@@ -1,0 +1,36 @@
+name,kind,tracks_won,n_prizes,sponsor_depth,ai_role,hardware,data_source,core_shown,video,live_demo,unbanked_focus,data_or_analytics,evidence,included
+Lumo,general,General; Goldman Sachs,2,problem_only,none,0,live,0,1,0,1,0,A,1
+TalkTuahBank,general,General; Goldman Sachs,2,problem_only,core_llm,0,live,1,1,1,1,0,A,1
+Ripple Banking,general,General,1,na,own_ml,0,user_input,1,1,0,1,0,A,1
+AllBank,domain_sponsor,Goldman Sachs,1,problem_only,llm_addon,0,user_input,0,0,0,1,0,A,1
+Data Pattern Observatory,domain_sponsor,PNC Bank,1,problem_only,own_ml,0,unclear,0,0,0,0,1,A,1
+FinnAI,domain_sponsor,PNC Bank,1,problem_only,core_llm,0,user_input,0,1,0,0,0,B,1
+Hermes,domain_sponsor,PNC Bank,1,problem_only,own_ml,0,live,0,1,0,1,0,A,1
+FUELICIENT,domain_sponsor,Toyota (1st),1,core_data,none,0,static_dataset,0,1,1,0,1,B,1
+KaizenDrive,domain_sponsor,Toyota,1,core_data*,llm_addon,0,static_dataset,0,1,0,0,1,A,1
+ToyoTrends,domain_sponsor,Toyota,1,core_data*,llm_addon,0,static_dataset,1,1,0,0,1,B,1
+PipeBrAIns,domain_sponsor,EOG Resources,1,core_data,own_ml,0,static_dataset,0,1,0,0,1,A,1
+DHy-n0,domain_sponsor,EOG Resources; [MLH] .Tech,2,core_data*,own_ml,0,static_dataset,0,1,1,0,1,A,1
+Eco Fast Track,domain_sponsor,CBRE; Veolia,2,problem_only,llm_addon,1,live,1,1,0,0,0,A,1
+EcoVerse,domain_sponsor,CBRE,1,problem_only,llm_addon,1,synthetic,0,0,0,0,0,A,1
+Greenify,domain_sponsor,CBRE,1,core_data,core_llm,0,static_dataset,0,1,0,0,1,A,1
+EcoLens (Sustainable Building Manager),domain_sponsor,Veolia,1,problem_only,none,0,unclear,0,0,0,0,1,A,1
+FrontierMap,domain_sponsor,Frontier,1,problem_only,none,0,user_input,1,1,1,0,0,A,1
+Homelander,domain_sponsor,Frontier,1,core_data,own_ml,0,static_dataset,0,0,1,0,1,B,1
+Promising Products,domain_sponsor,Frontier,1,problem_only,own_ml,0,static_dataset,0,1,0,0,0,A,1
+InvestIQ,domain_sponsor,Infosys,1,unknown,core_llm,0,synthetic,0,1,0,0,0,A,1
+Monch,tool_sponsor,Pinata (1st),1,core,own_ml,0,user_input,1,1,1,0,0,A,1
+Capsule,tool_sponsor,Pinata (2nd),1,core,none,0,user_input,1,0,1,0,0,B,1
+Cheddarboxd,tool_sponsor,Pinata (3rd per master list); Best Solo Hack,2,core,none,0,user_input,0,1,0,0,0,A,1
+Notable,tool_sponsor,SambaNova,1,core,core_llm,0,live,0,0,1,0,0,A,1
+Vestique,tool_sponsor,SambaNova; [MLH] Streamlit,2,core,core_llm,0,user_input,0,1,0,0,0,A,1
+Backtracc,tool_sponsor,SambaNova; Hardware; [MLH] Cloudflare,3,core,core_llm,1,live,1,1,1,0,0,A,1
+Echo,side,Best Design,1,na,own_ml,0,live,0,0,0,0,0,A,1
+EcoLens (property evaluator),side,Best Beginner,1,na,core_llm,0,user_input,0,1,0,0,0,B,1
+poyo.ed,side,Poyo's Prize,1,na,core_llm,1,live,1,0,0,0,0,A,1
+Planet Score,side,Best Devpost,1,na,none,0,live,0,0,0,0,0,A,1
+DuckTalk,side,Guided Track,1,na,none,0,live,0,0,0,0,0,B,1
+What's The Move?,side,Most Relatable,1,na,none,0,live,1,0,1,0,0,A,1
+GitFile,mlh,[MLH] Best Use of Terraform,1,na,none,0,user_input,0,1,1,0,0,A,1
+Roomie (unverified on Devpost),,,,,,,,,,,,,,0: evidence C; year unconfirmed; no Devpost page
+The Virtual Fitness Assistant,,,,,,,,,,,,,,"0: prize badges appear under Student Hacks, not HackUTD 2024"

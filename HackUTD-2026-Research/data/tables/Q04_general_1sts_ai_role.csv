@@ -1,0 +1,8 @@
+value,n,N,pct,weighted_pct
+multimodal_pipeline,21,65,32,34
+none,15,65,23,23
+agentic_multistep,10,65,15,13
+custom_or_finetuned_model,7,65,11,14
+single_call_wrapper,6,65,9,7
+on_device,5,65,8,7
+rag_or_chat,1,65,2,2

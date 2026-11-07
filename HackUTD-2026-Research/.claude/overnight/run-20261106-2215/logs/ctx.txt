@@ -1,0 +1,49 @@
+22:25  transcripts: /Users/aymanmohammed/.claude-account-b/projects/-Users-aymanmohammed-Documents  (last 3h)
+session       model        turns    ctx  c-write   c-read    out  weighted  first prompt
+c9cc85c7      opus-5-5       365   367k    1549k   91467k   514k    13653k  I need you to read this, the following folder, and
+sub:c9cc85c7  haiku-5-5       95   132k    1650k    4184k   781k     6385k  Read and follow /Users/aymanmohammed/Documents/Hac
+sub:c9cc85c7  haiku-5-5       99   128k    1992k    5089k   541k     5703k  Read and follow /Users/aymanmohammed/Documents/Hac
+sub:c9cc85c7  haiku-5-5      100   142k    1472k    6974k   572k     5397k  Read and follow /Users/aymanmohammed/Documents/Hac
+sub:c9cc85c7  haiku-5-5       98   136k    1377k    6417k   592k     5324k  Read and follow /Users/aymanmohammed/Documents/Hac
+sub:c9cc85c7  haiku-5-5      100   152k    1523k    6816k   411k     4639k  Read and follow /Users/aymanmohammed/Documents/Hac
+sub:c9cc85c7  haiku-5-5      104   141k    1599k    6703k   386k     4597k  Read and follow /Users/aymanmohammed/Documents/Hac
+sub:c9cc85c7  haiku-5-5       94   129k    1457k    5020k   442k     4535k  Read and follow /Users/aymanmohammed/Documents/Hac
+sub:c9cc85c7  haiku-5-5       97   133k    1285k    6338k   395k     4217k  Read and follow /Users/aymanmohammed/Documents/Hac
+sub:c9cc85c7  haiku-5-5       99   131k    1091k    6868k   394k     4018k  Read and follow /Users/aymanmohammed/Documents/Hac
+sub:c9cc85c7  haiku-5-5       80   123k    1209k    4535k   364k     3786k  Read and follow /Users/aymanmohammed/Documents/Hac
+sub:c9cc85c7  haiku-5-5       99   136k     937k    6769k   323k     3462k  Read and follow /Users/aymanmohammed/Documents/Hac
+sub:c9cc85c7  haiku-5-5       96   133k    1093k    6354k   227k     3139k  Read and follow /Users/aymanmohammed/Documents/Hac
+sub:c9cc85c7  haiku-5-5      263   125k     300k   21860k    83k     2978k  Read and follow /Users/aymanmohammed/Documents/Hac
+sub:c9cc85c7  haiku-5-5       95   141k     780k    6727k   199k     2644k  Read and follow /Users/aymanmohammed/Documents/Hac
+sub:c9cc85c7  opus-5-5        86   253k     384k   13734k   119k     2448k  You are the close reader for spec question Q19 (Ha
+sub:c9cc85c7  haiku-5-5      196   135k     202k   18617k    47k     2350k  Read and follow /Users/aymanmohammed/Documents/Hac
+sub:c9cc85c7  haiku-5-5      177   130k     228k   14911k    74k     2149k  Read and follow /Users/aymanmohammed/Documents/Hac
+sub:c9cc85c7  opus-5-5        87   195k     441k   10671k    97k     2105k  You are verifying facts for a hackathon research d
+sub:c9cc85c7  opus-5-5        48   205k     474k    5562k   135k     1822k  Read and follow /Users/aymanmohammed/Documents/Hac
+sub:c9cc85c7  haiku-5-5       94   133k     195k    7448k    71k     1342k  Read and follow /Users/aymanmohammed/Documents/Hac
+sub:c9cc85c7  opus-5-5        56   169k     263k    6535k    69k     1329k  You are the close reader for spec question Q19 (Ha
+sub:c9cc85c7  haiku-5-5       94   124k     194k    7172k    61k     1266k  Read and follow /Users/aymanmohammed/Documents/Hac
+sub:c9cc85c7  sonnet-5-5      15   197k     464k    1372k   106k     1249k  Read and follow /Users/aymanmohammed/Documents/Hac
+sub:c9cc85c7  opus-5-5        71   140k     227k    6689k    52k     1214k  You are the close reader for spec question Q21 (ca
+sub:c9cc85c7  sonnet-5-5      27   147k     254k    2407k    76k      941k  Read and follow /Users/aymanmohammed/Documents/Hac
+sub:c9cc85c7  sonnet-5-5      18   133k     231k    1233k    83k      828k  Read and follow /Users/aymanmohammed/Documents/Hac
+8e45368f      sonnet-5-5      71    97k     110k    5860k    21k      828k  <local-command-caveat>The command below was run di
+c2edb57b      sonnet-5-5      26   141k     200k    2386k    56k      771k  Read /Users/aymanmohammed/Documents/HackUTD-2026-R
+sub:c9cc85c7  sonnet-5-5      21   140k     258k    1794k    53k      768k  Read and follow /Users/aymanmohammed/Documents/Hac
+331003f2      sonnet-5-5      20   134k     182k    1857k    60k      713k  Read /Users/aymanmohammed/Documents/HackUTD-2026-R
+sub:c9cc85c7  sonnet-5-5      17   110k     173k    1255k    44k      562k  Read and follow /Users/aymanmohammed/Documents/Hac
+sub:c9cc85c7  sonnet-5-5      12   118k     177k     949k    12k      375k  Read and follow /Users/aymanmohammed/Documents/Hac
+sub:c9cc85c7  sonnet-5-5      12   117k     174k     844k    13k      368k  Read and follow /Users/aymanmohammed/Documents/Hac
+sub:c9cc85c7  sonnet-5-5      10   116k     171k     715k    10k      335k  Read and follow /Users/aymanmohammed/Documents/Hac
+sub:c9cc85c7  sonnet-5-5      10   114k     169k     708k    10k      331k  Read and follow /Users/aymanmohammed/Documents/Hac
+4290cbd0      sonnet-5-5      18    90k      90k    1327k    14k      315k  <local-command-caveat>The command below was run di
+sub:c9cc85c7  sonnet-5-5       8   114k     165k     490k     9k      303k  Read and follow /Users/aymanmohammed/Documents/Hac
+a5514967      sonnet-5-5      17    84k      81k    1205k    13k      285k  <local-command-caveat>The command below was run di
+sub:c9cc85c7  sonnet-5-5       8   102k     148k     464k     8k      274k  Read and follow /Users/aymanmohammed/Documents/Hac
+efadb418      sonnet-5-5      12    89k      96k     802k    10k      252k  <local-command-caveat>The command below was run di
+sub:c9cc85c7  sonnet-5-5      15    69k      91k     772k    10k      239k  Read and follow /Users/aymanmohammed/Documents/Hac
+sub:c9cc85c7  sonnet-5-5      12    70k     101k     594k     9k      229k  Read and follow /Users/aymanmohammed/Documents/Hac
+sub:c9cc85c7  sonnet-5-5      11    70k     101k     526k     8k      221k  Read and follow /Users/aymanmohammed/Documents/Hac
+sub:c9cc85c7  sonnet-5-5      11    70k     102k     529k     8k      220k  Read and follow /Users/aymanmohammed/Documents/Hac
+a9dc5e76      sonnet-5-5       4    67k      37k     223k     1k       72k  <local-command-caveat>The command below was run di
+TOTAL                       3168          25496k  311769k  7585k   100978k

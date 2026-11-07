@@ -1,0 +1,128 @@
+track_key,kind,firsts,lowers,tagged_first,tagged_lower
+Agentic AI Unleashed: AWS & NVIDIA Hackathon / 2025|general,general,Nomi,Agent Builder; Skyrchitect,1,2
+BoilerMake / BoilerMake XII|general,general,REMI,MockMade; Fluention,1,2
+Building the Next-Gen Agentic App with GraphRAG & NVIDIA cuGraph (ArangoDB) / 2025|general,general,GDELT Open Intelligence Agent,AskStreets: Querying and Visualizing Street Networks; Neuthera - Drug discovery toolkit,1,2
+Cal Hacks / Cal Hacks 11.0 (2024)|general,general,Duet: Brainwaves -> Live Music,GhostWriter; SnackSnap - recycle to feed your pet,1,2
+Cal Hacks / Cal Hacks 12.0 (2025)|general,general,FaceTimeOS: AI Mac Agent,Ted.AI,1,1
+Cal Hacks / Cal Hacks 13.0 (2026)|general,general,Sophi - The Physical Augmentation Walker,half full; Silent Voice,1,2
+Cal Hacks / Cal Hacks 13.0 (2026)|sponsor:microsoft|sponsor_open,sponsor,Standard Response,Standard Response,1,1
+ConUHacks / ConUHacks IX|general,general,PrezPal,LeetWrite; 404 Lost & Found,1,2
+ConUHacks / ConUHacks X|general,general,ViniClip,Pinscher; JungleBank,1,2
+DeltaHacks / DeltaHacks 12|general,general,Quota,deltawash; ReelJobs,1,2
+DeltaHacks / DeltaHacks XI|general,general,WhaleBeing,Layoff Evaders; GitAgent,1,2
+DubHacks / DubHacks 2026|other:dubhacks next,other_track,Noxen,OpenCanopy,1,1
+DubHacks / DubHacks 2026|sponsor:perceptron|sponsor_domain,sponsor,OpenCanopy; Robo-view,ReMind; Delta; SonoRocky,2,3
+DubHacks / DubHacks 2026|sponsor:sideshift|sponsor_open,sponsor,Octaby,Lapse; Noxen,1,2
+DubHacks / DubHacks 2026|sponsor:t-mobile|sponsor_open,sponsor,"Formly - the secure, fast form filler",Starward; Kill-Switch,1,2
+DubHacks / DubHacks 2026|theme_track:chef's kitchen,other_track,tensormew,Brawlmegle,1,1
+DubHacks / DubHacks 2026|theme_track:community kitchen,other_track,Drone Perceptron Relief System,Pollensight,1,1
+DubHacks / DubHacks 2026|theme_track:cook smarter,other_track,Tool Distill,Codegraph,1,1
+HP & NVIDIA Developer Challenge / 2025|general,general,AffectLink,Document Analysis Toolset; Mira3D,1,2
+Hack Western / Hack Western 12|general,general,Vril,FlowBoard; komo,1,2
+Hack the Valley / Hack the Valley 11|general,general,Pyrosense,Soundscape; Premiere,1,2
+Hack the Valley / Hack the Valley X|general,general,Plant Hopper,Dream House; NavSense,1,2
+HackGT / HackGT 11|general,general,Noma,Fight and Furious; prompt+,1,2
+HackGT / HackGT 11|side_beginner:best emerging,other_track,WoundAI,SafeSnap; OncoBot,1,2
+HackGT / HackGT 12|general,general,Dose,RefNet; vibesB2B,1,2
+HackGT / HackGT 12|side_beginner:best emerging,other_track,Vertex A11y,Orion,1,1
+HackGT / HackGT 12|theme_track:crypt of data,other_track,graphaura,Tradegist,1,1
+HackGT / HackGT 12|theme_track:hall of illusions,other_track,Dispatch,Hall of Us,1,1
+HackGT / HackGT 12|theme_track:the curator's cause,other_track,VisionNav,Caladrius,1,1
+HackGT / HackGT 12|theme_track:the gadget gallery,other_track,BikeBuddy,Dotify,1,1
+HackGT / HackGT 13|general,general,Sky-C2,FlyBy; VIGIL: Assistive Eyewear with an Autonomous Aerial Scout,1,2
+HackGT / HackGT 13|sponsor:aramco|sponsor_domain,sponsor,TapChart,DopaMarine,1,1
+HackGT / HackGT 13|sponsor:impiricus|sponsor_domain,sponsor,ATP - Accessible to Prescription,DocSpot; ClearPath,1,2
+HackGT / HackGT 13|sponsor:nsa|sponsor_domain,sponsor,SideQuests-HearsaySubmission,Athena,1,1
+HackGT / HackGT 13|theme_track:the lighthouse laboratory,other_track,Fourteenth Floor,MiiHab: Get Back in the Game,1,1
+HackGT / HackGT 13|theme_track:the shipyard,other_track,Synesthesia,Strider,1,1
+HackHarvard / HackHarvard 2024|general,general,Sustain-ify,Garuda; Diabeteasy,1,2
+HackHarvard / HackHarvard 2025|general,general,Post Surgery Pillow (PSP),ResQme; Yumi,1,2
+HackIllinois / HackIllinois 2026|general,general,Sparsh Mukthi,Sparsh Mukthi,1,1
+HackIllinois / HackIllinois 2026|sponsor:actian|sponsor_api_depth,sponsor,Vigilante AI,Logian; LinkCare,1,2
+HackIllinois / HackIllinois 2026|theme_track:track best ai inference,other_track,OpenReality,LARYNX; Vizem Flow (the Voicepill mogger),1,2
+HackIllinois / HackIllinois 2026|theme_track:track best ai inspection,other_track,ease 'n spect,Cat Vision Copilot; Cat-AR-pillar,1,2
+HackIllinois / HackIllinois 2026|theme_track:track best web api,other_track,EcoApi(Recost),Superstyle,1,1
+HackMIT / HackMIT 2026|general,general,Peel - The tiny lab technician,GPU (Graphics Processing Unit (GPU)); CareChair,1,2
+HackMIT / HackMIT 2026|sponsor:arduino|sponsor_domain,sponsor,Keiko,The PenPal,1,1
+HackMIT / HackMIT 2026|sponsor:asus|sponsor_domain,sponsor,CareChair,Newton's Playground; Paw Patrol,1,2
+HackMIT / HackMIT 2026|sponsor:dropbox|sponsor_domain,sponsor,Recall,ClubHub,1,1
+HackMIT / HackMIT 2026|sponsor:elastic|sponsor_domain,sponsor,Peel - The tiny lab technician,nullMap,1,1
+HackMIT / HackMIT 2026|sponsor:givecampus|sponsor_domain,sponsor,DonoRex,Stewardship Sam,1,1
+HackMIT / HackMIT 2026|sponsor:hackster|sponsor_domain,sponsor,SignalHound,Keiko; Lil-Vro Model,1,2
+HackMIT / HackMIT 2026|sponsor:maximor ai|sponsor_domain,sponsor,VistaAI,CFO-Sabbatical; Sherlock,1,2
+HackMIT / HackMIT 2026|sponsor:meta|sponsor_domain,sponsor,Klick,Memory Palace; btw,1,2
+HackMIT / HackMIT 2026|sponsor:openai|sponsor_domain,sponsor,CareChair,Elute; FRIDAY,1,2
+HackMIT / HackMIT 2026|sponsor:ramp|sponsor_domain,sponsor,camp,Money Maxer; Rumi,1,2
+HackNC / HackNC 2025|general,general,InterviewArcade,Localized; SentiFrame,1,2
+HackNC / HackNC 2025|side_beginner:hacknc beginner,other_track,Carolina Capital: OS Game About Youth Finance Management,EyeCode: Speak With Your Eyes!; CuratePlate,1,2
+HackNC / HackNC 2026|general,general,Scrub+,Klane; Bazaarly,1,2
+HackNC / HackNC 2026|side_beginner:hacknc beginner,other_track,Speak Up,Ebb; CampusSync,1,2
+HackNC / HackNC 2026|sponsor:photon|sponsor_api_depth,sponsor,Batman,Phish Finder,1,1
+HackNC / HackNC 2026|theme_track:hacknc frutiger aero,other_track,aerodance.,Call me Maybe,1,1
+HackNJIT / HackNJIT - 2023|general,general,Wager Whales,Treasure Snap!; SeaSOS,1,2
+HackNJIT / HackNJIT - 2024|general,general,TheBackPak,Gamify.work(); Medify,1,2
+HackNotts / HackNotts '25|general,general,Chronomancer,Functional Fantisay Minecraft TEAM 44,1,1
+HackNotts / HackNotts '26|general,general,Kitkat,Logicverse,1,1
+HackOut / HackOut'25|general,general,Placement-ke-Pyaase,Vibe Coders; The Titanic Is Syncing,1,2
+HackSheffield / HackSheffield 10|general,general,2025: A Beer Odyssey,TripSync; SupplyTrace,1,2
+HackSheffield / hackSheffield 9|general,general,A Helping Hand,Where is the SOIL; Explainatron - 3000,1,2
+HackUMass / HackUMass XIII|general,general,Soundbrush,3D Printing Kiosk; PixelParty,1,2
+HackUMass / HackUMass XII|general,general,SpeedPUB,Tomo; RealityPaint,1,2
+HackUPC / HackUPC 2025|general,general,MMG,IndiSearch; TopRack Studio,1,2
+HackUPC / HackUPC 2025|sponsor:grafana|sponsor_domain,sponsor,Graf-Anna,Peaceful Protest Tracker: Headlines vs Reality,1,1
+HackUPC / HackUPC 2025|sponsor:inditex|sponsor_domain,sponsor,ECHOLOOK,Inditex Visual Search; Inditex clothe detector,1,2
+HackUPC / HackUPC 2025|sponsor:revolut|sponsor_domain,sponsor,Referlut,Wise Wallet; RevPoints+,1,2
+HackUPC / HackUPC 2025|sponsor:seat|sponsor_domain,sponsor,CUPRA-App,CARmen; Feel the CUPRA,1,2
+HackUPC / HackUPC 2025|sponsor:siemens energy|sponsor_domain,sponsor,FlowCore,DataCenter-DeCoder; Rack Attack,1,2
+HackUPC / HackUPC 2025|sponsor:skyscanner|sponsor_domain,sponsor,TripMates - Team Trip Planner AI Agent,We Nomad Us; unpackr,1,2
+HackUPC / HackUPC 2026|general,general,convertfs,PearUp; Smadex Creative Copilot,1,2
+HackUPC / HackUPC 2026|sponsor:hp|sponsor_open,sponsor,JetSense: AI agents for printers.,hpcp,1,1
+HackUPC / HackUPC 2026|sponsor:jetbrains|sponsor_open,sponsor,ARC React,OpenPlanner; Bender Blender,1,2
+HackUPC / HackUPC 2026|sponsor:mecalux|sponsor_open,sponsor,Carbassot climbing,Baymaxxing; Warehouse Yasolizer,1,2
+HackUPC / HackUPC 2026|sponsor:qualcomm|sponsor_open,sponsor,Djubrino,FestiCleaner; guAIta,1,2
+HackUPC / HackUPC 2026|sponsor:skyscanner|sponsor_domain,sponsor,PearPost,B2Travel; Roam,1,2
+HackUPC / HackUPC 2026|sponsor:smadex|sponsor_open,sponsor,Smadex Creative Lab,SmadexAd Courtroom,1,1
+HackUTD / HackUTD 2024|sponsor:pinata|sponsor_api_depth,sponsor,Monch,Capsule,1,1
+Hacklytics / Hacklytics - 2026: Golden Byte|general,general,Alleaf,Lumos AI; Crisis Averted,1,2
+Hacklytics / Hacklytics - 2026: Golden Byte|theme_track:in entertainment,other_track,A Spark in the Dark,Tempr; DataFables,1,2
+Hacklytics / Hacklytics - 2026: Golden Byte|theme_track:in finance,other_track,Veritais,BlindSpot; Nexus,1,2
+Hacklytics / Hacklytics - 2026: Golden Byte|theme_track:in healthcare,other_track,Vigil,Conduit; HeartScape,1,2
+Hacklytics / Hacklytics - 2026: Golden Byte|theme_track:in sports,other_track,BraceML,MomentumShift; DarkHorse,1,2
+HooHacks / HooHacks 2025|general,general,Dr. Andy - The Deployable Surgeon,Show Me A Sign; wearit,1,2
+HooHacks / HooHacks 2026|general,general,Search and Rescue,Agent Gauntlet; ScamShield,1,2
+LA Hacks / LA Hacks 2025|general,general,Alto,Lumos; OpenSesame.Work,1,2
+LA Hacks / LA Hacks 2026|general,general,codebreaker,RIIS; Autopsy; Autopsy,1,3
+McHacks / McHacks 12|general,general,SeeForMe,Planorama; Debug Debacle,1,2
+McHacks / McHacks 13|general,general,McGill Go,Bloomscroll; WaterYouDoin,1,2
+NMIT Hacks / NMIT HACKS 2025|general,general,Medivision,ANTI-TAPP; AirCommand,1,2
+NMIT Hacks / NMIT HACKS 2026|general,general,Resonator; Preflight-ai,Peer2Play; Mandamus; Mandamus; PrivaSense,2,4
+PennApps / PennApps XXV (Fall 2024)|general,general,SoundSheild,Rally AI; SurgeVue,1,2
+PennApps / PennApps XXVI (Fall 2025)|general,general,kinemo,Dispatch; OverSEA,1,2
+QHacks / QHacks 2025|general,general,LUNA,TLDR.AI; NextBid,1,2
+QHacks / QHacks 2026|general,general,Orca,Atlas; Willow,1,2
+TAMUhack / TAMUhack 2025|general,general,TalkTuahAirline,flock; DJ Bestie,1,2
+TAMUhack / TAMUhack 2025|side_hardware:hardware hack,other_track,Hi-5,Smart Plant Pot; DrumRoller,1,2
+TAMUhack / TAMUhack 2025|sponsor:american airlines|sponsor_domain,sponsor,FindAir,TalkTuahAirline; Aviateur,1,2
+TAMUhack / TAMUhack 2025|sponsor:arm|sponsor_domain,sponsor,FireGrid.ai,Ember,1,1
+TAMUhack / TAMUhack 2025|sponsor:aws|sponsor_domain,sponsor,EcoFy,NimbusNews: AI-Powered Weather Storytelling; Vision Learning,1,2
+TAMUhack / TAMUhack 2025|sponsor:pimco|sponsor_domain,sponsor,FinSim,Coinvo,1,1
+TAMUhack / TAMUhack 2025|sponsor:toyota|sponsor_domain,sponsor,Kaizen,DreamDrive; Garage,1,2
+TAMUhack / TAMUhack 2026|general,general,cortex,HPC Runner; Haggle,1,2
+TAMUhack / TAMUhack 2026|side_hardware:hardware hack,other_track,MediBot,Autonomous Surgical Light; Celcii PixiPen,1,2
+TAMUhack / TAMUhack 2026|sponsor:american airlines|sponsor_domain,sponsor,AIsle0,Aria: The Multimodal AI Kiosk; Stowed,1,2
+TAMUhack / TAMUhack 2026|sponsor:northmark compute & cloud|sponsor_domain,sponsor,Constellation,Cinder Control; PocketPlay,1,2
+TAMUhack / TAMUhack 2026|sponsor:toyota|sponsor_domain,sponsor,RideIQ,CarBaba; Treat Me To A Toyota,1,2
+TreeHacks / TreeHacks 2025|general,general,HawkWatch,Portable Braille,1,1
+TreeHacks / TreeHacks 2025|sponsor:eigencloud|sponsor_open,sponsor,MediLedger,MediLedger,1,1
+TreeHacks / TreeHacks 2026|general,general,Shepherd,Robosurge; ChromaChord,1,2
+UNIHACK / UNIHACK 2025|general,general,Growth Garden,Shuffl; Weave,1,2
+UNIHACK / UNIHACK 2026|general,general,Antrum MK 1,Sentinel AI; Cowdar,1,2
+UXperience / UXperience 2025|sponsor:cbre|sponsor_domain,sponsor,Aero,Integra; Mosaic,1,2
+UofTHacks / UofTHacks|general,general,FurMe,wayback,1,1
+VTHacks / VTHacks - 13|general,general,StoryVue,Cognita; Fire Guard,1,2
+VTHacks / VTHacks - 14|general,general,Deadbolt,Bubu-Dins; aftercare.,1,2
+VTHacks / VTHacks - 14|sponsor:impiricus|sponsor_domain,sponsor,FalsePay,CuraVox; Persist Health,1,2
+YHack / YHack 2024|general,general,Tidbits,YGroove; AlphaBuddy AR,1,2
+YHack / YHack Fall 2024|general,general,Percival,bellcrve; The Tales of Detective Toasty,1,2
+YHack / YHack Spring 2026|general,general,Circa,LifeSaver; GaitGuard,1,2
+hackCBS / hackCBS 7.0|general,general,Team Zenith Hacks (project name not given),Team Solve Ease (project name not given); Team Encryptors (project name not given),1,2

@@ -1,0 +1,213 @@
+sponsor,field,value,n,N,pct,low_n,median_sponsor_features_used
+CBRE,pattern,data_to_decision,7,17,41,False,0
+CBRE,pattern,docs_to_action,5,17,29,False,0
+CBRE,pattern,other,2,17,12,False,0
+CBRE,pattern,sensor_to_alert_or_action,2,17,12,False,0
+CBRE,pattern,spatial_ar,1,17,6,False,0
+CBRE,problem_owner,consumer,4,17,24,False,0
+CBRE,problem_owner,sponsor_customers,2,17,12,False,0
+CBRE,problem_owner,sponsor_internal_or_b2b,11,17,65,False,0
+CBRE,prompt_literalness,0,1,17,6,False,0
+CBRE,prompt_literalness,1,4,17,24,False,0
+CBRE,prompt_literalness,2,5,17,29,False,0
+CBRE,prompt_literalness,na,7,17,41,False,0
+CBRE,sponsor_removable,no,1,17,6,False,0
+CBRE,sponsor_removable,yes,16,17,94,False,0
+CBRE,sponsor_features_used,0,16,17,94,False,0
+CBRE,sponsor_features_used,1,1,17,6,False,0
+CBRE,placement,1,1,17,6,False,0
+CBRE,placement,2,1,17,6,False,0
+CBRE,placement,3,1,17,6,False,0
+CBRE,placement,unranked,14,17,82,False,0
+CBRE,prize_kind,sponsor_domain,17,17,100,False,0
+Capital One,pattern,data_to_decision,23,42,55,False,0
+Capital One,pattern,docs_to_action,1,42,2,False,0
+Capital One,pattern,education_feedback,3,42,7,False,0
+Capital One,pattern,game_or_social,3,42,7,False,0
+Capital One,pattern,other,3,42,7,False,0
+Capital One,pattern,realtime_coordination,2,42,5,False,0
+Capital One,pattern,risk_detect_and_respond,3,42,7,False,0
+Capital One,pattern,voice_to_action,1,42,2,False,0
+Capital One,pattern,workflow_automation_agent,3,42,7,False,0
+Capital One,problem_owner,consumer,32,42,76,False,0
+Capital One,problem_owner,sponsor_customers,4,42,10,False,0
+Capital One,problem_owner,sponsor_internal_or_b2b,6,42,14,False,0
+Capital One,prompt_literalness,0,1,42,2,False,0
+Capital One,prompt_literalness,1,14,42,33,False,0
+Capital One,prompt_literalness,2,10,42,24,False,0
+Capital One,prompt_literalness,na,17,42,40,False,0
+Capital One,sponsor_removable,no,12,42,29,False,0
+Capital One,sponsor_removable,yes,30,42,71,False,0
+Capital One,sponsor_features_used,0,23,42,55,False,0
+Capital One,sponsor_features_used,1,17,42,40,False,0
+Capital One,sponsor_features_used,6,1,42,2,False,0
+Capital One,sponsor_features_used,8,1,42,2,False,0
+Capital One,placement,unranked,42,42,100,False,0
+Capital One,prize_kind,sponsor_api_depth,9,42,21,False,0
+Capital One,prize_kind,sponsor_domain,32,42,76,False,0
+Capital One,prize_kind,sponsor_open,1,42,2,False,0
+EOG Resources,pattern,data_to_decision,1,4,25,True,0
+EOG Resources,pattern,risk_detect_and_respond,3,4,75,True,0
+EOG Resources,problem_owner,sponsor_internal_or_b2b,4,4,100,True,0
+EOG Resources,prompt_literalness,2,1,4,25,True,0
+EOG Resources,prompt_literalness,na,3,4,75,True,0
+EOG Resources,sponsor_removable,no,1,4,25,True,0
+EOG Resources,sponsor_removable,yes,3,4,75,True,0
+EOG Resources,sponsor_features_used,0,3,4,75,True,0
+EOG Resources,sponsor_features_used,1,1,4,25,True,0
+EOG Resources,placement,unranked,4,4,100,True,0
+EOG Resources,prize_kind,sponsor_domain,4,4,100,True,0
+Goldman Sachs,pattern,docs_to_action,2,6,33,False,0
+Goldman Sachs,pattern,other,2,6,33,False,0
+Goldman Sachs,pattern,realtime_coordination,1,6,17,False,0
+Goldman Sachs,pattern,voice_to_action,1,6,17,False,0
+Goldman Sachs,problem_owner,consumer,3,6,50,False,0
+Goldman Sachs,problem_owner,sponsor_internal_or_b2b,3,6,50,False,0
+Goldman Sachs,prompt_literalness,na,6,6,100,False,0
+Goldman Sachs,sponsor_removable,yes,6,6,100,False,0
+Goldman Sachs,sponsor_features_used,0,6,6,100,False,0
+Goldman Sachs,placement,unranked,6,6,100,False,0
+Goldman Sachs,prize_kind,sponsor_domain,6,6,100,False,0
+NMC2,pattern,data_to_decision,2,6,33,False,0
+NMC2,pattern,realtime_coordination,1,6,17,False,0
+NMC2,pattern,workflow_automation_agent,3,6,50,False,0
+NMC2,problem_owner,consumer,1,6,17,False,0
+NMC2,problem_owner,sponsor_customers,1,6,17,False,0
+NMC2,problem_owner,sponsor_internal_or_b2b,4,6,67,False,0
+NMC2,prompt_literalness,1,2,6,33,False,0
+NMC2,prompt_literalness,2,2,6,33,False,0
+NMC2,prompt_literalness,na,2,6,33,False,0
+NMC2,sponsor_removable,yes,6,6,100,False,0
+NMC2,sponsor_features_used,0,6,6,100,False,0
+NMC2,placement,1,1,6,17,False,0
+NMC2,placement,2,1,6,17,False,0
+NMC2,placement,3,1,6,17,False,0
+NMC2,placement,unranked,3,6,50,False,0
+NMC2,prize_kind,sponsor_domain,6,6,100,False,0
+NVIDIA,pattern,data_to_decision,3,21,14,False,2
+NVIDIA,pattern,realtime_coordination,3,21,14,False,2
+NVIDIA,pattern,risk_detect_and_respond,4,21,19,False,2
+NVIDIA,pattern,sensor_to_alert_or_action,3,21,14,False,2
+NVIDIA,pattern,translate_between_people_or_systems,2,21,10,False,2
+NVIDIA,pattern,vision_to_assist,1,21,5,False,2
+NVIDIA,pattern,workflow_automation_agent,5,21,24,False,2
+NVIDIA,problem_owner,consumer,10,21,48,False,2
+NVIDIA,problem_owner,sponsor_customers,2,21,10,False,2
+NVIDIA,problem_owner,sponsor_internal_or_b2b,5,21,24,False,2
+NVIDIA,problem_owner,unknown,4,21,19,False,2
+NVIDIA,prompt_literalness,0,2,21,10,False,2
+NVIDIA,prompt_literalness,1,4,21,19,False,2
+NVIDIA,prompt_literalness,2,11,21,52,False,2
+NVIDIA,prompt_literalness,na,4,21,19,False,2
+NVIDIA,sponsor_removable,no,18,21,86,False,2
+NVIDIA,sponsor_removable,yes,3,21,14,False,2
+NVIDIA,sponsor_features_used,1,8,21,38,False,2
+NVIDIA,sponsor_features_used,2,8,21,38,False,2
+NVIDIA,sponsor_features_used,3,2,21,10,False,2
+NVIDIA,sponsor_features_used,4,2,21,10,False,2
+NVIDIA,sponsor_features_used,5,1,21,5,False,2
+NVIDIA,placement,unranked,21,21,100,False,2
+NVIDIA,prize_kind,sponsor_api_depth,7,21,33,False,2
+NVIDIA,prize_kind,sponsor_domain,3,21,14,False,2
+NVIDIA,prize_kind,sponsor_open,11,21,52,False,2
+PNC Bank,pattern,data_to_decision,3,6,50,False,0
+PNC Bank,pattern,docs_to_action,1,6,17,False,0
+PNC Bank,pattern,workflow_automation_agent,2,6,33,False,0
+PNC Bank,problem_owner,consumer,2,6,33,False,0
+PNC Bank,problem_owner,sponsor_internal_or_b2b,3,6,50,False,0
+PNC Bank,problem_owner,unknown,1,6,17,False,0
+PNC Bank,prompt_literalness,2,2,6,33,False,0
+PNC Bank,prompt_literalness,na,4,6,67,False,0
+PNC Bank,sponsor_removable,yes,6,6,100,False,0
+PNC Bank,sponsor_features_used,0,6,6,100,False,0
+PNC Bank,placement,unranked,6,6,100,False,0
+PNC Bank,prize_kind,sponsor_domain,6,6,100,False,0
+Photon,pattern,data_to_decision,2,17,12,False,1
+Photon,pattern,docs_to_action,2,17,12,False,1
+Photon,pattern,realtime_coordination,3,17,18,False,1
+Photon,pattern,risk_detect_and_respond,3,17,18,False,1
+Photon,pattern,voice_to_action,3,17,18,False,1
+Photon,pattern,workflow_automation_agent,4,17,24,False,1
+Photon,problem_owner,consumer,16,17,94,False,1
+Photon,problem_owner,sponsor_internal_or_b2b,1,17,6,False,1
+Photon,prompt_literalness,0,1,17,6,False,1
+Photon,prompt_literalness,1,2,17,12,False,1
+Photon,prompt_literalness,2,10,17,59,False,1
+Photon,prompt_literalness,na,4,17,24,False,1
+Photon,sponsor_removable,no,13,17,76,False,1
+Photon,sponsor_removable,unknown,1,17,6,False,1
+Photon,sponsor_removable,yes,3,17,18,False,1
+Photon,sponsor_features_used,1,16,17,94,False,1
+Photon,sponsor_features_used,3,1,17,6,False,1
+Photon,placement,1,1,17,6,False,1
+Photon,placement,2,1,17,6,False,1
+Photon,placement,HM,3,17,18,False,1
+Photon,placement,unranked,12,17,71,False,1
+Photon,prize_kind,sponsor_api_depth,8,17,47,False,1
+Photon,prize_kind,sponsor_open,9,17,53,False,1
+Spacetime,pattern,data_to_decision,3,12,25,False,2
+Spacetime,pattern,education_feedback,1,12,8,False,2
+Spacetime,pattern,game_or_social,1,12,8,False,2
+Spacetime,pattern,realtime_coordination,2,12,17,False,2
+Spacetime,pattern,risk_detect_and_respond,1,12,8,False,2
+Spacetime,pattern,workflow_automation_agent,4,12,33,False,2
+Spacetime,problem_owner,consumer,5,12,42,False,2
+Spacetime,problem_owner,sponsor_customers,2,12,17,False,2
+Spacetime,problem_owner,sponsor_internal_or_b2b,4,12,33,False,2
+Spacetime,problem_owner,unknown,1,12,8,False,2
+Spacetime,prompt_literalness,2,9,12,75,False,2
+Spacetime,prompt_literalness,na,3,12,25,False,2
+Spacetime,sponsor_removable,no,12,12,100,False,2
+Spacetime,sponsor_features_used,1,6,12,50,False,2
+Spacetime,sponsor_features_used,3,2,12,17,False,2
+Spacetime,sponsor_features_used,4,4,12,33,False,2
+Spacetime,placement,unranked,12,12,100,False,2
+Spacetime,prize_kind,sponsor_api_depth,12,12,100,False,2
+State Farm,pattern,data_to_decision,1,13,8,False,0
+State Farm,pattern,devtool,3,13,23,False,0
+State Farm,pattern,education_feedback,4,13,31,False,0
+State Farm,pattern,game_or_social,2,13,15,False,0
+State Farm,pattern,sensor_to_alert_or_action,2,13,15,False,0
+State Farm,pattern,workflow_automation_agent,1,13,8,False,0
+State Farm,problem_owner,consumer,6,13,46,False,0
+State Farm,problem_owner,sponsor_customers,3,13,23,False,0
+State Farm,problem_owner,sponsor_internal_or_b2b,3,13,23,False,0
+State Farm,problem_owner,unknown,1,13,8,False,0
+State Farm,prompt_literalness,0,1,13,8,False,0
+State Farm,prompt_literalness,1,3,13,23,False,0
+State Farm,prompt_literalness,2,5,13,38,False,0
+State Farm,prompt_literalness,na,4,13,31,False,0
+State Farm,sponsor_removable,yes,13,13,100,False,0
+State Farm,sponsor_features_used,0,13,13,100,False,0
+State Farm,placement,unranked,13,13,100,False,0
+State Farm,prize_kind,sponsor_domain,13,13,100,False,0
+T-Mobile,pattern,data_to_decision,4,7,57,False,0
+T-Mobile,pattern,docs_to_action,1,7,14,False,0
+T-Mobile,pattern,risk_detect_and_respond,2,7,29,False,0
+T-Mobile,problem_owner,consumer,4,7,57,False,0
+T-Mobile,problem_owner,sponsor_internal_or_b2b,3,7,43,False,0
+T-Mobile,prompt_literalness,0,1,7,14,False,0
+T-Mobile,prompt_literalness,na,6,7,86,False,0
+T-Mobile,sponsor_removable,yes,7,7,100,False,0
+T-Mobile,sponsor_features_used,0,5,7,71,False,0
+T-Mobile,sponsor_features_used,1,2,7,29,False,0
+T-Mobile,placement,1,1,7,14,False,0
+T-Mobile,placement,2,1,7,14,False,0
+T-Mobile,placement,3,2,7,29,False,0
+T-Mobile,placement,unranked,3,7,43,False,0
+T-Mobile,prize_kind,sponsor_domain,4,7,57,False,0
+T-Mobile,prize_kind,sponsor_open,3,7,43,False,0
+Toyota Financial Services,pattern,data_to_decision,4,6,67,False,0
+Toyota Financial Services,pattern,education_feedback,1,6,17,False,0
+Toyota Financial Services,pattern,workflow_automation_agent,1,6,17,False,0
+Toyota Financial Services,problem_owner,sponsor_customers,3,6,50,False,0
+Toyota Financial Services,problem_owner,sponsor_internal_or_b2b,2,6,33,False,0
+Toyota Financial Services,problem_owner,unknown,1,6,17,False,0
+Toyota Financial Services,prompt_literalness,na,6,6,100,False,0
+Toyota Financial Services,sponsor_removable,no,2,6,33,False,0
+Toyota Financial Services,sponsor_removable,yes,4,6,67,False,0
+Toyota Financial Services,sponsor_features_used,0,4,6,67,False,0
+Toyota Financial Services,sponsor_features_used,1,2,6,33,False,0
+Toyota Financial Services,placement,1,1,6,17,False,0
+Toyota Financial Services,placement,unranked,5,6,83,False,0
+Toyota Financial Services,prize_kind,sponsor_domain,6,6,100,False,0

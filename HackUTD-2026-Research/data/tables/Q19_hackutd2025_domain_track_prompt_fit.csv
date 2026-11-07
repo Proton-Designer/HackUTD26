@@ -1,0 +1,10 @@
+group,prompt_fit_level,n,N,pct,names
+winner,explicit,11,24,46,AutoBoard; AutoPM; Beacon; Cura; DCDaddy; Hingine; InsighT; ProdPlex; qAPIbara; SpendingWithSpendy; TrustEstate AI
+winner,implied,13,24,54,DataDriver; Enchantress; HarmoniQ; Kachow; MirrorAPI; Pact; PoyoLabs; ProDuh!; Stamped; TaskFlow; Toyotron; TrustIssues.AI; UpGuardian
+winner,none,0,24,0,
+demo_ready,explicit,8,34,24,Aethernet; Cauldron-FlowGuard AI; GenVis; PMGenie; PotionWatch; Snitch the Witch; The Potion Police; Witch Delivery Associates
+demo_ready,implied,26,34,76,Brew View; BuildYourRide; BUYOTA; CarCents; CarTender; CBRE Intelligence Hub; DreaMatcher; KanbanSync; Kramhtron.ai; MagentaMonitor; PrisM; ProToyotaAI; PulseLink; PulseWire; Read the Room; Reflex Work Order Automation; RideOracle; Satisfaction Visual Analytics (SAM); SentimentRadar; Sync; T-Pulse; T-Time; TOYODA; ToyoQuest; Toyota Path Finder; WitchWatch
+demo_ready,none,0,34,0,
+random,explicit,3,20,15,BudgetBrew; FinPath; lisTen.AI
+random,implied,17,20,85,Car Vibes; FindMyToyota - Vehicle Finder; IKARIS; inteliBudget; mimimimimi; MoodWave; PM_Ticket_Manager; PulseScore; Raven; T-Care; T-Data; T-Mobile Happiness Index; T-Mobile Happy Assesment Dashboard; Toyota Discover; Toyota DreamDrive; Toyota Vision; ToyoTrack
+random,none,0,20,0,

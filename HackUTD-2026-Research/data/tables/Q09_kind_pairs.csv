@@ -1,0 +1,138 @@
+scope,kind_a,kind_b,n_projects,N_multi_award,pct_of_multi,low_n,examples
+all_winners,general,sponsor_api_depth,18,148,12,False,Permanence; Silent Voice; Shepherd; CareChair
+all_winners,general,sponsor_open,16,148,11,False,Portable Braille; Ted.AI; ChromaChord; Autopsy
+all_winners,general,sponsor_domain,13,148,9,False,Lumo; TalkTuahBank; Shepherd; CareChair
+all_winners,sponsor_domain,sponsor_domain,12,148,8,False,Farsight; Eco Fast Track; DataDriver; Toyotron
+all_winners,mlh,sponsor_domain,8,148,5,False,Backtracc; DHy-n0; Vestique; HarmoniQ
+all_winners,sponsor_open,sponsor_open,7,148,5,False,VL-ADK; Haven; Standard Response; MediLedger
+all_winners,general,theme_track,7,148,5,False,SurgeVue; SignHero; IronBook; Lucid Voice
+all_winners,sponsor_api_depth,sponsor_api_depth,6,148,4,False,Farsight; Permanence; Standard Response; GreenChain
+all_winners,general,general,6,148,4,False,Autopsy; ZeroStrike; Sparsh Mukthi; Identity Matrix
+all_winners,sponsor_open,theme_track,6,148,4,False,Fivi; Devin & Kevin; Embers; Terrametric
+all_winners,general,mlh,6,148,4,False,aftercare.; GitAgent; Vril; Explainatron - 3000
+all_winners,sponsor_api_depth,sponsor_open,5,148,3,False,Fireline; Haven; Standard Response; MockMade
+all_winners,other,sponsor_domain,5,148,3,False,OpenCanopy; FindAir; Cinder Control; Nimbus
+all_winners,general,other,5,148,3,False,Sparsh Mukthi; LifeSaver; REMI; Functional Fantisay Minecraft TEAM 44
+all_winners,sponsor_api_depth,sponsor_domain,4,148,3,False,Farsight; Shepherd; CareChair; Klick
+all_winners,other,sponsor_open,4,148,3,False,diffuji; Freak in the Sheets; Noxen; Unreal EngJam
+all_winners,sponsor_domain,sponsor_open,4,148,3,False,ATP - Accessible to Prescription; Lapse; Atlas; Donair
+all_winners,sponsor_api_depth,theme_track,4,148,3,False,Superstyle; BAS Buddy (Climate Action Matcher); Accent; Dots
+all_winners,theme_track,theme_track,3,148,2,False,Griddy; Accent; WeCare
+all_winners,mlh,theme_track,3,148,2,False,Infraflow; OpenReality; aerodance.
+all_winners,general,side_design,3,148,2,False,Rally AI; Paper Cuts; Mapd
+all_winners,sponsor_domain,theme_track,3,148,2,False,Therms - Thermoregulation Wearables with AI-powered Insights; VisionGuard: smart vision for smarter driving; cryptX by Moonshot
+all_winners,mlh,sponsor_open,2,148,1,False,Weave; Bender Blender
+all_winners,other,sponsor_api_depth,2,148,1,False,Cheddarboxd; Nara - Autonomous Red Teaming Agent
+all_winners,side_design,sponsor_domain,2,148,1,False,SpendingWithSpendy; Mapd
+all_winners,side_social_impact,sponsor_open,2,148,1,False,Standard Response; Mira
+all_winners,side_beginner,sponsor_domain,2,148,1,False,PocketPlay; Track2Give
+all_winners,other,theme_track,2,148,1,False,OpenReality; EcoDepot
+all_winners,mlh,sponsor_api_depth,2,148,1,False,HireWire; GitAgent
+all_winners,side_design,sponsor_api_depth,2,148,1,False,Radar; NeighborFridge
+all_winners,side_design,theme_track,2,148,1,False,BraceML; Paper Cuts
+all_winners,side_hardware,sponsor_domain,1,148,1,False,Backtracc
+all_winners,mlh,side_hardware,1,148,1,False,Backtracc
+all_winners,side_social_impact,sponsor_api_depth,1,148,1,False,Standard Response
+all_winners,mlh,side_design,1,148,1,False,VisuWorld
+all_winners,mlh,peoples_choice,1,148,1,False,DoortectiveAI
+all_winners,other,side_design,1,148,1,False,Peersuade
+all_winners,side_hardware,side_hardware,1,148,1,False,TerraGlide
+all_winners,mlh,other,1,148,1,False,OpenReality
+all_winners,other,other,1,148,1,False,Sparsh Mukthi
+all_winners,side_design,sponsor_open,1,148,1,False,Rally AI
+all_winners,general,side_social_impact,1,148,1,False,Circa
+all_winners,side_social_impact,sponsor_domain,1,148,1,False,Resililink
+all_winners,side_beginner,sponsor_api_depth,1,148,1,False,Talk Tuah
+all_winners,peoples_choice,sponsor_api_depth,1,148,1,False,TeachXR
+all_winners,side_social_impact,side_social_impact,1,148,1,False,Expungo
+all_winners,side_hardware,sponsor_open,1,148,1,False,Hardware Context Protocol (MCP for Hardware)
+all_winners,side_hardware,sponsor_api_depth,1,148,1,False,ICU
+all_winners,peoples_choice,side_social_impact,1,148,1,False,pFOG: Parkinson's Medical Aid Device
+all_winners,general,peoples_choice,1,148,1,False,Inspector
+all_winners,side_design,side_design,1,148,1,False,Mapd
+all_winners,other,side_beginner,1,148,1,False,Track2Give
+all_winners,side_beginner,side_beginner,1,148,1,False,ToughCrowd
+all_winners,mlh,side_beginner,1,148,1,False,Agora Socrates
+hackutd,mlh,sponsor_domain,5,12,42,False,Backtracc; DHy-n0; Vestique; HarmoniQ
+hackutd,sponsor_domain,sponsor_domain,3,12,25,False,Eco Fast Track; DataDriver; Toyotron
+hackutd,general,sponsor_domain,2,12,17,False,Lumo; TalkTuahBank
+hackutd,side_hardware,sponsor_domain,1,12,8,False,Backtracc
+hackutd,mlh,side_hardware,1,12,8,False,Backtracc
+hackutd,other,sponsor_api_depth,1,12,8,False,Cheddarboxd
+hackutd,side_design,sponsor_domain,1,12,8,False,SpendingWithSpendy
+student_24h_inperson,general,sponsor_domain,8,54,15,False,CareChair; Peel - The tiny lab technician; JungleBank; TalkTuahAirline
+student_24h_inperson,sponsor_domain,sponsor_domain,7,54,13,False,CareChair; Rumi; Elute; Keiko
+student_24h_inperson,general,sponsor_api_depth,6,54,11,False,CareChair; Percival; GaitGuard; Debug Debacle
+student_24h_inperson,general,theme_track,5,54,9,False,IronBook; Lucid Voice; Paper Cuts; Theracat
+student_24h_inperson,other,sponsor_domain,4,54,7,False,OpenCanopy; FindAir; Cinder Control; Track2Give
+student_24h_inperson,sponsor_open,theme_track,3,54,6,False,Fivi; Cameron; Theracat
+student_24h_inperson,general,other,3,54,6,False,LifeSaver; Functional Fantisay Minecraft TEAM 44; Kitkat
+student_24h_inperson,theme_track,theme_track,2,54,4,False,Griddy; WeCare
+student_24h_inperson,sponsor_api_depth,sponsor_domain,2,54,4,False,CareChair; Klick
+student_24h_inperson,sponsor_domain,sponsor_open,2,54,4,False,Lapse; Donair
+student_24h_inperson,mlh,sponsor_domain,2,54,4,False,ReMind; Aria: The Multimodal AI Kiosk
+student_24h_inperson,side_beginner,sponsor_domain,2,54,4,False,PocketPlay; Track2Give
+student_24h_inperson,general,mlh,2,54,4,False,GitAgent; Explainatron - 3000
+student_24h_inperson,general,side_design,2,54,4,False,Paper Cuts; Mapd
+student_24h_inperson,mlh,sponsor_open,1,54,2,False,Weave
+student_24h_inperson,sponsor_open,sponsor_open,1,54,2,False,Kava
+student_24h_inperson,other,sponsor_open,1,54,2,False,Noxen
+student_24h_inperson,general,side_social_impact,1,54,2,False,Circa
+student_24h_inperson,mlh,theme_track,1,54,2,False,aerodance.
+student_24h_inperson,mlh,sponsor_api_depth,1,54,2,False,GitAgent
+student_24h_inperson,sponsor_api_depth,sponsor_open,1,54,2,False,DreamDirector
+student_24h_inperson,side_hardware,sponsor_api_depth,1,54,2,False,ICU
+student_24h_inperson,sponsor_api_depth,sponsor_api_depth,1,54,2,False,MayDay
+student_24h_inperson,peoples_choice,side_social_impact,1,54,2,False,pFOG: Parkinson's Medical Aid Device
+student_24h_inperson,general,peoples_choice,1,54,2,False,Inspector
+student_24h_inperson,side_design,theme_track,1,54,2,False,Paper Cuts
+student_24h_inperson,general,sponsor_open,1,54,2,False,Theracat
+student_24h_inperson,other,theme_track,1,54,2,False,EcoDepot
+student_24h_inperson,side_design,side_design,1,54,2,False,Mapd
+student_24h_inperson,general,general,1,54,2,False,Mapd
+student_24h_inperson,side_design,sponsor_domain,1,54,2,False,Mapd
+student_24h_inperson,other,side_beginner,1,54,2,False,Track2Give
+student_24h_inperson,side_beginner,side_beginner,1,54,2,False,ToughCrowd
+student_24h_inperson,mlh,side_beginner,1,54,2,False,Agora Socrates
+student_36_48h,general,sponsor_open,15,82,18,False,Portable Braille; Ted.AI; ChromaChord; Autopsy
+student_36_48h,general,sponsor_api_depth,12,82,15,False,Permanence; Silent Voice; Shepherd; Alto
+student_36_48h,sponsor_open,sponsor_open,6,82,7,False,VL-ADK; Haven; Standard Response; MediLedger
+student_36_48h,sponsor_api_depth,sponsor_api_depth,5,82,6,False,Farsight; Permanence; Standard Response; GreenChain
+student_36_48h,general,general,5,82,6,False,Autopsy; ZeroStrike; Sparsh Mukthi; Identity Matrix
+student_36_48h,sponsor_api_depth,sponsor_open,4,82,5,False,Fireline; Haven; Standard Response; MockMade
+student_36_48h,sponsor_api_depth,theme_track,4,82,5,False,Superstyle; BAS Buddy (Climate Action Matcher); Accent; Dots
+student_36_48h,general,mlh,4,82,5,False,aftercare.; Vril; Mandamus; Composition
+student_36_48h,other,sponsor_open,3,82,4,False,diffuji; Freak in the Sheets; Unreal EngJam
+student_36_48h,general,sponsor_domain,3,82,4,False,Shepherd; Asclepius; Combadge
+student_36_48h,sponsor_domain,theme_track,3,82,4,False,Therms - Thermoregulation Wearables with AI-powered Insights; VisionGuard: smart vision for smarter driving; cryptX by Moonshot
+student_36_48h,sponsor_open,theme_track,3,82,4,False,Devin & Kevin; Embers; Terrametric
+student_36_48h,sponsor_api_depth,sponsor_domain,2,82,2,False,Farsight; Shepherd
+student_36_48h,sponsor_domain,sponsor_domain,2,82,2,False,Farsight; Asclepius
+student_36_48h,side_social_impact,sponsor_open,2,82,2,False,Standard Response; Mira
+student_36_48h,sponsor_domain,sponsor_open,2,82,2,False,ATP - Accessible to Prescription; Atlas
+student_36_48h,mlh,theme_track,2,82,2,False,Infraflow; OpenReality
+student_36_48h,general,other,2,82,2,False,Sparsh Mukthi; REMI
+student_36_48h,general,theme_track,2,82,2,False,SurgeVue; SignHero
+student_36_48h,side_design,sponsor_api_depth,2,82,2,False,Radar; NeighborFridge
+student_36_48h,side_social_impact,sponsor_api_depth,1,82,1,False,Standard Response
+student_36_48h,mlh,side_design,1,82,1,False,VisuWorld
+student_36_48h,mlh,peoples_choice,1,82,1,False,DoortectiveAI
+student_36_48h,other,side_design,1,82,1,False,Peersuade
+student_36_48h,side_hardware,side_hardware,1,82,1,False,TerraGlide
+student_36_48h,other,theme_track,1,82,1,False,OpenReality
+student_36_48h,mlh,other,1,82,1,False,OpenReality
+student_36_48h,other,other,1,82,1,False,Sparsh Mukthi
+student_36_48h,side_design,sponsor_open,1,82,1,False,Rally AI
+student_36_48h,general,side_design,1,82,1,False,Rally AI
+student_36_48h,mlh,sponsor_api_depth,1,82,1,False,HireWire
+student_36_48h,side_design,theme_track,1,82,1,False,BraceML
+student_36_48h,mlh,sponsor_domain,1,82,1,False,B2Travel
+student_36_48h,mlh,sponsor_open,1,82,1,False,Bender Blender
+student_36_48h,side_social_impact,sponsor_domain,1,82,1,False,Resililink
+student_36_48h,side_beginner,sponsor_api_depth,1,82,1,False,Talk Tuah
+student_36_48h,peoples_choice,sponsor_api_depth,1,82,1,False,TeachXR
+student_36_48h,side_social_impact,side_social_impact,1,82,1,False,Expungo
+student_36_48h,side_hardware,sponsor_open,1,82,1,False,Hardware Context Protocol (MCP for Hardware)
+student_36_48h,theme_track,theme_track,1,82,1,False,Accent
+student_36_48h,other,sponsor_domain,1,82,1,False,Nimbus
+student_36_48h,other,sponsor_api_depth,1,82,1,False,Nara - Autonomous Red Teaming Agent

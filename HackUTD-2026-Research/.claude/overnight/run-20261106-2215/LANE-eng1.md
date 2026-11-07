@@ -1,0 +1,34 @@
+- s3 validator needs int (not str) for prompt_literalness/prompt_words_in_title, and non-empty ev on centerpiece_visible even when "none".
+- named_user: judge from first two sentences of devpost_page; empty record needs placeholder ratings of 1 (design unknown).
+- When building rows via helper scripts, pass literalness/title-words as ints, not strings (validator rejects '1').
+- Validator also rejects empty ev on ai_role when v=none (and centerpiece_visible none). Always fill ev.
+- Build rows with a helper that casts literalness/title-words to int; validator rejects "2" strings (hit again on pri_14).
+- Scratchpad helper (lib.py: row/rt/write) speeds building rows; pass ints. Organizer/theme tracks (Overall, Grand, Treehacks Grand, Frutiger Aero, Hall of Illusions) => sponsor_fit [].
+- Validator flags empty ev on centerpiece_visible=none; always fill ev for it (hit again on pri_18).
+- Helper sf() calls: pass prompt_literalness/prompt_words_in_title as ints, not quoted strings (hit again on pri_22); post-cast loop fixes it.
+- Scratchpad lib.py in session 60b77be9: R()/sf()/write() builders; V() auto-fills ev so empty-ev validator error avoided; ints for literalness (hit none on pri_26).
+- Hit again on pri_28: sf() takes lit/title-words as strings if quoted; post-cast loop over sponsor_fit after writing fixes it. Pass ints.
+- Pass lib.py builders fresh per session; p*.py scripts return rows json then cast ints in a final loop (worked on pri_32, no validator fails).
+- pri_34: p*.py scripts return rows json, final loop casts ints; validator clean first try.
+- shard_rest_01: macOS sed needs -i "" ; extra ")" after rt(...) when note= follows was my recurring syntax slip.
+- shard_rest_03: lib.py in session 5be81d6c scratchpad casts ints automatically (I()); build rows per 3 records in bN.py, tuples must be 2-item (v,ev) - a 3-tuple crashes V().
+- shard_rest_05: new scratchpad lib.py (V/S/RT/R/write) takes (v,ev) tuples everywhere incl. sponsor_features_used; passing a bare int crashes S(). b*.py per 3 records worked, validator clean first try.
+- shard_rest_07: lib.py in session 533b61a5 scratchpad (V/SF/R/write, tuples (v,ev)); b*.py per 3 records; validator flags empty ev on centerpiece_technical/visible/wow when v=none/none_visible -> fill ev always (fixed by post-pass).
+- shard_rest_09: lib.py in session 7eceb993 scratchpad (V/SF/R/write/fix); fix() casts ints and fills empty ev; b*.py per 3 records; validator clean first try.
+- shard_rest_11: lib.py in session 025292f1 scratchpad (V/SF/R/write/fix, same as 09); b*.py per 3 records; validator clean first try.
+- shard_rest_13: lib.py in session c40a976c scratchpad (copy of 11 with OUT swapped); b*.py per 3 records; validator clean first try. named_user judged from page tagline+first section (false when no user type).
+- shard_rest_15: lib.py in session 3290086b scratchpad (copy of 13, OUT swapped); b1-b5.py per 3 records; fix() handles ints/empty ev; validator clean first try.
+- shard_rest_17: lib.py in session 1bd7a352 scratchpad (copy of 15, OUT swapped); b1-b5.py per 3 records; validator clean first try. Avoid inline 'if False' tricks in SF lists.
+- shard_rest_19: lib.py in session ca5aeb1c scratchpad (copy of 17, OUT swapped); b1-b5.py per 3 records; validator clean first try. Next after 19 starts with new session: copy lib.py/view.py from previous scratchpad and sed shard names.
+- shard_rest_21: lib.py in session 6fc586f8 scratchpad (copy of 19, OUT swapped); b1-b5.py per 3 records; validator clean first try.
+- shard_rest_23: lib.py in session 16eaeb88 scratchpad (copy of 21, OUT swapped); b1-b5.py per 3 records; validator clean first try.
+- shard_rest_25: lib.py in session c3cba6b9 scratchpad (copy of 23, OUT swapped); b1-b5.py per 3 records; validator clean first try.
+- shard_rest_27: lib.py in session 7df8c812 scratchpad (copy of 25, OUT swapped); b1-b5.py per 3 records; validator clean first try.
+- shard_rest_29: lib.py in session 6c13ce4e scratchpad (copy of 27, OUT swapped); b1-b5.py per 3 records; validator clean first try.
+- shard_rest_31: lib.py in session 5b491965 scratchpad (copy of 29, OUT swapped); b1-b5.py per 3 records; validator clean first try.
+- shard_rest_33: lib.py in session c434308b scratchpad (copy of 31, OUT swapped); b1-b5.py per 3 records; validator clean first try.
+- shard_rest_35: lib.py in session 99ad9c5a scratchpad (copy of 33, OUT swapped); b1-b5.py per 3 records; validator clean first try. Organizer tracks (Best Hardware, Best ML/AI, Most Entertaining Pitch) => [].
+- shard_rest_37: lib.py in session e48f349e scratchpad (copy of 35, OUT swapped); b1-b3.py per 4 records; validator clean first try. Organizer tracks (IATSU Design, GRAND Dev Tools) => [].
+- TASK-101: spot-check compares only schema fields (has_hardware is not in S3 output). Seed 101.
+- TASK-103: scripts/s7_sponsor_cards.py regenerates sponsor_cards.md; hand-written findings live in cards_logic(); Q13 sponsor name for NMC is "NMC2", PNC is "PNC Bank". Q13_sponsor_card_stats.csv not yet in data/tables/INDEX.md.
+- TASK-106: review checks done by python snippets in-session; kit/archetype numbers all matched tables, issues were wording/overreach and NMC2/hardware contradictions.

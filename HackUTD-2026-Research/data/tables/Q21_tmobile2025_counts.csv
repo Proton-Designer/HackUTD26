@@ -1,0 +1,28 @@
+metric,group,n,N,pct,low_n,names
+happiness_index,winner,3,3,100,True,Beacon; HarmoniQ; InsighT
+map_or_heatmap,winner,2,3,67,True,Beacon; InsighT
+llm_actions,winner,3,3,100,True,Beacon; HarmoniQ; InsighT
+auth0,winner,2,3,67,True,Beacon; HarmoniQ
+synthetic_or_mock_mentioned,winner,1,3,33,True,HarmoniQ
+call_or_voice,winner,1,3,33,True,Beacon
+outage_data,winner,3,3,100,True,Beacon; HarmoniQ; InsighT
+has_live_demo,winner,1,3,33,True,InsighT
+median_n_tech_items,winner,6,3,,True,
+happiness_index,demo_ready,7,8,88,False,MagentaMonitor; PulseWire; Read the Room; Satisfaction Visual Analytics (SAM); SentimentRadar; T-Pulse; T-Time
+map_or_heatmap,demo_ready,6,8,75,False,Read the Room; Satisfaction Visual Analytics (SAM); SentimentRadar; Sync; T-Pulse; T-Time
+llm_actions,demo_ready,7,8,88,False,PulseWire; Read the Room; Satisfaction Visual Analytics (SAM); SentimentRadar; Sync; T-Pulse; T-Time
+auth0,demo_ready,0,8,0,False,
+synthetic_or_mock_mentioned,demo_ready,5,8,62,False,MagentaMonitor; Satisfaction Visual Analytics (SAM); SentimentRadar; Sync; T-Pulse
+call_or_voice,demo_ready,1,8,12,False,Read the Room
+outage_data,demo_ready,2,8,25,False,MagentaMonitor; Read the Room
+has_live_demo,demo_ready,1,8,12,False,T-Time
+median_n_tech_items,demo_ready,4,8,,False,
+happiness_index,random,5,8,62,False,lisTen.AI; MoodWave; PulseScore; T-Mobile Happiness Index; T-Mobile Happy Assesment Dashboard
+map_or_heatmap,random,6,8,75,False,mimimimimi; MoodWave; T-Care; T-Data; T-Mobile Happiness Index; T-Mobile Happy Assesment Dashboard
+llm_actions,random,3,8,38,False,mimimimimi; T-Data; T-Mobile Happy Assesment Dashboard
+auth0,random,1,8,12,False,lisTen.AI
+synthetic_or_mock_mentioned,random,4,8,50,False,lisTen.AI; MoodWave; T-Mobile Happiness Index; T-Mobile Happy Assesment Dashboard
+call_or_voice,random,2,8,25,False,mimimimimi; T-Care
+outage_data,random,3,8,38,False,MoodWave; T-Care; T-Mobile Happy Assesment Dashboard
+has_live_demo,random,0,8,0,False,
+median_n_tech_items,random,3,8,,False,

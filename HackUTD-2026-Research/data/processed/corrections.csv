@@ -1,0 +1,4 @@
+project_id,action,award_idx,reason,source
+hackutd-2024-investiq,drop_award,0.0,"'First Place' badge is from the Lightning Fast AI Hackathon, not HackUTD; only HackUTD win is Infosys",outputs/close_reads/hackutd_2024_winners.md
+hackutd-2024-roomie,exclude_project,,"No Devpost page; HackUTD year unconfirmed",outputs/close_reads/hackutd_2024_winners.md
+hackutd-2024-the-virtual-fitness-assistant,exclude_project,,"Prize badges are from Student Hacks, not HackUTD",outputs/close_reads/hackutd_2024_winners.md

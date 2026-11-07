@@ -1,0 +1,7 @@
+dimension,winners_N,winners_ge4,winners_ge4_pct,floor_if_ge80,paired_first_median,paired_lower_median,paired_median_gap,paired_tracks_first_higher,paired_tracks_equal,paired_tracks_first_lower,hackutd25_winners_median,demo_ready_median
+innovation,1048,407 of 1048 (39%),39,False,3,3.0,0.0,36,56,35,3.0,2.0
+technical_complexity,1048,580 of 1048 (55%),55,False,4,4.0,0.0,54,37,36,3.0,3.0
+completeness,1048,304 of 1048 (29%),29,False,3,3.0,0.0,47,42,38,3.0,3.0
+design,881,242 of 881 (27%),27,False,3.0,3,0.0,38,34,25,3,3.0
+impact,1048,101 of 1048 (10%),10,False,3,3.0,0.0,38,45,44,2.5,3.0
+presentation,1048,445 of 1048 (42%),42,False,3,3.0,0.0,52,37,38,3.0,3.0

@@ -1,0 +1,137 @@
+label_id,hackathon,prize,confidence,note,example_project
+56fbca3f1f61,HackUTD,Northmark Compute & Cloud,medium,NMC assumed,hackutd-2025-taskflow
+6430b19c0a3e,HackUTD,Best Domain Name from GoDaddy Registry,medium,MLH/GoDaddy domain prize,hackutd-2025-hyperlynx
+402e112b98ac,HackUTD,Winner Pinata,medium,"queue notes 3rd place, unverified; Pinata product prize",hackutd-2024-cheddarboxd
+88e924118a52,HackUTD,Frontier,low,Frontier entity/industry unclear,hackutd-2024-frontiermap
+7da55ce27f72,HackUTD,Toyota,medium,Toyota entity unclear,hackutd-2024-kaizendrive
+5e8386964f0e,HackUTD,Next Step; Interview Cake,medium,two sponsor prizes; no problem stated,hackutd-2024-the-virtual-fitness-assistant
+d104ff6dc6f3,HackUTD,Winner Northmark Compute & Cloud,medium,NMC assumed,hackutd-2025-datadriver
+4d64aa4d11b6,HackUTD,Veolia,medium,Veolia industry assumed other,hackutd-2024-ecolens
+88e924118a52,HackUTD,Frontier,low,Frontier entity/industry unclear,hackutd-2024-homelander
+8873bab5db09,HackUTD,Toyota,medium,Toyota entity unclear,hackutd-2024-fuelicient
+69388666e126,HackUTD,Best Devpost,medium,Devpost sponsor prize,hackutd-2024-planet-score
+9c3a92215a0b,HackUTD,"Winner General and Hardware Track (per ACM UTD site, year unconfirmed)",low,label merges General and Hardware track; year unconfirmed,hackutd-2024-roomie
+56fbca3f1f61,HackUTD,Northmark Compute & Cloud,medium,NMC assumed,hackutd-2025-dcdaddy
+4d64aa4d11b6,HackUTD,Veolia,medium,Veolia industry assumed other,hackutd-2024-eco-fast-track
+88e924118a52,HackUTD,Frontier,low,Frontier entity/industry unclear,hackutd-2024-promising-products
+7da55ce27f72,HackUTD,Toyota,medium,Toyota entity unclear,hackutd-2024-toyotrends
+748091d0b5b8,Cal Hacks,[Anthropic] Claude for Public Benefit,medium,Claude product,cal-hacks-cal-hacks-13-0-2026-standard-response
+ec37fd97245d,TreeHacks,Winner Web3 Prize: Best AI Agents ($8k Cash + 8k EIGEN [1st] & $7k Cash + 7k EIGEN [2nd]),medium,1st and 2nd tiers listed in one label; sponsor inferred from EIGEN,treehacks-treehacks-2025-mediledger
+af4e88f52347,TreeHacks,Healthcare Grand Prize,medium,track grand prize,treehacks-treehacks-2025-therms-thermoregulation-wearables-with-ai-powered-insights
+3fe3a39afb31,TreeHacks,Autonomy Grand Prize,medium,track grand prize,treehacks-treehacks-2025-visionguard-smart-vision-for-smarter-driving
+1107494bdb36,TreeHacks,Education Grand Prize,medium,track grand prize,treehacks-treehacks-2025-hivemind
+d686d243c868,TreeHacks,Winner [OpenAI] Artificial Intelligence Track,medium,tiers 1st/2nd/3rd listed in category; rank not stated,treehacks-treehacks-2026-mira
+fca802e20a63,TreeHacks,Winner [OpenAI] Artificial Intelligence Track,medium,tier not stated,treehacks-treehacks-2026-visionos
+60257fec8068,HackMIT,SPONSOR WINNER: GIVECAMPUS - 1ST PLACE + GRAND PRIZE - FUNDRAISING / CONSTITUENT INTELLIGENCE CHALLENGE,medium,1st place plus grand prize in one label,hackmit-hackmit-2026-donorex
+3aa7647e0a67,HackMIT,SPONSOR WINNER: OPENAI - 2ND PLACE - THE FIFTH TEAMMATE; SPONSOR WINNER: REGENERON - GRAND PRIZE - MAKE CLINICAL TRIALS AND BIOSTATISTICS BETTER!,medium,Regeneron grand prize treated as 1,hackmit-hackmit-2026-elute
+05bbacddc671,HackMIT,SPONSOR WINNER: RAMP - 3RD PLACE - SAVE TIME. SAVE MONEY; SPONSOR WINNER: MAXIMOR AI - 4TH PLACE - OFFICE OF THE CFO AGENT CHALLENGE,medium,4th place mapped to HM,hackmit-hackmit-2026-money-maxer
+8af91ff4e9d2,HackMIT,SPONSOR WINNER: GIVECAMPUS - 2ND PLACE + MOST PRODUCTION READY - FUNDRAISING / CONSTITUENT INTELLIGENCE CHALLENGE,medium,2nd place plus Most Production Ready in one label,hackmit-hackmit-2026-stewardship-sam
+e5679cc9e1a3,LA Hacks,Track: AI Agents League (Fetch.ai),medium,Fetch.ai Agents League track,la-hacks-la-hacks-2025-alto
+e5679cc9e1a3,LA Hacks,Track: AI Agents League (Fetch.ai),medium,Fetch.ai Agents League track,la-hacks-la-hacks-2025-lumos
+e5679cc9e1a3,LA Hacks,Track: AI Agents League (Fetch.ai),medium,Fetch.ai Agents League track,la-hacks-la-hacks-2025-fynd
+e5679cc9e1a3,LA Hacks,Track: AI Agents League (Fetch.ai),medium,Fetch.ai Agents League track,la-hacks-la-hacks-2025-startnow
+af9519ef6360,LA Hacks,Google Gemini: Chase the Future!,medium,unsure domain vs api_depth,la-hacks-la-hacks-2025-embers
+28b5afb892fe,LA Hacks,Winner Track: Catalyst For Care; Winner Track: Agentverse - Search & Discovery of Agents,medium,Agentverse is Fetch.ai product,la-hacks-la-hacks-2026-dots
+34b5ef6eb4d1,LA Hacks,Winner Track: Light The Way; Winner Figma Make Challenge,medium,Figma Make is a product,la-hacks-la-hacks-2026-accent
+cab19ae23995,LA Hacks,Track: Agentverse - Search & Discovery of Agents,medium,Agentverse is Fetch.ai product,la-hacks-la-hacks-2026-jarvis
+cab19ae23995,LA Hacks,Track: Agentverse - Search & Discovery of Agents,medium,Agentverse is Fetch.ai product,la-hacks-la-hacks-2026-neurallens
+cab19ae23995,LA Hacks,Track: Agentverse - Search & Discovery of Agents,medium,Agentverse is Fetch.ai product,la-hacks-la-hacks-2026-multieval
+cab19ae23995,LA Hacks,Track: Agentverse - Search & Discovery of Agents,medium,Agentverse is Fetch.ai product,la-hacks-la-hacks-2026-residue
+cab19ae23995,LA Hacks,Track: Agentverse - Search & Discovery of Agents,medium,Agentverse is Fetch.ai product,la-hacks-la-hacks-2026-northstar
+cab19ae23995,LA Hacks,Track: Agentverse - Search & Discovery of Agents,medium,Agentverse is Fetch.ai product,la-hacks-la-hacks-2026-pols-15
+cab19ae23995,LA Hacks,Track: Agentverse - Search & Discovery of Agents,medium,Agentverse is Fetch.ai product,la-hacks-la-hacks-2026-conjure
+8e6f53c762a4,HackGT,Best Emerging - 1st Place,medium,Emerging assumed beginner tier,hackgt-hackgt-11-woundai
+68d6a674b340,HackGT,Best Emerging - 2nd Place,medium,Emerging assumed beginner tier,hackgt-hackgt-11-safesnap
+d0b3ca167d0f,HackGT,Best Emerging - 3rd Place,medium,Emerging assumed beginner tier,hackgt-hackgt-11-oncobot
+39c4b847d5f4,HackGT,PHRI Challenge - 1st Place,low,PHRI Challenge sponsor unclear,hackgt-hackgt-11-clarity
+7f7603f0eac3,HackGT,Winner Best Emerging - 1st Place,medium,Emerging assumed beginner tier,hackgt-hackgt-12-vertex-a11y
+1197c0beaca6,HackGT,Winner Best Emerging - 2nd Place,medium,Emerging assumed beginner tier,hackgt-hackgt-12-orion
+7aba6a6d72f3,HackGT,PrizePicks - The Second Screen Experience,medium,"""Second Screen"" is part of challenge name",hackgt-hackgt-12-sideline
+acbf8ee880e3,HackGT,Notability: Trust the Process,medium,Notability prize; problem unclear,hackgt-hackgt-13-atp-accessible-to-prescription
+34d0f7078eb8,DubHacks,SideShift: 3rd Place,medium,company prize; problem not stated,dubhacks-dubhacks-26-lapse
+20a13095a0a9,DubHacks,SideShift: 1st Place,medium,company prize; problem not stated,dubhacks-dubhacks-26-octaby
+9149be7b99e0,DubHacks,SideShift: 2nd Place,medium,company prize; problem not stated,dubhacks-dubhacks-26-noxen
+d16fb18b7dda,DubHacks,DubHacks Next: 1st Place,medium,DubHacks Next; meaning unclear,dubhacks-dubhacks-26-noxen
+1e14a3a2afe7,DubHacks,DubHacks Next: 2nd Place,medium,DubHacks Next; meaning unclear,dubhacks-dubhacks-26-opencanopy
+497d69651161,DubHacks,VEYZL: First Place,medium,company prize; problem not stated,dubhacks-dubhacks-26-dump
+e51e5b9b4cc5,DubHacks,Photon: Track Winner,medium,Photon track winner; problem unclear,dubhacks-dubhacks-26-tenant
+3d4dc94ee237,DubHacks,T-Mobile: 1st Place,medium,T-Mobile at non-HackUTD event; problem unclear,dubhacks-dubhacks-26-formly-the-secure-fast-form-filler
+26eb7c5e3b67,DubHacks,T-Mobile: 2nd Place,medium,T-Mobile at non-HackUTD event; problem unclear,dubhacks-dubhacks-26-starward
+d77374c29f36,DubHacks,T-Mobile: 3rd Place,medium,T-Mobile at non-HackUTD event; problem unclear,dubhacks-dubhacks-26-kill-switch
+e04d9fc93482,DubHacks,SpaceXAI: 1st Place,medium,company prize; problem not stated,dubhacks-dubhacks-26-ko-rbit
+bb9dccdb1d4d,Bitcamp,Best Hack Promoting Public Health - Bloomberg,medium,Bloomberg public-health themed prize,bitcamp-bitcamp-2025-carbonqapture
+6f6b910a608a,Bitcamp,Real World Prize - Ambrook; Best Champion of Open Source w/ Featherless - Featherless; Best Intermediate Data Science Track Hack - Bitcamp,medium,Ambrook prize problem unclear; open,bitcamp-bitcamp-2026-terrametric
+760618bcca28,ConUHacks,1st Place - 4x PS5 and MLH Winner Pins,medium,"category note says MLH, but label is overall placement",conuhacks-conuhacks-ix-prezpal
+2ac28cb700ca,ConUHacks,2nd Place - 4x Meta Quest 3S 128GB VR Headset with Touch Plus Controllers & Batman: Arkham Shadow and MLH Winner Pins,medium,"category note says MLH, but label is overall placement (prizes mention MLH pins only)",conuhacks-conuhacks-ix-leetwrite
+67217a993eb8,ConUHacks,3rd Place - 4x MSI MAG 27” QHD Gaming monitor and MLH Winner Pins,medium,"category note says MLH, but label is overall placement",conuhacks-conuhacks-ix-404-lost-found
+544f3f951f28,HackUMass,Best Use of GenAI,medium,sponsor unnamed,hackumass-hackumass-xii-storybytes
+6bc5549f93d3,HackUMass,Best Use of ML/AI,medium,sponsor unnamed,hackumass-hackumass-xii-loopwise
+fecc13ac1d45,StormHacks,CSSS Rube Goldberg Challenge,medium,club challenge,stormhacks-stormhacks-2025-hello-world-rube-goldberg-the-stormhacks-experience
+577acc471e95,StormHacks,Surge Choice Award,low,Surge Choice Award unclear,stormhacks-stormhacks-2025-ecodepot
+877ae3a91f23,StormHacks,SFU Satellite - ALEASAT - Earth Observation Track,medium,club/institute track,stormhacks-stormhacks-2026-common-ground
+577acc471e95,StormHacks,Surge Choice Award,low,Surge Choice Award unclear,stormhacks-stormhacks-2026-otter-nonsense
+ab109f794cff,Junction,Overall winner (prize name not stated),medium,prize name not stated,junction-junction-2024-breakdance-frank-sandqvist
+1d83aae1c00b,Junction,Main prize (exact prize name not stated by source),medium,prize name not stated,junction-junction-2025-wavelet-rudrrayan-manna-arjun-juneja-keanu-czirjak-akshith-alluri
+9b82c6a211bf,HackEurope,Overall winner / top prize (per TCD article; which city not stated),medium,city not stated,hackeurope-hackeurope-2026-zerostrike-julian-lewandowski-aditya-joshi-eniola-olumeyan-1
+008cb5f2a05f,TAMUhack,Best Use of Gen AI,medium,sponsor unnamed,tamuhack-tamuhack-2025-findair
+a98ac3590c65,TAMUhack,First Place for NorthMark Compute & Cloud Challenge,medium,NMC assumed,tamuhack-tamuhack-2026-constellation
+e52cb496ff52,TAMUhack,Second Place for NorthMark Compute & Cloud Challenge,medium,NMC assumed,tamuhack-tamuhack-2026-cinder-control
+99105d763c2b,TAMUhack,Third Place for NorthMark Compute & Cloud Challenge,medium,NMC assumed,tamuhack-tamuhack-2026-pocketplay
+15942356fc18,HackTX,[Best Novice Hack] The First Chapter,medium,label silent; placement from field,hacktx-hacktx-2026-once-upon-a-focus
+4a7f84f7f80f,HackIllinois,Second Place – Frostbyte Runner-Up,medium,runner-up wording but ranked 2nd,hackillinois-hackillinois-2026-sparsh-mukthi
+7cd87babe788,HackIllinois,Track: Best Hardware Hack (John Deere Mechathon) (1st Place),medium,John Deere Mechathon sponsor on hardware track,hackillinois-hackillinois-2026-terraglide
+344dfaf9191b,HackIllinois,Track: Best Hardware Hack (John Deere Mechathon) (Easy Track Winner),medium,John Deere Mechathon; Easy Track winner,hackillinois-hackillinois-2026-terraglide
+40e6b5058c4d,HackPrinceton,"AI Research and Alignment Environments by d_model [$500 for 1st, $250 for 2nd, $125 for 3rd (Amazon gift cards)]",medium,tiers 1st/2nd/3rd listed in label,hackprinceton-hackprinceton-spring-2026-asclepius
+40e6b5058c4d,HackPrinceton,"AI Research and Alignment Environments by d_model [$500 for 1st, $250 for 2nd, $125 for 3rd (Amazon gift cards)]",medium,tiers 1st/2nd/3rd listed in label,hackprinceton-hackprinceton-spring-2026-object-state-tracking-in-language-models
+40e6b5058c4d,HackPrinceton,"AI Research and Alignment Environments by d_model [$500 for 1st, $250 for 2nd, $125 for 3rd (Amazon gift cards)]",medium,tiers 1st/2nd/3rd listed in label,hackprinceton-hackprinceton-spring-2026-confab
+2843fe40b5de,HackPrinceton,Best use of Dedalus Containers by Dedalus [$250 for the top 4],medium,top 4 prizes,hackprinceton-hackprinceton-spring-2026-greenchain
+eeaa77a7be1a,HackPrinceton,Best agent swarm hosted on Dedalus Containers by Dedalus [$500 for 1st place],medium,1st place prize listed,hackprinceton-hackprinceton-spring-2026-greenchain
+ce0d2cc0de51,HackPrinceton,"Best AI-Powered App by Orchids (1st place: $300 cash, 2nd place: $200 cash)",medium,1st/2nd listed in label,hackprinceton-hackprinceton-spring-2026-citadail
+ce0d2cc0de51,HackPrinceton,"Best AI-Powered App by Orchids (1st place: $300 cash, 2nd place: $200 cash)",medium,1st/2nd listed in label,hackprinceton-hackprinceton-spring-2026-atlas
+fe82665af1cf,HackNC,[Photon] Best iMessage Agent - 1st Place,medium,iMessage agent via Photon,hacknc-hacknc-2026-batman
+31c55e474ed3,HackNC,[Photon] Best iMessage Agent - 2nd Place,medium,iMessage agent via Photon,hacknc-hacknc-2026-phish-finder
+1c311016fdce,SwampHacks,"Best Overall Sponsored By Vobile (1st, 2nd, & 3rd Place); Best Game Design Project",medium,label lists 1st/2nd/3rd tiers without saying which team got which,swamphacks-swamphacks-xi-signhero
+f9fc4eb756c5,SwampHacks,"Best Overall Sponsored By Vobile (1st, 2nd, & 3rd Place)",medium,label lists 1st/2nd/3rd tiers; rank not stated,swamphacks-swamphacks-xi-restory
+f9fc4eb756c5,SwampHacks,"Best Overall Sponsored By Vobile (1st, 2nd, & 3rd Place)",medium,label lists 1st/2nd/3rd tiers; rank not stated,swamphacks-swamphacks-xi-offtrails
+285bdddac650,UofTHacks,Overall UofTHacks First Place,high,Best <event> Hack,uofthacks-uofthacks-furme
+3a3cb54713fa,UofTHacks,Overall UofTHacks Third Place,high,Best <event> Hack,uofthacks-uofthacks-wayback
+d2e0d42ebf93,UofTHacks,"Overall 1st place; Best ""UofT"" Hack",high,Best <event> Hack,uofthacks-uofthacks-13-identity-matrix
+fbf83fcaed4b,hackCBS,1st Runner Up,high,1st runner-up,hackcbs-hackcbs-8-0-wealthpulse
+5a8b25d9cd1f,TreeHacks,Winner Edge AI Prize: Operator Optimization Champion ($5k Cash),high,possibly NVIDIA-linked; sponsor unconfirmed,treehacks-treehacks-2025-pushpa
+396796cf670c,TreeHacks,Winner Edge AI Prize: Most Creative On-Device AI Deployment ($10k Cash),high,possibly NVIDIA-linked; sponsor unconfirmed,treehacks-treehacks-2025-survivex
+881b23c7615f,HackGT,SnapAR Elexa Power Bank (20000mAH),medium,prize item listed,hackgt-hackgt-11-firefightar
+cd5f4ecc61e4,HackGT,Impiricus,high,HCP engagement,hackgt-hackgt-12-vital
+8f6012da4a9d,Bitcamp,Neelbauer Agentic Revolution Award (NARA) - Alumni Prize,high,alumni prize,bitcamp-bitcamp-2026-catan-tactics
+f2019093a400,Bitcamp,Best Champion of Open Source w/ Featherless - Featherless; Neelbauer Agentic Revolution Award (NARA) - Alumni Prize,high,alumni prize,bitcamp-bitcamp-2026-nara-autonomous-red-teaming-agent
+9504f155c051,UC Berkeley AI Hackathon,Google: Best Use of Gemini; Nobel Era Group (truncated),medium,truncated label,uc-berkeley-ai-hackathon-uc-berkeley-ai-hackathon-2025-dreamdirector
+fbe9b7ff56cd,UC Berkeley AI Hackathon,Nobel Era Group: Best Projects Leveraging LLM (truncated),medium,truncated label,uc-berkeley-ai-hackathon-uc-berkeley-ai-hackathon-2025-navo
+ef729870e235,Cal Hacks,Winner Y Combinator: Build an Iconic YC Company - 1st Place,medium,challenge-like; unsure,cal-hacks-cal-hacks-12-0-2025-haven
+396796cf670c,TreeHacks,Winner Edge AI Prize: Most Creative On-Device AI Deployment ($10k Cash),high,possibly NVIDIA-linked; sponsor unconfirmed,treehacks-treehacks-2025-iris
+dcbf3f7d5352,HackGT,Winner SnapAR Skullcandy Grind True Wireless Earbuds,medium,prize item listed,hackgt-hackgt-11-snapsecure
+e7732004485f,HackGT,SnapAR Soundview Speaker,medium,prize item listed,hackgt-hackgt-11-spectackles
+cd5f4ecc61e4,HackGT,Impiricus,high,HCP engagement,hackgt-hackgt-12-doc-mcquery
+cd5f4ecc61e4,HackGT,Impiricus,high,HCP engagement,hackgt-hackgt-12-medicus
+8f6012da4a9d,Bitcamp,Neelbauer Agentic Revolution Award (NARA) - Alumni Prize,high,alumni prize,bitcamp-bitcamp-2026-arena
+53245bcdf647,Cal Hacks,[Spacetime] Best Use of Spacetime,high,Spacetime assumed,sponsor-cal-hacks-cal-hacks-13-0-bandit-the-only-band-you-need
+53245bcdf647,Cal Hacks,[Spacetime] Best Use of Spacetime,high,Spacetime assumed,sponsor-cal-hacks-cal-hacks-13-0-ender-s-bench
+53245bcdf647,Cal Hacks,[Spacetime] Best Use of Spacetime,high,Spacetime assumed,sponsor-cal-hacks-cal-hacks-13-0-geonosisai
+53245bcdf647,Cal Hacks,[Spacetime] Best Use of Spacetime,high,Spacetime assumed,sponsor-cal-hacks-cal-hacks-13-0-luyten
+53245bcdf647,Cal Hacks,[Spacetime] Best Use of Spacetime,high,Spacetime assumed,sponsor-cal-hacks-cal-hacks-13-0-orkio
+53245bcdf647,Cal Hacks,[Spacetime] Best Use of Spacetime,high,Spacetime assumed,sponsor-cal-hacks-cal-hacks-13-0-pacioli
+53245bcdf647,Cal Hacks,[Spacetime] Best Use of Spacetime,high,Spacetime assumed,sponsor-cal-hacks-cal-hacks-13-0-rally
+53245bcdf647,Cal Hacks,[Spacetime] Best Use of Spacetime,high,Spacetime assumed,sponsor-cal-hacks-cal-hacks-13-0-skyfall
+53245bcdf647,Cal Hacks,[Spacetime] Best Use of Spacetime,high,Spacetime assumed,sponsor-cal-hacks-cal-hacks-13-0-vouch
+a35bb845cafa,DubHacks,Photon: Runner Up,medium,runner-up,sponsor-dubhacks-dubhacks-2026-restock
+48592853a2f7,HackHarvard,UNCONFIRMED: appears in winners=true gallery AND project text mentions Photon; Devpost page shows no prize badge yet (Photon 2.0 messaging agent track: winner/runner-up/best voice),low,unconfirmed badge,sponsor-hackharvard-hackharvard-2026-concord
+48592853a2f7,HackHarvard,UNCONFIRMED: appears in winners=true gallery AND project text mentions Photon; Devpost page shows no prize badge yet (Photon 2.0 messaging agent track: winner/runner-up/best voice),low,unconfirmed badge,sponsor-hackharvard-hackharvard-2026-elfie
+48592853a2f7,HackHarvard,UNCONFIRMED: appears in winners=true gallery AND project text mentions Photon; Devpost page shows no prize badge yet (Photon 2.0 messaging agent track: winner/runner-up/best voice),low,unconfirmed badge,sponsor-hackharvard-hackharvard-2026-keepsake
+48592853a2f7,HackHarvard,UNCONFIRMED: appears in winners=true gallery AND project text mentions Photon; Devpost page shows no prize badge yet (Photon 2.0 messaging agent track: winner/runner-up/best voice),low,unconfirmed badge,sponsor-hackharvard-hackharvard-2026-mirage
+48592853a2f7,HackHarvard,UNCONFIRMED: appears in winners=true gallery AND project text mentions Photon; Devpost page shows no prize badge yet (Photon 2.0 messaging agent track: winner/runner-up/best voice),low,unconfirmed badge,sponsor-hackharvard-hackharvard-2026-siteline
+48592853a2f7,HackHarvard,UNCONFIRMED: appears in winners=true gallery AND project text mentions Photon; Devpost page shows no prize badge yet (Photon 2.0 messaging agent track: winner/runner-up/best voice),low,unconfirmed badge,sponsor-hackharvard-hackharvard-2026-swarm
+48592853a2f7,HackHarvard,UNCONFIRMED: appears in winners=true gallery AND project text mentions Photon; Devpost page shows no prize badge yet (Photon 2.0 messaging agent track: winner/runner-up/best voice),low,unconfirmed badge,sponsor-hackharvard-hackharvard-2026-tekkey
+9b6dbd224e48,MHacks,Best Use of Spacetime,high,Spacetime assumed,sponsor-mhacks-mhacks-2026-coclip
+9b6dbd224e48,MHacks,Best Use of Spacetime,high,Spacetime assumed,sponsor-mhacks-mhacks-2026-scalpal
+9b6dbd224e48,MHacks,Best Use of Spacetime,high,Spacetime assumed,sponsor-mhacks-mhacks-2026-traycer-food-waste-intelligence
+9782ea7448d2,VTHacks,Winner [Capital One] $250 Amazon Gift Card,medium,gift card prize,sponsor-vthacks-vthacks-13-crediwise-use-the-right-card-every-time
+e063869bb39b,Hacklanta,[Photon] Agents in iMessage - Runner Up,high,runner-up,sponsor-hacklanta-hacklanta-2026-safeword
+27c575029cac,LA Hacks (AI Hackathon 2026),Photon: iMessage Runner-Up (also Visa prize),high,runner-up,sponsor-la-hacks-ai-hackathon-2026-la-hacks-ai-hackathon-2026-sproutpass

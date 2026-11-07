@@ -1,0 +1,16 @@
+scope,n_awards,n,N,pct
+all_winners,1,900,1048,86
+all_winners,2,125,1048,12
+all_winners,3,18,1048,2
+all_winners,4+,5,1048,0
+hackutd,1,57,69,83
+hackutd,2,11,69,16
+hackutd,3,1,69,1
+student_24h_inperson,1,311,365,85
+student_24h_inperson,2,48,365,13
+student_24h_inperson,3,4,365,1
+student_24h_inperson,4+,2,365,1
+student_36_48h,1,500,582,86
+student_36_48h,2,66,582,11
+student_36_48h,3,13,582,2
+student_36_48h,4+,3,582,1

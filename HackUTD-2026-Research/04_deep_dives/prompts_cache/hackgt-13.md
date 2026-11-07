@@ -1,0 +1,6 @@
+## HackGT 13 main and themed tracks - appended by dd_chunk_017
+Source: https://hackgt13.devpost.com/
+All listed tracks (Best Overall, NSA Hearsay: The Audio Authentication Challenge, Impiricus: Build the next HCP Engagement Tool, Notability: Trust the Process, Oracle of the Deep, Aramco: A Marina's Mission, The Lighthouse Laboratory, The Shipyard) are shown as prize lists only, with no description text. General brief: "build anything"; submit GitHub repo + 1-3 min pitch video; judging criteria deferred to live.hexlabs.org. Impiricus track text from HackGT 12 page (likely reused): build technology-enabled healthcare provider (HCP) engagement tools that deliver the right information at the right time. NSA Hearsay challenge per a winning team's README: detect real vs AI-synthetic voice, scored with minDCF/EER on held-out voices.
+
+## HackGT 13 "Seaside Market" (dd_chunk_018 notes) - source https://hackgt13.devpost.com/
+- Overview page lists prize names only, no track descriptions: Best Overall 1-3, Oracle of the Deep, The Shipyard, The Lighthouse Laboratory, Aramco: A Marina's Mission 1st/2nd, Impiricus HCP engagement tool, NSA Hearsay and Packet Pursuit, Meta, Visa Reimagine Shopping, SpaceXAI, Notability, MLH prizes. Rules page has no track text.

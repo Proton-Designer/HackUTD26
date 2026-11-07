@@ -1,0 +1,20 @@
+scope,sponsor_kind_combo,n,N_two_sponsor,pct,low_n
+all_winners,sponsor_domain x2,10,32,31,False
+all_winners,sponsor_api_depth+sponsor_open,5,32,16,False
+all_winners,sponsor_open x2,5,32,16,False
+all_winners,sponsor_api_depth+sponsor_domain,4,32,12,False
+all_winners,sponsor_api_depth x2,4,32,12,False
+all_winners,sponsor_domain+sponsor_open,4,32,12,False
+hackutd,sponsor_domain x2,3,3,100,True
+student_24h_inperson,sponsor_domain x2,6,13,46,False
+student_24h_inperson,sponsor_api_depth+sponsor_domain,2,13,15,False
+student_24h_inperson,sponsor_domain+sponsor_open,2,13,15,False
+student_24h_inperson,sponsor_open x2,1,13,8,False
+student_24h_inperson,sponsor_api_depth+sponsor_open,1,13,8,False
+student_24h_inperson,sponsor_api_depth x2,1,13,8,False
+student_36_48h,sponsor_api_depth+sponsor_open,4,16,25,False
+student_36_48h,sponsor_open x2,4,16,25,False
+student_36_48h,sponsor_api_depth x2,3,16,19,False
+student_36_48h,sponsor_api_depth+sponsor_domain,2,16,12,False
+student_36_48h,sponsor_domain+sponsor_open,2,16,12,False
+student_36_48h,sponsor_domain x2,1,16,6,False

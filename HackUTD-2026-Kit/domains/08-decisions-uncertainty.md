@@ -1,0 +1,107 @@
+---
+name: 08-decisions-uncertainty
+description: Open when the team must make a consequential call on thin evidence: locking the idea at hour 0-2, picking a model provider or stack, deciding which assumption to test first, a go/pivot/kill checkpoint, a teammate deadlock, choosing live vs recorded demo, or judging whether a handful of tester reactions or eval scores is real.
+---
+# Decision-making under uncertainty
+> Built from cross-domain links; thinner sourcing than other domains.
+
+## Use this when
+- Hour 0-2: three candidate ideas, four opinions, no data, and the loudest teammate is already arguing for one.
+- Any "should we do X?" fork that will cost more than 2 hours or is hard to undo (core model, data source, agent vs fixed pipeline, sponsor API).
+- Deciding which of the team's assumptions deserves the scarce validation hours before +3h.
+- A checkpoint (+6h, +8h, midpoint, +14h) where you must say persevere, pivot, or kill out loud.
+- Reading weak evidence: 3 tester reactions, one excited mentor, a 30-example eval, a prompt tweak that "seems better".
+- Late calls under fatigue: live demo vs backup video, attempt a stretch integration or not.
+
+## Core principles
+1. **Never decide on a single option; put at least three options that differ in kind on the board.** Nutt's research found single-option decisions go wrong more than half the time versus about a third with multiple options; fifteen vendors of the same solution still count as one option. [What's Your Problem?, p.52-53] [Continuous Discovery Habits, p.31-32] [Six Thinking Hats, p.104-105]
+2. **Score privately first, then add equal-weight criteria; the sum decides, not the debate.** (counterintuitive) Open discussion correlates everyone's errors behind the first confident speaker, and simple equal-weight sums matched fitted models (r about .60 vs .57) and clearly beat holistic expert judgment. [Thinking, Fast and Slow, p.84, p.224-226] [Noise, p.112-114]
+3. **Name one Decider; the vote is advisory.** (counterintuitive) With 3+ options and 4 people, pairwise majorities can cycle forever (Condorcet), and consensus produces mush; in Sprint's OstrichCo case the team voted and the CEO quietly reverted to his own untested idea anyway. [Good Strategy Bad Strategy, p.73-74] [Sprint, p.111-114]
+4. **Spend validation only where uncertainty and cost of being wrong are both high, and only on questions whose answer could change what you do.** Across scores of large decisions, only 1-4 variables justified measurement; most had information value near zero. If outcome A and outcome B lead to the same action, skip the test. [How to Measure Anything, p.28-31, p.77-78] [Testing Business Ideas, p.52-55]
+5. **Start every forecast from the base rate, then adjust.** (counterintuitive) About 70-90% of new ideas fail, only about a third of tested features move their metric, and with ~200 projects the prior for any one prize is low no matter how good the story feels. Nobody says "this will work" without a number from a real person. [The Right It, p.24] [Trustworthy Online Controlled Experiments, p.41] [Noise, p.145-146]
+6. **Estimate "how likely?" before asking "how much risk do we want?"** Mixing hope into a forecast contaminates it. Write each forecast as a percent or 90% range, keep complementary outcomes summing to 100%, then choose your risk appetite as a separate step. [Noise, p.62-63] [How to Measure Anything, p.60-62]
+7. **Multiply step reliabilities before trusting a pipeline.** At 95% per step, 10 steps succeed end to end about 60% of the time; 100 steps about 0.6%. Cut steps, add checks between them, and cap retries at about two on calls that succeed over 90%. [AI Engineering, p.539] [Generative AI Design Patterns, p.519, p.633]
+8. **Match decision speed to reversibility.** Treat two-way doors (which problem to explore, UI choices, naming) as temporary: cap them and move on. People who see a decision as reversible keep noticing its downsides and the alternatives; those who see it as final see only positives. Decide one-way doors at the last responsible moment: when waiting costs more than the risk of deciding. [Continuous Discovery Habits, p.107-108] [Getting Real, p.59] [Fundamentals of Software Architecture 2e, p.693-694]
+9. **Run a premortem just before you commit.** Writing the story of the failed demo breaks the groupthink that suppresses doubt once a decision is almost made; positive thinking is not a risk plan. [Thinking, Fast and Slow, p.257] [Good Strategy Bad Strategy, p.88] [Sprint, p.46]
+10. **Neutralize anchors and name the exact question.** Anchoring effects run about 40-55% in Kahneman's examples and hit experts nearly as hard as novices. Under a hard question ("will judges find this useful?") people silently answer an easier one ("do I like it?", "does it demo well?"). [Thinking, Fast and Slow, p.97-99, p.118-126]
+11. **Size your trust to your sample.** For 95% confidence one system beats another: a 30-point gap needs about 10 examples, 10 points about 100, 3 points about 1,000. One passionate interviewee is not a mandate; a pattern across at least 3 people is a signal. [AI Engineering, p.405-407] [Talking to Humans, p.90]
+12. **Write the prediction and the kill criterion before you see the result.** After the fact people rewrite what they believed; a pre-set trigger ("if 3 of 4 testers do not want it, we pivot the framing") turns a checkpoint into a decision instead of a rationalization. [Thinking, Fast and Slow, p.197-198] [Inspired, p.153] [Testing Business Ideas, p.61-63]
+
+## Decision procedure
+Main decision: making a consequential team call (idea lock, core technical bet, pivot, live vs recorded demo) with little data and a running clock.
+
+1. **Classify the door (1 min).** Two-way door, under 2 hours to undo: 10-minute cap, the person building it decides, done [Getting Real, p.59]. One-way door (idea lock, core model or data source, pivot after the midpoint, final demo mode): run steps 2-9. Total cap: 90 minutes for idea lock, 30 minutes for anything else. If a stack debate passes 20 minutes, run a 30-minute spike on each option or take what the strongest builder already knows [Fundamentals of Software Architecture 2e, p.693-694].
+2. **Frame it (3 min).** At the top of a shared note write: the target question, the decision it feeds, and what you would do differently under each answer [Thinking, Fast and Slow, p.97-99] [How to Measure Anything, p.28-31]. Confirm who the Decider is (the team plan's decision owner).
+3. **Generate options (5-8 min).** Silent write for 3 minutes, trim to your best 2-3, post them; you need at least three options that differ in kind, not three versions of one [Sprint, p.117-118] [What's Your Problem?, p.52-53]. For each, list 3-5 load-bearing dependencies marked "exists and we have access" or "must build". Drop any option with more than one "must build" that is not its core novelty [Where Good Ideas Come From, p.35-38]. Spend 2 minutes per dependency confirming it really exists (open the file, call the API once) [Agile Testing, p.373-376].
+4. **Score privately (5 min).** Criteria fixed before anyone speaks: the HackUTD criteria plus "feasible in our hours", 1-5 each, equal weight. Each person also writes, privately, a percent chance the option is demo-ready by +14h and a 90% range for build hours. No numbers spoken until all four are written [Noise, p.112-114] [Thinking, Fast and Slow, p.84, p.118-126].
+5. **Sum and read the gap.** Sum across people and criteria. If the leader beats second place by 10% of maximum points or more, it is the default. If closer, discuss only the criteria where scores split, then apply tie-breakers in order: (a) hours until a stranger can try it [Creative Confidence, p.117], (b) cheaper to reverse [Six Thinking Hats, p.131-132], (c) fewer "must build" dependencies. Each person may add one gut score at equal weight, but nobody overrides the total [Thinking, Fast and Slow, p.224-226]. A wide spread in time estimates flags what to prototype first [How to Measure Anything, p.60-62].
+6. **List what must be true for the leader (10 min).** 3-5 assumptions in blunt present tense, no analogies [Lean Startup, p.71-73]. Plot importance against evidence you already have; the important, evidence-free quadrant gets tested, and only its top 1-2 [Testing Business Ideas, p.52-55]. Each test must run in under an hour and in parallel with building, never as a gate past +3h [User Story Mapping, p.83, p.285].
+7. **Do the reliability math for anything on the demo path.** Multiply per-step success. If the end-to-end estimate is below about 90%, cut a step, cache a result, or replace an autonomous loop with a fixed chain using one or two model calls [AI Engineering, p.539]. Later, rehearse the path 10 times; more than 1 failure in 10 means remove or cache a step [Generative AI Design Patterns, p.633].
+8. **Premortem plus dissent (10 min).** 5 minutes silent: "It is Sunday morning and the demo was a disaster. Why?" Cluster and keep the top 3; each gets a mitigation or a fallback (cached data, recorded clip) [Thinking, Fast and Slow, p.257]. Then one assigned dissenter gets 5 minutes to argue against the leader and for a very different option; rotate the role each time [Where Good Ideas Come From, p.106-108]. The lead asks, "What is the strongest reason this is a bad idea?" [Crucial Conversations, p.202-203].
+9. **Decide and record (3 min).** The Decider calls it after hearing everyone. Write a 3-line record: context and alternatives, decision and why, consequences and what you gave up [Software Architecture (Ford et al.), p.23]. Add the forecast ("70% the pipeline returns real data by +3h") and the kill criterion with its checkpoint hour. If the Decider overrides the summed scores, the reason goes in the record.
+10. **At each checkpoint: persevere, pivot, or kill, out loud (10 min).** Compare results with the written forecast. Act only on patterns seen in at least 3 people [Talking to Humans, p.90]. Supporting evidence means test the next critical assumption; unclear evidence means keep testing; a triggered kill criterion means pivot (change user, problem, or solution, keeping the other two) or kill [Testing Business Ideas, p.61-63, p.96]. A full pivot is survivable up to about +8h; after +14h it usually is not. Settled decisions reopen only when a kill criterion fires, not because someone is tired or bored.
+
+## Checklists
+**Decision record check (run before acting on any one-way-door call)**
+- [ ] The target question is written, and the options differ in kind (at least 3).
+- [ ] Scores and estimates were written privately before any discussion.
+- [ ] The base rate is stated before the forecast is adjusted.
+- [ ] The chosen option has a named cost; "no downside" means you have not found it yet [Fundamentals of Software Architecture 2e, p.26].
+- [ ] Forecasts are percents or ranges that add up, not "should be fine".
+- [ ] There is a kill criterion with an hour attached, plus a named fallback.
+- [ ] The Decider is named, and any override of the scores carries a written reason.
+
+**Evidence check (before letting data move a decision)**
+- [ ] Sample size is stated; the claimed gap is large enough for it (30-50 eval examples: trust only 10+ point jumps, and call the result "preliminary").
+- [ ] The finding repeats across at least 3 people, or is labeled a hypothesis.
+- [ ] Someone wrote a competing interpretation of the same data and it lost on the merits [This Is Service Design Doing, p.208].
+- [ ] The test was set up to find where the idea breaks, not to "validate" it [Just Enough Research, p.42-43].
+- [ ] The claim matches the question type actually answered (descriptive, exploratory, or predictive; never causal from a weekend dataset) [The Elements of Data Analytic Style, p.8-12].
+
+**Estimate sanity (before committing hours or quoting a number)**
+- [ ] Round numbers, written assumptions, and units on every figure [System Design Interview, p.40].
+- [ ] A Fermi check of 2-4 factors lands within about 10x of the claim [Calling Bullshit, p.273-278].
+- [ ] Test effort, unknown APIs, and demo data are included; "sounds easy" stories overrun by 5-10x [Agile Testing, p.373-376].
+- [ ] The estimate was not bent to fit the deadline; if the plan needs heroics, it is a plan to cut [The Mythical Man-Month, p.39].
+
+## Anti-patterns
+- **Whether-or-not framing.** Tell: "Should we do the AR thing?" with nothing to compare it to. Fix: reframe as "which of these three?" and add two options that differ in kind. [Continuous Discovery Habits, p.31-32]
+- **First speaker sets the frame.** Tell: someone says "this is a $40B market" or "that's 2 hours" before others have estimated, and every later number lands near it. Fix: private estimates, then take the median. [Thinking, Fast and Slow, p.118-126]
+- **Group hype.** Tell: high energy, "we love it", and zero outsiders have seen it by +8h. Fix: show the prototype to 3-5 non-teammates at the midpoint; log what they did, not what they said. [Make, p.62-63]
+- **Cycling votes.** Tell: the third round of hand-raising and the winner keeps changing. Fix: stop voting; the Decider calls it using the summed scores. [Good Strategy Bad Strategy, p.73-74]
+- **Answering the easier question.** Tell: the case for an idea is all "it would look cool on stage". Fix: re-read the target question and ask which question the discussion just answered. [Thinking, Fast and Slow, p.97-99]
+- **One-voice mandate.** Tell: a single mentor or sponsor rep's opinion rewrites the plan. Fix: treat it as a hypothesis until 2 more people repeat it. [Talking to Humans, p.90]
+- **Over-reading the eval.** Tell: "the new prompt is 4 points better" on 40 examples. Fix: bootstrap-resample or call it noise; only 10+ point jumps count at this size. [AI Engineering, p.405-407]
+- **Optimistic agent chain.** Tell: the demo path is an 8-step autonomous agent and nobody has multiplied the odds. Fix: a deterministic chain with 1-2 model decisions, plus a cached result for the riskiest step. [AI Engineering, p.539]
+- **Stack paralysis.** Tell: 40 minutes on database choice before any core behavior exists. Fix: pick the default the team knows, put it behind a thin interface, and defer the rest. [Clean Architecture, p.158-159]
+- **Relitigating.** Tell: the hour-2 debate returns at hour 10 with no new evidence. Fix: point to the decision record; reopen only if a kill criterion fired. [Software Architecture (Ford et al.), p.23]
+
+## Hackathon calibration
+- **Value-of-information math becomes a gut check.** Hubbard's full calculation becomes a 15-30 minute loop: "How uncertain are we, and how costly is being wrong?" Rank by uncertainty times consequence and test the top 2 in the first hours. [How to Measure Anything, p.31, p.77-78]
+- **Ignore significance-based methods as decision tools.** A/B tests need about 1,000 users per variant to separate 2% from 4.5%; at a hackathon, run both versions past 3-5 people and note which problems each causes. [Quantifying the User Experience, p.31] Mention controlled experiments only as "what we would measure next".
+- **The demo raises the cost of failure.** With ~4 minutes per judge in a science-fair format, one crash costs that judge's whole impression, and the same path must run many times in a row. Use the payoff tree to choose demo mode: list actions, states with probabilities, payoffs 0-10, and take the highest average [Prediction Machines, p.76-78]. Illustrative: live-works 10, live-fails 2, recorded 6 means go live only if P(live works) is above 50%; change the payoffs and watch the choice flip. For AI thresholds, set an explicit false-positive to false-negative cost ratio and put it on the slide [Machine Learning Design Patterns, p.34].
+- **Base rates argue for spreading risk, not lowering ambition.** The team wants first place; the base rate still says avoid all-or-nothing bets on a single fragile integration or prize, and give every ambitious bet a fallback. [Noise, p.145-146]
+- **Decide big things while fresh.** Depleted people default to gut feel [Thinking, Fast and Slow, p.42-43], and willpower drains with each decision [Sprint, p.103-104]. Lock one-way-door calls before the overnight low; between midnight and 6am, put a visible 5-minute timer on every debate and let the scope owner decide.
+- **Rule out slow paths early.** Fine-tuning needs hundreds to thousands of documents and days of work; use prompting plus retrieval, and list fine-tuning as roadmap. [Prompt Engineering for LLMs, p.162-165] Before committing to a model at all, check whether a rule or lookup solves it; if there is no signal in the data within an hour, drop the ML claim. [Designing Machine Learning Systems, p.20-27] [Machine Learning Design Patterns, p.466-469]
+- **Long-horizon advice to ignore.** "A week or two of conversations" becomes the first 2-3 hours [The Mom Test, p.115]. "Imagine failure a year from now" becomes "Sunday morning". Clean Architecture's "maximize decisions not made" applies to infrastructure only; the product decision must be locked by +2h.
+- **Thresholds for a 4-person team.** Kill criteria are counted in people ("3 of 4 testers"), parallel tracks are capped at two pairs, and the problem definition gets a 2-minute "is this still the problem?" at each checkpoint, then stops being reopened at feature freeze. [Inspired, p.153] [This Is Service Design Methods, p.583-584] [Are Your Lights On?, p.54-58]
+
+## Where experts disagree
+- **Commit hard vs keep options open.** Moore says decide with informed intuition and go hard, since hesitating costs more than a sub-optimal pick [Crossing the Chasm, p.76-77], and Aulet agrees [Disciplined Entrepreneurship, p.141-142]. Stickdorn says carry several parallel concepts while uncertainty is high [This Is Service Design Methods, p.560-561], and Gause says the problem definition is never final [Are Your Lights On?, p.54-58]. Follow here: commit to one idea and one user by +2h; allow two throwaway approach prototypes within that idea during hours 3-8, converging at a fixed hour. In 24 hours, a split team ships nothing.
+- **Decide now vs decide late.** Getting Real says make the call and move on [Getting Real, p.59]; Martin says defer what does not matter yet [Clean Architecture, p.158-159]; Richards says the last responsible moment [Fundamentals of Software Architecture 2e, p.693-694]. Follow here: the door type settles it. Two-way doors get 10 minutes. One-way doors get the procedure, with "last responsible" measured in hours, not days.
+- **Mechanical sum vs gut call.** Kahneman and the Noise authors say the equal-weight sum beats judgment [Noise, p.112-114]. De Bono says that when the laid-out map still does not settle it, the final step is an explicit gut call [Six Thinking Hats, p.131-132]. Osterwalder treats dot votes as a signal of excitement, not a decision [Value Proposition Design, p.189]. Follow here: the sum decides outside the 10% tie band; inside it, use the tie-breakers, then a named gut call that records what information is missing and prefers the reversible option.
+- **Decider vs aggregated judgment.** Sprint lets the Decider ignore the straw poll [Sprint, p.111-114]; Kahneman's case for independent judgments rests on aggregating them [Thinking, Fast and Slow, p.84]. Follow here: the Decider decides, but only after seeing the private scores, and writes the reason for any override. That keeps the speed and keeps the noise reduction.
+- **Test before building vs build to learn.** Hall, Bland, and Gothelf say test the riskiest assumptions first [Just Enough Research, p.52-53] [Testing Business Ideas, p.52-55] [Lean UX, p.27-28]; Levels says you cannot ask people whether an idea will work, you have to build it [Make, p.62-63]. Follow here: tests run in parallel with the build and last under an hour each; none may hold up the build past +3h. In 24 hours, the build itself is the main experiment.
+- **Score your beliefs vs unburden them.** Kahneman says write predictions down and check them against results [Thinking, Fast and Slow, p.197-198]; Portigal says a pre-interview brain dump of assumptions should not be scored afterward, because its job is to let the team hear surprises [Interviewing Users, p.143-144]. Follow both, separately: keep the brain dump of user-research hopes unscored, and keep decision forecasts in the decision record, where they are scored.
+
+## Go deeper
+- search_experts("premortem failure story before committing", domain="08-decisions-uncertainty")
+- search_experts("equal weight scorecard independent judgments noise", domain="08-decisions-uncertainty")
+- search_experts("value of information uncertainty cost of being wrong", domain="08-decisions-uncertainty")
+- search_experts("base rate outside view prediction", domain="08-decisions-uncertainty")
+- search_experts("Decider straw poll super-vote", domain="08-decisions-uncertainty")
+- search_experts("assumptions mapping importance evidence quadrant", domain="08-decisions-uncertainty")
+- search_experts("persevere pivot kill decision checkpoint", domain="08-decisions-uncertainty")
+- search_experts("compounding error multi-step agent reliability", domain="08-decisions-uncertainty")
+- search_experts("anchoring substitution easier question bias", domain="08-decisions-uncertainty")
+- search_experts("two-way door reversible decision time-box last responsible moment", domain="08-decisions-uncertainty")

@@ -1,0 +1,7 @@
+feature,value,winners_n,winners_N,winners_pct,winners_unknown,winners_low_n,demo_ready_n,demo_ready_N,demo_ready_pct,demo_ready_unknown,demo_ready_low_n,random_n,random_N,random_pct,random_unknown,random_low_n
+cover_test_score,3,30,36,83,0,False,43,49,88,0,False,33,49,67,0,False
+cover_test_score,1,2,36,6,0,False,1,49,2,0,False,1,49,2,0,False
+cover_test_score,2,4,36,11,0,False,3,49,6,0,False,5,49,10,0,False
+cover_test_score,0,0,36,0,0,False,2,49,4,0,False,10,49,20,0,False
+cover_test_3of3,True,30,36,83,0,False,43,49,88,0,False,33,49,67,0,False
+cover_test_3of3,False,6,36,17,0,False,6,49,12,0,False,16,49,33,0,False

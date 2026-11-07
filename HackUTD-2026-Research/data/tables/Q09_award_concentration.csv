@@ -1,0 +1,5 @@
+scope,projects,awards,top10pct_projects,top10pct_awards,top10pct_share,mean_awards,note
+all_winners,1048,1229,105,243,20,1.17,"dataset sampled winners per track, so concentration is a lower bound of the real one"
+hackutd,69,82,7,15,18,1.19,"dataset sampled winners per track, so concentration is a lower bound of the real one"
+student_24h_inperson,365,429,36,82,19,1.18,"dataset sampled winners per track, so concentration is a lower bound of the real one"
+student_36_48h,582,686,58,138,20,1.18,"dataset sampled winners per track, so concentration is a lower bound of the real one"

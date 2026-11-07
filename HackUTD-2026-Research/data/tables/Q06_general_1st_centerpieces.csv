@@ -1,0 +1,66 @@
+project,event_type,ai_role,centerpiece,visible
+REMI,student_36_48h,none,"Custom Arduino Nano NFC lock with encrypted keys and BLE link, paired to a Flutter two-sided marketplace app",in_demo_output
+Duet: Brainwaves -> Live Music,student_36_48h,agentic_multistep,Closed loop from EEG stream through Gemini composer to live Sonic Pi code with SingleStore storage,described_only
+FaceTimeOS: AI Mac Agent,student_36_48h,agentic_multistep,Bridging live FaceTime call audio through virtual devices into a Claude and computer-use agent loop,in_demo_output
+Sophi - The Physical Augmentation Walker,student_36_48h,agentic_multistep,"Pi 5 and three ESP32 modules integrating sensors, haptics, arms and lift with cloud Claude agent; custom iPhone arm-control harness",described_only
+PrezPal,student_24h_inperson,multimodal_pipeline,Custom slide editing engine driven by OpenAI function calls from Moonshine speech transcripts,described_only
+ViniClip,student_24h_inperson,agentic_multistep,"Async event queues and frame buffers let streaming transcription, agent cuts and ffmpeg stitching run during recording",described_only
+Quota,student_24h_inperson,rag_or_chat,AST-based cost detection and one-click refactoring engine with token estimation heuristic,in_demo_output
+WhaleBeing,student_24h_inperson,custom_or_finetuned_model,"Published whale-habitat model translated from R to Python, scored along ship-route nodes",in_demo_output
+Pyrosense,student_36_48h,custom_or_finetuned_model,"LiDAR SLAM on ROS 2 tied to VOC readings, streamed to TimescaleDB heat map with Gaussian-process prediction",in_demo_output
+Plant Hopper,student_36_48h,none,AprilTag localization with lens calibration feeding PID plus trigonometric aiming of a CAD-built two-axis water turret,in_demo_output
+BravoDispatch,student_36_48h,single_call_wrapper,none_visible,none
+Vril,student_36_48h,multimodal_pipeline,"Panel-level packaging editing with consistent UV maps, dielines and parallel Gemini texture generation",in_demo_output
+Team Zenith Hacks (project name not given),student_24h_inperson,none,none_visible,none
+Noma,student_36_48h,multimodal_pipeline,Gaussian-splat face reconstruction viewer with incision tool plus Neo4j GraphRAG built from diarized OR transcripts,in_demo_output
+Dose,student_36_48h,none,Load-cell weight-change sensing on ESP32-C3 converted to dosing-window adherence stats and anomalies,in_demo_output
+Sky-C2,student_36_48h,multimodal_pipeline,"Bearing and pinhole projection math placing live ADS-B aircraft in a stereo HUD with focus cone, no computer vision",described_only
+Sustain-ify,student_36_48h,agentic_multistep,CrewAI agents over live crawled data feeding BGE-Large vector index in MongoDB Atlas and Neo4j graph,shown_via_diagram_or_logs
+Post Surgery Pillow (PSP),student_36_48h,single_call_wrapper,Weighted triage score with hidden-critical edge-case detection and priority-ranking formula,shown_via_diagram_or_logs
+Sparsh Mukthi,student_36_48h,multimodal_pipeline,none_visible,none
+Alleaf,student_36_48h,custom_or_finetuned_model,Closed loop from ESP32 RR intervals to WESAD-trained stress model to bilateral haptics and RAG agent,described_only
+Peel - The tiny lab technician,student_24h_inperson,multimodal_pipeline,ESP32 six-LED optical dissolution instrument plus six-stage evidence pipeline over 245k Elastic documents with guardrails overriding the model,in_demo_output
+InterviewArcade,student_24h_inperson,multimodal_pipeline,Chunked audio streaming plus code sent to Gemini for combined communication and coding scores,described_only
+Scrub+,student_24h_inperson,multimodal_pipeline,"Browser CT volume rendering with live tumor margin, vessel intersection and 3,751-candidate cut optimizer driven by hand gestures",in_demo_output
+Wager Whales,student_24h_inperson,custom_or_finetuned_model,YOLOv8 fish detection over user-selected regions of restreamed live aquarium feeds to settle bets,in_demo_output
+TheBackPak,student_24h_inperson,custom_or_finetuned_model,none_visible,none
+Chronomancer,student_24h_inperson,multimodal_pipeline,Z3 SMT solver verifying a Rust DAG of non-linear time events as the game rule engine,in_demo_output
+Kitkat,student_24h_inperson,none,"Custom C++ operating system on ESP32 juggling touchscreen, display and SD card on limited buses",described_only
+Placement-ke-Pyaase,other,none,none_visible,none
+2025: A Beer Odyssey,student_24h_inperson,custom_or_finetuned_model,Random route generation through real pubs with Haversine distance plus fine-tuned vision model rating selfies,in_demo_output
+A Helping Hand,student_24h_inperson,on_device,MediaPipe hand-landmark gesture detection scoring set hand positions in a themed OpenCV game,described_only
+SpeedPUB,student_36_48h,single_call_wrapper,none_visible,none
+Soundbrush,student_36_48h,none,none_visible,none
+MMG,student_36_48h,none,Self-configured Pi Wi-Fi access points with Android phones bridging subnets via Bluetooth and Wi-Fi,in_demo_output
+convertfs,student_36_48h,none,Lazy on-the-fly conversion through a trio-based FUSE mount with automatic encoder selection,described_only
+Dr. Andy - The Deployable Surgeon,student_24h_inperson,none,Custom robotic arms with Arduino firmware driven by inverse kinematics from Quest hand tracking over WebSockets and ROS,in_demo_output
+Search and Rescue,student_24h_inperson,none,"FastAPI simulator with A* pathing and Hungarian responder assignment across multi-floor layouts, replayed in WebGL 3D",in_demo_output
+Alto,student_36_48h,agentic_multistep,"Seven uAgents coordinated by session-ID request-response, wrapping gitingest and Gemini large-context analysis",shown_via_diagram_or_logs
+codebreaker,student_36_48h,agentic_multistep,"ECVE-Bench from GitHub advisories at four hint layers, curated by Devin, with sandboxed security harness and cross-model scoring",shown_via_diagram_or_logs
+SeeForMe,student_24h_inperson,multimodal_pipeline,Real-time YOLO detection on camera feed with voice command control and spoken directions,in_demo_output
+McGill Go,student_24h_inperson,none,Selenium scraping of dynamic catalogs plus curriculum digitization matching host courses to degree requirements,described_only
+Medivision,student_36_48h,multimodal_pipeline,"Per-modality preprocessing and pretrained inference routes (DICOM, NIfTI, 3D CT/MRI) feeding LLM report generation",described_only
+Preflight-ai,student_36_48h,single_call_wrapper,"Layered npm risk pipeline: tarball script diff, Acorn AST scan, maintainer reputation, with non-overridable deterministic findings",shown_via_diagram_or_logs
+Resonator,student_36_48h,single_call_wrapper,none_visible,none
+SoundSheild,student_36_48h,on_device,Real-time spectral subtraction and compression of audio plus OpenCV rear person detection on a Pi Zero,described_only
+kinemo,student_36_48h,on_device,Two-player webcam pose tracking with velocity and acceleration math driving tuned combat and slicing rules,in_demo_output
+LUNA,student_36_48h,multimodal_pipeline,"Custom ESP32-S3 firmware, CAD enclosure and I2S audio feeding a Claude vision plus TTS backend",in_demo_output
+Orca,student_36_48h,multimodal_pipeline,"Segments speech vs humming vs beatboxing, converts to quantized MIDI, then edits via Gemini tool calls",in_demo_output
+Nomi,corporate_or_mlh_online,multimodal_pipeline,"Multi-sensor ESP32 network with pressure-film event inference and on-device posture check, feeding AWS and Nemotron summaries",in_demo_output
+GDELT Open Intelligence Agent,corporate_or_mlh_online,agentic_multistep,"ReWOO planner routing queries across AQL, full-text, vector, geospatial and cuGraph tools, with human-confirmed writes",described_only
+AffectLink,corporate_or_mlh_online,multimodal_pipeline,"Multimodal fusion into Emotional Consistency Index over face, vocal tone and transcript, all local",in_demo_output
+Permanence,student_36_48h,on_device,Self-quantized 3D VLM grounding plus custom occlusion-aware 3D tracker and persistent world memory on 8 GB Jetson,in_demo_output
+TalkTuahAirline,student_24h_inperson,agentic_multistep,"Outbound voice agent negotiating a seat swap with another passenger via Retell, Twilio and puppeteer/selenium",described_only
+cortex,student_24h_inperson,multimodal_pipeline,"On-device hand and object tracking remembering item spots, plus Gaussian splat terminal view on Vultr GPUs",in_demo_output
+HawkWatch,student_36_48h,multimodal_pipeline,Client-side TensorFlow.js pose estimation combined with audio and video context sent to a Gemini VLM,described_only
+Shepherd,student_36_48h,on_device,Gap-seeking steering over 16 LiDAR depth columns at 60fps driving an ESP32 omni wheel via 12-byte BLE packets,in_demo_output
+Growth Garden,student_36_48h,single_call_wrapper,Custom vector math for surface snapping on a 3D planet and a dynamic ambient audio system,in_demo_output
+Antrum MK 1,student_36_48h,none,"Dead reckoning with zero-velocity updates and shared yaw frame across two ESP32 devices over half-duplex RF24, custom PCB",described_only
+One Million Notes,student_36_48h,none,none_visible,none
+Identity Matrix,student_36_48h,agentic_multistep,"Server-authoritative 10Hz multiplayer engine with utility-based agent decisions, social memory and LLM isolation boundary",in_demo_output
+FurMe,unknown_duration,multimodal_pipeline,Servo-driven face tracking body combined with emotion-based Spotify playback and speech conversation,described_only
+StoryVue,student_36_48h,multimodal_pipeline,TensorFlow.js book detector gating Tesseract.js OCR into a voice-driven GPT loop,in_demo_output
+Deadbolt,student_36_48h,none,"Pre-send gate with tiered regex and checksum detectors, reversible placeholder vault and fail-closed send cancellation",in_demo_output
+Tidbits,student_24h_inperson,multimodal_pipeline,"Parallel async pipeline chaining six generative services into stitched video per lecture chunk, cut from 30 to ~5 minutes",in_demo_output
+Percival,student_24h_inperson,multimodal_pipeline,K-means clustering over a vector database of anonymized cases to retrieve similar patients for recommendations,described_only
+Circa,student_24h_inperson,custom_or_finetuned_model,"Two-axis stepper turret aimed at field coordinates with ESP-NOW sensor mesh, MQTT stack and XGBoost forecasts",in_demo_output

@@ -1,0 +1,4 @@
+eng1 shard_rest_27: assumed Clean Code, Bitcamp data science, Analytics Arcade, Hack the North 2025 are organizer/theme tracks => sponsor_fit []; Surge Choice treated as company (na prompt).
+eng1 shard_rest_33: organizer tracks (Best Beginner Hardware, in Sports) given empty sponsor_fit; Sentinel/FirstResponder have no tracks; Wolfram prompt na; 'Finance track (likely)' and 'Bonus : Retail' treated as company tracks.
+eng2 shard_rest_36: Quantum Track (Best Scientific Quantum Track Hack) treated as organizer track => sponsor_fit []; Hyphenate/Desjardins/PrizePicks/Bloomberg/Capital One treated as problem-only sponsors (features 0).
+TASK-104 assumption: significance numbers (z/Fisher) are hand estimates for orientation only; flagged 6.3/6.4 as DROP (HarmoniQ treated as ordinary data point per standing note).

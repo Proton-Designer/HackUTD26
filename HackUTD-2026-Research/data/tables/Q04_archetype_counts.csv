@@ -1,0 +1,117 @@
+archetype,field,value,n,N,pct,weighted_pct
+Hardware sense-and-act loop,_size,all,22,65,34,31
+Hardware sense-and-act loop,pattern,sensor_to_alert_or_action,10,22,45,43
+Hardware sense-and-act loop,pattern,realtime_coordination,3,22,14,15
+Hardware sense-and-act loop,pattern,vision_to_assist,3,22,14,11
+Hardware sense-and-act loop,pattern,voice_to_action,1,22,5,4
+Hardware sense-and-act loop,pattern,spatial_ar,1,22,5,4
+Hardware sense-and-act loop,pattern,data_to_decision,1,22,5,4
+Hardware sense-and-act loop,pattern,risk_detect_and_respond,1,22,5,8
+Hardware sense-and-act loop,pattern,other,1,22,5,8
+Hardware sense-and-act loop,pattern,game_or_social,1,22,5,4
+Hardware sense-and-act loop,ai_role,none,7,22,32,34
+Hardware sense-and-act loop,ai_role,multimodal_pipeline,5,22,23,21
+Hardware sense-and-act loop,ai_role,custom_or_finetuned_model,4,22,18,23
+Hardware sense-and-act loop,ai_role,on_device,3,22,14,11
+Hardware sense-and-act loop,ai_role,agentic_multistep,2,22,9,8
+Hardware sense-and-act loop,ai_role,single_call_wrapper,1,22,5,4
+Hardware sense-and-act loop,has_hardware,True,22,22,100,100
+Hardware sense-and-act loop,live_data,yes,19,22,86,85
+Hardware sense-and-act loop,live_data,no,2,22,9,11
+Hardware sense-and-act loop,live_data,unknown,1,22,5,4
+Hardware sense-and-act loop,novelty_source,combination,10,22,45,47
+Hardware sense-and-act loop,novelty_source,new_interaction,6,22,27,26
+Hardware sense-and-act loop,novelty_source,execution_of_familiar_idea,2,22,9,11
+Hardware sense-and-act loop,novelty_source,technical_method,2,22,9,8
+Hardware sense-and-act loop,novelty_source,new_user_group,1,22,5,4
+Hardware sense-and-act loop,novelty_source,new_data_or_context,1,22,5,4
+Hardware sense-and-act loop,event_type,student_36_48h,15,22,68,57
+Hardware sense-and-act loop,event_type,student_24h_inperson,5,22,23,38
+Hardware sense-and-act loop,event_type,corporate_or_mlh_online,1,22,5,2
+Hardware sense-and-act loop,event_type,unknown_duration,1,22,5,4
+Agent / dev-tool automation,_size,all,11,65,17,16
+Agent / dev-tool automation,pattern,devtool,4,11,36,37
+Agent / dev-tool automation,pattern,workflow_automation_agent,3,11,27,30
+Agent / dev-tool automation,pattern,risk_detect_and_respond,2,11,18,15
+Agent / dev-tool automation,pattern,data_to_decision,1,11,9,4
+Agent / dev-tool automation,pattern,voice_to_action,1,11,9,15
+Agent / dev-tool automation,ai_role,agentic_multistep,7,11,64,63
+Agent / dev-tool automation,ai_role,none,2,11,18,15
+Agent / dev-tool automation,ai_role,rag_or_chat,1,11,9,15
+Agent / dev-tool automation,ai_role,single_call_wrapper,1,11,9,7
+Agent / dev-tool automation,has_hardware,False,11,11,100,100
+Agent / dev-tool automation,live_data,yes,6,11,55,52
+Agent / dev-tool automation,live_data,no,4,11,36,33
+Agent / dev-tool automation,live_data,unknown,1,11,9,15
+Agent / dev-tool automation,novelty_source,technical_method,6,11,55,48
+Agent / dev-tool automation,novelty_source,combination,3,11,27,30
+Agent / dev-tool automation,novelty_source,new_interaction,2,11,18,22
+Agent / dev-tool automation,event_type,student_36_48h,7,11,64,52
+Agent / dev-tool automation,event_type,student_24h_inperson,3,11,27,44
+Agent / dev-tool automation,event_type,corporate_or_mlh_online,1,11,9,4
+Multimodal human-need pipeline,_size,all,16,65,25,27
+Multimodal human-need pipeline,pattern,vision_to_assist,7,16,44,40
+Multimodal human-need pipeline,pattern,voice_to_action,2,16,12,13
+Multimodal human-need pipeline,pattern,education_feedback,2,16,12,17
+Multimodal human-need pipeline,pattern,other,1,16,6,4
+Multimodal human-need pipeline,pattern,spatial_ar,1,16,6,4
+Multimodal human-need pipeline,pattern,risk_detect_and_respond,1,16,6,4
+Multimodal human-need pipeline,pattern,translate_between_people_or_systems,1,16,6,9
+Multimodal human-need pipeline,pattern,docs_to_action,1,16,6,9
+Multimodal human-need pipeline,ai_role,multimodal_pipeline,15,16,94,91
+Multimodal human-need pipeline,ai_role,on_device,1,16,6,9
+Multimodal human-need pipeline,has_hardware,False,16,16,100,100
+Multimodal human-need pipeline,live_data,yes,9,16,56,57
+Multimodal human-need pipeline,live_data,no,7,16,44,43
+Multimodal human-need pipeline,novelty_source,combination,8,16,50,55
+Multimodal human-need pipeline,novelty_source,new_interaction,3,16,19,21
+Multimodal human-need pipeline,novelty_source,new_user_group,3,16,19,17
+Multimodal human-need pipeline,novelty_source,execution_of_familiar_idea,1,16,6,4
+Multimodal human-need pipeline,novelty_source,new_data_or_context,1,16,6,2
+Multimodal human-need pipeline,event_type,student_24h_inperson,8,16,50,68
+Multimodal human-need pipeline,event_type,student_36_48h,7,16,44,30
+Multimodal human-need pipeline,event_type,corporate_or_mlh_online,1,16,6,2
+Data-to-decision utility,_size,all,4,65,6,8
+Data-to-decision utility,pattern,data_to_decision,2,4,50,57
+Data-to-decision utility,pattern,docs_to_action,1,4,25,14
+Data-to-decision utility,pattern,realtime_coordination,1,4,25,29
+Data-to-decision utility,ai_role,none,2,4,50,57
+Data-to-decision utility,ai_role,custom_or_finetuned_model,1,4,25,29
+Data-to-decision utility,ai_role,single_call_wrapper,1,4,25,14
+Data-to-decision utility,has_hardware,False,3,4,75,86
+Data-to-decision utility,has_hardware,,1,4,25,14
+Data-to-decision utility,live_data,yes,2,4,50,43
+Data-to-decision utility,live_data,no,2,4,50,57
+Data-to-decision utility,novelty_source,new_user_group,2,4,50,43
+Data-to-decision utility,novelty_source,new_data_or_context,1,4,25,29
+Data-to-decision utility,novelty_source,combination,1,4,25,29
+Data-to-decision utility,event_type,student_24h_inperson,3,4,75,86
+Data-to-decision utility,event_type,student_36_48h,1,4,25,14
+unassigned,_size,all,3,65,5,4
+unassigned,pattern,other,3,3,100,100
+unassigned,ai_role,none,3,3,100,100
+unassigned,has_hardware,,3,3,100,100
+unassigned,live_data,unknown,3,3,100,100
+unassigned,novelty_source,execution_of_familiar_idea,3,3,100,100
+unassigned,event_type,student_24h_inperson,1,3,33,57
+unassigned,event_type,other,1,3,33,14
+unassigned,event_type,student_36_48h,1,3,33,29
+Playful new interaction,_size,all,9,65,14,14
+Playful new interaction,pattern,game_or_social,7,9,78,83
+Playful new interaction,pattern,translate_between_people_or_systems,2,9,22,17
+Playful new interaction,ai_role,single_call_wrapper,3,9,33,25
+Playful new interaction,ai_role,custom_or_finetuned_model,2,9,22,33
+Playful new interaction,ai_role,multimodal_pipeline,1,9,11,17
+Playful new interaction,ai_role,none,1,9,11,8
+Playful new interaction,ai_role,on_device,1,9,11,8
+Playful new interaction,ai_role,agentic_multistep,1,9,11,8
+Playful new interaction,has_hardware,False,8,9,89,83
+Playful new interaction,has_hardware,True,1,9,11,17
+Playful new interaction,live_data,no,5,9,56,42
+Playful new interaction,live_data,yes,4,9,44,58
+Playful new interaction,novelty_source,new_interaction,4,9,44,42
+Playful new interaction,novelty_source,combination,3,9,33,33
+Playful new interaction,novelty_source,technical_method,1,9,11,17
+Playful new interaction,novelty_source,new_user_group,1,9,11,8
+Playful new interaction,event_type,student_36_48h,6,9,67,50
+Playful new interaction,event_type,student_24h_inperson,3,9,33,50

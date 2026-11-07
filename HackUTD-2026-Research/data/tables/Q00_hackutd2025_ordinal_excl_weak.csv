@@ -1,0 +1,10 @@
+feature,winners_N,winners_median,winners_mean,demo_ready_N,demo_ready_median,demo_ready_mean,random_N,random_median,random_mean
+cover_test_score,35,3,2.77,46,3.0,2.76,39,3,2.54
+rating_innovation,35,3,2.66,46,2.0,2.41,39,2,2.31
+rating_technical_complexity,35,3,3.11,46,3.0,2.96,39,2,2.54
+rating_completeness,35,3,3,46,3.0,2.67,39,2,2.41
+rating_design,32,3.0,3.25,39,3,3.1,29,3,2.76
+rating_impact,35,2,2.49,46,3.0,2.61,39,2,2.23
+rating_presentation,35,3,3.23,46,3.0,3.02,39,3,2.92
+rating_min,35,2,2.23,46,2.0,2.2,39,2,1.95
+rating_spread,35,1,1.31,46,1.0,1.2,39,1,1.21

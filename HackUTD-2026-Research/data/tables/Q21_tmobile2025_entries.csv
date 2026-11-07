@@ -1,0 +1,20 @@
+name,group,record_found,deepdive_found,devpost_url,n_tech_items,n_screenshots,has_live_demo,ai_types,happiness_index,map_or_heatmap,llm_actions,auth0,synthetic_or_mock_mentioned,call_or_voice,outage_data
+MagentaMonitor,demo_ready,True,True,https://devpost.com/software/magentamatrix,3,3,False,predictive_ml|llm_chat,True,False,False,False,True,False,True
+PulseWire,demo_ready,True,True,https://devpost.com/software/pulsewire,4,13,False,llm_chat|predictive_ml,True,False,True,False,False,False,False
+Read the Room,demo_ready,True,True,https://devpost.com/software/cool-project-w4h7ob,6,19,False,llm_chat|predictive_ml,True,True,True,False,False,True,True
+Satisfaction Visual Analytics (SAM),demo_ready,True,True,https://devpost.com/software/t-mobile-customer-happiness-index-edc5y9,3,19,False,,True,True,True,False,True,False,False
+SentimentRadar,demo_ready,True,True,https://devpost.com/software/sentimentradar,4,7,False,llm_chat|predictive_ml,True,True,True,False,True,False,False
+Sync,demo_ready,True,True,https://devpost.com/software/sync-ai-gltbhz,7,3,False,agent_or_tool_use|rag_or_search|llm_chat|generative_media,False,True,True,False,True,False,False
+T-Pulse,demo_ready,True,True,https://devpost.com/software/t-pulse,5,13,False,llm_chat|predictive_ml,True,True,True,False,True,False,False
+T-Time,demo_ready,True,True,https://devpost.com/software/t-time,4,13,True,rag_or_search|agent_or_tool_use|llm_chat,True,True,True,False,False,False,False
+lisTen.AI,random,True,True,https://devpost.com/software/listen-ai,7,1,False,llm_chat|agent_or_tool_use|rag_or_search,True,False,False,True,True,False,False
+mimimimimi,random,True,True,https://devpost.com/software/mimimimimi,3,1,False,predictive_ml,False,True,True,False,False,True,False
+MoodWave,random,True,True,https://devpost.com/software/moodwave-wv3x8m,3,10,False,predictive_ml,True,True,False,False,True,False,True
+PulseScore,random,True,True,https://devpost.com/software/pulsescore,4,6,False,llm_chat|predictive_ml,True,False,False,False,False,False,False
+T-Care,random,True,True,https://devpost.com/software/t-care-4ynlev,6,1,False,llm_chat|agent_or_tool_use|speech_or_voice|vision,False,True,False,False,False,True,True
+T-Data,random,True,True,https://devpost.com/software/t-data,3,5,False,llm_chat|predictive_ml,False,True,True,False,False,False,False
+T-Mobile Happiness Index,random,True,True,https://devpost.com/software/t-mobile-happiness-index-3szd41,2,7,False,predictive_ml,True,True,False,False,True,False,False
+T-Mobile Happy Assesment Dashboard,random,True,True,https://devpost.com/software/t-mobile-happy-assesment-dashboard,1,1,False,predictive_ml,True,True,True,False,True,False,True
+Beacon,winner,True,True,https://devpost.com/software/na-504rkg,8,6,False,llm_chat|speech_or_voice|predictive_ml,True,True,True,True,False,True,True
+HarmoniQ,winner,True,True,https://devpost.com/software/x-yiqm81,6,7,False,llm_chat|predictive_ml,True,False,True,True,True,False,True
+InsighT,winner,True,True,https://devpost.com/software/t-insights,6,16,True,llm_chat|predictive_ml,True,True,True,False,False,False,True

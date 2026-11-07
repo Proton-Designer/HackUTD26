@@ -1,0 +1,42 @@
+name,award,award_kind,integration_depth,note
+Alchemetrics,Nvidia,sponsor_api_depth,core,Nemotron planner orchestrates agents
+AutoBoard,Goldman Sachs,sponsor_domain,problem_only,vendor onboarding; no GS tech
+AutoPM,PNC Bank,sponsor_domain,problem_only,PM copilot; no PNC tech
+Beacon,T-Mobile,sponsor_domain,problem_only,happiness index; T-Mobile branding/offers only
+bevinAI,Best Use of DigitalOcean Gradient AI,mlh,none_visible,page names NVIDIA NIM not DigitalOcean
+Cura,CBRE,sponsor_domain,problem_only,CRE analytics; no CBRE tech
+DataDriver,Northmark Compute & Cloud,sponsor_domain,problem_only,data-center technician challenge
+DataDriver,Nvidia,sponsor_api_depth,core,Nemotron nano agent reasoning
+DCDaddy,Northmark Compute & Cloud,sponsor_domain,problem_only,covers five challenge areas
+Enchantress,EOG Resources,sponsor_domain,sponsor_data,uses challenge cauldron dataset
+HarmoniQ,T-Mobile,sponsor_domain,problem_only,sentiment+network fusion
+HarmoniQ,Best Use of Auth0,mlh,supporting,login pages only
+HealthSense,Best Use of Vultr,mlh,supporting,hosts Redis and training box
+Hingine,Toyota Financial Services,sponsor_domain,problem_only,TFS API hookup planned
+hyperlynx,Best Domain Name from GoDaddy Registry,mlh,token,registered domain
+InsighT,T-Mobile,sponsor_domain,problem_only,CHI dashboard for T-Mobile PMs
+Kachow,Toyota Financial Services,sponsor_domain,problem_only,car cost chatbot
+Kori,Best Use of Gemini API,mlh,supporting,Gemini insights in companion app
+MirrorAPI,StateFarm,sponsor_domain,problem_only,API version diff
+NLB (Nothing Left Behind),General Track,general,n_a,
+Pact,CBRE,sponsor_domain,problem_only,contract platform; CBRE link not stated
+Pact,Best Use of Solana,mlh,core,three Anchor programs
+PoyoLabs,EOG Resources,sponsor_domain,sponsor_data,cauldron data; handling unspecified
+PoyoPop,Best Startup,side,n_a,
+ProdigyPM,General Track,general,n_a,
+ProdPlex,PNC Bank,sponsor_domain,problem_only,Nemotron agents; PNC regulation agent
+ProDuh!,PNC Bank,sponsor_domain,problem_only,PM lifecycle copilot
+qAPIbara,StateFarm,sponsor_domain,problem_only,README Layer 0 = State Farm requirement
+Relay,Best Use of ElevenLabs,mlh,none_visible,no ElevenLabs use found
+SpendingWithSpendy,Capital One,sponsor_domain,problem_only,kids NFC spending
+SpendingWithSpendy,Best Design,side,n_a,
+Stamped,Goldman Sachs,sponsor_domain,problem_only,bank onboarding UI
+TaskFlow,Northmark Compute & Cloud,sponsor_domain,problem_only,technician coordination + AR
+Toyotron,Toyota Financial Services,sponsor_domain,problem_only,Toyota buying concierge
+Toyotron,Nvidia,sponsor_api_depth,core,Nemotron super 49B four-agent orchestration
+TrustEstate AI,CBRE,sponsor_domain,problem_only,CBRE-style mock data
+TrustIssues.AI,Goldman Sachs,sponsor_domain,problem_only,vendor onboarding agents
+UpGuardian,StateFarm,sponsor_domain,problem_only,API upgrade diff
+VisionScout,Best Hardware,side,core,event-provided smart glasses capture
+WiSPR - Wireless Safety Pulse Relay,Best Beginner,side,n_a,
+Working Memory,General Track,general,n_a,

@@ -1,0 +1,85 @@
+project,group,pattern,wow_moment,has_video_embed
+REMI,general_1st,realtime_coordination,Phone unlocks the 3D-printed bike lock over NFC,True
+Duet: Brainwaves -> Live Music,general_1st,sensor_to_alert_or_action,Brain waves change tempo and intensity of live generated music,True
+FaceTimeOS: AI Mac Agent,general_1st,workflow_automation_agent,"Calling the Mac over FaceTime, the agent answers by voice, runs the task and texts back a screenshot",True
+Sophi - The Physical Augmentation Walker,general_1st,voice_to_action,Walker's robotic arms open doors or pick up dropped objects on voice command,True
+Quota,general_1st,devtool,Live cost heatmap in VS Code with one-click swap to a cheaper model,True
+WhaleBeing,general_1st,data_to_decision,Animated whale-habitat heatmap with a ship route drawn over it and a risk score,True
+Pyrosense,general_1st,sensor_to_alert_or_action,Gas heat map painted onto floor of a self-built 3D map with unsampled areas highlighted,True
+Plant Hopper,general_1st,sensor_to_alert_or_action,Turret finds a tagged plant and shoots water at it on a remote web command,True
+Vril,general_1st,other,Plain-English prompt becomes editable 3D product with dielines and textured packaging panels,True
+Noma,general_1st,spatial_ar,Consultant rotates a 3D reconstruction of the patient's face and marks incisions on it,True
+Dose,general_1st,sensor_to_alert_or_action,Live pill-count line chart and event log update as pills leave the bottle,True
+Sky-C2,general_1st,spatial_ar,"Looking at a plane centers it and shows callsign, route and altitude; ask Grok about it",True
+Post Surgery Pillow (PSP),general_1st,data_to_decision,Single failing oxygen reading flagged Critical despite four normal vitals,False
+Peel - The tiny lab technician,general_1st,risk_detect_and_respond,Dissolution curve streams to phone and a cited three-way verdict arrives within a minute,
+Scrub+,general_1st,vision_to_assist,Optimizer raised tumor margin from 6.3 mm to 10.2 mm and removed vessel intersections,True
+Wager Whales,general_1st,game_or_social,Draw a box on a live aquarium feed and win coins when a fish swims in,False
+Chronomancer,general_1st,game_or_social,Accepting a decision triggers a Z3 check that either continues play or ends the game on a paradox,True
+Kitkat,general_1st,other,Finished 3D-printed Hello Kitty flip case built in 25 hours,False
+2025: A Beer Odyssey,general_1st,game_or_social,LLM rates a selfie's drunkenness and roasts the user,False
+SpeedPUB,general_1st,translate_between_people_or_systems,Prose in a standard EPUB coloured by grammatical function in English and Chinese,True
+Soundbrush,general_1st,translate_between_people_or_systems,Hearing a distinct synth note change as the brush hue changes while the color name shows,False
+MMG,general_1st,realtime_coordination,Flight updates reach phones across bridged clusters with no internet or mains power,True
+convertfs,general_1st,devtool,Dragging a file into a mounted folder and getting a converted file out,False
+Dr. Andy - The Deployable Surgeon,general_1st,realtime_coordination,Robotic arms mirroring a surgeon's hands to tie a suture,True
+Search and Rescue,general_1st,realtime_coordination,Scrubbing a 3D multi-floor rescue replay from dispatch to extraction,True
+Alto,general_1st,devtool,Bug report arrives and root-cause hypothesis lands in Slack within minutes,True
+codebreaker,general_1st,devtool,"Leaderboard comparing GPT-5, Kimi K2.6 and Claude Sonnet scores on real CVEs, after 280M tokens",True
+SeeForMe,general_1st,vision_to_assist,Detected objects and turn-by-turn directions are spoken aloud on voice request,True
+Preflight-ai,general_1st,risk_detect_and_respond,Pull request gets a BLOCK comment and failed CI for a hijacked dependency,
+Resonator,general_1st,game_or_social,Generated character dialogue and atmospheric sound effects in horror setting,
+kinemo,general_1st,game_or_social,"Two players box each other with punches, kicks and weaves tracked by a single webcam",True
+LUNA,general_1st,vision_to_assist,Glasses-mounted device narrating the scene aloud to a blind user,True
+Orca,general_1st,voice_to_action,Humming plus spoken instructions in one recording becomes multi-track MIDI editable by voice,True
+Nomi,general_1st,sensor_to_alert_or_action,First fall-alert email with vitals and advice reached a caregiver,True
+GDELT Open Intelligence Agent,general_1st,data_to_decision,"Plotly graph showing how events, actors and locations interconnect, from a natural-language query",True
+AffectLink,general_1st,vision_to_assist,Dashboard flags when patient says 'I'm fine' but face or tone suggests distress,True
+Permanence,general_1st,vision_to_assist,Rover finds the ball under a shuffled cup and drives to it,True
+TalkTuahAirline,general_1st,voice_to_action,"AI phones the seat holder, negotiates a swap and reports back",True
+cortex,general_1st,vision_to_assist,"3D Gaussian splat terminal showing where an item was left, with sub-2-second voice answers",True
+Shepherd,general_1st,vision_to_assist,Cane physically nudges the user left or right toward the clearest path in real time,True
+Growth Garden,general_1st,game_or_social,Placing earned plants and mushrooms that snap onto a calming 3D garden planet,True
+Antrum MK 1,general_1st,sensor_to_alert_or_action,Both cavers' recorded paths plotted on the Antrum DASH web app after surfacing,True
+Identity Matrix,general_1st,game_or_social,Logging off while your pixel-art AI stand-in keeps talking and forming friendships,True
+StoryVue,general_1st,vision_to_assist,Child points camera at a book and it reads and explains the page by voice,True
+Deadbolt,general_1st,risk_detect_and_respond,Sensitive values become placeholders in the prompt and reveal on hover in the response,True
+Tidbits,general_1st,translate_between_people_or_systems,"Hour-long lecture becomes TikTok-style clips with talking-head presenter, music and subtitles",True
+Circa,general_1st,sensor_to_alert_or_action,Turret aims water at specific field coordinates driven by live soil sensors,True
+Haven,sponsor_1st,realtime_coordination,Natural-language nurse query updates a 3D hospital map with rooms colored by alerts,True
+Standard Response,sponsor_1st,realtime_coordination,Simulated Eaton Fire night: voice agent calls every home in the warning zone as fire advances,True
+dump,sponsor_1st,docs_to_action,"Single search bar finds a face, an object, a banner word or a name said in a video",True
+"Formly - the secure, fast form filler",sponsor_1st,docs_to_action,One button fills a whole merchant form with each answer showing its source file,True
+KO.rbit,sponsor_1st,game_or_social,Full-body saber duel on NASA-measured Mars terrain with a phone as the blade,True
+Octaby,sponsor_1st,vision_to_assist,Sewn fabric wristband with four vibration motors cueing hand direction,True
+OpenCanopy,sponsor_1st,risk_detect_and_respond,One-click printable evidence dossier with before/after slider and loss-by-year chart for any plot,True
+Robo-view,sponsor_1st,voice_to_action,Robot arm orbits a product and returns the filmed clip to the phone app,True
+Clarity,sponsor_1st,risk_detect_and_respond,Live webcam face box labeled fatigued or active plus spectrogram saliency overlay,True
+ATP - Accessible to Prescription,sponsor_1st,voice_to_action,"Doctor joins the same live insurer call, presses # and the AI resumes with context",True
+Vigilante AI,sponsor_1st,vision_to_assist,"Plain-English query like 'show me fights' returns matching clips streamed first, then a narrative",True
+Kava,sponsor_1st,docs_to_action,Claim score rising from about 42% to 85%+ and a signed proof card on the packet PDF,
+camp,sponsor_1st,data_to_decision,Order status visible live in the Mac notch and on iPhone Live Activity,
+CareChair,sponsor_1st,workflow_automation_agent,Robot arms scrub a body region while a 3D avatar erases cleaned areas,
+DonoRex,sponsor_1st,data_to_decision,"Ranked weekly queue where each card shows who, action, channel, minutes and an evidence-based reason",
+Elute,sponsor_1st,workflow_automation_agent,Rerun nilotinib-for-Parkinson's at earlier cutoff to show objections visible before trial,
+Keiko,sponsor_1st,sensor_to_alert_or_action,Handmade buoy deployed in water streaming detections to a live open site,
+Klick,sponsor_1st,realtime_coordination,"Two nearby phones or badges negotiate and push a specific reason to meet, shown on live dashboard",
+Peel - The tiny lab technician,general_1st,risk_detect_and_respond,Dissolution curve streams to phone and a cited three-way verdict arrives within a minute,
+Recall,sponsor_1st,voice_to_action,A phone-style voice companion talks with a person and their words appear as nodes in a relationship graph,
+SignalHound,sponsor_1st,sensor_to_alert_or_action,"Robot dog autonomously made 39 moves over about 12 m, signal rising to -51.3 dBm",
+VistaAI,sponsor_1st,docs_to_action,Messy files become a standardized portfolio dashboard with vendor consolidation opportunities,
+Batman,sponsor_1st,risk_detect_and_respond,Texting a secret code word silently alerts the friend or gives an excuse to leave,True
+ECHOLOOK,sponsor_1st,vision_to_assist,Tapping a garment in your photo then seeing suggested Inditex clothes blended onto you,True
+FlowCore,sponsor_1st,data_to_decision,Isometric simulator where injected failures like blackouts are reacted to by the autonomous system in real time,False
+Graf-Anna,sponsor_1st,data_to_decision,Scroll from 1850 CO2 and temperature rise to maps of emission hotspots,False
+TripMates - Team Trip Planner AI Agent,sponsor_1st,voice_to_action,Agent listens to friends chatting then fetches real flights when asked,True
+Carbassot climbing,sponsor_1st,data_to_decision,3D view of the optimized warehouse bay layout with its quality score,False
+JetSense: AI agents for printers.,sponsor_1st,data_to_decision,3D printer model highlighting component health with forecasts beside past data,False
+Monch,sponsor_1st,vision_to_assist,A hotdog photo correctly classified with macros shown,True
+FindAir,sponsor_1st,vision_to_assist,"Passenger emailed with item description, QR code and collect-or-ship options after a crew photo",True
+FinSim,sponsor_1st,education_feedback,Buying stocks and watching portfolio value evolve in real time,True
+Kaizen,sponsor_1st,data_to_decision,Adjusting metric weights re-ranks Toyota models instantly,True
+AIsle0,sponsor_1st,realtime_coordination,Live status and photo-backed inspection results appear across web and mobile with a 3D plane view,True
+Constellation,sponsor_1st,workflow_automation_agent,Natural-language goal becomes a visual graph that deploys to a real AWS Batch cluster,True
+RideIQ,sponsor_1st,data_to_decision,Search returns meaningful results with explained relaxation even under strict constraints,True
+FalsePay,sponsor_1st,data_to_decision,Physician opens no-login link and sees flagged payments with a generated dispute draft,True

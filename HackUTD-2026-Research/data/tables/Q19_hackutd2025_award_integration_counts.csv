@@ -1,0 +1,12 @@
+award_kind,integration_depth,n_awards,N_awards_of_kind,names
+general,n_a,3,3,NLB (Nothing Left Behind) (General Track); ProdigyPM (General Track); Working Memory (General Track)
+mlh,core,1,7,Pact (Best Use of Solana)
+mlh,none_visible,2,7,bevinAI (Best Use of DigitalOcean Gradient AI); Relay (Best Use of ElevenLabs)
+mlh,supporting,3,7,HarmoniQ (Best Use of Auth0); HealthSense (Best Use of Vultr); Kori (Best Use of Gemini API)
+mlh,token,1,7,hyperlynx (Best Domain Name from GoDaddy Registry)
+side,core,1,4,VisionScout (Best Hardware)
+side,n_a,3,4,PoyoPop (Best Startup); SpendingWithSpendy (Best Design); WiSPR - Wireless Safety Pulse Relay (Best Beginner)
+sponsor_api_depth,core,3,3,Alchemetrics (Nvidia); DataDriver (Nvidia); Toyotron (Nvidia)
+sponsor_domain,problem_only,22,24,AutoBoard (Goldman Sachs); AutoPM (PNC Bank); Beacon (T-Mobile); Cura (CBRE); DataDriver (Northmark Compute & Cloud); DCDaddy (Northmark Compute & Cloud); HarmoniQ (T-Mobile); Hingine (Toyota Financial Services); InsighT (T-Mobile); Kachow (Toyota Financial Services); MirrorAPI (StateFarm); Pact (CBRE); ProdPlex (PNC Bank); ProDuh! (PNC Bank); qAPIbara (StateFarm); SpendingWithSpendy (Capital One); Stamped (Goldman Sachs); TaskFlow (Northmark Compute & Cloud); Toyotron (Toyota Financial Services); TrustEstate AI (CBRE); TrustIssues.AI (Goldman Sachs); UpGuardian (StateFarm)
+sponsor_domain,sponsor_data,2,24,Enchantress (EOG Resources); PoyoLabs (EOG Resources)
+ALL,total_awards,41,41,

@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Overnight Run Briefing</title>
+<style>
+:root{--bg:#fbfaf7;--fg:#1d1d1b;--muted:#5d5b55;--line:#dedad0;--card:#ffffff;--accent:#2f5d8a;--ok:#2e7d4f;--warn:#a5641a}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#17181a;--fg:#e9e7e1;--muted:#a4a19a;--line:#33343a;--card:#1f2024;--accent:#86b2dc;--ok:#7cc79a;--warn:#e0ad6a}}
+:root[data-theme="dark"]{--bg:#17181a;--fg:#e9e7e1;--muted:#a4a19a;--line:#33343a;--card:#1f2024;--accent:#86b2dc;--ok:#7cc79a;--warn:#e0ad6a}
+body{background:var(--bg);color:var(--fg);font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:0;padding:0 16px}
+main{max-width:860px;margin:32px auto 64px}
+h1{font-size:1.7rem;margin:0 0 4px}h2{font-size:1.2rem;margin:36px 0 10px;border-bottom:1px solid var(--line);padding-bottom:6px}
+.sub{color:var(--muted);margin:0 0 20px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin:12px 0}
+table{border-collapse:collapse;width:100%;font-size:.93rem}td,th{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}th{color:var(--muted);font-weight:600}
+code{font-family:ui-monospace,Menlo,monospace;font-size:.88em;background:color-mix(in srgb,var(--line) 45%,transparent);padding:1px 4px;border-radius:4px;word-break:break-word}
+.ok{color:var(--ok);font-weight:600}.warn{color:var(--warn);font-weight:600}
+li{margin:4px 0}.wrap{overflow-x:auto}
+</style></head><body><main>
+<h1>Overnight run briefing</h1>
+<p class="sub">HackUTD 2026 winner research · run <code>run-20261106-2215</code> · lead + 2 engineers (eng1, eng2), no subagents · finished 2026-11-07 ~00:30 CST</p>
+
+<div class="card"><strong>Bottom line.</strong> Every stage through Phase 4 is done. Start with <code>outputs/TRACK_DAY_KIT.md</code> when tracks are announced; it links to <code>outputs/findings.md</code>, <code>outputs/archetypes.md</code> and <code>outputs/sponsor_cards.md</code>. All 1,148 projects were tagged blind and validated. Two independent red-team reviews were applied.</div>
+
+<h2>What the research says (short)</h2>
+<ul>
+<li><strong>Show working features.</strong> HackUTD 2025 winners showed ≥1 feature working 75% vs 42% for strong non-winners; two working flows 23% vs 0%. One flow alone does not separate them.</li>
+<li><strong>Nothing visible on Devpost separates 1st from 2nd/3rd</strong> (127 track pairs). Why is not in the data; rehearse the live demo and Q&amp;A.</li>
+<li><strong>General track:</strong> plain dashboards are 6% of general 1sts but 48% of strong HackUTD non-winners. Common general-1st shapes: multimodal human-need pipeline, agent/dev-tool automation, hardware sense-and-act (mostly from longer events).</li>
+<li><strong>Problem-style sponsor tracks</strong> (banks, insurance, real estate, energy, NMC2): solve the stated problem literally; 22 of 24 HackUTD 2025 company-problem awards used no sponsor product. <strong>Tool prizes</strong> (NVIDIA, Spacetime, Photon, MLH): the tool must be non-removable (85% of winners).</li>
+<li><strong>Stacking</strong> General + sponsor happens in a minority (10 of 65 general 1sts); at HackUTD 12 of 69 winners won 2+ awards.</li>
+<li>Cover, images, video: separate you from weak entries, not from strong ones.</li>
+</ul>
+
+<h2>1. Open questions (assumed, and what was built)</h2>
+<div class="wrap"><table><tr><th>Question</th><th>Assumption used</th></tr>
+<tr><td>Which tracks are organizer vs company tracks (tagger calls varied)</td><td>Analysis only uses sponsor-fit entries matched to the awarding sponsor's name; unmatched = unknown.</td></tr>
+<tr><td>Empty or bundled Devpost records</td><td>Tagged with placeholders / on the first project; the excl_weak view drops them; findings hold in both views.</td></tr>
+<tr><td>Single tagger model</td><td>All tagging by Sonnet (pilot showed Opus ≈ Sonnet except presentation +0.37), so no model-by-group confound.</td></tr>
+<tr><td>Things to confirm at opening ceremony</td><td>Listed in TRACK_DAY_KIT §8 (multi-award rules, MLH limits, NMC2/8090/Spacetime/Photon challenges, prior-work rules, judging format).</td></tr>
+</table></div>
+
+<h2>2. Completed</h2>
+<div class="wrap"><table><tr><th>Stage</th><th>Result</th><th>Files</th></tr>
+<tr><td>S0 join, S1b fetch, S2 pilot, S5 close reads</td><td>Done before/early in the run</td><td><code>data/processed/</code>, <code>data/pages/</code>, <code>outputs/close_reads/</code></td></tr>
+<tr><td>S3+S4a blind tag + rate</td><td>77 shards, 1,148 of 1,148 valid; cross spot-check 84% / 67% exact agreement</td><td><code>data/tagged/content_all.jsonl</code>, <code>spotcheck_eng*.md</code></td></tr>
+<tr><td>S4b cover test</td><td>1,071 merged rows; ceiling 835 of 1,068 at 3/3</td><td><code>data/tagged/cover_test.jsonl</code></td></tr>
+<tr><td>S6 compute</td><td>48 tables, all indexed</td><td><code>data/tables/INDEX.md</code></td></tr>
+<tr><td>S7 synthesis</td><td>findings v2 (28 findings), 5 archetypes, 17 sponsor cards</td><td><code>outputs/findings.md</code>, <code>archetypes.md</code>, <code>sponsor_cards.md</code></td></tr>
+<tr><td>S8 red team</td><td>Findings: 3 hold / 22 weaken / 2 drop, 11 number fixes. Kit+archetypes: 4 high / 16 med / 7 low. All applied.</td><td><code>outputs/redteam_review.md</code>, <code>redteam_kit_review.md</code></td></tr>
+<tr><td>S9 track-day kit</td><td>Rules, announcement procedure, matrix, scoring sheet, templates, judge questions</td><td><code>outputs/TRACK_DAY_KIT.md</code></td></tr>
+</table></div>
+
+<h2>3. Unfinished, and why</h2>
+<ul>
+<li>S1a second pass, S1c/S1d expansions: skipped/deferred by plan (page text replaced S1a).</li>
+<li>Q16 video timing not measured (videos not watched); Q22 repeat teams not computed (member links unreliable).</li>
+<li>Optional .docx of the kit: not made (not required).</li>
+<li>Three general 1sts carry a truncated event label ("2025") upstream in <code>Q04_general_1sts.csv</code>; noted in findings §8.</li>
+</ul>
+
+<h2>4. Done-gate</h2>
+<ul>
+<li class="ok">All S-stage outputs exist (S0–S9).</li>
+<li class="ok">Validator clean: 1,148 of 1,148 valid, 0 to re-tag.</li>
+<li class="ok">Every findings number traced to a <code>data/tables/</code> file by an independent red team; mismatches fixed.</li>
+<li class="ok">No time/duration estimates in outputs (final grep; engineer-introduced ones removed).</li>
+</ul>
+
+<h2>5. Costs</h2>
+<p>Usage at finish: 5-hour window ≈ 82% (start of run 35%), 7-day ≈ 54% (start 47%). No usage pause was needed. Session token totals are in <code>COSTS.md</code> (context-usage snapshots every checkpoint). Engineers self-reset after every queue item (92 items), which kept each item's context small; the lead compacted once (22:26).</p>
+
+<h2>6. Session mechanics</h2>
+<ul>
+<li>caffeinate ran all night on AC power; checkpoint cron every 10 min; watchdog running until shutdown.</li>
+<li>No pauses or resumes; no hook denials of note.</li>
+<li>Anomalies: cover-glance shards where the model answered from the image only (rerun with text-first rule); a re-queued item skipped because its name was already in the done list (fixed with a "rerun" suffix); zsh word-splitting broke one task-file generator (redone in bash); usage file occasionally read mid-write (retry).</li>
+</ul>
+
+<h2>7. Security note</h2>
+<p class="warn">The HarmoniQ repo contains a plaintext Gemini API key (value not recorded). Rotate it if not done yet.</p>
+
+<h2>8. Proposed skill changes (approve / reject)</h2>
+<ol>
+<li>Re-queued items need a unique suffix (done-list matching skips duplicates).</li>
+<li>Wrap task-generator loops in <code>bash</code> (zsh doesn't word-split).</li>
+<li>Retry reads of <code>usage-state.json</code> up to 3 times.</li>
+<li>Put the validator's typing rules into worker prompts from the start.</li>
+<li>Every synthesis file gets a reviewer who did not write it (crossed red teams found 11 number errors).</li>
+<li>When time estimates are forbidden, grep all outputs for duration words before shutdown.</li>
+</ol>
+<p class="sub">Source: <code>.claude/overnight/run-20261106-2215/SKILL-PROPOSALS.md</code></p>
+</main></body></html>

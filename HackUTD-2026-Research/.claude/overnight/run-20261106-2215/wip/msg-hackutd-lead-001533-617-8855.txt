@@ -1,0 +1,4 @@
+eng2 · TASK-105 archetypes · done (in 03-in-review) · outputs/archetypes.md + data/tables/Q04_archetype_assignment.csv, Q04_archetype_counts.csv (scripts/q04_archetype_counts.py), INDEX.md rows added
+Archetypes (n of 65): Hardware sense-and-act loop 22 · Multimodal human-need pipeline 16 · Agent/dev-tool automation 11 · Playful new interaction 9 · Data-to-decision utility 4 (low n) · unassigned 3
+3 findings written (hardware 34%, software B+C 42%, data_to_decision 6% general vs 26% sponsor). Checks: counts sum to 65, assignment rows 65.
+Assumed: group borders are hand calls (Chronomancer in Playful despite hardware; Orca/Percival in Multimodal). HackUTD fit comes from the two close reads, not tags (HackUTD 1sts are not in the 65). NOT done: red-team review.

@@ -1,0 +1,2 @@
+excluded image-only glance rows: 16
+merged 1071 invalid 0 Counter({3: 838, 2: 133, 1: 58, 0: 42})

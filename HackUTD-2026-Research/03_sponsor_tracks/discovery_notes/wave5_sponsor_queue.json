@@ -1,0 +1,2963 @@
+[
+ {
+  "project_id": "sponsor-hackunt-hackunt-2024-meet",
+  "project_name": "Meet+",
+  "hackathon": "HackUNT",
+  "hackathon_no": 99,
+  "edition": "HackUNT 2024",
+  "devpost_url": "https://devpost.com/software/meet-gqybo1",
+  "github_url": "https://github.com/SameerK73/Meet-",
+  "event_start": "2024-10-26",
+  "event_end": "2024-10-27",
+  "prizes": [
+   {
+    "prize": "Winner CBRE",
+    "category_as_awarded": "CBRE sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "CBRE"
+  ]
+ },
+ {
+  "project_id": "sponsor-hackunt-hackunt-2024-propertunity",
+  "project_name": "Propertunity",
+  "hackathon": "HackUNT",
+  "hackathon_no": 99,
+  "edition": "HackUNT 2024",
+  "devpost_url": "https://devpost.com/software/propertunity",
+  "github_url": "https://github.com/UsmanS2/realhackUNT24",
+  "event_start": "2024-10-26",
+  "event_end": "2024-10-27",
+  "prizes": [
+   {
+    "prize": "Winner CBRE",
+    "category_as_awarded": "CBRE sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "CBRE"
+  ]
+ },
+ {
+  "project_id": "sponsor-hackunt-hackunt-2024-utilitrack",
+  "project_name": "UtiliTrack",
+  "hackathon": "HackUNT",
+  "hackathon_no": 99,
+  "edition": "HackUNT 2024",
+  "devpost_url": "https://devpost.com/software/utilitrack",
+  "github_url": "https://github.com/Sid-Myla/HackUNT2024/tree/good",
+  "event_start": "2024-10-26",
+  "event_end": "2024-10-27",
+  "prizes": [
+   {
+    "prize": "Winner CBRE",
+    "category_as_awarded": "CBRE sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "CBRE"
+  ]
+ },
+ {
+  "project_id": "sponsor-uxperience-2025-uxperience-2025-aero",
+  "project_name": "Aero",
+  "hackathon": "UXperience 2025",
+  "hackathon_no": 99,
+  "edition": "UXperience 2025",
+  "devpost_url": "https://devpost.com/software/aero-h038lg",
+  "github_url": "",
+  "event_start": "2025-10-25",
+  "event_end": "2025-10-26",
+  "prizes": [
+   {
+    "prize": "CBRE 1st Place",
+    "category_as_awarded": "CBRE sponsor prize",
+    "placement": "1st"
+   }
+  ],
+  "sponsors": [
+   "CBRE"
+  ]
+ },
+ {
+  "project_id": "sponsor-uxperience-2025-uxperience-2025-integra",
+  "project_name": "Integra",
+  "hackathon": "UXperience 2025",
+  "hackathon_no": 99,
+  "edition": "UXperience 2025",
+  "devpost_url": "https://devpost.com/software/workplace-wellbeing",
+  "github_url": "",
+  "event_start": "2025-10-25",
+  "event_end": "2025-10-26",
+  "prizes": [
+   {
+    "prize": "CBRE 2nd Place",
+    "category_as_awarded": "CBRE sponsor prize",
+    "placement": "2nd"
+   }
+  ],
+  "sponsors": [
+   "CBRE"
+  ]
+ },
+ {
+  "project_id": "sponsor-uxperience-2025-uxperience-2025-mosaic",
+  "project_name": "Mosaic",
+  "hackathon": "UXperience 2025",
+  "hackathon_no": 99,
+  "edition": "UXperience 2025",
+  "devpost_url": "https://devpost.com/software/mosaic-q402zy",
+  "github_url": "",
+  "event_start": "2025-10-25",
+  "event_end": "2025-10-26",
+  "prizes": [
+   {
+    "prize": "CBRE 3rd Place",
+    "category_as_awarded": "CBRE sponsor prize",
+    "placement": "3rd"
+   }
+  ],
+  "sponsors": [
+   "CBRE"
+  ]
+ },
+ {
+  "project_id": "sponsor-wehack-wehack-2025-personal-finance-smart-investment-app",
+  "project_name": "Personal Finance / Smart Investment App",
+  "hackathon": "WEHack",
+  "hackathon_no": 99,
+  "edition": "WEHack 2025",
+  "devpost_url": "https://devpost.com/software/money-app-z4w7r5",
+  "github_url": "https://github.com/SarahMendoza/investment-planning-app.git",
+  "event_start": null,
+  "event_end": null,
+  "prizes": [
+   {
+    "prize": "Winner CBRE Challenge",
+    "category_as_awarded": "CBRE sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "CBRE"
+  ]
+ },
+ {
+  "project_id": "sponsor-wehack-wehack-2025-stock-lock",
+  "project_name": "Stock Lock",
+  "hackathon": "WEHack",
+  "hackathon_no": 99,
+  "edition": "WEHack 2025",
+  "devpost_url": "https://devpost.com/software/investai",
+  "github_url": "https://github.com/gayu2216/StockLock",
+  "event_start": null,
+  "event_end": null,
+  "prizes": [
+   {
+    "prize": "Winner CBRE Challenge",
+    "category_as_awarded": "CBRE sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "CBRE"
+  ]
+ },
+ {
+  "project_id": "sponsor-wehack-wehack-2025-trendpulse",
+  "project_name": "TrendPulse",
+  "hackathon": "WEHack",
+  "hackathon_no": 99,
+  "edition": "WEHack 2025",
+  "devpost_url": "https://devpost.com/software/trendpulse",
+  "github_url": "https://github.com/Ajiyiba/TrendPulse/tree/main",
+  "event_start": null,
+  "event_end": null,
+  "prizes": [
+   {
+    "prize": "Winner CBRE Challenge",
+    "category_as_awarded": "CBRE sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "CBRE"
+  ]
+ },
+ {
+  "project_id": "sponsor-wehack-2026-wehack-2026-miro",
+  "project_name": "Miro",
+  "hackathon": "WEHack 2026",
+  "hackathon_no": 99,
+  "edition": "WEHack 2026",
+  "devpost_url": "https://devpost.com/software/miro-rzbevu",
+  "github_url": "https://github.com/enayas/wehack26",
+  "event_start": "2026-04-11",
+  "event_end": "2026-04-12",
+  "prizes": [
+   {
+    "prize": "Winner CBRE Challenge",
+    "category_as_awarded": "CBRE sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "CBRE"
+  ]
+ },
+ {
+  "project_id": "sponsor-wehack-2026-wehack-2026-temp",
+  "project_name": "Temp",
+  "hackathon": "WEHack 2026",
+  "hackathon_no": 99,
+  "edition": "WEHack 2026",
+  "devpost_url": "https://devpost.com/software/temp-5aht81",
+  "github_url": "https://github.com/sachi-jh/we-hack",
+  "event_start": "2026-04-11",
+  "event_end": "2026-04-12",
+  "prizes": [
+   {
+    "prize": "Winner CBRE Challenge",
+    "category_as_awarded": "CBRE sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "CBRE"
+  ]
+ },
+ {
+  "project_id": "sponsor-bitcamp-bitcamp-2025-budgetbuddy",
+  "project_name": "BudgetBuddy",
+  "hackathon": "Bitcamp",
+  "hackathon_no": 9,
+  "edition": "Bitcamp 2025",
+  "devpost_url": "https://devpost.com/software/budgetbuddy-3qvr78",
+  "github_url": "https://github.com/team-moondust/BudgetBuddy-frontend",
+  "event_start": "2025-04-11",
+  "event_end": "2025-04-13",
+  "prizes": [
+   {
+    "prize": "Winner Best Financial Hack - Capital One",
+    "category_as_awarded": "Capital One sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Capital One"
+  ]
+ },
+ {
+  "project_id": "sponsor-bitcamp-bitcamp-2025-finguard",
+  "project_name": "FinGuard",
+  "hackathon": "Bitcamp",
+  "hackathon_no": 9,
+  "edition": "Bitcamp 2025",
+  "devpost_url": "https://devpost.com/software/finguard-x1akuc",
+  "github_url": "",
+  "event_start": "2025-04-11",
+  "event_end": "2025-04-13",
+  "prizes": [
+   {
+    "prize": "Winner Best Financial Hack - Capital One",
+    "category_as_awarded": "Capital One sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Capital One"
+  ]
+ },
+ {
+  "project_id": "sponsor-divhacks-divhacks-2025-paypark",
+  "project_name": "PayPark",
+  "hackathon": "DivHacks",
+  "hackathon_no": 99,
+  "edition": "DivHacks 2025",
+  "devpost_url": "https://devpost.com/software/paypark",
+  "github_url": "https://github.com/kkanda0/ParkPay",
+  "event_start": "2025-10-04",
+  "event_end": "2025-10-05",
+  "prizes": [
+   {
+    "prize": "Winner Sponsor Challenge: Capital One [Best Financial Hack]",
+    "category_as_awarded": "Capital One sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Capital One"
+  ]
+ },
+ {
+  "project_id": "sponsor-divhacks-divhacks-2026-rentescrow",
+  "project_name": "RentEscrow",
+  "hackathon": "DivHacks",
+  "hackathon_no": 99,
+  "edition": "DivHacks 2026",
+  "devpost_url": "https://devpost.com/software/rentescrow-nthfwb",
+  "github_url": "https://github.com/mujtaba-atif/divhacks1",
+  "event_start": "2026-09-26",
+  "event_end": "2026-09-27",
+  "prizes": [
+   {
+    "prize": "Winner Sponsor Challenge: Capital One [The Best Use of Nessie]",
+    "category_as_awarded": "Capital One sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Capital One"
+  ]
+ },
+ {
+  "project_id": "sponsor-divhacks-divhacks-2026-unsaid",
+  "project_name": "unsaid",
+  "hackathon": "DivHacks",
+  "hackathon_no": 99,
+  "edition": "DivHacks 2026",
+  "devpost_url": "https://devpost.com/software/unsaid-zm8w5v",
+  "github_url": "https://github.com/argsdio/unsaid",
+  "event_start": "2026-09-26",
+  "event_end": "2026-09-27",
+  "prizes": [
+   {
+    "prize": "Winner Sponsor Challenge: Capital One [The Best Use of Nessie]",
+    "category_as_awarded": "Capital One sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Capital One"
+  ]
+ },
+ {
+  "project_id": "sponsor-hackgt-hackgt-12-hr-audit",
+  "project_name": "HR Audit",
+  "hackathon": "HackGT",
+  "hackathon_no": 6,
+  "edition": "HackGT 12",
+  "devpost_url": "https://devpost.com/software/the-hr-audit",
+  "github_url": "https://github.com/heyitsprashant/HR-Audit",
+  "event_start": "2025-09-26",
+  "event_end": "2025-09-28",
+  "prizes": [
+   {
+    "prize": "Winner Capital One - Best Financial Hack",
+    "category_as_awarded": "Capital One sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Capital One"
+  ]
+ },
+ {
+  "project_id": "sponsor-hackgt-hackgt-12-i-d-rather-scroll",
+  "project_name": "I'd Rather Scroll",
+  "hackathon": "HackGT",
+  "hackathon_no": 6,
+  "edition": "HackGT 12",
+  "devpost_url": "https://devpost.com/software/i-d-rather-scroll",
+  "github_url": "",
+  "event_start": "2025-09-26",
+  "event_end": "2025-09-28",
+  "prizes": [
+   {
+    "prize": "Winner Capital One - Best Financial Hack",
+    "category_as_awarded": "Capital One sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Capital One"
+  ]
+ },
+ {
+  "project_id": "sponsor-hackharvard-hackharvard-2025-c2pay",
+  "project_name": "C2Pay",
+  "hackathon": "HackHarvard",
+  "hackathon_no": 24,
+  "edition": "HackHarvard 2025",
+  "devpost_url": "https://devpost.com/software/c2pay",
+  "github_url": "https://github.com/sofiaal1/C2Pay",
+  "event_start": "2025-10-03",
+  "event_end": "2025-10-05",
+  "prizes": [
+   {
+    "prize": "Winner Best Financial Hack by Capital One",
+    "category_as_awarded": "Capital One sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Capital One"
+  ]
+ },
+ {
+  "project_id": "sponsor-hackillinois-hackillinois-2026-velum",
+  "project_name": "Velum",
+  "hackathon": "HackIllinois",
+  "hackathon_no": 19,
+  "edition": "HackIllinois 2026",
+  "devpost_url": "https://devpost.com/software/velum",
+  "github_url": "https://github.com/MarcDasilva/HackIllinois",
+  "event_start": "2026-02-27",
+  "event_end": "2026-03-01",
+  "prizes": [
+   {
+    "prize": "Winner Best Use of Capital One Nessie (Hackathon API)",
+    "category_as_awarded": "Capital One sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Capital One"
+  ]
+ },
+ {
+  "project_id": "sponsor-hacknc-hacknc-2024-ai-powered-investment-portfolio-creator",
+  "project_name": "AI-powered Investment Portfolio Creator",
+  "hackathon": "HackNC",
+  "hackathon_no": 30,
+  "edition": "HackNC 2024",
+  "devpost_url": "https://devpost.com/software/ai-powered-investment-portfolio-creator",
+  "github_url": "https://github.com/ColeWhaley1/hackNC24",
+  "event_start": "2024-11-02",
+  "event_end": "2024-11-03",
+  "prizes": [
+   {
+    "prize": "Winner Capital One - Best Financial Hack",
+    "category_as_awarded": "Capital One sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Capital One"
+  ]
+ },
+ {
+  "project_id": "sponsor-hacknc-hacknc-2026-rxsolve",
+  "project_name": "RxSolve",
+  "hackathon": "HackNC",
+  "hackathon_no": 30,
+  "edition": "HackNC 2026",
+  "devpost_url": "https://devpost.com/software/rxsolve",
+  "github_url": "https://github.com/manyuagashe/rxsolve",
+  "event_start": "2026-10-09",
+  "event_end": "2026-10-11",
+  "prizes": [
+   {
+    "prize": "Winner [Capital One] The Best Use of Nessie",
+    "category_as_awarded": "Capital One sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Capital One"
+  ]
+ },
+ {
+  "project_id": "sponsor-hackprinceton-hackprinceton-spring-2025-roots",
+  "project_name": "Roots",
+  "hackathon": "HackPrinceton",
+  "hackathon_no": 23,
+  "edition": "HackPrinceton Spring 2025",
+  "devpost_url": "https://devpost.com/software/roots-xk19te",
+  "github_url": "",
+  "event_start": "2025-03-28",
+  "event_end": "2025-03-30",
+  "prizes": [
+   {
+    "prize": "Winner Best Financial Hack [Sponsored by Capital One]",
+    "category_as_awarded": "Capital One sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Capital One"
+  ]
+ },
+ {
+  "project_id": "sponsor-hackprinceton-hackprinceton-fall-2025-edgecart",
+  "project_name": "edgecart.",
+  "hackathon": "HackPrinceton",
+  "hackathon_no": 23,
+  "edition": "HackPrinceton Fall 2025",
+  "devpost_url": "https://devpost.com/software/edgecart",
+  "github_url": "https://github.com/AntoDono/edgecart",
+  "event_start": "2025-11-07",
+  "event_end": "2025-11-09",
+  "prizes": [
+   {
+    "prize": "Winner Best Financial Hack by Capital One",
+    "category_as_awarded": "Capital One sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Capital One"
+  ]
+ },
+ {
+  "project_id": "sponsor-hackrice-hackrice-16-larp-city",
+  "project_name": "Larp City",
+  "hackathon": "HackRice",
+  "hackathon_no": 99,
+  "edition": "HackRice 16",
+  "devpost_url": "https://devpost.com/software/temp-6yaocn",
+  "github_url": "https://github.com/cayden-h/LarpCity",
+  "event_start": "2026-09-11",
+  "event_end": "2026-09-13",
+  "prizes": [
+   {
+    "prize": "Winner [CHALLENGE] - Capital One Best Financial Hack",
+    "category_as_awarded": "Capital One sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Capital One"
+  ]
+ },
+ {
+  "project_id": "sponsor-hackrice-hackrice-15-owlnudge",
+  "project_name": "OwlNudge",
+  "hackathon": "HackRice",
+  "hackathon_no": 99,
+  "edition": "HackRice 15",
+  "devpost_url": "https://devpost.com/software/owlnudge",
+  "github_url": "https://github.com/reyanp/OwlNudge",
+  "event_start": "2025-09-19",
+  "event_end": "2025-09-21",
+  "prizes": [
+   {
+    "prize": "Winner Capital One Best Financial Hack",
+    "category_as_awarded": "Capital One sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Capital One"
+  ]
+ },
+ {
+  "project_id": "sponsor-hackrice-hackrice-15-swipe-coach",
+  "project_name": "Swipe Coach",
+  "hackathon": "HackRice",
+  "hackathon_no": 99,
+  "edition": "HackRice 15",
+  "devpost_url": "https://devpost.com/software/swipe-coach",
+  "github_url": "https://github.com/leo2971998/HackRice25",
+  "event_start": "2025-09-19",
+  "event_end": "2025-09-21",
+  "prizes": [
+   {
+    "prize": "Winner Capital One Best Financial Hack",
+    "category_as_awarded": "Capital One sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Capital One"
+  ]
+ },
+ {
+  "project_id": "sponsor-hacktx-hacktx-2026-breakingpoint",
+  "project_name": "BreakingPoint",
+  "hackathon": "HackTX",
+  "hackathon_no": 18,
+  "edition": "HackTX 2026",
+  "devpost_url": "https://devpost.com/software/breakingpoint",
+  "github_url": "https://github.com/MMehta45/hacktx26",
+  "event_start": "2026-10-24",
+  "event_end": "2026-10-25",
+  "prizes": [
+   {
+    "prize": "Winner [Capital One] The Best Use of Nessie",
+    "category_as_awarded": "Capital One sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Capital One"
+  ]
+ },
+ {
+  "project_id": "sponsor-hacktx-hacktx-2025-hacktx-2025",
+  "project_name": "HackTX 2025",
+  "hackathon": "HackTX",
+  "hackathon_no": 18,
+  "edition": "HackTX 2025",
+  "devpost_url": "https://devpost.com/software/ecofin-carbon",
+  "github_url": "https://github.com/arnavvalvekar/hacktx",
+  "event_start": "2025-10-18",
+  "event_end": "2025-10-19",
+  "prizes": [
+   {
+    "prize": "Winner Best Capital One Hack",
+    "category_as_awarded": "Capital One sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Capital One"
+  ]
+ },
+ {
+  "project_id": "sponsor-hoohacks-hoohacks-2026-foregast",
+  "project_name": "foreGASt",
+  "hackathon": "HooHacks",
+  "hackathon_no": 21,
+  "edition": "HooHacks 2026",
+  "devpost_url": "https://devpost.com/software/hoohacks-submission",
+  "github_url": "https://github.com/bob3457/HooHacks26",
+  "event_start": "2026-03-21",
+  "event_end": "2026-03-22",
+  "prizes": [
+   {
+    "prize": "Winner Best Financial Hack - Sponsored by Capital One",
+    "category_as_awarded": "Capital One sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Capital One"
+  ]
+ },
+ {
+  "project_id": "sponsor-madhacks-madhacks-fall-2024-taskchain",
+  "project_name": "TaskChain",
+  "hackathon": "MadHacks",
+  "hackathon_no": 99,
+  "edition": "MadHacks Fall 2024",
+  "devpost_url": "https://devpost.com/software/taskchain",
+  "github_url": "https://github.com/sagore1263/my-website",
+  "event_start": "2024-11-09",
+  "event_end": "2024-11-10",
+  "prizes": [
+   {
+    "prize": "Winner [Capital One] How Will You Reimagine Banking?",
+    "category_as_awarded": "Capital One sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Capital One"
+  ]
+ },
+ {
+  "project_id": "sponsor-pennapps-pennapps-xxv-plate-o",
+  "project_name": "Plate-O",
+  "hackathon": "PennApps",
+  "hackathon_no": 22,
+  "edition": "PennApps XXV",
+  "devpost_url": "https://devpost.com/software/plate-o",
+  "github_url": "https://github.com/pennapps-w/plate-o",
+  "event_start": "2024-09-20",
+  "event_end": "2024-09-22",
+  "prizes": [
+   {
+    "prize": "Winner Track: Best Financial Hack (Sponsored by Capital One)",
+    "category_as_awarded": "Capital One sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Capital One"
+  ]
+ },
+ {
+  "project_id": "sponsor-pennapps-pennapps-xxvi-sproutai",
+  "project_name": "SproutAI",
+  "hackathon": "PennApps",
+  "hackathon_no": 22,
+  "edition": "PennApps XXVI",
+  "devpost_url": "https://devpost.com/software/sproutai-9vil8w",
+  "github_url": "",
+  "event_start": "2025-09-20",
+  "event_end": "2025-09-21",
+  "prizes": [
+   {
+    "prize": "Winner CATEGORY - Finance (Capital One)",
+    "category_as_awarded": "Capital One sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Capital One"
+  ]
+ },
+ {
+  "project_id": "sponsor-pennapps-pennapps-xxvi-subsave",
+  "project_name": "Subsave",
+  "hackathon": "PennApps",
+  "hackathon_no": 22,
+  "edition": "PennApps XXVI",
+  "devpost_url": "https://devpost.com/software/subsave",
+  "github_url": "https://github.com/adlonymous/subsave",
+  "event_start": "2025-09-20",
+  "event_end": "2025-09-21",
+  "prizes": [
+   {
+    "prize": "Winner CATEGORY - Finance (Capital One)",
+    "category_as_awarded": "Capital One sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Capital One"
+  ]
+ },
+ {
+  "project_id": "sponsor-shellhacks-shellhacks-2025-agent-zero",
+  "project_name": "Agent Zero",
+  "hackathon": "ShellHacks",
+  "hackathon_no": 99,
+  "edition": "ShellHacks 2025",
+  "devpost_url": "https://devpost.com/software/agentzero-tnh9p3",
+  "github_url": "https://github.com/BonelessWater/shellHacks_1",
+  "event_start": null,
+  "event_end": null,
+  "prizes": [
+   {
+    "prize": "Winner Capital One",
+    "category_as_awarded": "Capital One sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Capital One"
+  ]
+ },
+ {
+  "project_id": "sponsor-shellhacks-shellhacks-2024-lease-saving-plan",
+  "project_name": "Lease Saving Plan",
+  "hackathon": "ShellHacks",
+  "hackathon_no": 99,
+  "edition": "ShellHacks 2024",
+  "devpost_url": "https://devpost.com/software/lease-saving-plan",
+  "github_url": "https://github.com/Jackal-HQ/Lease-Saving-Guide/tree/master",
+  "event_start": "2024-09-27",
+  "event_end": "2024-09-29",
+  "prizes": [
+   {
+    "prize": "Winner Capital One",
+    "category_as_awarded": "Capital One sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Capital One"
+  ]
+ },
+ {
+  "project_id": "sponsor-shellhacks-shellhacks-2024-smartcards",
+  "project_name": "SmartCards",
+  "hackathon": "ShellHacks",
+  "hackathon_no": 99,
+  "edition": "ShellHacks 2024",
+  "devpost_url": "https://devpost.com/software/smartcards-qxdusb",
+  "github_url": "https://github.com/mavreyn/smart-cards",
+  "event_start": "2024-09-27",
+  "event_end": "2024-09-29",
+  "prizes": [
+   {
+    "prize": "Winner Capital One",
+    "category_as_awarded": "Capital One sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Capital One"
+  ]
+ },
+ {
+  "project_id": "sponsor-swamphacks-swamphacks-xi-pay-pals",
+  "project_name": "Pay Pals",
+  "hackathon": "SwampHacks",
+  "hackathon_no": 34,
+  "edition": "SwampHacks XI",
+  "devpost_url": "https://devpost.com/software/project-c1nomzfei7a0",
+  "github_url": "https://github.com/GridGxly/PayPals",
+  "event_start": "2026-01-23",
+  "event_end": "2026-01-25",
+  "prizes": [
+   {
+    "prize": "Winner Best Finance Hack Sponsored By Capital One",
+    "category_as_awarded": "Capital One sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Capital One"
+  ]
+ },
+ {
+  "project_id": "sponsor-swamphacks-swamphacks-xii-runway",
+  "project_name": "Runway",
+  "hackathon": "SwampHacks",
+  "hackathon_no": 34,
+  "edition": "SwampHacks XII",
+  "devpost_url": "https://devpost.com/software/runway-57dpic",
+  "github_url": "https://github.com/rshah2001/runway",
+  "event_start": "2026-10-16",
+  "event_end": "2026-10-18",
+  "prizes": [
+   {
+    "prize": "Winner Capital One - The Best Use of Nessie!",
+    "category_as_awarded": "Capital One sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Capital One"
+  ]
+ },
+ {
+  "project_id": "sponsor-tamuhack-tamuhack-2026-drift",
+  "project_name": "Drift",
+  "hackathon": "TAMUhack",
+  "hackathon_no": 17,
+  "edition": "TAMUhack 2026",
+  "devpost_url": "https://devpost.com/software/pff",
+  "github_url": "https://github.com/aadit2805/drift",
+  "event_start": "2026-01-24",
+  "event_end": "2026-01-25",
+  "prizes": [
+   {
+    "prize": "Winner Capital One Challenge",
+    "category_as_awarded": "Capital One sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Capital One"
+  ]
+ },
+ {
+  "project_id": "sponsor-tamuhack-tamuhack-2025-paws-personal-assets-and-wise-saving",
+  "project_name": "PAWS - Personal Assets and Wise Saving",
+  "hackathon": "TAMUhack",
+  "hackathon_no": 17,
+  "edition": "TAMUhack 2025",
+  "devpost_url": "https://devpost.com/software/cat-finances",
+  "github_url": "https://github.com/Redninjale/budget-app",
+  "event_start": "2025-01-25",
+  "event_end": "2025-01-26",
+  "prizes": [
+   {
+    "prize": "Winner Capital One Challenge",
+    "category_as_awarded": "Capital One sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Capital One"
+  ]
+ },
+ {
+  "project_id": "sponsor-technica-technica-2026-atlantis-the-long-night",
+  "project_name": "Atlantis - The Long Night",
+  "hackathon": "Technica",
+  "hackathon_no": 99,
+  "edition": "Technica 2026",
+  "devpost_url": "https://devpost.com/software/atlantis-the-long-night",
+  "github_url": "https://github.com/Mitanshcodes/Atlantis",
+  "event_start": "2026-10-17",
+  "event_end": "2026-10-18",
+  "prizes": [
+   {
+    "prize": "Winner [Capital One] The Best Use of Nessie",
+    "category_as_awarded": "Capital One sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Capital One"
+  ]
+ },
+ {
+  "project_id": "sponsor-technica-technica-2024-pennywise",
+  "project_name": "Pennywise",
+  "hackathon": "Technica",
+  "hackathon_no": 99,
+  "edition": "Technica 2024",
+  "devpost_url": "https://devpost.com/software/pennywise-84p1il",
+  "github_url": "https://github.com/Yashaswe/pennywise",
+  "event_start": "2024-10-26",
+  "event_end": "2024-10-27",
+  "prizes": [
+   {
+    "prize": "Winner Capital One: Best Financial Hack",
+    "category_as_awarded": "Capital One sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Capital One"
+  ]
+ },
+ {
+  "project_id": "sponsor-technica-technica-2025-personal-cart-roaster",
+  "project_name": "Personal Cart Roaster",
+  "hackathon": "Technica",
+  "hackathon_no": 99,
+  "edition": "Technica 2025",
+  "devpost_url": "https://devpost.com/software/personal-cart-roaster",
+  "github_url": "",
+  "event_start": "2025-11-15",
+  "event_end": "2025-11-16",
+  "prizes": [
+   {
+    "prize": "Winner [Capital One] Best Financial Hack",
+    "category_as_awarded": "Capital One sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Capital One"
+  ]
+ },
+ {
+  "project_id": "sponsor-technica-technica-2025-resale-radar",
+  "project_name": "Resale Radar",
+  "hackathon": "Technica",
+  "hackathon_no": 99,
+  "edition": "Technica 2025",
+  "devpost_url": "https://devpost.com/software/resale-radar",
+  "github_url": "",
+  "event_start": "2025-11-15",
+  "event_end": "2025-11-16",
+  "prizes": [
+   {
+    "prize": "Winner [Capital One] Best Financial Hack",
+    "category_as_awarded": "Capital One sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Capital One"
+  ]
+ },
+ {
+  "project_id": "sponsor-technica-technica-2026-treasure-dive",
+  "project_name": "Treasure Dive",
+  "hackathon": "Technica",
+  "hackathon_no": 99,
+  "edition": "Technica 2026",
+  "devpost_url": "https://devpost.com/software/treasure-dive",
+  "github_url": "https://github.com/prajithravisankar/technica_2026",
+  "event_start": "2026-10-17",
+  "event_end": "2026-10-18",
+  "prizes": [
+   {
+    "prize": "Winner [Capital One] The Best Use of Nessie",
+    "category_as_awarded": "Capital One sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Capital One"
+  ]
+ },
+ {
+  "project_id": "sponsor-vthacks-vthacks-13-crediwise-use-the-right-card-every-time",
+  "project_name": "CrediWise - Use the right card, every time.",
+  "hackathon": "VTHacks",
+  "hackathon_no": 33,
+  "edition": "VTHacks 13",
+  "devpost_url": "https://devpost.com/software/crediwise-use-the-right-card-every-time",
+  "github_url": "https://github.com/adithyaharish/crediwise-vthacks",
+  "event_start": "2025-09-26",
+  "event_end": "2025-09-28",
+  "prizes": [
+   {
+    "prize": "Winner [Capital One] $250 Amazon Gift Card",
+    "category_as_awarded": "Capital One sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Capital One"
+  ]
+ },
+ {
+  "project_id": "sponsor-vthacks-vthacks-14-loadcheck",
+  "project_name": "LoadCheck",
+  "hackathon": "VTHacks",
+  "hackathon_no": 33,
+  "edition": "VTHacks 14",
+  "devpost_url": "https://devpost.com/software/loadcheck",
+  "github_url": "https://github.com/VTHACKATHON/VTHACKS",
+  "event_start": "2026-09-18",
+  "event_end": "2026-09-20",
+  "prizes": [
+   {
+    "prize": "Winner [Capital One] Best Use of Nessie",
+    "category_as_awarded": "Capital One sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Capital One"
+  ]
+ },
+ {
+  "project_id": "sponsor-wehack-wehack-2025-bread-bot",
+  "project_name": "Bread Bot",
+  "hackathon": "WEHack",
+  "hackathon_no": 99,
+  "edition": "WEHack 2025",
+  "devpost_url": "https://devpost.com/software/money-makerz",
+  "github_url": "https://github.com/aasthasharrma/WeHack25/",
+  "event_start": null,
+  "event_end": null,
+  "prizes": [
+   {
+    "prize": "Winner Capital One Challenge",
+    "category_as_awarded": "Capital One sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Capital One"
+  ]
+ },
+ {
+  "project_id": "sponsor-wehack-wehack-2025-kairos",
+  "project_name": "Kairos",
+  "hackathon": "WEHack",
+  "hackathon_no": 99,
+  "edition": "WEHack 2025",
+  "devpost_url": "https://devpost.com/software/kairos-fnab7r",
+  "github_url": "https://github.com/charuy2/wehack25",
+  "event_start": null,
+  "event_end": null,
+  "prizes": [
+   {
+    "prize": "Winner Capital One Challenge",
+    "category_as_awarded": "Capital One sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Capital One"
+  ]
+ },
+ {
+  "project_id": "sponsor-wichacks-wichacks-2026-income-firewall",
+  "project_name": "Income Firewall",
+  "hackathon": "WiCHacks",
+  "hackathon_no": 99,
+  "edition": "WiCHacks 2026",
+  "devpost_url": "https://devpost.com/software/income-firewall",
+  "github_url": "https://github.com/ash413/income-firewall",
+  "event_start": "2026-02-28",
+  "event_end": "2026-03-01",
+  "prizes": [
+   {
+    "prize": "Winner Capital One: Best Financial Hack",
+    "category_as_awarded": "Capital One sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Capital One"
+  ]
+ },
+ {
+  "project_id": "sponsor-cal-hacks-cal-hacks-13-0-bandit-the-only-band-you-need",
+  "project_name": "Bandit - The only band you need",
+  "hackathon": "Cal Hacks",
+  "hackathon_no": 2,
+  "edition": "Cal Hacks 13.0",
+  "devpost_url": "https://devpost.com/software/bandit-the-only-band-you-need",
+  "github_url": "https://github.com/viktorinkov/cal-hacks-13",
+  "event_start": "2026-10-23",
+  "event_end": "2026-10-25",
+  "prizes": [
+   {
+    "prize": "[Spacetime] Best Use of Spacetime",
+    "category_as_awarded": "Clockwork Labs sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Clockwork Labs"
+  ]
+ },
+ {
+  "project_id": "sponsor-cal-hacks-cal-hacks-13-0-ender-s-bench",
+  "project_name": "Ender's Bench",
+  "hackathon": "Cal Hacks",
+  "hackathon_no": 2,
+  "edition": "Cal Hacks 13.0",
+  "devpost_url": "https://devpost.com/software/ender-s-bench",
+  "github_url": "https://github.com/BeanyZoldyck/endersbench",
+  "event_start": "2026-10-23",
+  "event_end": "2026-10-25",
+  "prizes": [
+   {
+    "prize": "[Spacetime] Best Use of Spacetime",
+    "category_as_awarded": "Clockwork Labs sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Clockwork Labs"
+  ]
+ },
+ {
+  "project_id": "sponsor-cal-hacks-cal-hacks-13-0-geonosisai",
+  "project_name": "GeonosisAI",
+  "hackathon": "Cal Hacks",
+  "hackathon_no": 2,
+  "edition": "Cal Hacks 13.0",
+  "devpost_url": "https://devpost.com/software/robofactory",
+  "github_url": "https://github.com/jaximus808/GeonosisAI",
+  "event_start": "2026-10-23",
+  "event_end": "2026-10-25",
+  "prizes": [
+   {
+    "prize": "[Spacetime] Best Use of Spacetime",
+    "category_as_awarded": "Clockwork Labs sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Clockwork Labs"
+  ]
+ },
+ {
+  "project_id": "sponsor-cal-hacks-cal-hacks-13-0-luyten",
+  "project_name": "Luyten",
+  "hackathon": "Cal Hacks",
+  "hackathon_no": 2,
+  "edition": "Cal Hacks 13.0",
+  "devpost_url": "https://devpost.com/software/cafoo",
+  "github_url": "https://github.com/3nvyx/luyten.git",
+  "event_start": "2026-10-23",
+  "event_end": "2026-10-25",
+  "prizes": [
+   {
+    "prize": "[Spacetime] Best Use of Spacetime",
+    "category_as_awarded": "Clockwork Labs sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Clockwork Labs"
+  ]
+ },
+ {
+  "project_id": "sponsor-cal-hacks-cal-hacks-13-0-orkio",
+  "project_name": "Orkio",
+  "hackathon": "Cal Hacks",
+  "hackathon_no": 2,
+  "edition": "Cal Hacks 13.0",
+  "devpost_url": "https://devpost.com/software/gehub",
+  "github_url": "https://github.com/chuddrw/CalHacks26",
+  "event_start": "2026-10-23",
+  "event_end": "2026-10-25",
+  "prizes": [
+   {
+    "prize": "[Spacetime] Best Use of Spacetime",
+    "category_as_awarded": "Clockwork Labs sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Clockwork Labs"
+  ]
+ },
+ {
+  "project_id": "sponsor-cal-hacks-cal-hacks-13-0-pacioli",
+  "project_name": "Pacioli",
+  "hackathon": "Cal Hacks",
+  "hackathon_no": 2,
+  "edition": "Cal Hacks 13.0",
+  "devpost_url": "https://devpost.com/software/pacioli",
+  "github_url": "https://github.com/Rahuchpred/Pacilio",
+  "event_start": "2026-10-23",
+  "event_end": "2026-10-25",
+  "prizes": [
+   {
+    "prize": "[Spacetime] Best Use of Spacetime",
+    "category_as_awarded": "Clockwork Labs sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Clockwork Labs"
+  ]
+ },
+ {
+  "project_id": "sponsor-cal-hacks-cal-hacks-13-0-rally",
+  "project_name": "Rally",
+  "hackathon": "Cal Hacks",
+  "hackathon_no": 2,
+  "edition": "Cal Hacks 13.0",
+  "devpost_url": "https://devpost.com/software/locomotion-5i4gzy",
+  "github_url": "https://github.com/JacobQuion/Cal-Hacks-Final-Project",
+  "event_start": "2026-10-23",
+  "event_end": "2026-10-25",
+  "prizes": [
+   {
+    "prize": "[Spacetime] Best Use of Spacetime",
+    "category_as_awarded": "Clockwork Labs sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Clockwork Labs"
+  ]
+ },
+ {
+  "project_id": "sponsor-cal-hacks-cal-hacks-13-0-vouch",
+  "project_name": "Vouch",
+  "hackathon": "Cal Hacks",
+  "hackathon_no": 2,
+  "edition": "Cal Hacks 13.0",
+  "devpost_url": "https://devpost.com/software/vouch-7i3bft",
+  "github_url": "https://github.com/shubhaych/vouch",
+  "event_start": "2026-10-23",
+  "event_end": "2026-10-25",
+  "prizes": [
+   {
+    "prize": "[Spacetime] Best Use of Spacetime",
+    "category_as_awarded": "Clockwork Labs sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Clockwork Labs"
+  ]
+ },
+ {
+  "project_id": "sponsor-cal-hacks-cal-hacks-13-0-skyfall",
+  "project_name": "skyFall",
+  "hackathon": "Cal Hacks",
+  "hackathon_no": 2,
+  "edition": "Cal Hacks 13.0",
+  "devpost_url": "https://devpost.com/software/skyfall-uca4i9",
+  "github_url": "http://github.com/bobbybendola/skyFall",
+  "event_start": "2026-10-23",
+  "event_end": "2026-10-25",
+  "prizes": [
+   {
+    "prize": "[Spacetime] Best Use of Spacetime",
+    "category_as_awarded": "Clockwork Labs sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Clockwork Labs"
+  ]
+ },
+ {
+  "project_id": "sponsor-mhacks-mhacks-2026-coclip",
+  "project_name": "CoClip",
+  "hackathon": "MHacks",
+  "hackathon_no": 26,
+  "edition": "MHacks 2026",
+  "devpost_url": "https://devpost.com/software/coclip",
+  "github_url": "https://github.com/anuragsk05/CoClip",
+  "event_start": "2026-10-03",
+  "event_end": "2026-10-04",
+  "prizes": [
+   {
+    "prize": "Best Use of Spacetime",
+    "category_as_awarded": "Clockwork Labs sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Clockwork Labs"
+  ]
+ },
+ {
+  "project_id": "sponsor-mhacks-mhacks-2026-traycer-food-waste-intelligence",
+  "project_name": "Traycer: Food-waste Intelligence",
+  "hackathon": "MHacks",
+  "hackathon_no": 26,
+  "edition": "MHacks 2026",
+  "devpost_url": "https://devpost.com/software/traycer-ai-food-waste-intelligence",
+  "github_url": "https://github.com/anton-3/traycer",
+  "event_start": "2026-10-03",
+  "event_end": "2026-10-04",
+  "prizes": [
+   {
+    "prize": "Best Use of Spacetime",
+    "category_as_awarded": "Clockwork Labs sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Clockwork Labs"
+  ]
+ },
+ {
+  "project_id": "sponsor-mhacks-mhacks-2026-scalpal",
+  "project_name": "scalpal.",
+  "hackathon": "MHacks",
+  "hackathon_no": 26,
+  "edition": "MHacks 2026",
+  "devpost_url": "https://devpost.com/software/scalpal",
+  "github_url": "https://github.com/stephenhungg/scalpal",
+  "event_start": "2026-10-03",
+  "event_end": "2026-10-04",
+  "prizes": [
+   {
+    "prize": "Best Use of Spacetime",
+    "category_as_awarded": "Clockwork Labs sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Clockwork Labs"
+  ]
+ },
+ {
+  "project_id": "sponsor-agentic-ai-unleashed-aws-nvidia-hackathon-2025-nvidia-run-devpost-event-agent-builder",
+  "project_name": "Agent Builder",
+  "hackathon": "Agentic AI Unleashed: AWS & NVIDIA Hackathon",
+  "hackathon_no": 99,
+  "edition": "2025 (NVIDIA-run Devpost event)",
+  "devpost_url": "https://devpost.com/software/agent-builder",
+  "github_url": "",
+  "event_start": "2025-10-13",
+  "event_end": "2025-11-04",
+  "prizes": [
+   {
+    "prize": "Third Place",
+    "category_as_awarded": "NVIDIA sponsor prize",
+    "placement": "3rd"
+   }
+  ],
+  "sponsors": [
+   "NVIDIA"
+  ]
+ },
+ {
+  "project_id": "sponsor-agentic-ai-unleashed-aws-nvidia-hackathon-2025-nvidia-run-devpost-event-nomi",
+  "project_name": "Nomi",
+  "hackathon": "Agentic AI Unleashed: AWS & NVIDIA Hackathon",
+  "hackathon_no": 99,
+  "edition": "2025 (NVIDIA-run Devpost event)",
+  "devpost_url": "https://devpost.com/software/nomi-aoim58",
+  "github_url": "https://github.com/Crustaly/nomi",
+  "event_start": "2025-10-13",
+  "event_end": "2025-11-04",
+  "prizes": [
+   {
+    "prize": "Grand Prize",
+    "category_as_awarded": "NVIDIA sponsor prize",
+    "placement": "1st"
+   }
+  ],
+  "sponsors": [
+   "NVIDIA"
+  ]
+ },
+ {
+  "project_id": "sponsor-agentic-ai-unleashed-aws-nvidia-hackathon-2025-nvidia-run-devpost-event-skyrchitect",
+  "project_name": "Skyrchitect",
+  "hackathon": "Agentic AI Unleashed: AWS & NVIDIA Hackathon",
+  "hackathon_no": 99,
+  "edition": "2025 (NVIDIA-run Devpost event)",
+  "devpost_url": "https://devpost.com/software/skyrchitect-6d37yf",
+  "github_url": "https://github.com/EimisPacheco/nvidia-aws-skychitect",
+  "event_start": "2025-10-13",
+  "event_end": "2025-11-04",
+  "prizes": [
+   {
+    "prize": "Second Place",
+    "category_as_awarded": "NVIDIA sponsor prize",
+    "placement": "2nd"
+   }
+  ],
+  "sponsors": [
+   "NVIDIA"
+  ]
+ },
+ {
+  "project_id": "sponsor-building-the-next-gen-agentic-app-with-graphrag-nvidia-cugra-2025-agentbim",
+  "project_name": "AgentBIM",
+  "hackathon": "Building the Next-Gen Agentic App with GraphRAG & NVIDIA cuGraph (ArangoDB)",
+  "hackathon_no": 99,
+  "edition": "2025",
+  "devpost_url": "https://devpost.com/software/agentbim",
+  "github_url": "https://github.com/tewodros18/arangodb-hack",
+  "event_start": "2025-02-10",
+  "event_end": "2025-03-09",
+  "prizes": [
+   {
+    "prize": "Honorable Mention",
+    "category_as_awarded": "NVIDIA sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "NVIDIA"
+  ]
+ },
+ {
+  "project_id": "sponsor-building-the-next-gen-agentic-app-with-graphrag-nvidia-cugra-2025-askstreets-querying-and-visualizing-street-networks",
+  "project_name": "AskStreets: Querying and Visualizing Street Networks",
+  "hackathon": "Building the Next-Gen Agentic App with GraphRAG & NVIDIA cuGraph (ArangoDB)",
+  "hackathon_no": 99,
+  "edition": "2025",
+  "devpost_url": "https://devpost.com/software/askstreets-querying-and-visualizing-street-networks",
+  "github_url": "https://github.com/msradam/askstreets",
+  "event_start": "2025-02-10",
+  "event_end": "2025-03-09",
+  "prizes": [
+   {
+    "prize": "Second Place",
+    "category_as_awarded": "NVIDIA sponsor prize",
+    "placement": "2nd"
+   }
+  ],
+  "sponsors": [
+   "NVIDIA"
+  ]
+ },
+ {
+  "project_id": "sponsor-building-the-next-gen-agentic-app-with-graphrag-nvidia-cugra-2025-data-engineer-s-buddy",
+  "project_name": "Data Engineer's Buddy",
+  "hackathon": "Building the Next-Gen Agentic App with GraphRAG & NVIDIA cuGraph (ArangoDB)",
+  "hackathon_no": 99,
+  "edition": "2025",
+  "devpost_url": "https://devpost.com/software/trial-kjzbys",
+  "github_url": "https://github.com/HrishikeshP-01/DEBy-Project",
+  "event_start": "2025-02-10",
+  "event_end": "2025-03-09",
+  "prizes": [
+   {
+    "prize": "Honorable Mention",
+    "category_as_awarded": "NVIDIA sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "NVIDIA"
+  ]
+ },
+ {
+  "project_id": "sponsor-building-the-next-gen-agentic-app-with-graphrag-nvidia-cugra-2025-gdelt-open-intelligence-agent",
+  "project_name": "GDELT Open Intelligence Agent",
+  "hackathon": "Building the Next-Gen Agentic App with GraphRAG & NVIDIA cuGraph (ArangoDB)",
+  "hackathon_no": 99,
+  "edition": "2025",
+  "devpost_url": "https://devpost.com/software/gdelt-open-intelligence-agent",
+  "github_url": "https://github.com/QasimKhan5x/GDELT-AQL-NetworkX-Agent",
+  "event_start": "2025-02-10",
+  "event_end": "2025-03-09",
+  "prizes": [
+   {
+    "prize": "First Place",
+    "category_as_awarded": "NVIDIA sponsor prize",
+    "placement": "1st"
+   }
+  ],
+  "sponsors": [
+   "NVIDIA"
+  ]
+ },
+ {
+  "project_id": "sponsor-building-the-next-gen-agentic-app-with-graphrag-nvidia-cugra-2025-neuthera-drug-discovery-toolkit",
+  "project_name": "Neuthera - Drug discovery toolkit",
+  "hackathon": "Building the Next-Gen Agentic App with GraphRAG & NVIDIA cuGraph (ArangoDB)",
+  "hackathon_no": 99,
+  "edition": "2025",
+  "devpost_url": "https://devpost.com/software/neuthera-drug-discovery-platform",
+  "github_url": "https://github.com/Redomic/NeuThera-Drug-Discovery-Toolkit",
+  "event_start": "2025-02-10",
+  "event_end": "2025-03-09",
+  "prizes": [
+   {
+    "prize": "Third Place",
+    "category_as_awarded": "NVIDIA sponsor prize",
+    "placement": "3rd"
+   }
+  ],
+  "sponsors": [
+   "NVIDIA"
+  ]
+ },
+ {
+  "project_id": "sponsor-building-the-next-gen-agentic-app-with-graphrag-nvidia-cugra-2025-scopium",
+  "project_name": "Scopium",
+  "hackathon": "Building the Next-Gen Agentic App with GraphRAG & NVIDIA cuGraph (ArangoDB)",
+  "hackathon_no": 99,
+  "edition": "2025",
+  "devpost_url": "https://devpost.com/software/scopium-lna7ro",
+  "github_url": "https://github.com/AdityaS8804/scopium",
+  "event_start": "2025-02-10",
+  "event_end": "2025-03-09",
+  "prizes": [
+   {
+    "prize": "Public Choice",
+    "category_as_awarded": "NVIDIA sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "NVIDIA"
+  ]
+ },
+ {
+  "project_id": "sponsor-datahacks-datahacks-2026-tidal-wave",
+  "project_name": "TIDAL WAVE",
+  "hackathon": "DataHacks",
+  "hackathon_no": 99,
+  "edition": "DataHacks 2026",
+  "devpost_url": "https://devpost.com/software/tidal-wave-ump7f9",
+  "github_url": "https://github.com/davdwan21/TIDAL-WAVE",
+  "event_start": "2026-04-18",
+  "event_end": "2026-04-19",
+  "prizes": [
+   {
+    "prize": "Challenge: Best Use of Nvidia Brev",
+    "category_as_awarded": "NVIDIA sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "NVIDIA"
+  ]
+ },
+ {
+  "project_id": "sponsor-devnetwork-ai-ml-hackathon-devnetwork-ai-ml-hackathon-2026-argus",
+  "project_name": "Argus",
+  "hackathon": "DevNetwork [AI + ML] Hackathon",
+  "hackathon_no": 99,
+  "edition": "DevNetwork [AI + ML] Hackathon 2026",
+  "devpost_url": "https://devpost.com/software/argus-475hkv",
+  "github_url": "https://github.com/aditya1rawat/devnetwork-aiml-hackathon-2026",
+  "event_start": "2026-05-11",
+  "event_end": "2026-05-28",
+  "prizes": [
+   {
+    "prize": "Crusoe: Build a Hermes / NemoClaw agent running Nvidia Nemotron on Crusoe Cloud Managed Inference",
+    "category_as_awarded": "NVIDIA sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "NVIDIA"
+  ]
+ },
+ {
+  "project_id": "sponsor-devnetwork-ai-ml-hackathon-devnetwork-ai-ml-hackathon-2026-leavitt-on-call-ai-agent-turns-alerts-into-answers",
+  "project_name": "Leavitt: On-Call AI Agent, Turns Alerts Into Answers",
+  "hackathon": "DevNetwork [AI + ML] Hackathon",
+  "hackathon_no": 99,
+  "edition": "DevNetwork [AI + ML] Hackathon 2026",
+  "devpost_url": "https://devpost.com/software/leavitt",
+  "github_url": "https://github.com/msradam/theodosia",
+  "event_start": "2026-05-11",
+  "event_end": "2026-05-28",
+  "prizes": [
+   {
+    "prize": "Crusoe: Build a Hermes / NemoClaw agent running Nvidia Nemotron on Crusoe Cloud Managed Inference",
+    "category_as_awarded": "NVIDIA sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "NVIDIA"
+  ]
+ },
+ {
+  "project_id": "sponsor-hp-nvidia-developer-challenge-2025-affectlink",
+  "project_name": "AffectLink",
+  "hackathon": "HP & NVIDIA Developer Challenge",
+  "hackathon_no": 99,
+  "edition": "2025",
+  "devpost_url": "https://devpost.com/software/affectlink",
+  "github_url": "https://github.com/kingkw1/AffectLink",
+  "event_start": "2025-04-07",
+  "event_end": "2025-06-09",
+  "prizes": [
+   {
+    "prize": "Winner First Place",
+    "category_as_awarded": "NVIDIA sponsor prize",
+    "placement": "1st"
+   }
+  ],
+  "sponsors": [
+   "NVIDIA"
+  ]
+ },
+ {
+  "project_id": "sponsor-hp-nvidia-developer-challenge-2025-codence",
+  "project_name": "Codence",
+  "hackathon": "HP & NVIDIA Developer Challenge",
+  "hackathon_no": 99,
+  "edition": "2025",
+  "devpost_url": "https://devpost.com/software/codence",
+  "github_url": "https://github.com/ChaoKuan-Lin/HP-hackathon",
+  "event_start": "2025-04-07",
+  "event_end": "2025-06-09",
+  "prizes": [
+   {
+    "prize": "Bonus Best in Enterprise Data Analysis",
+    "category_as_awarded": "NVIDIA sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "NVIDIA"
+  ]
+ },
+ {
+  "project_id": "sponsor-hp-nvidia-developer-challenge-2025-document-analysis-toolset",
+  "project_name": "Document Analysis Toolset",
+  "hackathon": "HP & NVIDIA Developer Challenge",
+  "hackathon_no": 99,
+  "edition": "2025",
+  "devpost_url": "https://devpost.com/software/document-analysis-toolset",
+  "github_url": "https://github.com/msamylea/hprepo",
+  "event_start": "2025-04-07",
+  "event_end": "2025-06-09",
+  "prizes": [
+   {
+    "prize": "Winner Second Place",
+    "category_as_awarded": "NVIDIA sponsor prize",
+    "placement": "2nd"
+   }
+  ],
+  "sponsors": [
+   "NVIDIA"
+  ]
+ },
+ {
+  "project_id": "sponsor-hp-nvidia-developer-challenge-2025-medical-report-analyzer-healthy-habits-recommender",
+  "project_name": "Medical Report Analyzer / Healthy Habits Recommender",
+  "hackathon": "HP & NVIDIA Developer Challenge",
+  "hackathon_no": 99,
+  "edition": "2025",
+  "devpost_url": "https://devpost.com/software/medical-report-analyzer-healthy-habits-recommender",
+  "github_url": "https://github.com/nobelchowdary/hp-ai-hackathon-health-habit-recommender-app",
+  "event_start": "2025-04-07",
+  "event_end": "2025-06-09",
+  "prizes": [
+   {
+    "prize": "Bonus Honorable Mention: Healthcare",
+    "category_as_awarded": "NVIDIA sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "NVIDIA"
+  ]
+ },
+ {
+  "project_id": "sponsor-hp-nvidia-developer-challenge-2025-mira3d",
+  "project_name": "Mira3D",
+  "hackathon": "HP & NVIDIA Developer Challenge",
+  "hackathon_no": 99,
+  "edition": "2025",
+  "devpost_url": "https://devpost.com/software/mirai-5d98z3",
+  "github_url": "https://github.com/ankithreddypati/mira3d",
+  "event_start": "2025-04-07",
+  "event_end": "2025-06-09",
+  "prizes": [
+   {
+    "prize": "Winner Third Place",
+    "category_as_awarded": "NVIDIA sponsor prize",
+    "placement": "3rd"
+   }
+  ],
+  "sponsors": [
+   "NVIDIA"
+  ]
+ },
+ {
+  "project_id": "sponsor-hp-nvidia-developer-challenge-2025-openmed",
+  "project_name": "OpenMed",
+  "hackathon": "HP & NVIDIA Developer Challenge",
+  "hackathon_no": 99,
+  "edition": "2025",
+  "devpost_url": "https://devpost.com/software/openmed-gtp792",
+  "github_url": "",
+  "event_start": "2025-04-07",
+  "event_end": "2025-06-09",
+  "prizes": [
+   {
+    "prize": "Bonus Best in Enterprise Computer Vision",
+    "category_as_awarded": "NVIDIA sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "NVIDIA"
+  ]
+ },
+ {
+  "project_id": "sponsor-hp-nvidia-developer-challenge-2025-orpheus-engine",
+  "project_name": "Orpheus Engine",
+  "hackathon": "HP & NVIDIA Developer Challenge",
+  "hackathon_no": 99,
+  "edition": "2025",
+  "devpost_url": "https://devpost.com/software/orpheus-engine",
+  "github_url": "https://github.com/jhead12/orpheus-engine",
+  "event_start": "2025-04-07",
+  "event_end": "2025-06-09",
+  "prizes": [
+   {
+    "prize": "Winner (prize name truncated in scan)",
+    "category_as_awarded": "NVIDIA sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "NVIDIA"
+  ]
+ },
+ {
+  "project_id": "sponsor-hp-nvidia-developer-challenge-2025-quantumfinance-ai",
+  "project_name": "QuantumFinance AI",
+  "hackathon": "HP & NVIDIA Developer Challenge",
+  "hackathon_no": 99,
+  "edition": "2025",
+  "devpost_url": "https://devpost.com/software/quantumfinance-ai",
+  "github_url": "https://github.com/Husky-AI9/QuantumFinanceAI",
+  "event_start": "2025-04-07",
+  "event_end": "2025-06-09",
+  "prizes": [
+   {
+    "prize": "Bonus Honorable Mention: Finance",
+    "category_as_awarded": "NVIDIA sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "NVIDIA"
+  ]
+ },
+ {
+  "project_id": "sponsor-hp-nvidia-developer-challenge-2025-sophia",
+  "project_name": "Sophia",
+  "hackathon": "HP & NVIDIA Developer Challenge",
+  "hackathon_no": 99,
+  "edition": "2025",
+  "devpost_url": "https://devpost.com/software/sophia-76ueiq",
+  "github_url": "https://github.com/prasaddpathak/hp-hackathon",
+  "event_start": "2025-04-07",
+  "event_end": "2025-06-09",
+  "prizes": [
+   {
+    "prize": "Bonus Best in Gen AI",
+    "category_as_awarded": "NVIDIA sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "NVIDIA"
+  ]
+ },
+ {
+  "project_id": "sponsor-hp-nvidia-developer-challenge-2025-tryon",
+  "project_name": "TRYON",
+  "hackathon": "HP & NVIDIA Developer Challenge",
+  "hackathon_no": 99,
+  "edition": "2025",
+  "devpost_url": "https://devpost.com/software/tryon-woi0bh",
+  "github_url": "https://github.com/krishnaadithya/tryon",
+  "event_start": "2025-04-07",
+  "event_end": "2025-06-09",
+  "prizes": [
+   {
+    "prize": "Bonus Honorable Mention: Retail",
+    "category_as_awarded": "NVIDIA sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "NVIDIA"
+  ]
+ },
+ {
+  "project_id": "sponsor-hacktx-2026-archer",
+  "project_name": "ARcher",
+  "hackathon": "HackTX",
+  "hackathon_no": 18,
+  "edition": "2026",
+  "devpost_url": "https://devpost.com/software/overworked-archers",
+  "github_url": "https://github.com/Mohammad-R-Rashid/ARcher",
+  "event_start": "2026-10-24",
+  "event_end": "2026-10-25",
+  "prizes": [
+   {
+    "prize": "[Best Hardware Hack] Brick House (prize: Nvidia 5080 per member; NVIDIA is the prize, not a confirmed sponsor challenge)",
+    "category_as_awarded": "NVIDIA sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "NVIDIA"
+  ]
+ },
+ {
+  "project_id": "sponsor-knight-hacks-knight-hacks-ix-2025-farsight",
+  "project_name": "Farsight",
+  "hackathon": "Knight Hacks",
+  "hackathon_no": 99,
+  "edition": "Knight Hacks IX (2025)",
+  "devpost_url": "https://devpost.com/software/farsight-t4qyli",
+  "github_url": "https://github.com/azizu06/farsight",
+  "event_start": "2026-10-09",
+  "event_end": "2026-10-11",
+  "prizes": [
+   {
+    "prize": "NVIDIA: Best Use of Jetson Nano",
+    "category_as_awarded": "NVIDIA sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "NVIDIA"
+  ]
+ },
+ {
+  "project_id": "sponsor-knight-hacks-knight-hacks-ix-2025-fireline",
+  "project_name": "Fireline",
+  "hackathon": "Knight Hacks",
+  "hackathon_no": 99,
+  "edition": "Knight Hacks IX (2025)",
+  "devpost_url": "https://devpost.com/software/fireline-764nir",
+  "github_url": "https://github.com/kateye31/jetsonyay",
+  "event_start": "2026-10-09",
+  "event_end": "2026-10-11",
+  "prizes": [
+   {
+    "prize": "NVIDIA: Best Use of Jetson Nano",
+    "category_as_awarded": "NVIDIA sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "NVIDIA"
+  ]
+ },
+ {
+  "project_id": "sponsor-knight-hacks-knight-hacks-ix-2025-permanence",
+  "project_name": "Permanence",
+  "hackathon": "Knight Hacks",
+  "hackathon_no": 99,
+  "edition": "Knight Hacks IX (2025)",
+  "devpost_url": "https://devpost.com/software/permanence",
+  "github_url": "https://github.com/billpquach/permanence",
+  "event_start": "2026-10-09",
+  "event_end": "2026-10-11",
+  "prizes": [
+   {
+    "prize": "NVIDIA: Best Use of Jetson Nano",
+    "category_as_awarded": "NVIDIA sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "NVIDIA"
+  ]
+ },
+ {
+  "project_id": "sponsor-nemoclaw-nvidia-x-asus-hackathon-ucsc-2026-clawforge",
+  "project_name": "ClawForge",
+  "hackathon": "NemoClaw NVIDIA x ASUS Hackathon @ UCSC",
+  "hackathon_no": 99,
+  "edition": "2026",
+  "devpost_url": "https://devpost.com/software/clawforge",
+  "github_url": "https://github.com/animvsh/clawforge",
+  "event_start": "2026-05-16",
+  "event_end": "2026-05-16",
+  "prizes": [
+   {
+    "prize": "Best Use of Brev",
+    "category_as_awarded": "NVIDIA sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "NVIDIA"
+  ]
+ },
+ {
+  "project_id": "sponsor-nemoclaw-nvidia-x-asus-hackathon-ucsc-2026-factorymind",
+  "project_name": "FactoryMind",
+  "hackathon": "NemoClaw NVIDIA x ASUS Hackathon @ UCSC",
+  "hackathon_no": 99,
+  "edition": "2026",
+  "devpost_url": "https://devpost.com/software/factorymind",
+  "github_url": "https://github.com/rohanlab104/R2D2",
+  "event_start": "2026-05-16",
+  "event_end": "2026-05-16",
+  "prizes": [
+   {
+    "prize": "Best Use of DGX Spark",
+    "category_as_awarded": "NVIDIA sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "NVIDIA"
+  ]
+ },
+ {
+  "project_id": "sponsor-nemoclaw-nvidia-x-asus-hackathon-ucsc-2026-monkeyclaw",
+  "project_name": "MonkeyClaw",
+  "hackathon": "NemoClaw NVIDIA x ASUS Hackathon @ UCSC",
+  "hackathon_no": 99,
+  "edition": "2026",
+  "devpost_url": "https://devpost.com/software/monkeyclaw",
+  "github_url": "https://github.com/justin06lee/monkeyclaw",
+  "event_start": "2026-05-16",
+  "event_end": "2026-05-16",
+  "prizes": [
+   {
+    "prize": "Best Use of NemoClaw",
+    "category_as_awarded": "NVIDIA sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "NVIDIA"
+  ]
+ },
+ {
+  "project_id": "sponsor-sbu-hacks-2026-a-u-r-a-awareness-understanding-and-ranging-assistant",
+  "project_name": "A.U.R.A. (Awareness Understanding and Ranging Assistant)",
+  "hackathon": "SBU Hacks",
+  "hackathon_no": 99,
+  "edition": "2026",
+  "devpost_url": "https://devpost.com/software/a-u-r-a-assistive-understanding-and-ranging-assistant",
+  "github_url": "https://github.com/jeras0/chest-lidar",
+  "event_start": "2026-10-23",
+  "event_end": "2026-10-25",
+  "prizes": [
+   {
+    "prize": "BEST HARDWARE TRACK (prize item: NVIDIA Jetson Orin Nano Super; NVIDIA is the prize, not a confirmed sponsor challenge)",
+    "category_as_awarded": "NVIDIA sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "NVIDIA"
+  ]
+ },
+ {
+  "project_id": "sponsor-shellhacks-shellhacks-2025-vl-adk",
+  "project_name": "VL-ADK",
+  "hackathon": "ShellHacks",
+  "hackathon_no": 99,
+  "edition": "ShellHacks 2025",
+  "devpost_url": "https://devpost.com/software/vl-adk",
+  "github_url": "",
+  "event_start": "2025-09-26",
+  "event_end": "2025-09-28",
+  "prizes": [
+   {
+    "prize": "NVIDIA (Hack for the Future with NVIDIA)",
+    "category_as_awarded": "NVIDIA sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "NVIDIA"
+  ]
+ },
+ {
+  "project_id": "sponsor-steelhacks-steelhacks-xiii-2026-heard",
+  "project_name": "Heard!",
+  "hackathon": "SteelHacks",
+  "hackathon_no": 99,
+  "edition": "SteelHacks XIII (2026)",
+  "devpost_url": "https://devpost.com/software/heard-puhs0f",
+  "github_url": "https://github.com/jiazhenz026/heard-meeting",
+  "event_start": "2026-09-19",
+  "event_end": "2026-09-20",
+  "prizes": [
+   {
+    "prize": "[NVIDIA] Beyond the Chatbot",
+    "category_as_awarded": "NVIDIA sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "NVIDIA"
+  ]
+ },
+ {
+  "project_id": "sponsor-steelhacks-steelhacks-xiii-2026-surrealestate",
+  "project_name": "SurrealEstate",
+  "hackathon": "SteelHacks",
+  "hackathon_no": 99,
+  "edition": "SteelHacks XIII (2026)",
+  "devpost_url": "https://devpost.com/software/surrealestate",
+  "github_url": "https://github.com/Lucas-Granucci/SurrealEstate",
+  "event_start": "2026-09-19",
+  "event_end": "2026-09-20",
+  "prizes": [
+   {
+    "prize": "[NVIDIA] Beyond the Chatbot",
+    "category_as_awarded": "NVIDIA sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "NVIDIA"
+  ]
+ },
+ {
+  "project_id": "sponsor-steelhacks-steelhacks-xiii-2026-weave",
+  "project_name": "Weave",
+  "hackathon": "SteelHacks",
+  "hackathon_no": 99,
+  "edition": "SteelHacks XIII (2026)",
+  "devpost_url": "https://devpost.com/software/weave-z8t1i0",
+  "github_url": "https://github.com/Emmit3/Weave",
+  "event_start": "2026-09-19",
+  "event_end": "2026-09-20",
+  "prizes": [
+   {
+    "prize": "[NVIDIA] Beyond the Chatbot",
+    "category_as_awarded": "NVIDIA sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "NVIDIA"
+  ]
+ },
+ {
+  "project_id": "sponsor-treehacks-treehacks-2026-caltrack",
+  "project_name": "CalTrack",
+  "hackathon": "TreeHacks",
+  "hackathon_no": 3,
+  "edition": "TreeHacks 2026",
+  "devpost_url": "https://devpost.com/software/caltrack-i0pq3n",
+  "github_url": "https://github.com/alangrewco/treehacks",
+  "event_start": null,
+  "event_end": null,
+  "prizes": [
+   {
+    "prize": "[NVIDIA] Edge AI Track",
+    "category_as_awarded": "NVIDIA sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "NVIDIA"
+  ]
+ },
+ {
+  "project_id": "sponsor-treehacks-treehacks-2026-detour",
+  "project_name": "Detour",
+  "hackathon": "TreeHacks",
+  "hackathon_no": 3,
+  "edition": "TreeHacks 2026",
+  "devpost_url": "https://devpost.com/software/detour-64kpds",
+  "github_url": "https://github.com/keanucz/detour",
+  "event_start": null,
+  "event_end": null,
+  "prizes": [
+   {
+    "prize": "[NVIDIA] Edge AI Track",
+    "category_as_awarded": "NVIDIA sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "NVIDIA"
+  ]
+ },
+ {
+  "project_id": "sponsor-treehacks-treehacks-2025-portable-braille",
+  "project_name": "Portable Braille",
+  "hackathon": "TreeHacks",
+  "hackathon_no": 3,
+  "edition": "TreeHacks 2025",
+  "devpost_url": "https://devpost.com/software/portable-braille-cdq8v5",
+  "github_url": "https://github.com/Adil-Jussupov/PortableBraille",
+  "event_start": "2025-02-14",
+  "event_end": "2025-02-16",
+  "prizes": [
+   {
+    "prize": "NVIDIA: Robo Prize",
+    "category_as_awarded": "NVIDIA sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "NVIDIA"
+  ]
+ },
+ {
+  "project_id": "sponsor-treehacks-treehacks-2025-ranger",
+  "project_name": "Ranger",
+  "hackathon": "TreeHacks",
+  "hackathon_no": 3,
+  "edition": "TreeHacks 2025",
+  "devpost_url": "https://devpost.com/software/ranger-6jkv5s",
+  "github_url": "https://github.com/YuanSamuel/Treehacks2025",
+  "event_start": "2025-02-14",
+  "event_end": "2025-02-16",
+  "prizes": [
+   {
+    "prize": "NVIDIA: Best Accelerated Compute",
+    "category_as_awarded": "NVIDIA sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "NVIDIA"
+  ]
+ },
+ {
+  "project_id": "sponsor-treehacks-treehacks-2026-sprout",
+  "project_name": "Sprout",
+  "hackathon": "TreeHacks",
+  "hackathon_no": 3,
+  "edition": "TreeHacks 2026",
+  "devpost_url": "https://devpost.com/software/greenguardian-microfarm",
+  "github_url": "https://github.com/lethan3/cactushacks",
+  "event_start": null,
+  "event_end": null,
+  "prizes": [
+   {
+    "prize": "[NVIDIA] Edge AI Track",
+    "category_as_awarded": "NVIDIA sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "NVIDIA"
+  ]
+ },
+ {
+  "project_id": "sponsor-treehacks-treehacks-2026-torq",
+  "project_name": "TORQ",
+  "hackathon": "TreeHacks",
+  "hackathon_no": 3,
+  "edition": "TreeHacks 2026",
+  "devpost_url": "https://devpost.com/software/torq",
+  "github_url": "https://github.com/HazyResearch/ThunderKittens",
+  "event_start": null,
+  "event_end": null,
+  "prizes": [
+   {
+    "prize": "[NVIDIA] Edge AI Track",
+    "category_as_awarded": "NVIDIA sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "NVIDIA"
+  ]
+ },
+ {
+  "project_id": "sponsor-treehacks-treehacks-2025-wiiwork",
+  "project_name": "WiiWork",
+  "hackathon": "TreeHacks",
+  "hackathon_no": 3,
+  "edition": "TreeHacks 2025",
+  "devpost_url": "https://devpost.com/software/wiiwork-8u1x62",
+  "github_url": "https://github.com/Alezander9/WiiWork",
+  "event_start": "2025-02-14",
+  "event_end": "2025-02-16",
+  "prizes": [
+   {
+    "prize": "NVIDIA: Best Accelerated Compute",
+    "category_as_awarded": "NVIDIA sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "NVIDIA"
+  ]
+ },
+ {
+  "project_id": "sponsor-ub-hacking-ub-hacking-fall-2025-eas-e",
+  "project_name": "EAS&E",
+  "hackathon": "UB Hacking",
+  "hackathon_no": 99,
+  "edition": "UB Hacking Fall 2025",
+  "devpost_url": "https://devpost.com/software/eas-e",
+  "github_url": "",
+  "event_start": "2025-11-08",
+  "event_end": "2025-11-09",
+  "prizes": [
+   {
+    "prize": "Best AI/ML Hack (prize: NVIDIA Orion Jetson Nano per team member; low confidence, no NVIDIA challenge)",
+    "category_as_awarded": "NVIDIA sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "NVIDIA"
+  ]
+ },
+ {
+  "project_id": "sponsor-hacknyu-2025-dristhi",
+  "project_name": "Dristhi",
+  "hackathon": "HackNYU",
+  "hackathon_no": 38,
+  "edition": "2025",
+  "devpost_url": "https://devpost.com/software/dristhi",
+  "github_url": "",
+  "event_start": null,
+  "event_end": null,
+  "prizes": [
+   {
+    "prize": "Track: Security and Privacy (sponsored by Nord Security)",
+    "category_as_awarded": "Nord sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Nord"
+  ]
+ },
+ {
+  "project_id": "sponsor-hacknyu-2025-firstwave",
+  "project_name": "FirstWave",
+  "hackathon": "HackNYU",
+  "hackathon_no": 38,
+  "edition": "2025",
+  "devpost_url": "https://devpost.com/software/firstwave-5wbld1",
+  "github_url": "",
+  "event_start": null,
+  "event_end": null,
+  "prizes": [
+   {
+    "prize": "Track: Security and Privacy (sponsored by Nord Security)",
+    "category_as_awarded": "Nord sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Nord"
+  ]
+ },
+ {
+  "project_id": "sponsor-hackprinceton-spring-2025-sixthsense",
+  "project_name": "SixthSense",
+  "hackathon": "HackPrinceton",
+  "hackathon_no": 23,
+  "edition": "Spring 2025",
+  "devpost_url": "https://devpost.com/software/sixthsense-xuw41r",
+  "github_url": "",
+  "event_start": null,
+  "event_end": null,
+  "prizes": [
+   {
+    "prize": "Best Overall Hack (Meta Quest + NordVPN products 1yr + 1GB data per member)",
+    "category_as_awarded": "Nord sponsor prize",
+    "placement": "1st"
+   }
+  ],
+  "sponsors": [
+   "Nord"
+  ]
+ },
+ {
+  "project_id": "sponsor-hackrpi-2025-bytebite",
+  "project_name": "ByteBite",
+  "hackathon": "HackRPI",
+  "hackathon_no": 37,
+  "edition": "2025",
+  "devpost_url": "https://devpost.com/software/bytebite-5ohg82",
+  "github_url": "https://github.com/TheByteGuy/bytebite",
+  "event_start": "2025-11-15",
+  "event_end": "2025-11-16",
+  "prizes": [
+   {
+    "prize": "Best Data Science Hack (+ Nord bundle: 1yr NordVPN/NordPass/NordProtect/Incogni, 1GB Saily, 3-month nexos.ai with 200 EUR credit)",
+    "category_as_awarded": "Nord sponsor prize",
+    "placement": "track winner"
+   }
+  ],
+  "sponsors": [
+   "Nord"
+  ]
+ },
+ {
+  "project_id": "sponsor-hoohacks-2025-morpheus",
+  "project_name": "Morpheus",
+  "hackathon": "HooHacks",
+  "hackathon_no": 21,
+  "edition": "2025",
+  "devpost_url": "https://devpost.com/software/morpheus-nu26ai",
+  "github_url": "",
+  "event_start": null,
+  "event_end": null,
+  "prizes": [
+   {
+    "prize": "Best Artificial Intelligence (OpenAI credits + 1yr NordVPN/NordPass/Incogni + 1GB Saily)",
+    "category_as_awarded": "Nord sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Nord"
+  ]
+ },
+ {
+  "project_id": "sponsor-dubhacks-dubhacks-2026-fluffy",
+  "project_name": "Fluffy",
+  "hackathon": "DubHacks",
+  "hackathon_no": 8,
+  "edition": "DubHacks 2026",
+  "devpost_url": "https://devpost.com/software/fluffy-xq8lgp",
+  "github_url": "https://github.com/edwinthemathman/dubhacks26-Fluffy",
+  "event_start": "2026-10-17",
+  "event_end": "2026-10-18",
+  "prizes": [
+   {
+    "prize": "Photon: Best Voice Agent",
+    "category_as_awarded": "Photon sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Photon"
+  ]
+ },
+ {
+  "project_id": "sponsor-dubhacks-dubhacks-2026-restock",
+  "project_name": "restock",
+  "hackathon": "DubHacks",
+  "hackathon_no": 8,
+  "edition": "DubHacks 2026",
+  "devpost_url": "https://devpost.com/software/restock-n5hxgo",
+  "github_url": "https://github.com/aknotwell/restock",
+  "event_start": "2026-10-17",
+  "event_end": "2026-10-18",
+  "prizes": [
+   {
+    "prize": "Photon: Runner Up",
+    "category_as_awarded": "Photon sponsor prize",
+    "placement": "2nd"
+   }
+  ],
+  "sponsors": [
+   "Photon"
+  ]
+ },
+ {
+  "project_id": "sponsor-hackharvard-hackharvard-2026-concord",
+  "project_name": "Concord",
+  "hackathon": "HackHarvard",
+  "hackathon_no": 24,
+  "edition": "HackHarvard 2026",
+  "devpost_url": "https://devpost.com/software/concord-17as0b",
+  "github_url": "https://github.com/CosmicOdyssey/concord",
+  "event_start": "2026-10-16",
+  "event_end": "2026-10-18",
+  "prizes": [
+   {
+    "prize": "UNCONFIRMED: appears in winners=true gallery AND project text mentions Photon; Devpost page shows no prize badge yet (Photon 2.0 messaging agent track: winner/runner-up/best voice)",
+    "category_as_awarded": "Photon sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Photon"
+  ]
+ },
+ {
+  "project_id": "sponsor-hackharvard-hackharvard-2026-elfie",
+  "project_name": "Elfie",
+  "hackathon": "HackHarvard",
+  "hackathon_no": 24,
+  "edition": "HackHarvard 2026",
+  "devpost_url": "https://devpost.com/software/n-a-okr0vf",
+  "github_url": "https://github.com/arshiyasharma/hackharvard/",
+  "event_start": "2026-10-16",
+  "event_end": "2026-10-18",
+  "prizes": [
+   {
+    "prize": "UNCONFIRMED: appears in winners=true gallery AND project text mentions Photon; Devpost page shows no prize badge yet (Photon 2.0 messaging agent track: winner/runner-up/best voice)",
+    "category_as_awarded": "Photon sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Photon"
+  ]
+ },
+ {
+  "project_id": "sponsor-hackharvard-hackharvard-2026-keepsake",
+  "project_name": "Keepsake",
+  "hackathon": "HackHarvard",
+  "hackathon_no": 24,
+  "edition": "HackHarvard 2026",
+  "devpost_url": "https://devpost.com/software/keepsake-df0gmw",
+  "github_url": "https://github.com/rayhanrinzan/keepsake",
+  "event_start": "2026-10-16",
+  "event_end": "2026-10-18",
+  "prizes": [
+   {
+    "prize": "UNCONFIRMED: appears in winners=true gallery AND project text mentions Photon; Devpost page shows no prize badge yet (Photon 2.0 messaging agent track: winner/runner-up/best voice)",
+    "category_as_awarded": "Photon sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Photon"
+  ]
+ },
+ {
+  "project_id": "sponsor-hackharvard-hackharvard-2026-mirage",
+  "project_name": "Mirage",
+  "hackathon": "HackHarvard",
+  "hackathon_no": 24,
+  "edition": "HackHarvard 2026",
+  "devpost_url": "https://devpost.com/software/team-b-0ydafx",
+  "github_url": "https://github.com/MrFiscus/Mirage",
+  "event_start": "2026-10-16",
+  "event_end": "2026-10-18",
+  "prizes": [
+   {
+    "prize": "UNCONFIRMED: appears in winners=true gallery AND project text mentions Photon; Devpost page shows no prize badge yet (Photon 2.0 messaging agent track: winner/runner-up/best voice)",
+    "category_as_awarded": "Photon sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Photon"
+  ]
+ },
+ {
+  "project_id": "sponsor-hackharvard-hackharvard-2026-siteline",
+  "project_name": "SiteLine",
+  "hackathon": "HackHarvard",
+  "hackathon_no": 24,
+  "edition": "HackHarvard 2026",
+  "devpost_url": "https://devpost.com/software/siteline-90rxwp",
+  "github_url": "https://github.com/duna-akin/hackharvard-2026",
+  "event_start": "2026-10-16",
+  "event_end": "2026-10-18",
+  "prizes": [
+   {
+    "prize": "UNCONFIRMED: appears in winners=true gallery AND project text mentions Photon; Devpost page shows no prize badge yet (Photon 2.0 messaging agent track: winner/runner-up/best voice)",
+    "category_as_awarded": "Photon sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Photon"
+  ]
+ },
+ {
+  "project_id": "sponsor-hackharvard-hackharvard-2026-swarm",
+  "project_name": "Swarm",
+  "hackathon": "HackHarvard",
+  "hackathon_no": 24,
+  "edition": "HackHarvard 2026",
+  "devpost_url": "https://devpost.com/software/swarm-1e527i",
+  "github_url": "https://github.com/shubangowda/swarm",
+  "event_start": "2026-10-16",
+  "event_end": "2026-10-18",
+  "prizes": [
+   {
+    "prize": "UNCONFIRMED: appears in winners=true gallery AND project text mentions Photon; Devpost page shows no prize badge yet (Photon 2.0 messaging agent track: winner/runner-up/best voice)",
+    "category_as_awarded": "Photon sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Photon"
+  ]
+ },
+ {
+  "project_id": "sponsor-hackharvard-hackharvard-2026-tekkey",
+  "project_name": "TekKEY",
+  "hackathon": "HackHarvard",
+  "hackathon_no": 24,
+  "edition": "HackHarvard 2026",
+  "devpost_url": "https://devpost.com/software/tekkey",
+  "github_url": "https://github.com/JoshuaA1292/TekKEY",
+  "event_start": "2026-10-16",
+  "event_end": "2026-10-18",
+  "prizes": [
+   {
+    "prize": "UNCONFIRMED: appears in winners=true gallery AND project text mentions Photon; Devpost page shows no prize badge yet (Photon 2.0 messaging agent track: winner/runner-up/best voice)",
+    "category_as_awarded": "Photon sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Photon"
+  ]
+ },
+ {
+  "project_id": "sponsor-hackprinceton-hackprinceton-fall-2025-messenger-ai",
+  "project_name": "Messenger AI",
+  "hackathon": "HackPrinceton",
+  "hackathon_no": 23,
+  "edition": "HackPrinceton Fall 2025",
+  "devpost_url": "https://devpost.com/software/messenger-ai",
+  "github_url": "",
+  "event_start": "2025-11-07",
+  "event_end": "2025-11-09",
+  "prizes": [
+   {
+    "prize": "Exploring Hybrid Intelligence by Photon",
+    "category_as_awarded": "Photon sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Photon"
+  ]
+ },
+ {
+  "project_id": "sponsor-hackprinceton-hackprinceton-fall-2025-piggybank",
+  "project_name": "PiggyBank",
+  "hackathon": "HackPrinceton",
+  "hackathon_no": 23,
+  "edition": "HackPrinceton Fall 2025",
+  "devpost_url": "https://devpost.com/software/tbd-9clz1k",
+  "github_url": "https://github.com/HackPrincetonQANT/backend-frontned-agent-alltogether",
+  "event_start": "2025-11-07",
+  "event_end": "2025-11-09",
+  "prizes": [
+   {
+    "prize": "Exploring Hybrid Intelligence by Photon",
+    "category_as_awarded": "Photon sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Photon"
+  ]
+ },
+ {
+  "project_id": "sponsor-hackprinceton-hackprinceton-fall-2025-textfly",
+  "project_name": "TextFly",
+  "hackathon": "HackPrinceton",
+  "hackathon_no": 23,
+  "edition": "HackPrinceton Fall 2025",
+  "devpost_url": "https://devpost.com/software/textfly",
+  "github_url": "https://github.com/TextFly/flub-agent",
+  "event_start": "2025-11-07",
+  "event_end": "2025-11-09",
+  "prizes": [
+   {
+    "prize": "Exploring Hybrid Intelligence by Photon",
+    "category_as_awarded": "Photon sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Photon"
+  ]
+ },
+ {
+  "project_id": "sponsor-hackprinceton-hackprinceton-fall-2025-wings",
+  "project_name": "Wings",
+  "hackathon": "HackPrinceton",
+  "hackathon_no": 23,
+  "edition": "HackPrinceton Fall 2025",
+  "devpost_url": "https://devpost.com/software/wingpay",
+  "github_url": "https://github.com/leowang2004/hackprinceton2025",
+  "event_start": "2025-11-07",
+  "event_end": "2025-11-09",
+  "prizes": [
+   {
+    "prize": "Exploring Hybrid Intelligence by Photon",
+    "category_as_awarded": "Photon sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Photon"
+  ]
+ },
+ {
+  "project_id": "sponsor-hackprinceton-hackprinceton-fall-2025-doeve",
+  "project_name": "doeve",
+  "hackathon": "HackPrinceton",
+  "hackathon_no": 23,
+  "edition": "HackPrinceton Fall 2025",
+  "devpost_url": "https://devpost.com/software/do-eve",
+  "github_url": "https://github.com/adhvaidhsunny/doeve",
+  "event_start": "2025-11-07",
+  "event_end": "2025-11-09",
+  "prizes": [
+   {
+    "prize": "Exploring Hybrid Intelligence by Photon",
+    "category_as_awarded": "Photon sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Photon"
+  ]
+ },
+ {
+  "project_id": "sponsor-hacklanta-hacklanta-2026-ingineer",
+  "project_name": "Ingineer",
+  "hackathon": "Hacklanta",
+  "hackathon_no": 99,
+  "edition": "Hacklanta 2026",
+  "devpost_url": "https://devpost.com/software/ingineer",
+  "github_url": "https://github.com/workoholyguy/Ingenium",
+  "event_start": "2026-10-09",
+  "event_end": "2026-10-11",
+  "prizes": [
+   {
+    "prize": "[Photon] Agents in iMessage - Winner",
+    "category_as_awarded": "Photon sponsor prize",
+    "placement": "1st"
+   }
+  ],
+  "sponsors": [
+   "Photon"
+  ]
+ },
+ {
+  "project_id": "sponsor-hacklanta-hacklanta-2026-safeword",
+  "project_name": "Safeword",
+  "hackathon": "Hacklanta",
+  "hackathon_no": 99,
+  "edition": "Hacklanta 2026",
+  "devpost_url": "https://devpost.com/software/safeword-3ef01z",
+  "github_url": "",
+  "event_start": "2026-10-09",
+  "event_end": "2026-10-11",
+  "prizes": [
+   {
+    "prize": "[Photon] Agents in iMessage - Runner Up",
+    "category_as_awarded": "Photon sponsor prize",
+    "placement": "2nd"
+   }
+  ],
+  "sponsors": [
+   "Photon"
+  ]
+ },
+ {
+  "project_id": "sponsor-la-hacks-ai-hackathon-2026-la-hacks-ai-hackathon-2026-betterbill",
+  "project_name": "BetterBill",
+  "hackathon": "LA Hacks (AI Hackathon 2026)",
+  "hackathon_no": 99,
+  "edition": "LA Hacks AI Hackathon 2026",
+  "devpost_url": "https://devpost.com/software/betterbill",
+  "github_url": "https://github.com/matmanna/betterbill",
+  "event_start": "2026-10-17",
+  "event_end": "2026-10-18",
+  "prizes": [
+   {
+    "prize": "Photon: Best Voice Agent (also Visa prize)",
+    "category_as_awarded": "Photon sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Photon"
+  ]
+ },
+ {
+  "project_id": "sponsor-la-hacks-ai-hackathon-2026-la-hacks-ai-hackathon-2026-henomaly",
+  "project_name": "Henomaly",
+  "hackathon": "LA Hacks (AI Hackathon 2026)",
+  "hackathon_no": 99,
+  "edition": "LA Hacks AI Hackathon 2026",
+  "devpost_url": "https://devpost.com/software/holy-crap",
+  "github_url": "https://github.com/RishitRai/Henomaly",
+  "event_start": "2026-10-17",
+  "event_end": "2026-10-18",
+  "prizes": [
+   {
+    "prize": "Photon: iMessage Track Winner (also QNX prize)",
+    "category_as_awarded": "Photon sponsor prize",
+    "placement": "1st"
+   }
+  ],
+  "sponsors": [
+   "Photon"
+  ]
+ },
+ {
+  "project_id": "sponsor-la-hacks-ai-hackathon-2026-la-hacks-ai-hackathon-2026-sproutpass",
+  "project_name": "SproutPass",
+  "hackathon": "LA Hacks (AI Hackathon 2026)",
+  "hackathon_no": 99,
+  "edition": "LA Hacks AI Hackathon 2026",
+  "devpost_url": "https://devpost.com/software/sproutpass",
+  "github_url": "https://github.com/96528025/SproutPass",
+  "event_start": "2026-10-17",
+  "event_end": "2026-10-18",
+  "prizes": [
+   {
+    "prize": "Photon: iMessage Runner-Up (also Visa prize)",
+    "category_as_awarded": "Photon sponsor prize",
+    "placement": "2nd"
+   }
+  ],
+  "sponsors": [
+   "Photon"
+  ]
+ },
+ {
+  "project_id": "sponsor-mhacks-mhacks-2026-concierge",
+  "project_name": "Concierge",
+  "hackathon": "MHacks",
+  "hackathon_no": 26,
+  "edition": "MHacks 2026",
+  "devpost_url": "https://devpost.com/software/concierge-o38bu5",
+  "github_url": "https://github.com/sszz01/zero-knowledge-team",
+  "event_start": "2026-10-03",
+  "event_end": "2026-10-04",
+  "prizes": [
+   {
+    "prize": "Photon iMessage Agents Track Winner",
+    "category_as_awarded": "Photon sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Photon"
+  ]
+ },
+ {
+  "project_id": "sponsor-mhacks-mhacks-2026-tab-groupchat-accountant",
+  "project_name": "Tab: Groupchat Accountant",
+  "hackathon": "MHacks",
+  "hackathon_no": 26,
+  "edition": "MHacks 2026",
+  "devpost_url": "https://devpost.com/software/tab-groupchat-finances",
+  "github_url": "https://github.com/kien-le-trung/Tab_MHacks26",
+  "event_start": "2026-10-03",
+  "event_end": "2026-10-04",
+  "prizes": [
+   {
+    "prize": "Photon iMessage Agents Track Winner",
+    "category_as_awarded": "Photon sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "Photon"
+  ]
+ },
+ {
+  "project_id": "sponsor-innovation-hacks-innovation-hacks-2-0-dollar-dash",
+  "project_name": "Dollar Dash",
+  "hackathon": "Innovation Hacks",
+  "hackathon_no": 99,
+  "edition": "Innovation Hacks 2.0",
+  "devpost_url": "https://devpost.com/software/dollar-dash",
+  "github_url": "https://github.com/WillBlair/dollardash",
+  "event_start": "2026-04-03",
+  "event_end": "2026-04-05",
+  "prizes": [
+   {
+    "prize": "Winner State Farm: Financial Wellness Track",
+    "category_as_awarded": "State Farm sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "State Farm"
+  ]
+ },
+ {
+  "project_id": "sponsor-innovation-hacks-innovation-hacks-2-0-redreemer",
+  "project_name": "Redreemer",
+  "hackathon": "Innovation Hacks",
+  "hackathon_no": 99,
+  "edition": "Innovation Hacks 2.0",
+  "devpost_url": "https://devpost.com/software/redreemer",
+  "github_url": "https://github.com/sumedha092/redreemer",
+  "event_start": "2026-04-03",
+  "event_end": "2026-04-05",
+  "prizes": [
+   {
+    "prize": "Winner State Farm: Financial Wellness Track",
+    "category_as_awarded": "State Farm sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "State Farm"
+  ]
+ },
+ {
+  "project_id": "sponsor-shellhacks-shellhacks-2024-fivehacks",
+  "project_name": "FiveHacks",
+  "hackathon": "ShellHacks",
+  "hackathon_no": 99,
+  "edition": "ShellHacks 2024",
+  "devpost_url": "https://devpost.com/software/fivehacks",
+  "github_url": "",
+  "event_start": "2024-09-27",
+  "event_end": "2024-09-29",
+  "prizes": [
+   {
+    "prize": "Winner Statefarm",
+    "category_as_awarded": "State Farm sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "State Farm"
+  ]
+ },
+ {
+  "project_id": "sponsor-shellhacks-shellhacks-2025-greenlight",
+  "project_name": "GreenLight",
+  "hackathon": "ShellHacks",
+  "hackathon_no": 99,
+  "edition": "ShellHacks 2025",
+  "devpost_url": "https://devpost.com/software/greenlight-idnv6o",
+  "github_url": "https://github.com/thashin04/GreenLight-Driving/tree/main",
+  "event_start": null,
+  "event_end": null,
+  "prizes": [
+   {
+    "prize": "Winner State Farm",
+    "category_as_awarded": "State Farm sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "State Farm"
+  ]
+ },
+ {
+  "project_id": "sponsor-shellhacks-shellhacks-2026-halo",
+  "project_name": "Halo",
+  "hackathon": "ShellHacks",
+  "hackathon_no": 99,
+  "edition": "ShellHacks 2026",
+  "devpost_url": "https://devpost.com/software/halo-1q59hf",
+  "github_url": "https://github.com/billpquach/halo",
+  "event_start": "2026-09-25",
+  "event_end": "2026-09-27",
+  "prizes": [
+   {
+    "prize": "Winner State Farm",
+    "category_as_awarded": "State Farm sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "State Farm"
+  ]
+ },
+ {
+  "project_id": "sponsor-shellhacks-shellhacks-2025-next-step",
+  "project_name": "Next Step",
+  "hackathon": "ShellHacks",
+  "hackathon_no": 99,
+  "edition": "ShellHacks 2025",
+  "devpost_url": "https://devpost.com/software/next-step-cme06a",
+  "github_url": "https://github.com/sebastian-noel/NextStep",
+  "event_start": null,
+  "event_end": null,
+  "prizes": [
+   {
+    "prize": "Winner State Farm",
+    "category_as_awarded": "State Farm sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "State Farm"
+  ]
+ },
+ {
+  "project_id": "sponsor-shellhacks-shellhacks-2025-the-rat-race",
+  "project_name": "The Rat Race",
+  "hackathon": "ShellHacks",
+  "hackathon_no": 99,
+  "edition": "ShellHacks 2025",
+  "devpost_url": "https://devpost.com/software/the-rat-race",
+  "github_url": "",
+  "event_start": null,
+  "event_end": null,
+  "prizes": [
+   {
+    "prize": "Winner State Farm",
+    "category_as_awarded": "State Farm sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "State Farm"
+  ]
+ },
+ {
+  "project_id": "sponsor-shellhacks-shellhacks-2024-treasure-keepers",
+  "project_name": "Treasure Keepers",
+  "hackathon": "ShellHacks",
+  "hackathon_no": 99,
+  "edition": "ShellHacks 2024",
+  "devpost_url": "https://devpost.com/software/treasure-keepers",
+  "github_url": "https://github.com/Juuicee/ShellHacks-2024",
+  "event_start": "2024-09-27",
+  "event_end": "2024-09-29",
+  "prizes": [
+   {
+    "prize": "Winner Statefarm",
+    "category_as_awarded": "State Farm sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "State Farm"
+  ]
+ },
+ {
+  "project_id": "sponsor-sunhacks-sunhacks-2025-crises-ai",
+  "project_name": "Crises.ai",
+  "hackathon": "SunHacks",
+  "hackathon_no": 99,
+  "edition": "SunHacks 2025",
+  "devpost_url": "https://devpost.com/software/crises-ai",
+  "github_url": "https://github.com/SankrityaT/Crises.ai",
+  "event_start": "2025-09-27",
+  "event_end": "2025-09-28",
+  "prizes": [
+   {
+    "prize": "Winner State Farm - Best Hack for Safety",
+    "category_as_awarded": "State Farm sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "State Farm"
+  ]
+ },
+ {
+  "project_id": "sponsor-sunhacks-sunhacks-2024-lockitup",
+  "project_name": "LockItUp",
+  "hackathon": "SunHacks",
+  "hackathon_no": 99,
+  "edition": "SunHacks 2024",
+  "devpost_url": "https://devpost.com/software/lockitup",
+  "github_url": "https://github.com/risratna/lockitup",
+  "event_start": "2024-09-28",
+  "event_end": "2024-09-29",
+  "prizes": [
+   {
+    "prize": "Winner State Farm - Best Hack for Social Good",
+    "category_as_awarded": "State Farm sponsor prize",
+    "placement": "unknown"
+   }
+  ],
+  "sponsors": [
+   "State Farm"
+  ]
+ }
+]

@@ -1,0 +1,101 @@
+pattern,sponsor_industry,in_2026_industries,n_projects,n_also_general,examples,examples_also_general
+data_to_decision,finance_banking,True,36,0,AI-powered Investment Portfolio Creator; Bread Bot; BreakingPoint,
+workflow_automation_agent,ai_compute,True,31,1,ANNEAL; AeroFreight AI; AgriBroker,CareChair
+data_to_decision,other,True,19,2,Bandaid Maps; Baymaxxing; Beyond Budgeting,Mapd; WhaleBeing
+workflow_automation_agent,cloud_devtools,True,18,3,Aether; CareChair; Citadail,Aether; CareChair; Rally AI
+data_to_decision,cloud_devtools,True,17,0,Cinder Control; Ember; Ender's Bench,
+risk_detect_and_respond,ai_compute,True,14,2,AERIS; Argus; Asclepius,Asclepius; RIIS
+game_or_social,other,True,13,0,Chess without Borders; CodeMafia; Doggin' Around,
+devtool,cloud_devtools,True,12,1,ARC React; Atlas; Bender Blender,Puppeteer
+sensor_to_alert_or_action,other,True,12,1,Artemis; BioMeshP2P; Djubrino,Theracat
+vision_to_assist,ai_compute,True,12,4,Delta; Drigil; Embers,Lumos; PathSense; Permanence
+data_to_decision,ai_compute,True,10,0,Alchemetrics; Elda AI; GreenChain,
+realtime_coordination,ai_compute,True,10,0,AlphaRescue; FactoryMind; Farsight,
+workflow_automation_agent,finance_banking,True,10,0,AutoPM; CFO-Sabbatical; Donair,
+education_feedback,ai_compute,True,9,3,Bloomscroll; ChromaChord; EduAgent,Bloomscroll; ChromaChord; MockMade
+workflow_automation_agent,other,True,9,1,Cameron; CareChair; Donair,CareChair
+data_to_decision,auto_mobility,True,8,0,CarBaba; DreamDrive; FUELICIENT,
+docs_to_action,cloud_devtools,True,8,1,BAS Buddy (Climate Action Matcher); ClubHub; EcoFy,Percival
+game_or_social,cloud_devtools,True,8,1,Cheddarboxd; DoubleTake; EcoBuddy,punching-face
+realtime_coordination,cloud_devtools,True,8,0,Bandit - The only band you need; CoClip; Haven,
+realtime_coordination,other,True,8,1,Farsight; Haven; Klick,TripSync
+risk_detect_and_respond,cloud_devtools,True,8,1,Batman; MediLedger; PathWise,Peel - The tiny lab technician
+vision_to_assist,other,True,8,0,Fivi; Ghostface Cookah; Octaby,
+data_to_decision,real_estate,True,7,0,Cura; Greenify; Personal Finance & Smart Investment App,
+docs_to_action,finance_banking,True,7,0,AutoBoard; Lapse; ProDuh!,
+other,other,True,7,0,Blockify; CookHub; Hooray-For-Huawei,
+voice_to_action,ai_compute,True,7,0,Concierge; Fluffy; MediBuddy,
+data_to_decision,telecom,True,6,0,Beacon; HarmoniQ; Homelander,
+devtool,ai_compute,True,6,4,Alto; Autopsy; Confab,Alto; Autopsy; GitAgent
+education_feedback,cloud_devtools,True,6,2,Bubu-Dins; Saykind; Ted.AI,Bubu-Dins; Ted.AI
+education_feedback,finance_banking,True,6,1,FinSim; Hingine; I'd Rather Scroll,JungleBank
+education_feedback,other,True,6,0,AI Escape; Deceipt; Inkling,
+other,finance_banking,True,6,0,"AllBank: Inclusive, Intelligent, Impactful; Desjardins ConUHacks Adventure Banking App; SpendingWithSpendy",
+sensor_to_alert_or_action,ai_compute,True,6,0,Backtracc; Ranger; Sprout,
+vision_to_assist,cloud_devtools,True,6,0,90°; Accent; I LOST IT,
+devtool,other,True,5,0,Duck Duck Goose; Freak in the Sheets; Hardware Context Protocol (MCP for Hardware),
+docs_to_action,ai_compute,True,5,0,AGastIa; BetterBill; HireSense,
+docs_to_action,health,True,5,0,ClearPath; Doc McQuery; Dr.Bob,
+docs_to_action,real_estate,True,5,0,Aero; Meet+; Miro,
+education_feedback,insurance,True,5,0,Finsurance; FiveHacks; GreenLight,
+risk_detect_and_respond,finance_banking,True,5,0,Agent Zero; C2Pay; Kairos,
+risk_detect_and_respond,other,True,5,0,Anchor (Monash); Fireline; Noxen,
+translate_between_people_or_systems,ai_compute,True,5,1,Dots; Portable Braille; Talk Tuah,Portable Braille
+data_to_decision,energy,True,4,0,DataCenter-DeCoder; FlowCore; PoyoLabs,
+game_or_social,finance_banking,True,4,0,Atlantis - The Long Night; Minty: Digital Tooth Fairy; Pay Pals,
+other,security_privacy,False,4,1,Clarify; NextBid; SideQuests-HearsaySubmission,NextBid
+realtime_coordination,finance_banking,True,4,2,Localized; Lumo; PayPark,Localized; Lumo
+risk_detect_and_respond,security_privacy,False,4,0,Athena; D3CISION; QWave,
+spatial_ar,ai_compute,True,4,1,FRIDAY; Fireflai; Orbis Engine,Orbis Engine
+spatial_ar,other,True,4,1,FirefightAR; Math Sandbox; Premiere,Premiere
+voice_to_action,other,True,4,0,ATP - Accessible to Prescription; B2Travel; HealthMe,
+devtool,insurance,True,3,0,MirrorAPI; UpGuardian; qAPIbara,
+docs_to_action,other,True,3,0,ADLOVIN; Lapse; dump,
+education_feedback,auto_mobility,True,3,1,CUPRA-App; Feel the CUPRA; MockMade,MockMade
+game_or_social,ai_compute,True,3,1,Debug Debacle; DreamDirector; KO.rbit,Debug Debacle
+risk_detect_and_respond,energy,True,3,0,DHy-n0; Enchantress; PipeBrAIns,
+sensor_to_alert_or_action,cloud_devtools,True,3,2,FireGrid.ai; GaitGuard; SoundSheild,GaitGuard; SoundSheild
+translate_between_people_or_systems,other,True,3,0,ASL-Bridge; HeirLoom; TedTime,
+vision_to_assist,retail,False,3,0,ECHOLOOK; Inditex Visual Search; Inditex clothe detector,
+voice_to_action,auto_mobility,True,3,1,Aria: The Multimodal AI Kiosk; TalkTuahAirline; Treat Me To A Toyota,TalkTuahAirline
+voice_to_action,cloud_devtools,True,3,1,Ai-Companion; Combadge; Recall,Combadge
+voice_to_action,health,True,3,0,ATP - Accessible to Prescription; CuraVox; HealthMe,
+data_to_decision,health,True,2,0,FalsePay; Persist Health,
+docs_to_action,security_privacy,False,2,1,Forens.tech; TLDR.AI,TLDR.AI
+game_or_social,insurance,True,2,0,Dollar Dash; The Rat Race,
+other,cloud_devtools,True,2,1,Capsule; Settlers of Solana,Settlers of Solana
+other,real_estate,True,2,0,Integra; Mosaic,
+realtime_coordination,auto_mobility,True,2,0,AIsle0; Aviateur,
+risk_detect_and_respond,health,True,2,1,Asclepius; Clarity,Asclepius
+risk_detect_and_respond,telecom,True,2,0,CareLens; Roam; Kill-Switch,
+sensor_to_alert_or_action,finance_banking,True,2,0,Desjungles; TeleGrid,
+sensor_to_alert_or_action,insurance,True,2,0,Halo; LockItUp,
+sensor_to_alert_or_action,real_estate,True,2,0,Eco Fast Track; UtiliTrack,
+spatial_ar,finance_banking,True,2,1,Flashback; Rumi,Flashback
+translate_between_people_or_systems,cloud_devtools,True,2,0,Braille Assist; NimbusNews: AI-Powered Weather Storytelling,
+voice_to_action,finance_banking,True,2,1,HR Audit; TalkTuahBank,TalkTuahBank
+workflow_automation_agent,health,True,2,0,BooBoo Buddy; Elute,
+data_to_decision,insurance,True,1,0,Crises.ai,
+devtool,security_privacy,False,1,0,The Miraculous Bits and Bytes Fuzzer,
+devtool,telecom,True,1,0,Nimbus,
+docs_to_action,auto_mobility,True,1,0,CARmen,
+docs_to_action,telecom,True,1,0,"Formly - the secure, fast form filler",
+education_feedback,energy,True,1,0,DopaMarine,
+other,ai_compute,True,1,0,Object State Tracking in Language Models,
+risk_detect_and_respond,auto_mobility,True,1,0,VisionGuard: smart vision for smarter driving,
+sensor_to_alert_or_action,security_privacy,False,1,0,Dristhi,
+sensor_to_alert_or_action,telecom,True,1,0,Resililink,
+spatial_ar,auto_mobility,True,1,0,Garage,
+spatial_ar,cloud_devtools,True,1,0,Atlas,
+spatial_ar,health,True,1,0,Atlas,
+spatial_ar,real_estate,True,1,0,EcoVerse,
+spatial_ar,telecom,True,1,0,FrontierMap,
+translate_between_people_or_systems,health,True,1,0,DocSpot,
+vision_to_assist,auto_mobility,True,1,0,FindAir,
+vision_to_assist,energy,True,1,0,TapChart,
+vision_to_assist,finance_banking,True,1,0,Banq Pirate,
+vision_to_assist,health,True,1,1,Shepherd,Shepherd
+vision_to_assist,security_privacy,False,1,1,LUNA,LUNA
+workflow_automation_agent,auto_mobility,True,1,0,VL-ADK,
+workflow_automation_agent,insurance,True,1,0,Redreemer,
+workflow_automation_agent,security_privacy,False,1,0,FirstWave,

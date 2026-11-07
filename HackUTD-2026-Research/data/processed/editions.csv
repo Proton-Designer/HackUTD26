@@ -1,0 +1,131 @@
+hackathon,edition_key,aliases,n_projects,start,end,hours,format,event_type,weight,recent,basis
+Cal Hacks,Cal Hacks 13.0 (2026),"[""Cal Hacks 13.0"", ""Cal Hacks 13.0 (2026)""]",25,2026-10-23,2026-10-25,36,in_person,student_36_48h,1,True,web:this_edition
+TreeHacks,TreeHacks 2025,"[""TreeHacks 2025""]",20,2025-02-14,2025-02-16,36,in_person,student_36_48h,1,False,web:this_edition
+TreeHacks,TreeHacks 2026,"[""TreeHacks 2026""]",13,2026-02-14,2026-02-15,36,in_person,student_36_48h,1,True,web:this_edition
+HackGT,HackGT 12,"[""HackGT 12""]",27,2025-09-26,2025-09-28,36,in_person,student_36_48h,1,True,web:this_edition
+DubHacks,DubHacks 2026,"[""DubHacks '26"", ""DubHacks 2026""]",26,2026-10-17,2026-10-18,24,in_person,student_24h_inperson,2,True,web:this_edition
+Bitcamp,Bitcamp 2025,"[""Bitcamp 2025""]",35,2025-04-11,2025-04-13,36,in_person,student_36_48h,1,False,web:this_edition
+TAMUhack,TAMUhack 2025,"[""TAMUhack 2025""]",19,2025-01-25,2025-01-26,24,in_person,student_24h_inperson,2,False,web:adjacent_edition
+TAMUhack,TAMUhack 2026,"[""TAMUhack 2026""]",16,2026-01-24,2026-01-25,24,in_person,student_24h_inperson,2,True,web:this_edition
+HackTX,HackTX 2026,"[""2026"", ""HackTX 2026""]",3,2026-10-24,2026-10-25,24,in_person,student_24h_inperson,2,True,web:adjacent_edition
+HackTX,HackTX 2025,"[""HackTX 2025""]",1,2025-10-18,2025-10-19,24,in_person,student_24h_inperson,2,True,web:this_edition
+HackIllinois,HackIllinois 2026,"[""HackIllinois 2026""]",14,2026-02-27,2026-03-01,36,in_person,student_36_48h,1,True,web:this_edition
+HooHacks,HooHacks 2025,"[""2025"", ""HooHacks 2025""]",4,2025-03-29,2025-03-30,24,in_person,student_24h_inperson,2,False,web:this_edition
+HooHacks,HooHacks 2026,"[""HooHacks 2026""]",4,2026-03-21,2026-03-22,24,in_person,student_24h_inperson,2,True,web:this_edition
+PennApps,PennApps XXV (Fall 2024),"[""PennApps XXV"", ""PennApps XXV (Fall 2024)""]",4,2024-09-20,2024-09-22,36,in_person,student_36_48h,1,False,web:this_edition
+PennApps,PennApps XXVI (Fall 2025),"[""PennApps XXVI"", ""PennApps XXVI (Fall 2025)""]",6,2025-09-19,2025-09-21,36,in_person,student_36_48h,1,True,web:adjacent_edition
+HackPrinceton,HackPrinceton Fall 2025,"[""HackPrinceton Fall 2025""]",6,2025-11-07,2025-11-09,36,in_person,student_36_48h,1,True,web:this_edition
+HackPrinceton,HackPrinceton Spring 2025,"[""HackPrinceton Spring 2025"", ""Spring 2025""]",2,2025-03-28,2025-03-30,36,in_person,student_36_48h,1,False,web:this_edition
+HackHarvard,HackHarvard 2025,"[""HackHarvard 2025""]",5,2025-10-03,2025-10-05,36,in_person,student_36_48h,1,True,web:this_edition
+HackHarvard,HackHarvard 2026,"[""HackHarvard 2026""]",7,2026-10-16,2026-10-18,36,in_person,student_36_48h,1,True,web:this_edition
+MHacks,MHacks 2026,"[""MHacks 2026""]",5,2026-10-03,2026-10-04,24,in_person,student_24h_inperson,2,True,web:this_edition
+HackNC,HackNC 2024,"[""HackNC 2024""]",1,2024-11-02,2024-11-03,24,in_person,student_24h_inperson,2,False,web:this_edition
+HackNC,HackNC 2026,"[""HackNC 2026""]",11,2026-10-10,2026-10-11,24,in_person,student_24h_inperson,2,True,web:this_edition
+VTHacks,VTHacks - 13,"[""VTHacks - 13"", ""VTHacks 13""]",5,2025-09-26,2025-09-28,36,in_person,student_36_48h,1,True,web:adjacent_edition
+VTHacks,VTHacks - 14,"[""VTHacks - 14"", ""VTHacks 14""]",9,2026-09-18,2026-09-20,36,in_person,student_36_48h,1,True,web:this_edition
+SwampHacks,SwampHacks - XI,"[""SwampHacks - XI"", ""SwampHacks XI""]",4,2026-01-23,2026-01-25,36,in_person,student_36_48h,1,True,web:this_edition
+SwampHacks,SwampHacks - XII,"[""SwampHacks - XII"", ""SwampHacks XII""]",2,2026-10-16,2026-10-18,36,in_person,student_36_48h,1,True,web:this_edition
+HackRPI,HackRPI - 2025,"[""2025"", ""HackRPI - 2025""]",2,2025-11-15,2025-11-16,24,in_person,student_24h_inperson,2,True,web:this_edition
+HackNYU,HackNYU - 2025,"[""2025"", ""HackNYU - 2025""]",3,2025-02-08,2025-02-09,48,in_person,student_36_48h,1,False,web:this_edition
+HP & NVIDIA Developer Challenge,2025,"[""2025""]",10,2025-04-07,2025-06-09,,virtual,corporate_or_mlh_online,0.5,False,web:unknown
+Building the Next-Gen Agentic App with GraphRAG & NVIDIA cuGraph (ArangoDB),2025,"[""2025""]",6,2025-02-10,2025-03-09,,virtual,corporate_or_mlh_online,0.5,False,web:unknown
+Agentic AI Unleashed: AWS & NVIDIA Hackathon,2025,"[""2025""]",3,2025-10-13,2025-11-04,,unknown,corporate_or_mlh_online,0.5,True,first_pass_dates
+SBU Hacks,2026,"[""2026""]",1,2026-10-23,2026-10-25,36,in_person,student_36_48h,1,True,web:this_edition
+NemoClaw NVIDIA x ASUS Hackathon @ UCSC,2026,"[""2026""]",3,2026-05-16,2026-05-16,24,in_person,other,0.5,True,web:this_edition
+DataHacks,DataHacks 2026,"[""DataHacks 2026""]",1,2026-04-18,2026-04-19,36,in_person,student_36_48h,1,True,web:this_edition
+DevNetwork [AI + ML] Hackathon,2026,"[""2026""]",2,2026-05-11,2026-05-28,,unknown,corporate_or_mlh_online,0.5,True,first_pass_dates
+DivHacks,DivHacks 2025,"[""DivHacks 2025""]",1,2025-10-04,2025-10-05,32,in_person,student_36_48h,1,True,web:adjacent_edition
+DivHacks,DivHacks 2026,"[""DivHacks 2026""]",2,2026-09-26,2026-09-27,32,in_person,student_36_48h,1,True,web:this_edition
+HackRice,HackRice 15,"[""HackRice 15""]",2,2025-09-19,2025-09-21,36,in_person,student_36_48h,1,True,web:adjacent_edition
+HackRice,HackRice 16,"[""HackRice 16""]",1,2026-09-11,2026-09-13,36,in_person,student_36_48h,1,True,web:this_edition
+HackUNT,HackUNT 2024,"[""HackUNT 2024""]",3,2024-10-26,2024-10-27,24,in_person,student_24h_inperson,2,False,web:this_edition
+Hacklanta,Hacklanta 2026,"[""Hacklanta 2026""]",2,2026-10-09,2026-10-11,36,in_person,student_36_48h,1,True,web:this_edition
+Innovation Hacks,Innovation Hacks 2.0,"[""Innovation Hacks 2.0""]",2,2026-04-03,2026-04-05,48,in_person,student_36_48h,1,True,web:this_edition
+Knight Hacks,Knight Hacks IX (2025),"[""Knight Hacks IX (2025)""]",3,2026-10-09,2026-10-11,36,in_person,student_36_48h,1,True,web:this_edition
+LA Hacks (AI Hackathon 2026),LA Hacks AI Hackathon 2026,"[""LA Hacks AI Hackathon 2026""]",3,2026-10-17,2026-10-18,24,in_person,student_24h_inperson,2,True,web:unknown; hours_from_date_span(1d)
+MadHacks,MadHacks Fall 2024,"[""MadHacks Fall 2024""]",1,2024-11-09,2024-11-10,24,in_person,student_24h_inperson,2,False,web:adjacent_edition
+ShellHacks,ShellHacks 2024,"[""ShellHacks 2024""]",4,2024-09-27,2024-09-29,36,in_person,student_36_48h,1,False,web:adjacent_edition
+ShellHacks,ShellHacks 2025,"[""ShellHacks 2025""]",5,2025-09-26,2025-09-28,36,in_person,student_36_48h,1,True,web:this_edition
+ShellHacks,ShellHacks 2026,"[""ShellHacks 2026""]",1,2026-09-25,2026-09-27,36,in_person,student_36_48h,1,True,web:adjacent_edition
+SteelHacks,SteelHacks XIII (2026),"[""SteelHacks XIII (2026)""]",3,2026-09-19,2026-09-20,24,in_person,student_24h_inperson,2,True,web:adjacent_edition
+SunHacks,SunHacks 2024,"[""SunHacks 2024""]",1,2024-09-28,2024-09-29,24,in_person,student_24h_inperson,2,False,web:this_edition
+SunHacks,SunHacks 2025,"[""SunHacks 2025""]",1,2025-09-27,2025-09-28,24,in_person,student_24h_inperson,2,True,web:this_edition
+Technica,Technica 2024,"[""Technica 2024""]",1,2024-10-26,2024-10-27,24,hybrid,student_24h_inperson,2,False,web:this_edition
+Technica,Technica 2025,"[""Technica 2025""]",2,2025-11-15,2025-11-16,24,hybrid,student_24h_inperson,2,True,web:this_edition
+Technica,Technica 2026,"[""Technica 2026""]",2,2026-10-17,2026-10-18,24,hybrid,student_24h_inperson,2,True,web:this_edition
+UB Hacking,UB Hacking Fall 2025,"[""UB Hacking Fall 2025""]",1,2025-11-08,2025-11-09,24,in_person,student_24h_inperson,2,True,web:adjacent_edition
+UXperience,UXperience 2025,"[""UXperience 2025""]",3,2025-10-25,2025-10-26,24,in_person,other,0.5,True,web:this_edition
+WEHack,WEHack 2025,"[""WEHack 2025""]",5,2025-04-05,2025-04-06,24,in_person,student_24h_inperson,2,False,web:this_edition
+WEHack,WEHack 2026,"[""WEHack 2026""]",2,2026-04-11,2026-04-12,24,in_person,student_24h_inperson,2,True,web:this_edition
+WiCHacks,WiCHacks 2026,"[""WiCHacks 2026""]",1,2026-02-28,2026-03-01,24,in_person,student_24h_inperson,2,True,web:this_edition
+HackUTD,HackUTD 2024,"[""HackUTD 2024""]",35,2024-11-16,2024-11-17,24,in_person,hackutd,3,False,web:this_edition
+HackUTD,HackUTD 2025,"[""HackUTD 2025""]",137,2025-11-08,2025-11-09,24,in_person,hackutd,3,True,web:this_edition
+Cal Hacks,Cal Hacks 11.0 (2024),"[""Cal Hacks 11.0 (2024)""]",9,2024-10-18,2024-10-20,36,in_person,student_36_48h,1,False,web:this_edition
+Cal Hacks,Cal Hacks 12.0 (2025),"[""Cal Hacks 12.0 (2025)""]",11,2025-10-24,2025-10-26,36,in_person,student_36_48h,1,True,web:this_edition
+HackMIT,HackMIT 2025,"[""HackMIT 2025""]",3,2025-09-13,2025-09-14,24,in_person,student_24h_inperson,2,True,web:adjacent_edition
+HackMIT,HackMIT 2026,"[""HackMIT 2026""]",31,2026-09-19,2026-09-20,24,in_person,student_24h_inperson,2,True,web:this_edition
+HackMIT,HackMIT 2024,"[""HackMIT 2024""]",1,2024-09-14,2024-09-15,24,in_person,student_24h_inperson,2,False,web:adjacent_edition
+LA Hacks,LA Hacks 2025,"[""LA Hacks 2025""]",20,2025-04-25,2025-04-27,36,in_person,student_36_48h,1,False,web:this_edition
+LA Hacks,LA Hacks 2026,"[""LA Hacks 2026""]",20,2026-04-24,2026-04-26,36,in_person,student_36_48h,1,True,web:this_edition
+HackGT,HackGT 11,"[""HackGT 11""]",19,2024-09-27,2024-09-29,36,in_person,student_36_48h,1,False,web:this_edition
+HackGT,HackGT 13,"[""HackGT 13""]",30,2026-09-25,2026-09-27,36,in_person,student_36_48h,1,True,web:this_edition
+Bitcamp,Bitcamp 2026,"[""Bitcamp 2026""]",48,2026-04-10,2026-04-12,36,in_person,student_36_48h,1,True,web:this_edition
+ConUHacks,ConUHacks IX,"[""ConUHacks IX""]",17,2025-02-01,2025-02-02,24,in_person,student_24h_inperson,2,False,web:this_edition
+ConUHacks,ConUHacks X,"[""ConUHacks X""]",31,2026-01-24,2026-01-25,24,in_person,student_24h_inperson,2,True,web:this_edition
+HackUMass,HackUMass XII,"[""HackUMass XII""]",24,2024-11-08,2024-11-10,36,in_person,student_36_48h,1,False,web:this_edition
+HackUMass,HackUMass XIII,"[""HackUMass XIII""]",27,2025-11-07,2025-11-09,36,in_person,student_36_48h,1,True,web:this_edition
+StormHacks,StormHacks 2025,"[""StormHacks 2025""]",27,2025-10-04,2025-10-05,24,in_person,student_24h_inperson,2,True,web:this_edition
+StormHacks,StormHacks 2026,"[""StormHacks 2026""]",28,2026-10-03,2026-10-04,24,in_person,student_24h_inperson,2,True,web:this_edition
+UNIHACK,UNIHACK 2025,"[""UNIHACK 2025""]",4,2025-03-14,2025-03-16,48,hybrid,student_36_48h,1,False,web:this_edition
+UNIHACK,UNIHACK 2026,"[""UNIHACK 2026""]",17,2026-03-13,2026-03-15,48,hybrid,student_36_48h,1,True,web:this_edition
+Junction,Junction 2024,"[""Junction 2024""]",1,,,48,in_person,student_36_48h,1,,web:this_edition
+Junction,Junction 2025,"[""Junction 2025""]",1,2025-11-14,2025-11-16,48,in_person,student_36_48h,1,True,web:this_edition
+HackEurope,HackEurope 2026,"[""HackEurope 2026""]",1,2026-02-21,2026-02-22,30,in_person,student_36_48h,1,True,web:this_edition
+HackIllinois,HackIllinois 2025,"[""HackIllinois 2025""]",1,2025-02-28,2025-03-02,36,in_person,student_36_48h,1,False,web:this_edition
+HackPrinceton,HackPrinceton Spring 2026,"[""HackPrinceton Spring 2026""]",6,2026-04-17,2026-04-19,36,in_person,student_36_48h,1,True,web:this_edition
+HackHarvard,HackHarvard 2024,"[""HackHarvard 2024""]",4,2024-10-11,2024-10-13,36,in_person,student_36_48h,1,False,web:this_edition
+YHack,YHack 2024,"[""YHack 2024""]",4,2024-03-30,2024-03-31,24,in_person,student_24h_inperson,2,False,web:adjacent_edition
+YHack,YHack Fall 2024,"[""YHack Fall 2024""]",3,2024-10-05,2024-10-06,24,in_person,student_24h_inperson,2,False,web:adjacent_edition
+YHack,YHack Spring 2026,"[""YHack Spring 2026""]",4,2026-03-28,2026-03-29,24,in_person,student_24h_inperson,2,True,web:this_edition
+BoilerMake,BoilerMake XII,"[""BoilerMake XII""]",3,2025-02-21,2025-02-23,36,in_person,student_36_48h,1,False,web:this_edition
+HackNC,HackNC 2025,"[""HackNC 2025""]",6,2025-10-11,2025-10-12,24,in_person,student_24h_inperson,2,True,web:this_edition
+HackDartmouth,HackDartmouth - X,"[""HackDartmouth - X""]",2,2025-04-26,2025-04-27,24,in_person,student_24h_inperson,2,False,web:this_edition
+HackNJIT,HackNJIT - 2023,"[""HackNJIT - 2023""]",4,2023-11-04,2023-11-05,24,in_person,student_24h_inperson,2,False,web:this_edition
+HackNJIT,HackNJIT - 2024,"[""HackNJIT - 2024""]",4,2024-11-02,2024-11-03,24,in_person,student_24h_inperson,2,False,web:this_edition
+Hacklytics,Hacklytics - 2025: Jurassic Age,"[""Hacklytics - 2025: Jurassic Age""]",10,2025-02-21,2025-02-23,36,in_person,student_36_48h,1,False,web:adjacent_edition
+Hacklytics,Hacklytics - 2026: Golden Byte,"[""Hacklytics - 2026: Golden Byte""]",15,2026-02-20,2026-02-22,36,in_person,student_36_48h,1,True,web:this_edition
+UofTHacks,UofTHacks,"[""UofTHacks""]",2,,,,unknown,unknown_duration,1,,none
+UofTHacks,UofTHacks 13,"[""UofTHacks - 13""]",1,2026-01-17,2026-01-18,36,in_person,student_36_48h,1,True,web:this_edition
+McHacks,McHacks 12,"[""McHacks 12""]",3,2025-01-25,2025-01-26,24,in_person,student_24h_inperson,2,False,web:this_edition
+McHacks,McHacks 13,"[""McHacks 13""]",3,2026-01-17,2026-01-18,24,in_person,student_24h_inperson,2,True,web:adjacent_edition
+UofTHacks,UofTHacks 12,"[""UofTHacks 12""]",1,2025-01-17,2025-01-19,36,in_person,student_36_48h,1,False,web:adjacent_edition
+QHacks,QHacks 2025,"[""QHacks 2025""]",3,2025-01-24,2025-01-26,36,in_person,student_36_48h,1,False,web:this_edition
+QHacks,QHacks 2026,"[""QHacks 2026""]",3,2026-02-06,2026-02-08,36,in_person,student_36_48h,1,True,web:this_edition
+DeltaHacks,DeltaHacks 12,"[""DeltaHacks 12""]",3,2026-01-10,2026-01-11,24,in_person,student_24h_inperson,2,True,web:this_edition
+DeltaHacks,DeltaHacks XI,"[""DeltaHacks XI""]",3,2025-01-11,2025-01-12,24,in_person,student_24h_inperson,2,False,web:this_edition
+Hack the Valley,Hack the Valley 11,"[""Hack the Valley 11""]",3,2026-10-16,2026-10-18,36,in_person,student_36_48h,1,True,web:this_edition
+Hack the Valley,Hack the Valley X,"[""Hack the Valley X""]",3,2025-10-03,2025-10-05,36,in_person,student_36_48h,1,True,web:this_edition
+Hack Western,Hack Western 12,"[""Hack Western 12""]",3,2025-11-21,2025-11-23,36,in_person,student_36_48h,1,True,web:this_edition
+Hack Western,Hack Western 11,"[""Hack Western 11""]",1,2024-11-29,2024-12-01,36,in_person,student_36_48h,1,False,web:adjacent_edition
+HackUPC,HackUPC 2025,"[""HackUPC 2025""]",20,2025-05-02,2025-05-04,36,in_person,student_36_48h,1,False,web:this_edition
+HackUPC,HackUPC 2026,"[""HackUPC 2026""]",21,2026-04-24,2026-04-26,36,in_person,student_36_48h,1,True,web:this_edition
+HackSheffield,HackSheffield 10,"[""HackSheffield 10""]",3,2025-11-29,2025-11-30,24,in_person,student_24h_inperson,2,True,web:adjacent_edition
+HackSheffield,hackSheffield 9,"[""hackSheffield 9""]",4,2024-11-16,2024-11-17,24,in_person,student_24h_inperson,2,False,web:adjacent_edition
+HackNotts,HackNotts '25,"[""HackNotts '25""]",3,2025-10-25,2025-10-26,24,in_person,student_24h_inperson,2,True,web:this_edition
+HackNotts,HackNotts '26,"[""HackNotts '26""]",3,2026-10-25,2026-10-25,24,in_person,student_24h_inperson,2,True,web:adjacent_edition
+NMIT Hacks,NMIT HACKS 2025,"[""NMIT HACKS 2025""]",3,2025-05-16,2025-05-18,48,in_person,student_36_48h,1,False,web:this_edition
+NMIT Hacks,NMIT HACKS 2026,"[""NMIT HACKS 2026""]",5,2026-05-08,2026-05-10,48,in_person,student_36_48h,1,True,web:this_edition
+hackCBS,hackCBS 7.0,"[""hackCBS 7.0""]",3,2024-11-09,2024-11-10,24,in_person,student_24h_inperson,2,False,web:adjacent_edition
+HackOut,HackOut'25,"[""HackOut'25""]",3,2025-08-29,2025-08-31,72,in_person,other,0.5,True,web:this_edition
+hackCBS,hackCBS 8.0,"[""hackCBS 8.0""]",1,2025-11-08,2025-11-09,24,in_person,student_24h_inperson,2,True,web:adjacent_edition
+Hack4Bengal,Hack4Bengal 4.0,"[""Hack4Bengal 4.0""]",1,2025-06-20,2025-06-22,36,in_person,student_36_48h,1,True,web:this_edition
+Hack the North,Hack the North 2024,"[""Hack the North 2024""]",6,2024-09-13,2024-09-15,36,in_person,student_36_48h,1,False,web:this_edition
+Hack the North,Hack the North 2025,"[""Hack the North 2025""]",12,2025-09-12,2025-09-14,36,in_person,student_36_48h,1,True,web:this_edition
+Hack the North,Hack the North 2026,"[""Hack the North 2026""]",12,2026-09-18,2026-09-20,36,in_person,student_36_48h,1,True,web:this_edition
+DubHacks,DubHacks 2025,"[""DubHacks 2025""]",14,2025-10-18,2025-10-19,24,in_person,student_24h_inperson,2,True,web:adjacent_edition
+UC Berkeley AI Hackathon,UC Berkeley AI Hackathon 2025,"[""2025"", ""UC Berkeley AI Hackathon 2025""]",16,2025-06-21,2025-06-22,24,in_person,student_24h_inperson,2,True,web:adjacent_edition
+UC Berkeley AI Hackathon,UC Berkeley AI Hackathon 2026,"[""UC Berkeley AI Hackathon 2026""]",21,2026-06-20,2026-06-21,24,in_person,student_24h_inperson,2,True,web:this_edition
+BoilerMake,BoilerMake XI - included as the second most recent edition on Devpost because BoilerMake XIII has no Devpost page,"[""BoilerMake XI - included as the second most recent edition on Devpost because BoilerMake XIII has no Devpost page""]",1,2024-01-19,2024-01-21,36,in_person,student_36_48h,1,False,web:this_edition
+Hack@Brown,Hack@Brown 2025,"[""Hack@Brown 2025""]",1,2025-02-01,2025-02-02,24,in_person,student_24h_inperson,2,False,web:this_edition
+Hack@Brown,Hack@Brown 2026,"[""Hack@Brown 2026""]",1,2026-01-31,2026-02-01,24,in_person,student_24h_inperson,2,True,web:this_edition
+HackNYU,HackNYU - Fall 2025,"[""HackNYU - Fall 2025""]",1,2025-11-15,2025-11-16,24,in_person,student_24h_inperson,2,True,web:unknown; hours_from_date_span(1d)

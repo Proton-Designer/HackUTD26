@@ -1,0 +1,15 @@
+value,n,N,pct,weighted_pct
+sensor_to_alert_or_action,10,65,15,13
+vision_to_assist,10,65,15,15
+game_or_social,8,65,12,13
+other,5,65,8,8
+realtime_coordination,4,65,6,7
+voice_to_action,4,65,6,7
+devtool,4,65,6,6
+data_to_decision,4,65,6,6
+risk_detect_and_respond,4,65,6,6
+workflow_automation_agent,3,65,5,5
+translate_between_people_or_systems,3,65,5,5
+docs_to_action,2,65,3,3
+spatial_ar,2,65,3,2
+education_feedback,2,65,3,5

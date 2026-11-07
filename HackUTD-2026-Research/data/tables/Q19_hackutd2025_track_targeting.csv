@@ -1,0 +1,46 @@
+track,group,n_targeting,N,names
+T-Mobile,winner,3,36,Beacon; HarmoniQ; InsighT
+T-Mobile,demo_ready,8,50,MagentaMonitor; PulseWire; Read the Room; Satisfaction Visual Analytics (SAM); SentimentRadar; Sync; T-Pulse; T-Time
+T-Mobile,random,8,50,lisTen.AI; mimimimimi; MoodWave; PulseScore; T-Care; T-Data; T-Mobile Happiness Index; T-Mobile Happy Assesment Dashboard
+EOG Resources,winner,2,36,Enchantress; PoyoLabs
+EOG Resources,demo_ready,8,50,Aethernet; Brew View; Cauldron-FlowGuard AI; PotionWatch; Snitch the Witch; The Potion Police; Witch Delivery Associates; WitchWatch
+EOG Resources,random,0,50,
+Toyota Financial Services,winner,3,36,Hingine; Kachow; Toyotron
+Toyota Financial Services,demo_ready,10,50,BuildYourRide; BUYOTA; CarCents; CarTender; DreaMatcher; ProToyotaAI; RideOracle; TOYODA; ToyoQuest; Toyota Path Finder
+Toyota Financial Services,random,6,50,Car Vibes; FindMyToyota - Vehicle Finder; Toyota Discover; Toyota DreamDrive; Toyota Vision; ToyoTrack
+PNC Bank,winner,3,36,AutoPM; ProdPlex; ProDuh!
+PNC Bank,demo_ready,3,50,GenVis; PMGenie; PrisM
+PNC Bank,random,1,50,PM_Ticket_Manager
+Northmark (NMC2),winner,3,36,DataDriver; DCDaddy; TaskFlow
+Northmark (NMC2),demo_ready,4,50,KanbanSync; Kramhtron.ai; PulseLink; Reflex Work Order Automation
+Northmark (NMC2),random,1,50,Raven
+Nvidia,winner,3,36,Alchemetrics; DataDriver; Toyotron
+Nvidia,demo_ready,17,50,Adjacent; Aether; AutoMate; Bridgit; CarTender; Catalyst; Clarity; GenVis; Kramhtron.ai; PMGenie; PrisM; Reflex Work Order Automation; SentimentRadar; ShelfSense; Sync; T-Time; TOYODA
+Nvidia,random,9,50,AutoDoc; Beyond Ordinary Browsing; breve; IKARIS; lisTen.AI; NAVI; On Your Terms; T-Care; T-Data
+StateFarm,winner,3,36,MirrorAPI; qAPIbara; UpGuardian
+StateFarm,demo_ready,0,50,
+StateFarm,random,0,50,
+Goldman Sachs,winner,3,36,AutoBoard; Stamped; TrustIssues.AI
+Goldman Sachs,demo_ready,0,50,
+Goldman Sachs,random,0,50,
+CBRE,winner,3,36,Cura; Pact; TrustEstate AI
+CBRE,demo_ready,1,50,CBRE Intelligence Hub
+CBRE,random,1,50,IKARIS
+Capital One,winner,1,36,SpendingWithSpendy
+Capital One,demo_ready,0,50,
+Capital One,random,3,50,BudgetBrew; FinPath; inteliBudget
+General Track,winner,3,36,NLB (Nothing Left Behind); ProdigyPM; Working Memory
+General Track,demo_ready,0,50,
+General Track,random,0,50,
+Best Hardware,winner,1,36,VisionScout
+Best Hardware,demo_ready,1,50,WitchWatch
+Best Hardware,random,1,50,CauldronCare
+ElevenLabs,winner,1,36,Relay
+ElevenLabs,demo_ready,2,50,Kramhtron.ai; TOYODA
+ElevenLabs,random,0,50,
+Gemini (MLH),winner,1,36,Kori
+Gemini (MLH),demo_ready,1,50,TOYODA
+Gemini (MLH),random,3,50,CauldronCare; CometNow; Raven
+Auth0,winner,1,36,HarmoniQ
+Auth0,demo_ready,1,50,Cursor on the Go!
+Auth0,random,1,50,CauldronCare

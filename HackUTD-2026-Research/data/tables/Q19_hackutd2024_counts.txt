@@ -1,0 +1,55 @@
+N included = 33 | excluded: ['Roomie (unverified on Devpost)', 'The Virtual Fitness Assistant']
+kind=general: 3 of 33 (9%): Lumo, TalkTuahBank, Ripple Banking
+kind=domain_sponsor: 17 of 33 (52%): AllBank, Data Pattern Observatory, FinnAI, Hermes, FUELICIENT, KaizenDrive, ToyoTrends, PipeBrAIns, DHy-n0, Eco Fast Track, EcoVerse, Greenify, EcoLens (Sustainable Building Manager), FrontierMap, Homelander, Promising Products, InvestIQ
+kind=tool_sponsor: 6 of 33 (18%): Monch, Capsule, Cheddarboxd, Notable, Vestique, Backtracc
+kind=side: 6 of 33 (18%): Echo, EcoLens (property evaluator), poyo.ed, Planet Score, DuckTalk, What's The Move?
+kind=mlh: 1 of 33 (3%): GitFile
+-- won any domain-sponsor track (incl. General+Goldman)
+  depth=core_data: 4 of 19 (21%): FUELICIENT, PipeBrAIns, Greenify, Homelander
+  depth=core_data*: 3 of 19 (16%): KaizenDrive, ToyoTrends, DHy-n0
+  depth=problem_only: 11 of 19 (58%): AllBank, Data Pattern Observatory, FinnAI, Hermes, Eco Fast Track, EcoVerse, EcoLens (Sustainable Building Manager), FrontierMap, Promising Products, Lumo, TalkTuahBank
+  depth=unknown: 1 of 19 (5%): InvestIQ
+  no LLM (own_ml or none): 10 of 19 (53%): Data Pattern Observatory, Hermes, FUELICIENT, PipeBrAIns, DHy-n0, EcoLens (Sustainable Building Manager), FrontierMap, Homelander, Promising Products, Lumo
+  multi-prize: 4 of 19 (21%): DHy-n0, Eco Fast Track, Lumo, TalkTuahBank
+ai_role=core_llm: 9 of 33 (27%): TalkTuahBank, FinnAI, Greenify, InvestIQ, Notable, Vestique, Backtracc, EcoLens (property evaluator), poyo.ed
+ai_role=llm_addon: 5 of 33 (15%): AllBank, KaizenDrive, ToyoTrends, Eco Fast Track, EcoVerse
+ai_role=own_ml: 9 of 33 (27%): Ripple Banking, Data Pattern Observatory, Hermes, PipeBrAIns, DHy-n0, Homelander, Promising Products, Monch, Echo
+ai_role=none: 10 of 33 (30%): Lumo, FUELICIENT, EcoLens (Sustainable Building Manager), FrontierMap, Capsule, Cheddarboxd, Planet Score, DuckTalk, What's The Move?, GitFile
+any AI: 23 of 33 (70%): TalkTuahBank, Ripple Banking, AllBank, Data Pattern Observatory, FinnAI, Hermes, KaizenDrive, ToyoTrends, PipeBrAIns, DHy-n0, Eco Fast Track, EcoVerse, Greenify, Homelander, Promising Products, InvestIQ, Monch, Notable, Vestique, Backtracc, Echo, EcoLens (property evaluator), poyo.ed
+hardware: 4 of 33 (12%): Eco Fast Track, EcoVerse, Backtracc, poyo.ed
+data_source=live: 11 of 33 (33%): Lumo, TalkTuahBank, Hermes, Eco Fast Track, Notable, Backtracc, Echo, poyo.ed, Planet Score, DuckTalk, What's The Move?
+data_source=static_dataset: 8 of 33 (24%): FUELICIENT, KaizenDrive, ToyoTrends, PipeBrAIns, DHy-n0, Greenify, Homelander, Promising Products
+data_source=synthetic: 2 of 33 (6%): EcoVerse, InvestIQ
+data_source=user_input: 10 of 33 (30%): Ripple Banking, AllBank, FinnAI, FrontierMap, Monch, Capsule, Cheddarboxd, Vestique, EcoLens (property evaluator), GitFile
+data_source=unclear: 2 of 33 (6%): Data Pattern Observatory, EcoLens (Sustainable Building Manager)
+core feature shown working: 10 of 33 (30%): TalkTuahBank, Ripple Banking, ToyoTrends, Eco Fast Track, FrontierMap, Monch, Capsule, Backtracc, poyo.ed, What's The Move?
+video: 21 of 33 (64%): Lumo, TalkTuahBank, Ripple Banking, FinnAI, Hermes, FUELICIENT, KaizenDrive, ToyoTrends, PipeBrAIns, DHy-n0, Eco Fast Track, Greenify, FrontierMap, Promising Products, InvestIQ, Monch, Cheddarboxd, Vestique, Backtracc, EcoLens (property evaluator), GitFile
+live demo: 11 of 33 (33%): TalkTuahBank, FUELICIENT, DHy-n0, FrontierMap, Homelander, Monch, Capsule, Notable, Backtracc, What's The Move?, GitFile
+video or live demo: 25 of 33 (76%): Lumo, TalkTuahBank, Ripple Banking, FinnAI, Hermes, FUELICIENT, KaizenDrive, ToyoTrends, PipeBrAIns, DHy-n0, Eco Fast Track, Greenify, FrontierMap, Homelander, Promising Products, InvestIQ, Monch, Capsule, Cheddarboxd, Notable, Vestique, Backtracc, EcoLens (property evaluator), What's The Move?, GitFile
+neither video nor live demo: 8 of 33 (24%): AllBank, Data Pattern Observatory, EcoVerse, EcoLens (Sustainable Building Manager), Echo, poyo.ed, Planet Score, DuckTalk
+multi-prize: 7 of 33 (21%): Lumo, TalkTuahBank, DHy-n0, Eco Fast Track, Cheddarboxd, Vestique, Backtracc
+unbanked/underbanked focus: 5 of 33 (15%): Lumo, TalkTuahBank, Ripple Banking, AllBank, Hermes
+-- domain-sponsor winners
+  depth=core_data: 4 of 17 (24%): FUELICIENT, PipeBrAIns, Greenify, Homelander
+  depth=core_data*: 3 of 17 (18%): KaizenDrive, ToyoTrends, DHy-n0
+  depth=problem_only: 9 of 17 (53%): AllBank, Data Pattern Observatory, FinnAI, Hermes, Eco Fast Track, EcoVerse, EcoLens (Sustainable Building Manager), FrontierMap, Promising Products
+  depth=unknown: 1 of 17 (6%): InvestIQ
+  no LLM (own_ml or none): 9 of 17 (53%): Data Pattern Observatory, Hermes, FUELICIENT, PipeBrAIns, DHy-n0, EcoLens (Sustainable Building Manager), FrontierMap, Homelander, Promising Products
+  Toyota/EOG/Frontier winners with no LLM: 6 of 8 (75%): FUELICIENT, PipeBrAIns, DHy-n0, FrontierMap, Homelander, Promising Products
+  data_or_analytics: 9 of 17 (53%): Data Pattern Observatory, FUELICIENT, KaizenDrive, ToyoTrends, PipeBrAIns, DHy-n0, Greenify, EcoLens (Sustainable Building Manager), Homelander
+-- tool-sponsor winners
+  depth=core: 6 of 6 (100%): Monch, Capsule, Cheddarboxd, Notable, Vestique, Backtracc
+-- general winners
+  also won Goldman: 2 of 3 (67%) (low n): Lumo, TalkTuahBank
+  unbanked focus: 3 of 3 (100%) (low n): Lumo, TalkTuahBank, Ripple Banking
+  data_or_analytics: 0 of 3 (0%) (low n): 
+  hardware: 0 of 3 (0%) (low n): 
+Goldman winners with unbanked focus: 3 of 3 (100%) (low n): Lumo, TalkTuahBank, AllBank
+known-placement projects with no LLM: 4 of 4 (100%) (low n): FUELICIENT, Monch, Capsule, Cheddarboxd
+uses/mentions Pinata: 15 of 33 (45%): Backtracc, Capsule, Cheddarboxd, Echo, Eco Fast Track, EcoLens (property evaluator), FrontierMap, FUELICIENT, GitFile, KaizenDrive, Monch, poyo.ed, Promising Products, TalkTuahBank, What's The Move?
+  of those, won Pinata: 3 of 15 (20%): Capsule, Cheddarboxd, Monch
+uses/mentions SambaNova: 8 of 33 (24%): Backtracc, Echo, EcoVerse, InvestIQ, Notable, poyo.ed, ToyoTrends, Vestique
+  of those, won SambaNova: 3 of 8 (38%): Backtracc, Notable, Vestique
+hardware prizes: {'Eco Fast Track': 2, 'EcoVerse': 1, 'Backtracc': 3, 'poyo.ed': 1}
+mean prizes hardware vs other: 1.75 1.17
+wrote /Users/aymanmohammed/Documents/HackUTD-2026-Research/data/tables/Q19_hackutd2024_close_read_tags.csv

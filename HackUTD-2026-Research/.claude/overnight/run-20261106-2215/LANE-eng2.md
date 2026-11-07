@@ -1,0 +1,45 @@
+- Records ~10KB each; view with trimmed viewer (scratchpad view.py), write in batches of 3-4 via h.R builder (scratchpad). Use `cut -c1-7500` on long views.
+- Judgment: n_user_flows counts journeys the page/video/screenshots support as working (not strictly shown_working only); claimed-only with no demo = 0.
+- live_data: voice/webcam/sensor input counts yes.
+- Event-name and organizer/general prize tracks skipped in sponsor_fit; sponsor_tracks_considered empty => [].
+- validator log: grep retag_needed.csv for shard; validator prints only totals.
+- COVER: view glance + record what_it_is/target_user/problem_statement compactly in a python -I print, decide per index, write via dict of exceptions (default 1,1,1).
+- Glance redo: one image per Read, append via scratchpad g.py (asserts row index). Many images are the same purple book placeholder or a tiny logo: answer from text, image_helped=no.
+- SF() builder must int-coerce prompt_literalness/prompt_words_in_title (string "1" fails validator); h.py now does this.
+- Validator: centerpiece_visible="none" still needs non-empty ev (fill with short reason). Scratchpad helpers (h.py, view.py) live in prior session scratchpads; copy to current one and sed OUT path.
+- Order of blind_ids in 07 matched; helpers: copy h.py/view.py from /private/tmp/claude-501/-Users-aymanmohammed-Documents/23fd1c98-78e4-4c5f-9430-cadc717777ac/scratchpad, sed OUT path.
+- Scratchpad helpers: copy h.py/view.py from /private/tmp/claude-501/-Users-aymanmohammed-Documents/ca33b8fc-2b65-4d53-8d60-c0d5790a2513/scratchpad (h.py OUT path edited per shard).
+- Validator rejects sponsor_features_used as string "1": write ints (SF() only coerces lit/words, not feat).
+- Scratchpad helpers: copy h.py/view.py from /private/tmp/claude-501/-Users-aymanmohammed-Documents/2bf007e0-43e1-40a8-979e-4bacb113266f/scratchpad (sed -i "" on macOS; run helper scripts WITHOUT python -I so `from h import *` works).
+- Scratchpad helpers: copy h.py/view.py from /private/tmp/claude-501/-Users-aymanmohammed-Documents/46bc26d3-238f-427a-a03a-ca33f3281e82/scratchpad (sed OUT shard name). RT(i,w,why) returns v=i.
+- Scratchpad helpers: copy h.py/view.py from /private/tmp/claude-501/-Users-aymanmohammed-Documents/9f8be9fa-7bb0-4ec4-97a0-c48ba37572b5/scratchpad (sed OUT shard name; RT(i,w,why) -> {"v":i,"why":why}; R(rec,note=) for tagger_note).
+- Scratchpad helpers: copy h.py/view.py from /private/tmp/claude-501/-Users-aymanmohammed-Documents/f8de1966-bb9a-4d94-b211-0283073f8e0e/scratchpad (sed OUT shard name; write batches as bN.py with 'from h import *').
+- Scratchpad helpers: copy h.py/view.py from /private/tmp/claude-501/-Users-aymanmohammed-Documents/9c750eb7-5f9b-4487-99cb-d3c9a49ad948/scratchpad (sed OUT shard name; b1..b5.py with from h import *; R(...,note=) keyword).
+- Scratchpad helpers: copy h.py/view.py from /private/tmp/claude-501/-Users-aymanmohammed-Documents/8fd2fd67-dd4a-4468-a1ad-780658f5fd8f/scratchpad (sed OUT shard name; b1..b5.py with from h import *; R(...,note=) keyword).
+- Scratchpad helpers: copy h.py/view.py from /private/tmp/claude-501/-Users-aymanmohammed-Documents/9263962d-3506-4a13-90aa-ba0666be95d6/scratchpad (sed OUT shard name). ai_role enum is rag_or_chat (not rag_or_search).
+- Scratchpad helpers: copy h.py/view.py from /private/tmp/claude-501/-Users-aymanmohammed-Documents/f0fb7ff4-327b-40dd-8354-8b6f0b79da66/scratchpad (sed OUT shard name; b1..b5.py with from h import *).
+- Scratchpad helpers: copy h.py/view.py from /private/tmp/claude-501/-Users-aymanmohammed-Documents/4797e3be-dd67-4758-ae22-38742f77a0bf/scratchpad (sed OUT shard name; b1..b5.py with from h import *).
+- Scratchpad helpers: copy h.py/view.py from /private/tmp/claude-501/-Users-aymanmohammed-Documents/6b258113-3e4d-47b8-a443-08d111d9ec64/scratchpad (sed OUT shard name; b1..b5.py with from h import *).
+- Scratchpad helpers: copy h.py/view.py from /private/tmp/claude-501/-Users-aymanmohammed-Documents/4f62988e-3316-4372-b703-f1cab81b58b9/scratchpad (sed OUT shard name; b1..b5.py with from h import *).
+- Scratchpad helpers: copy h.py/view.py from /private/tmp/claude-501/-Users-aymanmohammed-Documents/f55826ce-e8d1-4f76-a8aa-ed93119fbf5d/scratchpad (sed OUT shard name; b1..b5.py with from h import *).
+- Scratchpad helpers: copy h.py/view.py from /private/tmp/claude-501/-Users-aymanmohammed-Documents/446c224c-cb0d-4e36-be83-ecb25c19955d/scratchpad (sed OUT shard name; b1..b5.py with from h import *). cost_of_problem_stated=none ALSO needs non-empty ev.
+- Scratchpad helpers: copy h.py/view.py from /private/tmp/claude-501/-Users-aymanmohammed-Documents/bf624a92-8ab0-4ac7-bdd8-03bec0e3e063/scratchpad (sed OUT shard name; b1..b5.py with from h import *). Organizer/event/student-society tracks (Bitcamp, CalHacks, CSSS, Hack the North, MLH-less) => sponsor_fit [].
+- Scratchpad helpers: copy h.py/view.py from /private/tmp/claude-501/-Users-aymanmohammed-Documents/a5df9aa0-7289-4e0d-a887-d2410dba34d6/scratchpad (sed OUT shard name; b1..b5.py with from h import *; R(...) has no note kw issues if note=).
+- Scratchpad helpers: copy h.py/view.py from /private/tmp/claude-501/-Users-aymanmohammed-Documents/eac78899-b7c4-45a5-bada-b0e1dd86e83b/scratchpad (sed OUT shard name; b1..b5.py with from h import *).
+- Scratchpad helpers: copy h.py/view.py from /private/tmp/claude-501/-Users-aymanmohammed-Documents/8bc626bb-5d95-464f-8112-ecfe2f50c861/scratchpad (sed OUT shard name; b1..b5.py with from h import *).
+- Scratchpad helpers: copy h.py/view.py from /private/tmp/claude-501/-Users-aymanmohammed-Documents/bb857d76-5274-4f32-a9cd-4a4e81016234/scratchpad (sed OUT shard name; b1..b5.py with from h import *). Unknown design: RT("unknown","unknown","why") works.
+- Scratchpad helpers: copy h.py/view.py from /private/tmp/claude-501/-Users-aymanmohammed-Documents/e4d46e21-5e67-4980-aebb-84b7ba97f031/scratchpad (sed OUT shard name; b1..b5.py with from h import *).
+- Scratchpad helpers: copy h.py/view.py from /private/tmp/claude-501/-Users-aymanmohammed-Documents/735a039d-cd83-4537-bc49-de4a1a807dc9/scratchpad (sed OUT shard name; b1..b5.py with from h import *). R(...,note=) keyword.
+- Scratchpad helpers: copy h.py/view.py from /private/tmp/claude-501/-Users-aymanmohammed-Documents/b6bdb363-670b-4131-b0fd-b955f7100a53/scratchpad (sed OUT shard name; b1..b5.py with from h import *).
+- Scratchpad helpers: copy h.py/view.py from /private/tmp/claude-501/-Users-aymanmohammed-Documents/6ecd0870-73b5-417b-9fca-fb563b7a7782/scratchpad (sed OUT shard name; b1..b5.py with from h import *).
+- Scratchpad helpers: copy h.py/view.py from /private/tmp/claude-501/-Users-aymanmohammed-Documents/c8f6b644-020a-4d6f-a527-ea338a97822c/scratchpad (sed OUT shard name; b1..b5.py with from h import *). Do not hack R( with inline conditionals.
+- Scratchpad helpers: copy h.py/view.py from /private/tmp/claude-501/-Users-aymanmohammed-Documents/99336beb-449f-43be-ba0c-94d8c87b6c62/scratchpad (sed OUT shard name; b1..b5.py with from h import *).
+- Scratchpad helpers: copy h.py/view.py from /private/tmp/claude-501/-Users-aymanmohammed-Documents/46e94b41-1943-40ba-87fe-e5eb856aaa63/scratchpad (sed OUT shard name; b1..b5.py with from h import *). Unknown prompt text => literalness/words "na" (not 0).
+- Scratchpad helpers: copy h.py/view.py from /private/tmp/claude-501/-Users-aymanmohammed-Documents/3e8003d7-2deb-4405-a662-67c04ed62cc4/scratchpad (sed OUT shard name; b1..b5.py with from h import *). Redacted prompt_summary => literalness/words na.
+- Scratchpad helpers: copy h.py/view.py from /private/tmp/claude-501/-Users-aymanmohammed-Documents/a7791c6e-3420-4e51-bb7b-9fd9b8d00d69/scratchpad (sed OUT shard name; b1..b5.py with from h import *).
+- Scratchpad helpers: copy h.py/view.py from /private/tmp/claude-501/-Users-aymanmohammed-Documents/df4a474e-5fcf-43f4-ac41-1519339f3d0b/scratchpad (sed OUT shard name; b1..b4.py with from h import *). Open 'best use of X' prompts => literalness 1; Oracle of the Deep treated as company track.
+- Scratchpad helpers: copy h.py/view.py from /private/tmp/claude-501/-Users-aymanmohammed-Documents/d50bea62-a38e-47dd-8fa8-d70314aaf737/scratchpad (sed OUT shard name; b1..b5.py with from h import *).
+- Scratchpad helpers: copy h.py/view.py from /private/tmp/claude-501/-Users-aymanmohammed-Documents/39bebdf7-870b-49fc-b406-73d52dbb2fd9/scratchpad (sed OUT shard name; b1..b5.py with from h import *).
+- Spotcheck: view records with a long cut can hide sponsor_tracks_considered (near the end of the record); print that field separately.
+- TASK-105: zsh treats a bare ===== in echo as a command; quote it. Q04 table lacks HackUTD's own 1sts, so HackUTD fit comes from close reads only.
+- TASK-104: red-team checks done from CSVs with python3 -I; Q01 file print order matters (general block then all-tracks). calibration_tmobile_2025.md lines 182/260 contain time estimates (flagged to lead).
