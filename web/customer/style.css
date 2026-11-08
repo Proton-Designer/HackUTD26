@@ -229,3 +229,14 @@ details.keep[open] summary{margin-bottom:var(--sp1)}
 .card .pair .big{width:100%;align-self:stretch}
 #pairView.linking .link-hide{display:none}
 #pairView.linking #pairMsg{font-size:var(--fs-md);color:var(--fg)}
+
+/* UI review 2: one-screen onboarding, Home voice card */
+.trust{list-style:none;padding:0;display:flex;flex-direction:column;gap:var(--sp3);font-size:var(--fs-md);line-height:1.4}
+.trust li{display:flex;gap:var(--sp3);align-items:flex-start}
+.trust li::before{content:"";width:20px;height:20px;flex:none;margin-top:1px;background:var(--ok-ink);-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4.5 12.5l5 5 10-11' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4.5 12.5l5 5 10-11' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat}
+.mic-why{margin-top:var(--sp2);padding:var(--sp3);border-radius:var(--r-md);background:var(--surface)}
+.home-card{width:100%;min-height:var(--tap);display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:var(--sp3) var(--sp4);border-radius:var(--r-lg);border:1px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer;font:inherit}
+.home-card .hc-main{font-size:var(--fs-md);font-weight:700}
+.home-card .hc-time{color:var(--mut);font-weight:600}
+.home-card .hc-sub{font-size:var(--fs-sm);color:var(--mut)}
+.home-card:focus-visible{outline:3px solid #fff;outline-offset:2px}

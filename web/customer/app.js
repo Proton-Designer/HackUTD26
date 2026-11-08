@@ -64,7 +64,7 @@
   BF.ringEl = ringEl;
   document.addEventListener("pointerdown", () => { unlockAudio(); primeRing(); });   // every tap (not once): iOS suspends audio after backgrounding
   document.addEventListener("visibilitychange", () => { if (!document.hidden && st.ctx && st.ctx.state !== "running") st.ctx.resume().catch(() => {}); });
-  $("sound").addEventListener("click", unlockAudio);   // first tap anywhere unlocks beeps
+  $("sound").addEventListener("click", unlockAudio); BF.unlockAudio = () => { unlockAudio(); primeRing(); };   // first tap anywhere unlocks beeps
 
   // ---- Live Guard badge: watching / alert / handed off / off ----
   const fmtNum = n => /^\+1\d{10}$/.test(n || "") ? `+1 (${n.slice(2, 5)}) ${n.slice(5, 8)}-${n.slice(8)}` : (n || "");

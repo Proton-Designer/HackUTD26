@@ -101,6 +101,8 @@ if (!Element.prototype.replaceChildren) Element.prototype.replaceChildren = func
       <div class="glow"><img src="assets/backfire-flame.png" alt="" width="64" height="96"></div>
       <h1>You're protected</h1>
       <p class="lead">Backfire listens to the caller's side of calls from numbers you don't know.</p>
+      <p id="homeNote" class="note" role="status"></p>
+      <button id="voiceCard" class="home-card" type="button" hidden><span class="hc-main">Make Backfire sound like you <span class="hc-time">· 20 sec</span></span><span class="hc-sub">Optional. Scammers hear a synthetic voice until then.</span></button>
     </div>
     <div class="ended-only">
       <h1 id="endedTitle">Call ended</h1>
@@ -177,18 +179,18 @@ if (!Element.prototype.replaceChildren) Element.prototype.replaceChildren = func
     <div id="step1" class="step">
       <div class="step-body">
         <img class="wordmark" src="assets/backfire-wordmark.png" alt="Backfire" width="150" height="25">
-        <h1>Turn on Backfire</h1>
-        <p class="body">Backfire helps protect you from scam calls.</p>
-        <ul class="plainlist">
-          <li>It listens to the <b>caller only</b>. It never listens to you.</li>
-          <li>Nothing from your side of the call is saved.</li>
-          <li>You are always in control. You can turn it off at any time.</li></ul>
+        <h1>Protect this phone from scam calls</h1>
+        <ul class="trust">
+          <li>Backfire listens to the <b>caller only</b>, never to you.</li>
+          <li>Nothing from your side of a call is saved.</li>
+          <li>You can turn it off at any time.</li></ul>
+        <p class="note-line mic-why" id="s1mic">Your phone will then ask to use the microphone. Backfire needs it only so you can talk on calls it protects. Saying yes now means it never asks in the middle of a call.</p>
       </div>
-      <div class="actions"><button class="big accept" id="s1on">Turn on Backfire</button></div>
+      <div class="actions"><button class="big accept" id="s1on">Turn on protection</button></div>
     </div>
     <div id="step2" class="step" hidden>
       <div class="step-body">
-        <h1>Your voice (optional)</h1>
+        <h1>Make Backfire sound like you</h1>
         <p class="body">If you press <b>Fire Back</b>, Backfire can talk to the scammer in <b>your voice</b>, so they waste their time and not yours.</p>
         <div class="card"><h2>Voice permission</h2>
           <p class="body small">A voice profile is <b>biometric data</b>. If you agree, Backfire makes one from a short recording of you reading a paragraph.</p>
@@ -197,11 +199,11 @@ if (!Element.prototype.replaceChildren) Element.prototype.replaceChildren = func
             <li>Backfire keeps only an <b>8-second voice sample</b>, not the whole recording.</li>
             <li>Stored on Backfire's server and used for nothing else.</li>
             <li>You can <b>delete it any time</b> in Protection.</li></ul>
-          <p class="body small">This is separate from turning on Backfire. You can say no and still be protected.</p></div>
+          <p class="body small">You are protected either way. Without this, Backfire uses a synthetic voice.</p></div>
       </div>
       <div class="actions">
         <button class="big accept" id="s2agree">I agree</button>
-        <button class="big outline" id="s2skip">Skip, use a synthetic voice</button>
+        <button class="big outline" id="s2skip">Not now, keep the synthetic voice</button>
       </div>
     </div>
     <div id="stepRec" class="step" hidden>
@@ -222,14 +224,6 @@ if (!Element.prototype.replaceChildren) Element.prototype.replaceChildren = func
         </div>
         <button class="big outline" id="recSkip">Skip, use a synthetic voice</button>
       </div>
-    </div>
-    <div id="step3" class="step" hidden>
-      <div class="step-body">
-        <img class="wordmark" src="assets/backfire-wordmark.png" alt="Backfire" width="150" height="25">
-        <h1>You're protected</h1>
-        <p class="body" id="doneMsg">Backfire is on.</p>
-      </div>
-      <div class="actions"><button class="big accept" id="s3done">Done</button></div>
     </div>
   </section>
 

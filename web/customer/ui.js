@@ -61,7 +61,7 @@
     $("guardState").textContent = state.guardOn ? "On. Backfire is watching the caller's side of calls from numbers it doesn't know." : "Off. Calls are not being checked.";
     $("guardToggle").textContent = state.guardOn ? "Turn Live Guard off" : "Turn Live Guard on";
     $("voiceState").textContent = state.voiceNote ? state.voiceNote : state.voiceId ? "Set up. Backfire keeps only a short voice sample, used only if you press Fire Back." + (HUB ? "" : " (Simulated)") : "No voice profile.";
-    $("voiceDelete").hidden = !state.voiceId; $("voiceSetup").hidden = !!state.voiceId;
+    $("voiceDelete").hidden = !state.voiceId; $("voiceSetup").hidden = !!state.voiceId; paintHome();
     applyGuard();
   }
   async function undo(b) {
@@ -89,8 +89,8 @@
       state.blocked.push({ number: d.number, reason: "Caught after Fire Back", undo_token: d.undo_token });
     if (ev.type === "call.ended") state.calls++;
     if (ev.type === "blocklist.updated" || ev.type === "call.ended") setTimeout(renderProtection, 0);   // live update while she is looking at the log
-    if (ev.type === "voice.enrolled" && d.voice_id) { state.voiceId = d.voice_id; store.set("voice", d.voice_id); }
-    if (ev.type === "voice.deleted") { state.voiceId = null; store.set("voice", null); }
+    if (ev.type === "voice.enrolled" && d.voice_id) { state.voiceId = d.voice_id; store.set("voice", d.voice_id); paintHome(); }
+    if (ev.type === "voice.deleted") { state.voiceId = null; store.set("voice", null); paintHome(); }
   };
 
   // ---- voice delete ----
@@ -105,20 +105,29 @@
   $("voiceYes").onclick = async () => { $("voiceConfirm").hidden = true; await deleteVoice(); };
 
   // ---- onboarding: 1 turn on -> 2 voice consent (separate, optional) -> rec read-aloud -> dns Do Not Screen (optional) -> 3 done ----
-  const STEPS = ["step1", "step2", "stepRec", "step3"], STEP_NO = { 1: 0, 2: 1, rec: 2, 3: 3 };
+  // ---- onboarding (UI review 2): one screen, one button, straight to Home. Voice is offered later from a Home card (consent -> record). ----
+  const STEPS = ["step1", "step2", "stepRec"], STEP_NO = { 1: 0, 2: 1, rec: 2 };
   function setup(step) {
     VIEWS.forEach(x => $(x).hidden = x !== "setupView"); $("tabs").hidden = true;
     STEPS.forEach((s, i) => $(s).hidden = i !== STEP_NO[step]);
     window.scrollTo(0, 0);
   }
-  function finish(msg) { $("doneMsg").textContent = msg; setup(3); }
+  function home() { view("callView"); applyGuard(); paintHome(); if (BF.pendingStart) { const f = BF.pendingStart; BF.pendingStart = null; f(); } }
+  function finish(msg) { $("homeNote").textContent = msg || ""; home(); }
+  function paintHome() { const c = $("voiceCard"); if (c) c.hidden = !!state.voiceId || !state.guardOn; }
   // end of the voice flow (the Do Not Screen list now lives in Protection only)
   function toDns(msg) { state.doneMsg = msg; if (state.fromSettings) { state.fromSettings = false; view("protView"); } else finish(msg); }
-  $("s1on").onclick = () => { store.set("on", "1"); state.guardOn = true; store.set("done", "1"); setup(2); };
-  $("s2skip").onclick = () => toDns("Backfire is on. Scammers will hear a synthetic voice. You can set up your voice later in Protection.");
+  // The one tap: turns Live Guard on, unlocks call sounds (same gesture) and asks for the mic now, with the reason on screen, so the prompt never comes mid-call.
+  $("s1on").onclick = () => {
+    store.set("on", "1"); state.guardOn = true; store.set("done", "1");
+    try { BF.unlockAudio && BF.unlockAudio(); } catch (e) {}
+    try { if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) navigator.mediaDevices.getUserMedia({ audio: true }).then(s => s.getTracks().forEach(t => t.stop())).catch(() => {}); } catch (e) {}
+    finish("");
+  };
+  $("voiceCard").onclick = () => { state.fromSettings = false; setup(2); };
+  $("s2skip").onclick = () => toDns("");
   $("s2agree").onclick = () => { const p = newParagraph(); if (!CONVO) $("paragraph").textContent = p; resetRec(); setup("rec"); };
   $("recSkip").onclick = () => { if (lowQ) { lowQ = false; toDns("Your voice is set up. Backfire is on. It keeps only a short voice sample, used only if you press Fire Back. You can delete it any time in Protection."); return; } stopMeter(); if (rec) { discard = true; rec.stop(); } toDns("Backfire is on. Scammers will hear a synthetic voice. You can set up your voice later in Protection."); };
-  $("s3done").onclick = () => { view("callView"); applyGuard(); if (BF.pendingStart) { const f = BF.pendingStart; BF.pendingStart = null; f(); } };
   $("voiceSetup").onclick = () => { state.fromSettings = true; setup(2); };
   function dnsForm(open) { $("dnsForm").hidden = !open; $("dnsOpen").hidden = open; $("dnsOpen").setAttribute("aria-expanded", String(open)); if (open) $("dnsNumber").focus(); }
   $("dnsOpen").onclick = () => dnsForm(true);
