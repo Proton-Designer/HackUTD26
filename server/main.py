@@ -160,6 +160,26 @@ def protection_undo(body: dict = Body(...)):
             log.exception("intel undo failed")
     return {"ok": db.undo(tok)}
 
+_E164 = re.compile(r"^\+[1-9]\d{7,14}$")
+
+@app.get("/trusted", dependencies=[Depends(device.require_device)])
+def trusted_list():
+    return {"trusted": db.list_trusted()}
+
+@app.post("/trusted", dependencies=[Depends(device.require_device)])
+def trusted_add(body: dict = Body(...)):
+    number = db.norm(str(body.get("number", "")))
+    if not _E164.match(number):
+        raise HTTPException(422, "number must be E.164, e.g. +15555550123")
+    label = "".join(ch for ch in str(body.get("label") or "") if ch.isprintable())[:60]
+    db.add_trusted(number, label)
+    return {"ok": True, "number": number, "label": label}
+
+@app.delete("/trusted/{number}", dependencies=[Depends(device.require_device)])
+def trusted_remove(number: str):
+    number = db.norm(number)
+    return {"ok": True, "removed": bool(_E164.match(number)) and db.remove_trusted(number)}   # idempotent
+
 @app.get("/demo/latency")
 def demo_latency():
     return ops.latency_summary()

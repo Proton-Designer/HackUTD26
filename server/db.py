@@ -62,6 +62,12 @@ def add_campaign(number, campaign_id="camp"):
 def add_trusted(number, label=""):
     q("INSERT OR REPLACE INTO trusted VALUES(?,?)", (norm(number), label))
 
+def list_trusted():
+    return [dict(r) for r in q("SELECT number, label FROM trusted ORDER BY number").fetchall()]
+
+def remove_trusted(number):
+    return q("DELETE FROM trusted WHERE number=?", (norm(number),)).rowcount > 0
+
 def has(table, number):
     return q(f"SELECT 1 FROM {table} WHERE number=?", (norm(number),)).fetchone() is not None
 

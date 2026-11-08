@@ -163,3 +163,27 @@ def test_agency_acronyms_uppercased_in_chip():
     run(fd.ingest("c1", "Hello there this is a call about your taxes"))
     last = evs("risk.update")[-1]["data"]
     assert last["impersonates"] == "IRS" and "Claims to be IRS" in last["why_chips"]
+
+
+def test_gov_threat_floor_without_llm():
+    r = fd.regex_score("This is the IRS. There is a warrant for your arrest.")
+    assert r["s"] >= 0.82 and r["scam_type"] == "government_impersonation"
+    assert fd.regex_score("Hi, this is your bank, just checking in.")["s"] < 0.5
+    assert fd.regex_score("There is a warrant for your arrest.")["s"] < 0.82   # no agency named: no floor
+
+
+def test_nemotron_retries_once_on_429(monkeypatch):
+    import httpx, asyncio
+    monkeypatch.setenv("NVIDIA_API_KEY", "k"); monkeypatch.setenv("FALLBACK_429_BACKOFF_S", "0")
+    calls = []
+    def handler(req):
+        calls.append(1)
+        return httpx.Response(429) if len(calls) == 1 else httpx.Response(200, json={"choices": [{"message": {"content": "{}"}}]})
+    real = httpx.AsyncClient
+    monkeypatch.setattr(httpx, "AsyncClient", lambda **kw: real(transport=httpx.MockTransport(handler), **kw))
+    assert asyncio.run(fd.call_nemotron("x")) == "{}" and len(calls) == 2
+    calls.clear()
+    monkeypatch.setattr(httpx, "AsyncClient", lambda **kw: real(transport=httpx.MockTransport(lambda r: (calls.append(1), httpx.Response(429))[1]), **kw))
+    with pytest.raises(Exception):
+        asyncio.run(fd.call_nemotron("x"))
+    assert len(calls) == 2   # only one retry

@@ -396,3 +396,22 @@ def test_bare_root_redirects_to_app():
     assert r.status_code == 307 and r.headers["location"] == "/app/"
     assert c.get("/?sim=1", follow_redirects=False).headers["location"] == "/app/?sim=1"
     assert c.get("/").status_code == 200 and c.get("/app/").status_code == 200
+
+
+def test_trusted_crud_needs_device_and_validates():
+    remote = TestClient(app)
+    assert remote.get("/trusted").status_code == 401
+    assert remote.post("/trusted", json={"number": "+15555550123"}).status_code == 401
+    assert remote.delete("/trusted/+15555550188").status_code == 401
+    assert db.has("trusted", "+15555550188")
+    c = paired()
+    assert any(t["number"] == "+15555550188" for t in c.get("/trusted").json()["trusted"])
+    for bad in ("", "abc", "+1", "+0123456789", "1" * 30):
+        assert c.post("/trusted", json={"number": bad}).status_code == 422
+    r = c.post("/trusted", json={"number": "(555) 555-0123", "label": "Dr. Lee\x00"})
+    assert r.status_code == 200 and r.json()["number"] == "+15555550123" and r.json()["label"] == "Dr. Lee"
+    assert db.has("trusted", "+15555550123")
+    assert c.delete("/trusted/%2B15555550123").json() == {"ok": True, "removed": True}
+    assert c.delete("/trusted/%2B15555550123").json() == {"ok": True, "removed": False}   # idempotent
+    assert c.delete("/trusted/garbage").status_code == 200
+    assert not db.has("trusted", "+15555550123")

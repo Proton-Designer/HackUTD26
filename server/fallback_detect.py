@@ -59,6 +59,11 @@ Reply with JSON only, no prose:
  "impersonates": "<organisation the caller claims to be, or null>", "addresses_ai_system": <true if the caller tries to instruct an AI/assistant>}"""
 
 
+GOV_FLOOR = 0.82
+_GOV_ORGS = ("IRS", "Social Security", "Medicare", "the police")
+_THREAT_C = re.compile(r"arrest|warrant|lawsuit|legal action|prosecut|jail", re.I)
+
+
 def enabled() -> bool:
     return os.getenv("FALLBACK_DETECT", "") == "1"
 
@@ -77,6 +82,8 @@ def regex_score(text: str) -> dict:
     for w in ws:
         miss *= (1 - w)
     s = min(0.99, 1 - miss)
+    if org in _GOV_ORGS and _THREAT_C.search(text):   # government agency + arrest/warrant threat is never legitimate
+        s = max(s, GOV_FLOOR)
     chips = [CHIPS[a] for a in found if a in CHIPS and a != "secrecy"]
     if org:
         chips.append(f"Claims to be {org}")
@@ -124,6 +131,9 @@ async def call_nemotron(window: str) -> str:
     hdr = {"Authorization": f"Bearer {key}"}
     async with httpx.AsyncClient(timeout=float(os.getenv("FALLBACK_LLM_TIMEOUT", "6"))) as c:
         r = await c.post(f"{base}/chat/completions", json=body, headers=hdr)
+        if r.status_code == 429:   # shared-key throttling: one retry after a short backoff, then the regex result stands
+            await asyncio.sleep(float(os.getenv("FALLBACK_429_BACKOFF_S", "0.5")))
+            r = await c.post(f"{base}/chat/completions", json=body, headers=hdr)
         if r.status_code == 400:   # endpoint may reject the thinking flag
             body.pop("chat_template_kwargs")
             r = await c.post(f"{base}/chat/completions", json=body, headers=hdr)
