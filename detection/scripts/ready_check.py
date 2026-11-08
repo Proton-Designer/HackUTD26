@@ -127,7 +127,7 @@ def main():
         except Exception as e: add("git checks", "WARN", type(e).__name__, "run from the live checkout")
         if a.tests:
             try:
-                r = subprocess.run([".venv/bin/python", "-m", "pytest", "-q", "detection"], cwd=root, capture_output=True, text=True, timeout=600)
+                r = subprocess.run([".venv/bin/python", "-m", "pytest", "-q", "detection"], cwd=root, capture_output=True, text=True, timeout=600, env={k: v for k, v in os.environ.items() if k not in ("PIPELINE_TOKEN", "P2_TOKEN", "P2_DUMP_AUDIO")})   # tests assume no auth token in env (a sourced .env would make /detect 401)
                 add("pytest detection", "PASS" if r.returncode == 0 else "FAIL", (r.stdout.strip().splitlines() or [""])[-1], "" if r.returncode == 0 else "fix before the freeze")
             except Exception as e: add("pytest detection", "WARN", type(e).__name__, "")
     try:
