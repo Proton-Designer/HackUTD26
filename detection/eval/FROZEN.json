@@ -1,0 +1,24 @@
+{
+  "thresholds": {
+    "rules": {
+      "threshold": 0.85,
+      "tuned_on": "dev",
+      "n_dev": 60,
+      "dev_youden": 0.65
+    },
+    "cloud": {
+      "threshold": 0.85,
+      "tuned_on": "dev",
+      "n_dev": 60,
+      "dev_youden": 0.835
+    },
+    "local": {
+      "threshold": 0.95,
+      "tuned_on": "dev",
+      "n_dev": 60,
+      "dev_youden": 0.704
+    }
+  },
+  "git_sha": "20ca58a",
+  "frozen_at": "2026-11-08T01:29:14-0600"
+}

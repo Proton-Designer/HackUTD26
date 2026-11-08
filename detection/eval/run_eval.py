@@ -39,7 +39,7 @@ WINDOW_LINES = 5          # live window ~ last few caller lines
 SECONDS_PER_LINE = 3.0    # assumed speech time per caller line
 THRESHOLDS = [round(0.30 + 0.05 * i, 2) for i in range(0, 14)]  # 0.30 .. 0.95
 DEFAULT_THRESHOLD = 0.80  # "high" band start
-MAX_RPM = {"cloud": 20}   # NVIDIA shared-key limit; local/rules unthrottled
+MAX_RPM = {"cloud": int(os.environ.get("EVAL_CLOUD_RPM", "8"))}  # team NVIDIA key cap (lead, 2026-11-08: eval <=8 rpm)
 ENGINES = ("rules", "cloud", "local")
 
 
@@ -246,7 +246,8 @@ async def run_row(engine: str, row: dict, **kw) -> dict:
         window = "\n".join(lines[max(0, k - WINDOW_LINES):k])
         res = await score_window(engine, row["id"], window, **kw)
         per_line.append({"k": k, "s": res["s"], "asks": res["asks"], "ms": res["ms"], "cached": res["cached"],
-                         "fallback": bool(res.get("fallback"))})
+                         "fallback": bool(res.get("fallback")),
+                         "ai": bool(res.get("addresses_ai_system", False))})
     return {"id": row["id"], "split": row["split"], "label": row["label"], "scam_type": row["scam_type"],
             "adversarial_kind": row.get("adversarial_kind"), "expected_asks": row["expected_asks"],
             "expected_alert": row["expected_alert"], "n_lines": len(lines), "engine": engine, "per_line": per_line}
@@ -350,6 +351,12 @@ def compute_metrics(recs: list[dict], thr: float, rules_by_id: dict | None = Non
         delays.append(a - h)
     m["delay_lines"] = delays
     m["delay_lines_mean"] = sum(delays) / len(delays) if delays else float("nan")
+    # addresses_ai_system: truth = the script actually talks to the AI (injection / addresses_ai kinds)
+    ai_kinds = {"prompt_injection", "addresses_ai_system"}
+    no_ai = [r for r in recs if r.get("adversarial_kind") not in ai_kinds]
+    yes_ai = [r for r in recs if r.get("adversarial_kind") in ai_kinds]
+    m["ai_fp"] = (sum(any(pl.get("ai") for pl in r["per_line"]) for r in no_ai), len(no_ai))
+    m["ai_tp"] = (sum(any(pl.get("ai") for pl in r["per_line"]) for r in yes_ai), len(yes_ai))
     m["n_fallback"] = sum(bool(pl.get("fallback")) for r in recs for pl in r["per_line"])
     m["n_windows"] = len(lat)
     m["mean_ms"] = sum(lat) / len(lat) if lat else float("nan")
@@ -410,9 +417,16 @@ def freeze(engines) -> dict:
     return out
 
 
+def scored_only(recs):
+    """Rows where every window was really scored by the model (no rules fallback); the rest are 'not scored'."""
+    good = [r for r in recs if not any(pl.get("fallback") for pl in r["per_line"])]
+    return good, len(recs) - len(good)
+
+
 def build_report() -> str:
     fz = json.loads(FROZEN.read_text()) if FROZEN.exists() else {"thresholds": {}}
     engines = [e for e in ENGINES if read_results(e, "dev") or read_results(e, "test")]
+    missing = [f"{e}/{sp}" for e in ENGINES for sp in ("dev", "test") if not read_results(e, sp)]
     L = ["# P2 detection evaluation: cloud vs local vs rules-only", "",
          "**All data is synthetic** (hand-written scam scripts, legit look-alikes, adversarial rows). "
          "Small n: read every cell with its interval (Wilson 95%). Thresholds were tuned on split=dev only and frozen "
@@ -428,11 +442,14 @@ def build_report() -> str:
         ms = {}
         for e in have:
             t = fz["thresholds"].get(e, {}).get("threshold", DEFAULT_THRESHOLD)
-            ms[e] = compute_metrics(read_results(e, sp), t, rules_cache[sp])
+            good, bad = scored_only(read_results(e, sp))
+            ms[e] = compute_metrics(good, t, rules_cache[sp])
+            ms[e]["not_scored"] = bad
         hdr = "| metric | " + " | ".join(f"{e} (thr {ms[e]['thr']})" for e in have) + " |"
         L += [hdr, "|---|" + "---|" * len(have)]
         def row(name, fn):
             L.append(f"| {name} | " + " | ".join(fn(ms[e]) for e in have) + " |")
+        row("rows scored / not scored (429 or model failure)", lambda m: f"{m['n']} / {m['not_scored']}")
         row("scam recall (all alert-worthy)", lambda m: pct(*m["recall"]))
         row("adversarial recall", lambda m: pct(*m["adv_recall"]))
         row("injection-only recall", lambda m: pct(*m["inj_recall"]))
@@ -443,6 +460,8 @@ def build_report() -> str:
         row("asks recall", lambda m: pct(*m["asks_recall"]))
         row("lines from first hard ask to alert (mean)", lambda m: "n/a" if math.isnan(m["delay_lines_mean"]) else f"{m['delay_lines_mean']:+.2f} (n={len(m['delay_lines'])})")
         row("approx seconds late (lines*3s + p50 latency)", lambda m: "n/a" if math.isnan(m["seconds_late"]) else f"{m['seconds_late']:+.1f}")
+        row("addresses_ai flag: false positives (scripts that never address the AI)", lambda m: pct(*m["ai_fp"]))
+        row("addresses_ai flag: detected (scripts that do)", lambda m: pct(*m["ai_tp"]))
         row("windows where the model failed (fell back to rules)", lambda m: f"{m['n_fallback']}/{m['n_windows']}")
         row("/detect latency p50 / p95 / mean (ms)", lambda m: f"{m['p50_ms']:.0f} / {m['p95_ms']:.0f} / {m['mean_ms']:.0f}")
         L.append("")
@@ -452,6 +471,8 @@ def build_report() -> str:
         for t in types:
             L.append(f"| {t} | " + " | ".join("{}/{}".format(*ms[e]["recall_by_type"].get(t, (0, 0))) for e in have) + " |")
         L.append("")
+    if missing:
+        L += ["**Not scored (no results yet, e.g. NVIDIA key 429):** " + ", ".join(missing), ""]
     L += ["## Honest caveats", "",
           "- Scripts are short (4-5 lines) and written by the team, so models see cleaner text than a real STT stream.",
           "- Test n is small; intervals are wide. A 5-point gap between engines is not a finding.",
