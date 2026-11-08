@@ -37,6 +37,12 @@ BARGE_GRACE_S = 0.4        # ignore inbound right after we start speaking (echo 
 ECHO_MARGIN = 3.0          # inbound must be ~10 dB over the estimated echo of our own voice
 OUT_RATIO = 0.3            # ...and within ~10 dB of our own outbound level (real echo is far quieter)
 STT_TIMEOUT_S, LLM_TIMEOUT_S = 6.0, 7.0
+# Turn-taking (Ayman, real call adad65a0: "often speaks out of turn"). P2's 450 ms end-of-speech is tuned for fast
+# detection; callers pause longer than that mid-sentence on PSTN, so the decoy waits longer before it takes its turn,
+# and holds a ready reply while the caller is still talking (re-thinking if they added something).
+DECOY_ENDPOINT_MS = int(__import__("os").environ.get("DECOY_ENDPOINT_MS", "800"))
+HOLD_MAX_S = 4.0           # longest we hold a ready reply for a caller who keeps talking
+REDO_MAX = 2               # re-think at most twice per turn when the caller adds more
 FILLER_AFTER_S = 0.6       # play a filler only if Nemotron hasn't answered by then
 STALLS = ["Hold on, let me find my glasses.", "Oh, sorry, the line went funny. Say that again?"]
 
@@ -124,7 +130,7 @@ class Session:
         self.fillers: list[list[bytes]] = []
         from detection.stream import Segmenter
         from detection.stt import get_stt, mulaw_decode
-        self.seg, self.stt, self.decode = Segmenter(), _shared_stt(get_stt), mulaw_decode
+        self.seg, self.stt, self.decode = Segmenter(endpoint_ms=DECOY_ENDPOINT_MS), _shared_stt(get_stt), mulaw_decode
         self.stt_ms = 0
         self.speak_start = 0.0         # when the current stretch of our speech started
         self.out_rms = 0.0             # peak-hold level of what we're sending
@@ -231,7 +237,7 @@ class Session:
             self.stt_ms = int((time.monotonic() - t_stt) * 1000)
         except Exception as e:
             log.warning("STT failed: %s", type(e).__name__)
-            if self.active and not self.speaking() and self.stalls:
+            if self.active and not self.speaking() and not self.caller_talking() and self.stalls:
                 self.play(random.choice(self.stalls))   # never dead air
             return
         if not text or not self.active:
@@ -246,7 +252,19 @@ class Session:
             self.busy = True
             asyncio.create_task(self.reply())
 
+    def caller_talking(self) -> bool:
+        """The caller is mid-utterance right now (and it isn't just our own voice coming back)."""
+        return self.seg.cur is not None and not self.speaking()
+
+    async def hold_floor(self) -> bool:
+        """Wait while the caller is still talking. True if they finished; False if we gave up (keep waiting is worse)."""
+        t = time.monotonic()
+        while self.active and self.caller_talking() and time.monotonic() - t < HOLD_MAX_S:
+            await asyncio.sleep(0.05)
+        return not self.caller_talking()
+
     async def reply(self):
+        redo = 0
         try:
             while self.active and self.pending:
                 heard, self.pending = " ".join(self.pending), []
@@ -254,7 +272,7 @@ class Session:
                 self.history.append({"role": "user", "content": f"<caller>{core.clean(heard)}</caller>"})
                 task = asyncio.create_task(core.chat([{"role": "system", "content": core.SYSTEM}] + self.history[-16:]))
                 done, _ = await asyncio.wait({task}, timeout=FILLER_AFTER_S)
-                if not done and self.fillers and not self.speaking():
+                if not done and self.fillers and not self.speaking() and not self.caller_talking():
                     self.play(random.choice(self.fillers))     # mask the thinking time
                 try:
                     out = await asyncio.wait_for(task, LLM_TIMEOUT_S - FILLER_AFTER_S)
@@ -262,6 +280,15 @@ class Session:
                     log.warning("LLM failed: %s", type(e).__name__)
                     out = None
                 llm_ms = int((time.monotonic() - t0) * 1000)
+                await self.hold_floor()
+                if self.pending and redo < REDO_MAX:
+                    # they said more while we were thinking: answer everything they said, not a stale fragment
+                    redo += 1
+                    self.history.pop()
+                    self.pending = [heard] + self.pending
+                    log.info("turn %s: caller kept talking, re-thinking (%d)", self.call_id, redo)
+                    continue
+                redo = 0
                 out = out or random.choice(STALLS)
                 hist, spoken = core.guard(out, self.persona, self.given, self.ev)
                 self.history.append({"role": "assistant", "content": hist})
