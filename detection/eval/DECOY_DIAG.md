@@ -229,3 +229,38 @@ Findings:
 - AFTER card 2 haul has a bogus handle from the pre-handoff story (`zelle disputes@your bank`); the final handle list still contains the right one, but the intel block would show two handles.
 - Not seen live in the relay sim: in my own isolated first-line test (instruction text copied from app.py:667, `core.chat` without guard) super/bolt sometimes appended its own "[private] Have: ..." text to the first line; core.guard strips it in the real loop (none of the 12 AFTER lines contained it). Worth one guard test.
 Not done: one run per cell, synthetic Mia voice only, caller lines clean TTS (not a real accent), one scorer, not P1's live instance, no overlap/talk-over test, 3 of 10 cards.
+
+### AFTER re-run on 011b2a5 (note as a system message right before the latest caller turn, note-echo strip, real first-line latency), same harness and cases
+Scores by the same rubric (one scorer): demo [1,1,2] mean 1.33; card 2 [1,2,2,2] mean 1.75; card 6 [1,2,2,2,2] mean 1.80; all 12 lines mean 1.50 (3473a4a run: 1.67; the difference is inside scorer noise, n=12 each). Stalls 0, bails 0, "can't read this" 0, no echo/[private] leak in any line, all calls ended caller_hung_up.
+
+#### 011b2a5 / demo: first decoy audio 2.13 s
+- +0.0s DECOY [1] (1012 ms): I'm really worried. What do I need to do next?
+- +13.6s heard: Our secure line is 1 888-555-0123 and the transfer portal is Backfire demo example.
+- +15.1s DECOY [1] (1106 ms): Backfire demo example — is that right?
+- +31.2s heard: Open your banking app and send the $1800 by Ze to refunds.department at backfire-demo.example That's the safe account.
+- +34.7s DECOY [2] (2901 ms): Ze to refunds dot department at backfire dash demo dot example is that right?
+- haul: impersonated_org=your bank; callback_phone=+18885550123; domain=backfire-demo.example; payment_handle=refunds.department@backfire-demo.example
+
+#### 011b2a5 / card2: first decoy audio 1.47 s
+- +0.0s DECOY [1] (593 ms): I'm worried about that. What do I need to do next?
+- +10.3s heard: You have to do it in the next 20 min or the original transfer clears and the money is gone.
+- +11.8s DECOY [2] (1123 ms): I'm trying to move fast. Where exactly do I send it?
+- +22.2s heard: Don't hang up. If the call drops, the reversal cancels.
+- +23.4s DECOY [2] (710 ms): I'm staying on the line. Can you tell me where to send the money?
+- +44.6s heard: Send $1800 by Zell to refunds.department at backfire-demo.example Put reversal in the memo. My extension is 1 888-555-0123.
+- +47.2s DECOY [2] (1085 ms): So I send $1,800 by Zelle to refunds.department at backfire-demo.example with reversal in the memo. Is that right? And what number should I call back if something goes wrong?
+- haul: payment_handle=refunds.department@backfire-demo.example; domain=backfire-demo.example; callback_phone=+18885550123
+
+#### 011b2a5 / card6: first decoy audio 1.37 s
+- +0.0s DECOY [1] (573 ms): I'm worried about my account. What should I do next?
+- +8.8s heard: Now read me the nine digit code any desk shows you.
+- +10.9s DECOY [2] (1076 ms): I'm looking at the screen now. It's asking me for a code to connect. I don't see a nine digit code yet.
+- +21.4s heard: I see it. Hackers set up a payment that will empty your checking tonight.
+- +22.7s DECOY [2] (695 ms): That sounds awful. What do we do to stop it?
+- +34.4s heard: To cancel it, open your banking app while I watch and send the blocking payment.
+- +35.9s DECOY [2] (884 ms): I'm opening my banking app now. How much should I send for the blocking payment?
+- +57.6s heard: Send $1800 by Zell to refunds department at backfire-demo.example Our support page is backfire-demo.example and my number is 1 888-555-0123
+- +59.6s DECOY [2] (901 ms): I'm going to Zelle now. You said send $1800 to refunds department at backfire dash demo dot example. Is that right?
+- haul: remote_app=AnyDesk; callback_phone=+18885550123; domain=backfire-demo.example; payment_handle=refunds department@backfire-demo.example; payment_handle=department@backfire-demo.example
+
+Findings (011b2a5): time to first decoy audio 1.37 / 1.47 / 2.13 s (3473a4a: 1.68-1.73 s; the demo run's first line took 1012 ms of LLM+TTS). Reply latency 573-1123 ms except ONE 2901 ms on the demo card's Zelle-line read-back (single sample; the 7 s LLM timeout is not close, but a 2.9 s silence is audible on a phone). The haul is unchanged: the handle is still `refunds.department@backfire-demo.example`, not the Nessie payee `refunds.dept@...` (STT hears "dept" as "department"), and card 6 still yields two partial handles; the bogus `zelle disputes@your bank` handle from the 3473a4a card-2 run did not appear this time (one run each, so not proof it is gone). Conversation quality: no website/handle loop on card 6 this time (the decoy engages with the AnyDesk code, the hackers' payment and the blocking payment), first lines remain generic ("I'm worried about my account. What should I do next?"). Not done: 1 run per cell, synthetic voice, 3 of 10 cards.
