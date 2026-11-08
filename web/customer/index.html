@@ -118,7 +118,12 @@ if (!Element.prototype.replaceChildren) Element.prototype.replaceChildren = func
     <h1>Protection</h1>
     <div class="card"><h2>Live Guard</h2>
       <p id="guardState" class="sub"></p>
-      <button class="big outline" id="guardToggle"></button></div>
+      <button class="big outline" id="guardToggle"></button>
+      <div id="guardOffBox" class="confirm" hidden role="group" aria-label="Turn Live Guard off">
+        <p>Turn Live Guard off? Backfire will stop watching your calls.</p>
+        <label class="check"><input type="checkbox" id="guardAlso"><span>Also delete my voice</span></label>
+        <div class="pair"><button class="big outline" id="guardOffNo">Cancel</button><button class="big outline danger" id="guardOffYes">Turn off</button></div>
+      </div></div>
     <div class="card"><h2>Numbers we blocked</h2>
       <ul id="blockedList" class="rows"></ul><p id="blockedEmpty" class="sub">None yet.</p></div>
     <div class="card"><h2>Calls handled</h2><p class="stat" id="callsCount">0</p></div>
@@ -134,6 +139,10 @@ if (!Element.prototype.replaceChildren) Element.prototype.replaceChildren = func
     <div class="card"><h2>Your voice profile</h2>
       <p id="voiceState" class="sub"></p>
       <button class="big outline danger" id="voiceDelete" hidden>Delete my voice</button>
+      <div id="voiceConfirm" class="confirm" hidden role="alertdialog" aria-label="Delete my voice">
+        <p>This deletes the voice Backfire uses for every call. Delete?</p>
+        <div class="pair"><button class="big outline" id="voiceNo">Cancel</button><button class="big outline danger" id="voiceYes">Yes, delete</button></div>
+      </div>
       <button class="big outline" id="voiceSetup" hidden>Set up my voice</button></div>
   </section>
 
@@ -161,7 +170,7 @@ if (!Element.prototype.replaceChildren) Element.prototype.replaceChildren = func
             <li>Used <b>only</b> when you press Fire Back.</li>
             <li>Backfire keeps only an <b>8-second voice sample</b>, not the whole recording.</li>
             <li>Stored on Backfire's server and used for nothing else.</li>
-            <li>You can <b>delete it any time</b>. It is also deleted if you turn Live Guard off.</li></ul>
+            <li>You can <b>delete it any time</b> in Protection.</li></ul>
           <p class="body small">This is separate from turning on Backfire. You can say no and still be protected.</p></div>
       </div>
       <div class="actions">

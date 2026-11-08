@@ -54,9 +54,9 @@
     });
     $("blockedEmpty").hidden = state.blocked.length > 0;
     $("callsCount").textContent = state.calls; $("statCalls").textContent = state.calls; $("statBlocked").textContent = state.blocked.length;
-    $("guardState").textContent = state.guardOn ? "On. Backfire is watching the caller's side of calls from numbers it doesn't know." + (state.voiceId ? " Turning it off also deletes your voice." : "") : "Off. Calls are not being checked.";
+    $("guardState").textContent = state.guardOn ? "On. Backfire is watching the caller's side of calls from numbers it doesn't know." : "Off. Calls are not being checked.";
     $("guardToggle").textContent = state.guardOn ? "Turn Live Guard off" : "Turn Live Guard on";
-    $("voiceState").textContent = state.voiceId ? "Set up. Backfire keeps only a short voice sample, used only if you press Fire Back." + (HUB ? "" : " (Simulated)") : "No voice profile.";
+    $("voiceState").textContent = state.voiceNote ? state.voiceNote : state.voiceId ? "Set up. Backfire keeps only a short voice sample, used only if you press Fire Back." + (HUB ? "" : " (Simulated)") : "No voice profile.";
     $("voiceDelete").hidden = !state.voiceId; $("voiceSetup").hidden = !!state.voiceId;
     applyGuard();
   }
@@ -65,10 +65,17 @@
     catch (e) { console.log("[backfire] undo failed", String(e)); return; }   // keep the row if the hub refused
     state.blocked = state.blocked.filter(x => x !== b); renderProtection();
   }
-  // Consent promises the voice is deleted if she turns Backfire off, so turning it off deletes it (stays on if the delete fails).
-  $("guardToggle").onclick = async () => {
-    if (state.guardOn && state.voiceId && !(await deleteVoice())) return;
-    state.guardOn = !state.guardOn; store.set("on", state.guardOn ? "1" : "0"); renderProtection();
+  // Turning Live Guard off never touches the voice by itself. Only the separate, unticked-by-default "Also delete my voice" box does (and the hub may still refuse: 409 = locked).
+  function setGuard(on) { state.guardOn = on; store.set("on", on ? "1" : "0"); renderProtection(); }
+  $("guardToggle").onclick = () => {
+    if (state.guardOn && state.voiceId) { $("guardAlso").checked = false; $("guardOffBox").hidden = false; $("guardToggle").hidden = true; $("guardOffNo").focus(); return; }
+    setGuard(!state.guardOn);
+  };
+  $("guardOffNo").onclick = () => { $("guardOffBox").hidden = true; $("guardToggle").hidden = false; };
+  $("guardOffYes").onclick = async () => {
+    const del = $("guardAlso").checked; $("guardOffBox").hidden = true; $("guardToggle").hidden = false;
+    setGuard(false);
+    if (del) await deleteVoice();   // on failure (e.g. 409 locked) deleteVoice leaves its message on screen
   };
 
   // events from the hub / replay
@@ -85,10 +92,13 @@
   // ---- voice delete ----
   async function deleteVoice() {
     try { if (HUB && state.voiceId) await hub("DELETE", "/voice/" + encodeURIComponent(state.voiceId)); }
-    catch (e) { console.log("[backfire] voice delete failed", String(e)); $("voiceState").textContent = "Could not delete your voice right now. Try again."; return false; }
-    state.voiceId = null; store.set("voice", null); renderProtection(); return true;
+    catch (e) { console.log("[backfire] voice delete failed", String(e)); state.voiceNote = /\b409\b/.test(String(e)) ? "Voice is locked for the demo." : "Could not delete your voice right now. Try again."; $("voiceState").textContent = state.voiceNote; return false; }
+    state.voiceNote = ""; state.voiceId = null; store.set("voice", null); renderProtection(); return true;
   }
-  $("voiceDelete").onclick = deleteVoice;
+  // Deleting the voice always needs an explicit in-page confirmation (it is the voice Backfire uses for every call).
+  $("voiceDelete").onclick = () => { state.voiceNote = ""; $("voiceConfirm").hidden = false; $("voiceDelete").hidden = true; $("voiceNo").focus(); };
+  $("voiceNo").onclick = () => { $("voiceConfirm").hidden = true; $("voiceDelete").hidden = !state.voiceId; };
+  $("voiceYes").onclick = async () => { $("voiceConfirm").hidden = true; await deleteVoice(); };
   $("voiceSetup").onclick = () => { setup(2); };
 
   // ---- onboarding: 1 turn on -> 2 voice consent (separate, optional) -> rec read-aloud -> dns Do Not Screen (optional) -> 3 done ----
