@@ -537,6 +537,13 @@ class Session:
         finally:
             self.extracting = False
 
+    def recent(self) -> list[dict]:
+        """Last 16 history messages, with the pre-handoff story pinned at the start (P1/P2 08:08: it scrolled out after ~8 turns)."""
+        h = self.history
+        if self.pre_lines and h and len(h) > 16:
+            return [h[0]] + h[-15:]
+        return h[-16:]
+
     def steer(self) -> str:
         """Per-turn note (#127 4): scam type, what we have, the next target, turns left. Not stored in history."""
         arts = list(self.arts.values())
@@ -588,11 +595,11 @@ class Session:
             while self.active and self.pending:
                 heard, self.pending = " ".join(self.pending), []
                 t0 = time.monotonic()
-                self.history.append({"role": "user", "content": f"<caller>{core.clean(heard)}</caller>"})
+                self.history.append({"role": "user", "content": f"<caller>{core.clean(core.fix_zelle(heard))}</caller>"})
                 if self.bail_now:   # suspicion / hostile / refused twice: don't argue, leave now (#127 5d)
                     await self.finish(PB.GOODBYES[self.bail_now], self.bail_now)
                     return
-                msgs = [{"role": "system", "content": core.SYSTEM}] + self.history[-16:] + [{"role": "system", "content": self.steer()}]
+                msgs = [{"role": "system", "content": core.SYSTEM}] + self.recent() + [{"role": "system", "content": self.steer()}]
                 task = asyncio.create_task(core.chat(msgs))
                 done, _ = await asyncio.wait({task}, timeout=FILLER_AFTER_S)
                 # never before the first real reply (#124): the handoff should sound like the rest of the call
@@ -623,7 +630,7 @@ class Session:
                 if not out:   # stall, never the same line twice in a row
                     i = random.choice([k for k in range(len(STALLS)) if k != self.last_stall])
                     self.last_stall, out = i, STALLS[i]
-                hist, spoken = core.guard(out, self.persona, self.given, self.ev)
+                hist, spoken = core.guard(out, self.persona, self.given, self.ev, " ".join(self.pre_lines + list(self.scammer_lines)[-8:]))
                 self.history.append({"role": "assistant", "content": hist})
                 tts_ms = await self.say(spoken, llm_ms)
                 self.turns += 1
@@ -651,7 +658,26 @@ class Session:
 
         async def warm():
             # opener first and alone; the rest one at a time after it has been queued (no burst of clone requests)
-            await self.say(core.OPENER, record=True)
+            # P1 (Ayman 07:53): no canned opener (it was rendered cold and sounded machine-like, and 'who did you say was
+            # calling?' made no sense mid-call). The first line is generated from what the caller said before Fire Back.
+            first = None
+            if self.pre_lines:   # only worth the LLM wait when there is a story to react to; else a short line at once
+                try:
+                    first = await asyncio.wait_for(core.chat([{"role": "system", "content": core.SYSTEM}] + self.recent() + [
+                        {"role": "system", "content": "[private] You are picking the call back up after a two-second pause. Say "
+                         "your first line now: one short sentence reacting to what the caller said, then ask what to do next. "
+                         "Don't mention the pause or the line."}]), 3.0)
+                except Exception as e:
+                    log.warning("first line failed: %s", type(e).__name__)
+            if self.turns > 0 or self.busy:   # the caller already got a reply: don't talk over it with a stale first line
+                log.info("first line skipped for %s (already replying)", self.call_id)
+            else:
+                ctx = " ".join(self.pre_lines)
+                hist, spoken = core.guard(first, self.persona, self.given, self.ev, ctx) if first else (core.OPENER_SHORT, core.OPENER_SHORT)
+                if LOG_TEXT:
+                    log.info("said %s: %s", self.call_id, spoken)
+                self.history.append({"role": "assistant", "content": hist})   # once (say() is called without record)
+                await self.say(spoken)
             for f in core.FILLERS:
                 fr = await self.voice.frames(f)
                 if fr:

@@ -131,8 +131,8 @@ def note(scam: str, arts: list[dict], turns_left: int, pull: str | None) -> str:
     parts = [f"Scam type: {pb['label']}.", f"Have: {', '.join(got) or 'nothing yet'}."]
     if need:
         parts.append(f"Still need (next): {TARGET_HINT[need[0]]}.")
-        if pull:
-            parts.append(f"One idea, say it your own way and only if it fits what they just said: \"{pull}\"")
+        # P1 08:09: no verbatim pull phrase (the model parroted 'send-to box' in 6 of 12 replies); and no naming
+        # an app or payee before the caller does (SYSTEM already says so)
     else:
         parts.append("You have what you need: keep it short and friendly.")
     parts.append(f"Turns left: {turns_left}.")
