@@ -1,0 +1,16 @@
+{
+  "_note": "SEED DATA for the Backfire demo: published customer-service numbers and domains of real banks and agencies. Used only to recognize legitimate organizations (never actioned) and to flag attempted poisoning when a scammer gives one as a callback. Verify against each org's website before any production use.",
+  "entries": [
+    {"name": "Chase", "phones": ["1-800-935-9935"], "domains": ["chase.com"]},
+    {"name": "Bank of America", "phones": ["1-800-432-1000"], "domains": ["bankofamerica.com"]},
+    {"name": "Wells Fargo", "phones": ["1-800-869-3557"], "domains": ["wellsfargo.com"]},
+    {"name": "Capital One", "phones": ["1-800-227-4825"], "domains": ["capitalone.com"]},
+    {"name": "IRS", "phones": ["1-800-829-1040"], "domains": ["irs.gov"]},
+    {"name": "Social Security Administration", "phones": ["1-800-772-1213"], "domains": ["ssa.gov"]},
+    {"name": "Medicare", "phones": ["1-800-633-4227"], "domains": ["medicare.gov"]},
+    {"name": "T-Mobile", "phones": ["1-800-937-8997"], "domains": ["t-mobile.com"]},
+    {"name": "USPS", "phones": ["1-800-275-8777"], "domains": ["usps.com"]},
+    {"name": "Federal Trade Commission", "phones": ["1-877-382-4357"], "domains": ["ftc.gov", "reportfraud.ftc.gov"]},
+    {"name": "Microsoft", "phones": ["1-800-642-7676"], "domains": ["microsoft.com"]}
+  ]
+}
