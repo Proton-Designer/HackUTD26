@@ -1,0 +1,29 @@
+// Device pairing (TASK-014). Hub contract: POST /pair {pin} -> {device_token}; protected paths want header x-device-token.
+// Fail open: if the hub has no /pair (404) or never answers 401, nothing here ever shows.
+(() => {
+  "use strict";
+  const $ = id => document.getElementById(id), HUB = BF.hub; if (!HUB) return;
+  const busy = () => ["ringing", "active"].includes($("phone").dataset.state);
+  let want = false;
+  function show() { want = false; $("pairView").hidden = false; $("tabs").hidden = true; $("pairMsg").textContent = ""; setTimeout(() => $("pairPin").focus(), 50); }
+  function request() { want = true; if (!busy()) show(); }          // never interrupt a live call
+  BF.onUnauthorized = () => { try { localStorage.removeItem("bf.device"); } catch (e) {} request(); };
+  new MutationObserver(() => { if (want && !busy()) show(); }).observe($("phone"), { attributes: true, attributeFilter: ["data-state"] });
+  async function pair() {
+    const pin = $("pairPin").value.replace(/\s/g, ""); if (!pin) return;
+    $("pairBtn").disabled = true; $("pairMsg").textContent = "Checking…";
+    try {
+      const r = await fetch(HUB + "/pair", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pin }) });
+      if (!r.ok) throw new Error(String(r.status));
+      const j = await r.json(); if (!j.device_token) throw new Error("no token");
+      try { localStorage.setItem("bf.device", j.device_token); } catch (e) {}
+      location.reload();                                              // restart cleanly with the token (voip token fetch too)
+    } catch (e) {
+      $("pairMsg").textContent = String(e.message) === "429" ? "Too many tries. Wait a minute." : "That code did not work. Check the demo screen.";
+      $("pairBtn").disabled = false;
+    }
+  }
+  $("pairBtn").onclick = pair; $("pairPin").onkeydown = e => { if (e.key === "Enter") pair(); };
+  // first run: no token yet -> probe a protected path; 401 shows the pairing screen, anything else means no pairing needed
+  if (!BF.deviceToken()) BF.hubFetch("/protection-log").catch(() => {});
+})();
