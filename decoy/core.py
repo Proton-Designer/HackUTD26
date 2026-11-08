@@ -389,6 +389,66 @@ def fix_zelle(t: str) -> str:
     return DEPT_HEARD.sub(lambda m: m.group(1) + " dot dept", t)
 
 
+# ---------------------------------------------------------------- known payees (#140)
+# Phone STT drops the dots in a spoken address when more words follow ('refunds department at Backfire-demo example',
+# 'refunds dot dept at backfire-demos line ...'), so the exact handle often can't be rebuilt from the text. The demo's
+# payees are known (intel/demo_config.json is the single source; env DECOY_KNOWN_HANDLES='rail:id,...' overrides):
+# when a call names a payee's local part close before its domain words, the haul gets that exact handle and the
+# partial fragments of it are dropped.
+_KNOWN: list[tuple[str, str]] | None = None
+
+
+def known_handles() -> list[tuple[str, str]]:
+    global _KNOWN
+    if _KNOWN is None:
+        env = os.environ.get("DECOY_KNOWN_HANDLES", "").strip()
+        if env:
+            _KNOWN = [tuple(x.split(":", 1)) for x in env.split(",") if ":" in x]
+        else:
+            _KNOWN = []
+            try:
+                import pathlib
+                cfg = json.loads((pathlib.Path(__file__).resolve().parent.parent / "intel" / "demo_config.json").read_text())
+                for key in ("payment_handle", "payout_destination"):
+                    h = cfg.get(key) or {}
+                    if h.get("rail") and "@" in str(h.get("id", "")) and (h["rail"], h["id"]) not in _KNOWN:
+                        _KNOWN.append((h["rail"], h["id"].lower()))
+            except Exception as e:
+                log.warning("known payees not loaded (%s)", type(e).__name__)
+    return _KNOWN
+
+
+def _spoken_pat(words: list[str]) -> str:
+    return r"\W*(?:dot|dash|hyphen|at)?\W*".join(re.escape(w) for w in words)
+
+
+def canon_known(out: list[dict], t: str) -> list[dict]:
+    for rail, hid in known_handles():
+        local, dom = hid.split("@", 1)
+        lw = [w for w in re.split(r"[^a-z0-9]+", local) if w]
+        dw = [w for w in re.split(r"[^a-z0-9]+", dom.rsplit(".", 1)[0]) if w]   # domain label words, TLD optional
+        lw_pat = re.escape(lw[0]) + r"(?:\W*(?:dot\W*)?(?:" + "|".join(map(re.escape, lw[1:] + ["department", "dep"])) + r"))?" if len(lw) > 1 \
+            else re.escape(lw[0])
+        if not re.search(r"\b" + lw_pat + r"\b.{0,40}?\b" + _spoken_pat(dw), t, re.I | re.S):
+            continue
+        frag = re.sub(r"[^a-z0-9]", "", local.replace("dept", ""))   # 'refunds'
+        keep = []
+        for a in out:
+            if a.get("kind") == "payment_handle" and a.get("rail") == rail and a.get("id") != hid:
+                aid = str(a.get("id", ""))
+                loc = aid.split("@")[0]
+                partial = ("@" not in aid and not aid.startswith("+")) or (aid.endswith("@" + dom)) or \
+                          (re.sub(r"[^a-z0-9]", "", loc).startswith(frag) and "@" in aid and dw[0] in aid)
+                if partial:
+                    continue
+            keep.append(a)
+        out = keep
+        if not any(a.get("kind") == "payment_handle" and a.get("id") == hid for a in out):
+            out.append({"kind": "payment_handle", "rail": rail, "id": hid})
+            log.info("extractor: known payee matched in the transcript (%s)", rail)
+    return out
+
+
 async def extract(lines: list[str]) -> list[dict]:
     if not lines:
         return []
@@ -445,6 +505,7 @@ async def extract(lines: list[str]) -> list[dict]:
         for e in dict.fromkeys(emails):
             if e not in have_ids and not any(a["kind"] == "payment_handle" and "@" in a["id"] and a["id"].endswith("." + e.split("@")[0]) for a in out):
                 out.append({"kind": "payment_handle", "rail": "zelle", "id": e}); have_ids.add(e)
+    out = canon_known(out, t)
     seen, uniq = set(), []
     for a in out:   # the rebuild/backstop can make two identical handles
         key = json.dumps(a, sort_keys=True)

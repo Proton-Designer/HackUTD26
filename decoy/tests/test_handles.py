@@ -66,3 +66,31 @@ def test_live_1b838cd2_sell_it_to(monkeypatch):   # #138: 'Can you Sell it to th
                                   "Can you Sell it to the refunds.department at backfire dash demo dot example?"]))
     ids = [a["id"] for a in arts if a["kind"] == "payment_handle"]
     assert ids == ["+19207856782", H]   # the spoken Zelle phone and the refunds address (the one Nessie matches)
+
+
+def _run(monkeypatch, lines, ret):
+    import asyncio, json
+    import decoy.core as C
+
+    async def fake_chat(*a, **k):
+        return json.dumps({"artifacts": ret})
+    monkeypatch.setattr(C, "chat", fake_chat)
+    return [a["id"] for a in asyncio.run(C.extract(lines)) if a["kind"] == "payment_handle"]
+
+
+def test_known_payee_from_dotless_stt(monkeypatch):   # #140: P2's exact STT strings from cards 1, 5, 6, 7
+    assert _run(monkeypatch, ["Send the $1,800 by Zelle to refunds department at Backfire-demo example. Stay on the line."], []) == [H]
+    assert _run(monkeypatch, ["Send it by Zelle to refunds department at backfire-demo. Dot's our tracking account."],
+                [{"kind": "payment_handle", "rail": "zelle", "id": "refunds.department"},
+                 {"kind": "domain", "value": "backfire-demo.com"}]) == [H]
+    assert _run(monkeypatch, ["Zelle it to refunds at backfire-demos line 1 888 555 0123."],
+                [{"kind": "payment_handle", "rail": "zelle", "id": "refunds"}]) == [H]
+    assert _run(monkeypatch, ["Send by Zelle to refunds dot dept at backfire dash demo dot example."],
+                [{"kind": "payment_handle", "rail": "zelle", "id": "dept@backfire-demo.example"},
+                 {"kind": "payment_handle", "rail": "zelle", "id": H}]) == [H]
+
+
+def test_known_payee_not_invented(monkeypatch):
+    assert H not in _run(monkeypatch, ["Send it by Zelle to my friend at gmail dot com, he refunds people."],
+                         [{"kind": "payment_handle", "rail": "zelle", "id": "+12145550199"}])
+    assert _run(monkeypatch, ["We will refunds your money, this is backup demo team."], []) == []
