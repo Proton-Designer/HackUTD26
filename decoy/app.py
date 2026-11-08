@@ -109,6 +109,40 @@ async def emit_retry(type_: str, call_id: str, data: dict, tries: int = 4) -> bo
     return False
 
 
+# ---------------------------------------------------------------- pre-handoff context (#125, #130)
+# The decoy only hears the caller AFTER Fire Back, but the scam's story (and often the payment line) is told before it.
+# We keep each call's pre-handoff caller transcript (P2's transcript.caller finals) and P2's scam_type label from the
+# hub's /events stream, and seed the classifier, the extractor and the steering note with them.
+PRE: dict[str, dict] = {}
+PRE_TTL_S = 1800
+
+
+async def _on_hub_event(ev: dict):
+    t, cid, d = ev.get("type"), ev.get("call_id"), ev.get("data") or {}
+    if not cid or t not in ("transcript.caller", "risk.update"):
+        return
+    now = time.monotonic()
+    e = PRE.setdefault(cid, {"lines": [], "label": "", "t": now})
+    e["t"] = now
+    if t == "transcript.caller" and d.get("is_final") and str(d.get("text") or "").strip():
+        e["lines"] = (e["lines"] + [str(d["text"]).strip()[:400]])[-30:]
+    elif t == "risk.update":
+        lab = str(d.get("scam_type") or "").strip().lower()
+        if lab and lab not in ("unknown", "none", "null"):
+            e["label"] = lab[:60]
+    if len(PRE) > 200:
+        for k in [k for k, v in PRE.items() if now - v["t"] > PRE_TTL_S]:
+            PRE.pop(k, None)
+
+
+@app.on_event("startup")
+async def _subscribe_hub():
+    if os.environ.get("DECOY_PRE_HANDOFF", "1") == "1":
+        from detection import hub
+        asyncio.create_task(hub.subscribe(_on_hub_event))
+        log.info("decoy: listening to hub /events for pre-handoff context")
+
+
 @app.get("/healthz")
 def healthz():
     return {"ok": True, "cloned_voice": voice.active_voice() is not None, "model": core.MODEL}
@@ -226,6 +260,16 @@ class Session:
         self.last_heard = time.monotonic()
         self.stt_inflight = 0
         self.rec: list[bytes] = []     # first RECORD_S of outbound audio (PCMU frames)
+        pre = PRE.get(call_id) or {}
+        self.pre_lines: list[str] = list(pre.get("lines") or [])   # caller lines before Fire Back (snapshot at handoff)
+        self.prior = self.pre_lines                                  # #130: public name for P1's prompt work
+        if self.pre_lines:   # the model sees what the caller said before the decoy picked up, as earlier caller turns
+            self.history.append({"role": "user", "content": "<caller>" + core.clean(" ".join(self.pre_lines))[-1500:] + "</caller>"})
+        self.pre_label: str = pre.get("label") or ""                # P2's scam_type label, e.g. "irs impersonation"
+        if self.pre_lines or self.pre_label:
+            self.scam = PB.classify(self.pre_lines + ([self.pre_label] if self.pre_label else []), self.scam) if PLAYBOOKS_ON else self.scam
+            log.info("decoy %s: pre-handoff context %d lines, P2 label %r -> scam %s", call_id, len(self.pre_lines),
+                     self.pre_label, self.scam)
 
     def save_recording(self):
         if not self.rec:
@@ -372,7 +416,7 @@ class Session:
         self.caller_turns += 1
         self.last_heard = time.monotonic()
         if PLAYBOOKS_ON:
-            new = PB.classify(self.scammer_lines, self.scam)
+            new = PB.classify(self.pre_lines + ([self.pre_label] if self.pre_label else []) + self.scammer_lines, self.scam)
             if new != self.scam:
                 log.info("decoy %s: scam type %s -> %s at caller line %d", self.call_id, self.scam, new, self.caller_turns)
                 self.scam = new
@@ -455,7 +499,7 @@ class Session:
             upto = len(self.scammer_lines)
             for i in range(tries):
                 try:
-                    arts = await core.extract(list(self.scammer_lines[:upto]))
+                    arts = await core.extract(self.pre_lines + list(self.scammer_lines[:upto]))
                     self.merge(arts)
                     self.extracted_upto = upto
                     return True
@@ -591,6 +635,8 @@ class Session:
                     self.stalls.append(fr)
         asyncio.create_task(warm())
         asyncio.create_task(self.silence_watch())
+        if self.pre_lines:
+            asyncio.create_task(self.extract_now())   # the payment line may already be in the pre-handoff transcript
         try:
             while self.active:
                 m = json.loads(await self.ws.receive_text())
@@ -625,7 +671,7 @@ class Session:
                 if not self.extracting:
                     break
                 await asyncio.sleep(0.1)
-            if len(self.scammer_lines) > self.extracted_upto:   # final pass over everything, with retries
+            if len(self.scammer_lines) > self.extracted_upto or (self.pre_lines and not self.arts):   # final pass, with retries
                 await self.extract_now(tries=3)
             arts = list(self.arts.values())
             ok = await emit_retry("artifacts.extracted", self.call_id, {"artifacts": arts}) if arts else True
