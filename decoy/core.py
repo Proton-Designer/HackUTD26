@@ -505,6 +505,12 @@ async def extract(lines: list[str]) -> list[dict]:
         for e in dict.fromkeys(emails):
             if e not in have_ids and not any(a["kind"] == "payment_handle" and "@" in a["id"] and a["id"].endswith("." + e.split("@")[0]) for a in out):
                 out.append({"kind": "payment_handle", "rail": "zelle", "id": e}); have_ids.add(e)
+    # Backstop (#140 FYI): a phone number said right after "Zelle"/"Zell" ('The Zell account at 920 7856782') is a Zelle
+    # handle; the model often keeps only the email.
+    for m in re.finditer(r"\bzell?e?\b\W+(?:[a-z]+\W+){0,4}?(\+?1?[\s.\-]?\(?\d{3}\)?[\s.\-]?\d{3}[\s.\-]?\d{4})\b", t):
+        v = validate({"kind": "payment_handle", "rail": "zelle", "id": m.group(1)})
+        if v and not any(a.get("kind") == "payment_handle" and a.get("id") == v["id"] for a in out):
+            out.append(v)
     out = canon_known(out, t)
     seen, uniq = set(), []
     for a in out:   # the rebuild/backstop can make two identical handles

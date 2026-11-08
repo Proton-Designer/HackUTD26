@@ -94,3 +94,11 @@ def test_known_payee_not_invented(monkeypatch):
     assert H not in _run(monkeypatch, ["Send it by Zelle to my friend at gmail dot com, he refunds people."],
                          [{"kind": "payment_handle", "rail": "zelle", "id": "+12145550199"}])
     assert _run(monkeypatch, ["We will refunds your money, this is backup demo team."], []) == []
+
+
+def test_zelle_phone_backstop(monkeypatch):   # #140 FYI: model dropped the scammer's Zelle phone on 1b838cd2's lines
+    L = ["You need to buy Target gift cards and send them to us.", "Can you Sell it to the refunds.department at backfire-demo.example",
+         "Send it by Zell to the account.", "The Zell account at 920 7856782"]
+    ids = _run(monkeypatch, L, [{"kind": "payment_handle", "rail": "zelle", "id": "refunds.department"}])
+    assert sorted(ids) == sorted([H, "+19207856782"])
+    assert _run(monkeypatch, ["Call our office at 214 555 0199 about your Zelle problem."], []) == []   # number not after Zelle
