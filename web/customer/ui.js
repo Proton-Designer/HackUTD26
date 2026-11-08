@@ -103,7 +103,7 @@
   function toDns(msg) { state.doneMsg = msg; $("dnsNote").textContent = msg; if (state.fromSettings) { state.fromSettings = false; view("protView"); } else setup("dns"); }
   $("s1on").onclick = () => { store.set("on", "1"); state.guardOn = true; store.set("done", "1"); setup(2); };
   $("s2skip").onclick = () => toDns("Backfire is on. Scammers will hear a synthetic voice. You can set up your voice later in Protection.");
-  $("s2agree").onclick = () => { $("paragraph").textContent = newParagraph(); resetRec(); setup("rec"); };
+  $("s2agree").onclick = () => { const p = newParagraph(); if (!CONVO) $("paragraph").textContent = p; resetRec(); setup("rec"); };
   $("recSkip").onclick = () => { if (lowQ) { lowQ = false; toDns("Your voice is set up. Backfire is on. It keeps only a short voice sample, used only if you press Scammer Get Scammed. You can delete it any time in Protection."); return; } stopMeter(); if (rec) { discard = true; rec.stop(); } toDns("Backfire is on. Scammers will hear a synthetic voice. You can set up your voice later in Protection."); };
   $("s3done").onclick = () => { view("callView"); applyGuard(); if (BF.pendingStart) { const f = BF.pendingStart; BF.pendingStart = null; f(); } };
   $("voiceSetup").onclick = () => setup(2);
@@ -136,7 +136,21 @@
     "When the weather is fine, we drive out to the lake and have a picnic beside the water. I pack sandwiches, sliced pears, and a thermos of coffee. We watch the sailboats drift by, listen to the birds in the tall pines, and stay until the sky turns pink and gold."
   ];
   const CODE_WORDS = ["maple", "river", "lantern", "orchard", "copper", "meadow", "harbor", "violet"];
+  // Conversational enrollment (?enroll=talk, or localStorage bf.enroll=talk; off by default: not shipped until P3 confirms it clones better): 3 casual questions answered out loud instead of reading a paragraph.
+  // Zero-shot clones copy the reference's delivery, and read-aloud speech is flat. Same recorder settings, same /voice/enroll upload.
+  const CONVO = qs.get("enroll") === "talk" || store.get("enroll") === "talk";
+  const PROMPTS = ["Tell us about your weekend, like you're talking to a friend.", "What did you have for dinner last night?", "Tell us about a place you like to go, and why.", "What is something that made you laugh lately?", "Describe your morning, from when you woke up.", "Tell us about someone you enjoy spending time with.", "What would you do with a free afternoon?", "Tell us about your favorite meal and how it is made.", "What is the best trip you ever took?"];
+  function newPrompts() { const p = [...PROMPTS].sort(() => Math.random() - 0.5).slice(0, 3); return p; }
+  let curPrompts = [];
+  function showPrompts() {
+    curPrompts = newPrompts(); const bq = $("paragraph"); bq.replaceChildren();
+    const ol = document.createElement("ol"); ol.className = "prompts"; curPrompts.forEach((t, i) => { const li = document.createElement("li"); li.textContent = t; if (i === 0) li.className = "now"; ol.append(li); }); bq.append(ol);
+    const h = $("stepRec").querySelector("h1"); if (h) h.textContent = "Just talk to us";
+    const b = $("stepRec").querySelector(".body"); if (b) b.innerHTML = "Press the red button and answer the questions out loud, <b>like you're chatting with a friend</b>. Don't read: just talk, about 30 to 60 seconds in all. Press <b>Stop</b> when you are done.";
+  }
+  const promptNow = s => { if (!CONVO) return; const lis = document.querySelectorAll("#paragraph .prompts li"); const k = Math.min(lis.length - 1, Math.floor(s / 17)); lis.forEach((li, i) => li.classList.toggle("now", i === k)); };
   function newParagraph() {
+    if (CONVO) { showPrompts(); return ""; }
     const p = PARAS[Math.floor(Math.random() * PARAS.length)], w = CODE_WORDS[Math.floor(Math.random() * CODE_WORDS.length)];
     const digits = Array.from({ length: 4 }, () => Math.floor(Math.random() * 10)).join(" ");
     return p + " Today's code words are " + w + " " + digits + ".";
@@ -178,7 +192,7 @@
     }
   }
   $("recSave").onclick = () => { if (blob) enroll(blob); };
-  $("recAgain").onclick = () => { $("paragraph").textContent = newParagraph(); resetRec(); };   // a fresh paragraph each time
+  $("recAgain").onclick = () => { const p = newParagraph(); if (!CONVO) $("paragraph").textContent = p; resetRec(); };   // a fresh paragraph each time
   $("recBtn").onclick = async () => {
     if (rec) { if ((Date.now() - t0) / 1000 >= MIN_S) rec.stop(); return; }   // second press = stop
     try {
@@ -199,7 +213,7 @@
       try { actx = new (window.AudioContext || window.webkitAudioContext)(); const an = actx.createAnalyser(); an.fftSize = 512; actx.createMediaStreamSource(stream).connect(an); const buf = new Uint8Array(512);
         const loop = () => { an.getByteTimeDomainData(buf); let m = 0; for (const v of buf) m = Math.max(m, Math.abs(v - 128)); $("recLevel").style.width = Math.min(100, m / 80 * 100) + "%"; raf = requestAnimationFrame(loop); }; loop(); } catch (e) {}
       rec.start(); t0 = Date.now(); $("recBtn").textContent = "■ Stop"; $("recBtn").disabled = true; $("recSkip").hidden = true; $("recStatus").textContent = "Recording… read the words above.";
-      tick = setInterval(() => { const s = (Date.now() - t0) / 1000; $("recTime").textContent = mmss(s); if (s >= MIN_S) $("recBtn").disabled = false; if (s >= MAX_S && rec) rec.stop(); }, 250);
+      tick = setInterval(() => { const s = (Date.now() - t0) / 1000; $("recTime").textContent = mmss(s); promptNow(s); if (s >= MIN_S) $("recBtn").disabled = false; if (s >= MAX_S && rec) rec.stop(); }, 250);
     } catch (e) {
       $("recStatus").textContent = "We couldn't use the microphone. Allow it in your browser and try again, or skip.";
       if (qs.has("fakemic")) { blob = new Blob(["x"], { type: "audio/webm" }); enroll(blob); }   // test hook only
