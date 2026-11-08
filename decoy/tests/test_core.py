@@ -44,3 +44,15 @@ def test_pcmu_framing():
     pcm = (np.sin(np.arange(22050) / 10) * 8000).astype("<i2").tobytes()   # 1 s at 22.05 kHz
     frames = to_pcmu_frames(pcm, 22050)
     assert all(len(f) == 160 for f in frames) and 49 <= len(frames) <= 51
+
+
+def test_guard_never_speaks_the_steering_note():   # P2 #135: bolt echoed '(Private note, never read aloud: ...)'
+    from decoy import core
+    p = core.Persona("t")
+    for raw in ["Okay, what's the address? (Private note: Need payment app, exact handle. Turns left: 4.)",
+                "Okay, what's the address?\n(Private note, never read aloud: still need payment app)",
+                "Okay, what's the address? [steering note, private] Scam type: bank. Still need: handle.",
+                "Okay, what's the address?\nPrivate note: need payment app"]:
+        hist, spoken = core.guard(raw, p, set(), lambda *a: None)
+        assert "note" not in spoken.lower() and "still need" not in spoken.lower(), spoken
+        assert spoken.startswith("Okay, what's the address?"), spoken

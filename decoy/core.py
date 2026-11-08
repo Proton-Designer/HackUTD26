@@ -128,7 +128,11 @@ PLACEHOLDER = re.compile(r"\[(NAME|DOB|ADDRESS|BANK|CARD|CVV|EXPIRY|SSN|GIFTCODE
 def guard(raw: str, persona: Persona, given: set, emit, caller_text: str = "") -> tuple[str, str]:
     """Model output -> (text for the history, text to speak). emit(type, data) reports trips and fake values.
     caller_text: what the caller said recently; reading back THEIR number is allowed (P1, RCA 08:05)."""
-    t = re.sub(r"(?<![.!?,;:])[ \t]*\n+\s*", ". ", (raw or "").strip())   # a newline with no punctuation = a sentence break (TTS run-on)
+    raw = re.sub(r"(?is)\s*\[?\s*steering note.*$", " ", raw or "")   # never speak our own steering note (P2 #135): it always trails
+    raw = re.sub(r"(?is)\s*\(?\s*private note[^\)\n]*(\)|$)", " ", raw)
+    raw = re.sub(r"(?is)\s*[\(\[][^\)\]]*(note|never read|steer|scam type|turns left|still need)[^\)\]]*[\)\]]", " ", raw)
+    raw = re.sub(r"(?im)^\s*(private note|note|steering note)\s*:.*$", " ", raw)
+    t = re.sub(r"(?<![.!?,;:])[ \t]*\n+\s*", ". ", raw.strip())   # a newline with no punctuation = a sentence break (TTS run-on)
     t = re.sub(r"\s+", " ", t).strip().strip('"')
     caller_digits = re.sub(r"\D", "", caller_text or "")
     for rule, pat, repl in RULES:
