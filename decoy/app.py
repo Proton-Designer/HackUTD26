@@ -22,7 +22,7 @@ import time
 import numpy as np
 from fastapi import Body, Depends, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 
-from . import core, voice
+from . import core, playbooks as PB, voice
 
 log = logging.getLogger("p3.decoy")
 _p3 = logging.getLogger("p3")   # nobody configures logging under uvicorn, so p3 INFO lines (per-turn latency) were dropped
@@ -31,7 +31,13 @@ if not _p3.handlers:
     _h.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s", "%H:%M:%S"))
     _p3.addHandler(_h); _p3.setLevel(logging.INFO); _p3.propagate = False
 app = FastAPI(title="Backfire P3 decoy")
-CAP_S = 20 * 60
+# #127 bail rules: hard cap on decoy time, caller silence, no progress after we asked for the top target twice.
+CAP_S = float(os.environ.get("DECOY_CAP_S", "180"))
+SILENCE_S = float(os.environ.get("DECOY_SILENCE_S", "15"))
+# Counted from the later of: last new artifact, or the 2nd time we went after the current target (a 5-line card plus its
+# payment step must not trip it; 90 s, not 75, leaves room for the payment step at ~15 s per line).
+NO_PROGRESS_TURNS, NO_PROGRESS_S = 5, 90.0
+PLAYBOOKS_ON = os.environ.get("DECOY_PLAYBOOKS", "0") == "1"   # stage B: classify + per-type targets (else generic)
 # Barge-in (Ayman's real call 93c95fd6: 21 self-clears in 17 s, our own voice echoing back on the PSTN leg).
 BARGE_IN_MS = 500          # sustained loud caller audio needed to cut the decoy off
 BARGE_GRACE_S = 0.4        # ignore inbound right after we start speaking (echo onset)
@@ -207,6 +213,17 @@ class Session:
         self.turns = 0
         self.wrap_at: int | None = None
         self.stream_id = None
+        self.scam = "generic"            # playbook (#127)
+        self.asks: dict[str, int] = {}   # target -> times the note told the model to go after it
+        self.used_pulls: set[str] = set()
+        self.caller_turns = 0
+        self.new_art_turn, self.new_art_t = 0, time.monotonic()
+        self.refusals = 0
+        self.asked2 = (0, time.monotonic())   # (caller turn, time) when we went after the current target the 2nd time
+        self.bail_now: str | None = None   # suspicion/hostile/refused: say goodbye on the next turn
+        self.bail_reason: str | None = None
+        self.last_heard = time.monotonic()
+        self.stt_inflight = 0
         self.rec: list[bytes] = []     # first RECORD_S of outbound audio (PCMU frames)
 
     def save_recording(self):
@@ -332,11 +349,15 @@ class Session:
 
     # -------------------------------------------------- turns
     async def on_utterance(self, pcm: np.ndarray, maybe_echo: bool = False):
+        self.last_heard = time.monotonic()   # they just finished speaking: not silence, even while STT runs
+        self.stt_inflight += 1
         try:
             t_stt = time.monotonic()
             text = (await asyncio.wait_for(self.stt.transcribe(pcm), STT_TIMEOUT_S)).strip()
             self.stt_ms = int((time.monotonic() - t_stt) * 1000)
+            self.stt_inflight -= 1
         except Exception as e:
+            self.stt_inflight -= 1
             log.warning("STT failed: %s", type(e).__name__)
             if self.active and not self.speaking() and not self.caller_talking() and self.stalls:
                 self.play(random.choice(self.stalls))   # never dead air
@@ -347,6 +368,24 @@ class Session:
             log.info("drop %s: echo of our own words (%r)", self.call_id, text[:60])
             return
         self.scammer_lines.append(text)
+        self.caller_turns += 1
+        self.last_heard = time.monotonic()
+        if PLAYBOOKS_ON:
+            new = PB.classify(self.scammer_lines, self.scam)
+            if new != self.scam:
+                log.info("decoy %s: scam type %s -> %s", self.call_id, self.scam, new)
+                self.scam = new
+        if not self.bail_now:
+            if PB.SUSPICION.search(text):
+                self.bail_now = "suspicion"
+            elif PB.HOSTILE.search(text):
+                self.bail_now = "hostile"
+            elif PB.REFUSAL.search(text):
+                self.refusals += 1
+                if self.refusals >= 2:
+                    self.bail_now = "refused"
+            if self.bail_now:
+                log.info("decoy %s: bail signal %s", self.call_id, self.bail_now)
         if len(self.scammer_lines) - self.extracted_upto >= 2 and not self.extracting:
             asyncio.create_task(self.extract_now())
         self.ev("decoy.turn", {"speaker": "scammer", "text": text, "latency_ms": 0})
@@ -362,6 +401,7 @@ class Session:
         while self.active and time.monotonic() < self.speaking_until + 0.6:
             await asyncio.sleep(0.05)
         log.info("decoy %s wrapping up: %s", self.call_id, why)
+        self.bail_reason = self.bail_reason or why
         self.active = False
         try:
             await self.ws.close()
@@ -397,8 +437,12 @@ class Session:
             k = json.dumps(a, sort_keys=True)
             if k not in self.arts:
                 self.arts[k] = a; new += 1
+        if new:
+            self.new_art_turn, self.new_art_t = self.caller_turns, time.monotonic()
         kinds = {a.get("kind") for a in self.arts.values()}
-        if self.wrap_at is None and kinds & STRONG_KINDS and len(kinds) >= 2:
+        top = PB.PLAYBOOKS[self.scam]["targets"][0]
+        got_top = top in PB.have(list(self.arts.values()))
+        if self.wrap_at is None and (kinds & STRONG_KINDS or got_top) and len(kinds) >= 2:
             self.wrap_at = self.turns + WRAP_TURNS
             log.info("haul %s: payment details + %d types (%s); wrapping up after %d more turns", self.call_id,
                      len(kinds), ",".join(sorted(k for k in kinds if k)), WRAP_TURNS)
@@ -421,6 +465,51 @@ class Session:
         finally:
             self.extracting = False
 
+    def steer(self) -> str:
+        """Per-turn note (#127 4): scam type, what we have, the next target, turns left. Not stored in history."""
+        arts = list(self.arts.values())
+        need = [t for t in PB.missing(self.scam, arts) if t != "impersonated_org"]
+        pull = None
+        if need:
+            self.asks[need[0]] = self.asks.get(need[0], 0) + 1
+            if self.asks[need[0]] == 2:
+                self.asked2 = (self.caller_turns, time.monotonic())
+            fresh = [p for p in PB.PULLS.get(need[0], []) if p not in self.used_pulls]
+            if fresh:
+                pull = random.choice(fresh); self.used_pulls.add(pull)
+        if self.wrap_at is not None:
+            left = max(1, self.wrap_at - self.turns)
+        else:
+            left = max(1, int((CAP_S - (time.time() - self.t0)) / 15))
+        return PB.note(self.scam, arts, left, pull)
+
+    def bail_check(self) -> str | None:
+        """After each of our replies: which bail rule fires, if any (#127 5a-c; d is handled before the reply)."""
+        if self.wrap_at is not None and self.turns >= self.wrap_at:
+            return "got_payment_details"
+        if time.time() - self.t0 > CAP_S:
+            return "time_cap"
+        need = [t for t in PB.missing(self.scam, list(self.arts.values())) if t != "impersonated_org"]
+        since_turn = max(self.new_art_turn, self.asked2[0])
+        since_t = max(self.new_art_t, self.asked2[1])
+        if need and self.asks.get(need[0], 0) >= 2 and (self.caller_turns - since_turn >= NO_PROGRESS_TURNS
+                                                         or time.monotonic() - since_t >= NO_PROGRESS_S):
+            return "no_progress"
+        return None
+
+    async def silence_watch(self):
+        """#127 5e: caller silent SILENCE_S (after our last audio and their last line) -> goodbye."""
+        while self.active:
+            await asyncio.sleep(1.0)
+            if self.caller_talking() or self.stt_inflight or self.pending:
+                self.last_heard = time.monotonic()
+            quiet_since = max(self.last_heard, self.speaking_until)
+            if (not self.busy and not self.speaking() and not self.caller_talking() and not self.stt_inflight
+                    and time.monotonic() - quiet_since > SILENCE_S):
+                self.busy = True
+                await self.finish(PB.GOODBYES["silence"], "silence")
+                return
+
     async def reply(self):
         redo = 0
         try:
@@ -428,7 +517,11 @@ class Session:
                 heard, self.pending = " ".join(self.pending), []
                 t0 = time.monotonic()
                 self.history.append({"role": "user", "content": f"<caller>{core.clean(heard)}</caller>"})
-                task = asyncio.create_task(core.chat([{"role": "system", "content": core.SYSTEM}] + self.history[-16:]))
+                if self.bail_now:   # suspicion / hostile / refused twice: don't argue, leave now (#127 5d)
+                    await self.finish(PB.GOODBYES[self.bail_now], self.bail_now)
+                    return
+                msgs = [{"role": "system", "content": core.SYSTEM}] + self.history[-16:] + [{"role": "system", "content": self.steer()}]
+                task = asyncio.create_task(core.chat(msgs))
                 done, _ = await asyncio.wait({task}, timeout=FILLER_AFTER_S)
                 # never before the first real reply (#124): the handoff should sound like the rest of the call
                 if not done and self.turns > 0 and self.fillers and not self.speaking() and not self.caller_talking():
@@ -441,7 +534,7 @@ class Session:
                 if not out and time.monotonic() - t0 < LLM_RETRY_WITHIN_S:   # fast failure (429 etc): one retry
                     await asyncio.sleep(0.4)
                     try:
-                        out = await asyncio.wait_for(core.chat([{"role": "system", "content": core.SYSTEM}] + self.history[-16:]),
+                        out = await asyncio.wait_for(core.chat(msgs),
                                                      max(1.0, LLM_TIMEOUT_S - (time.monotonic() - t0)))
                     except Exception as e:
                         log.warning("LLM retry failed: %s", type(e).__name__)
@@ -465,10 +558,9 @@ class Session:
                 # Caller stopped talking -> first decoy audio queued = stt + llm + tts (the segmenter's end-of-speech wait is extra).
                 log.info("turn %s: stt=%dms llm=%dms tts_first=%dms total=%dms voice=%s chars=%d", self.call_id, self.stt_ms,
                          llm_ms, tts_ms, self.stt_ms + llm_ms + tts_ms, "clone" if self.voice.cloned else "synthetic", len(spoken))
-                if time.time() - self.t0 > CAP_S:
-                    await self.finish(core.GOODBYE, "time cap")
-                elif self.wrap_at is not None and self.turns >= self.wrap_at:
-                    await self.finish(WRAP_LINE, "got the payment details")
+                why = self.bail_check()
+                if why:
+                    await self.finish(PB.GOODBYES[why], why)
         except Exception:
             log.exception("turn failed (decoy keeps listening)")
         finally:
@@ -495,6 +587,7 @@ class Session:
                 if fr:
                     self.stalls.append(fr)
         asyncio.create_task(warm())
+        asyncio.create_task(self.silence_watch())
         try:
             while self.active:
                 m = json.loads(await self.ws.receive_text())
@@ -534,9 +627,13 @@ class Session:
             arts = list(self.arts.values())
             ok = await emit_retry("artifacts.extracted", self.call_id, {"artifacts": arts}) if arts else True
             kinds = sorted(a["kind"] + (":" + a["rail"] if a.get("rail") else "") for a in arts)   # kinds only, no values
-            log.info("decoy %s done: %d scammer lines, %d artifacts %s (%s, %.1f s after stop), voice=%s", self.call_id,
-                     len(self.scammer_lines), len(arts), kinds, "posted" if ok else "NOT POSTED", time.monotonic() - t_end,
-                     "clone" if self.voice.cloned else "synthetic")
+            reason = self.bail_reason or "caller_hung_up"
+            log.info("decoy %s done: reason=%s scam=%s, %d scammer lines, %d artifacts %s (%s, %.1f s after stop), voice=%s",
+                     self.call_id, reason, self.scam, len(self.scammer_lines), len(arts), kinds, "posted" if ok else "NOT POSTED",
+                     time.monotonic() - t_end, "clone" if self.voice.cloned else "synthetic")
+            await emit("decoy.done", self.call_id, {"reason": reason, "scam_type": self.scam, "turns": self.turns,
+                                                    "caller_turns": self.caller_turns, "artifact_kinds": kinds,
+                                                    "duration_s": round(time.time() - self.t0, 1)})
 
 
 @app.websocket("/decoy/{call_id}")
