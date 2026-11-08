@@ -79,9 +79,10 @@
       const url = HUB.replace(/^http/, "ws") + "/talk/" + encodeURIComponent(id);
       const w = ws = tok ? new WebSocket(url, ["bf-device", tok]) : new WebSocket(url);
       stats.state = "connecting";
-      w.onopen = () => { stats.state = "open"; wsTry = 0; };
+      let opened = false; w.onopen = () => { opened = true; stats.state = "open"; wsTry = 0; refused = 0; };
       w.onclose = ev => {
         if (ws === w) ws = null;
+        if (!wsExpected && active === id && ((ev && ev.code === 1013) || (!opened && ++refused >= 2))) { observer(); return; }   // 1013 = another device is already talking; a browser reports a refused handshake as 1006, so two never-opened tries count as refused too
         const final = ev && [1000, 1008, 1013].includes(ev.code);   // replaced by another tab/device or ended by the hub: do not reconnect (ping-pong)
         if (wsExpected || final || active !== id || wsTry >= 6) { if (!wsExpected) stats.state = "closed"; return; }
         stats.state = "reconnecting"; wsT = setTimeout(() => { if (active === id && !ws) open(id); }, Math.min(4000, 500 * 2 ** wsTry++));   // died unexpectedly mid-call: back off and retry
@@ -89,9 +90,14 @@
       w.onerror = () => { stats.state = "error"; };
     } catch (e) { stats.state = "error"; }
   }
+  let refused = 0;
+  function observer() {                                   // another phone is the customer's client: watch only (alert, chips, buttons still work; first tap wins on the hub)
+    stats.state = "observer"; BF.observer = true; stopMic(); const b = $("talkBox"); if (b) b.hidden = true;
+    const o = $("observerMsg"); if (o) o.hidden = false;
+  }
   function close() { clearTimeout(wsT); wsExpected = true; try { ws && ws.close(); } catch (e) {} ws = null; wsCid = null; wsTry = 0; stats.state = "idle"; }
-  function show(on) { const b = $("talkBox"); if (b) b.hidden = !(on && BF.talk); }
-  function end() { active = null; close(); stopMic(); show(false); handed = false; muted = false; render(); }
+  function show(on) { const b = $("talkBox"); if (b) b.hidden = !(on && BF.talk) || !!BF.observer; }
+  function end() { active = null; refused = 0; BF.observer = false; { const o = $("observerMsg"); if (o) o.hidden = true; } close(); stopMic(); show(false); handed = false; muted = false; render(); }
 
   const eb = $("earBox"); if (eb) { eb.checked = earphones; eb.onchange = () => { earphones = eb.checked; try { localStorage.setItem("bf.earphones", earphones ? "1" : "0"); } catch (e) {} }; }
   setInterval(() => { const d = $("micDot"); if (!d) return; const on = !!stream && Date.now() - lastSend < 1000; d.className = "dot " + (on ? "live" : stats.mic === "blocked" || stats.state === "error" ? "bad" : "idle"); d.title = on ? "Your voice is reaching the call" : "Not sending"; d.setAttribute("aria-label", d.title); }, 300);

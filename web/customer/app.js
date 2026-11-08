@@ -77,6 +77,7 @@
   const ACR = s => String(s).replace(/\b(Irs|Ssa|Fbi|Dea|Ftc|Usps|Cdc|Dhs)\b/g, m => m.toUpperCase());   // server title-cases impersonated agencies
   function renderChips(chips) { const ul = $("chips"); ul.replaceChildren(...(chips || []).map(c => { const li = document.createElement("li"); li.textContent = ACR(c); return li; })); }
   function endCall(msg) {
+    { const n = $("actedMsg"); if (n) n.hidden = true; }
     clearInterval(st.timer); st.answered = false; show("ended"); $("endedMsg").textContent = msg || "";
     $("phone").dataset.state = "ended";
   }
@@ -102,8 +103,14 @@
       case "alert.fired":
         if (d.level === "first" && st.alerted) break;      // re-alert only on level: realert
         st.alerted = true; setBadge("alert"); renderChips(d.why_chips);
+        { const tg = $("alertTag"); const e = String(d.engine || d.source || "").toLowerCase(); if (tg) { tg.textContent = !e ? "" : /device|local|on-?device/.test(e) ? "Checked on this phone" : "Checked by Backfire's server"; tg.hidden = !tg.textContent; } }
         $("alertBox").hidden = false; $("idleMsg").hidden = true; $("handoffMsg").hidden = true;
         twoBeeps(); break;
+      case "user.action": {                               // first tap wins on the hub; show an action taken on ANOTHER phone
+        const mine = (window.__userActions || []).some(m => m.call_id === ev.call_id && m.data && m.data.action === d.action && Date.now() - Date.parse(m.ts) < 4000);
+        const who = d.by || d.device || d.client || "another phone", n = $("actedMsg");
+        if (!mine && n && d.action) { n.textContent = ({ continue: "Continue", scammer_get_scammed: "Scammer Get Scammed", hang_up: "Hang up" }[d.action] || d.action) + " was chosen on " + (/^another/.test(who) ? who : "the " + who) + "."; n.hidden = false; }
+        break; }
       case "handoff.started": showHandoff(); break;
       case "handoff.restored": setBadge("watching"); $("handoffMsg").textContent = "You're back on the call. Backfire stepped aside."; $("handoffMsg").hidden = false; $("alertBox").hidden = true; $("idleMsg").hidden = true; break;
       default: break;

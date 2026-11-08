@@ -99,3 +99,6 @@ nav#tabs button.on{background:#fff;color:#000;border-color:#fff}
 .talk-hint{margin:0;font-size:1.05rem;font-weight:800;color:#ffd166;text-align:center}
 .ear{display:flex;align-items:center;gap:10px;font-size:.95rem;min-height:44px}.ear input{width:26px;height:26px}
 .talk.compact .talk-hint{display:block;font-size:.85rem}.talk.compact .ear{display:none}
+
+.observer{margin:0;padding:10px 14px;border-radius:14px;background:#1a2540;border:2px solid #4a6cff;color:#dfe6ff;font-weight:700;font-size:1rem;text-align:center;width:100%}
+.alert-tag{margin:0;font-size:.75rem;color:#c9a3ab;text-align:center}

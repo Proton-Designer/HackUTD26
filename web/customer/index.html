@@ -51,8 +51,12 @@ if (!Element.prototype.replaceChildren) Element.prototype.replaceChildren = func
       <label class="ear"><input type="checkbox" id="earBox"><span>I am wearing earphones</span></label>
     </div>
 
+    <p id="observerMsg" class="observer" hidden role="status">Customer is answering on another phone. You can still watch and press the buttons.</p>
+    <p id="actedMsg" class="observer" hidden role="status"></p>
+
     <div id="alertBox" class="alert" hidden role="alert" aria-live="assertive">
       <p class="alert-title">Be careful. This may be a scam.</p>
+      <p id="alertTag" class="alert-tag" hidden></p>
       <ul id="chips" class="chips"></ul>
       <button class="big continue" id="btnContinue">Continue</button>
       <button class="big gets" id="btnGets">Scammer Get Scammed</button>
