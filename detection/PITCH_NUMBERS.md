@@ -22,7 +22,7 @@ All eval data is synthetic (team-written scripts). Intervals are Wilson 95%. Say
 Don't say: "100%", "real-time" (say 1.7 s), "validated", "outperforms", "nothing leaves the device" (hosted STT unless `P2_STT=whisper`).
 One line to leave with a judge: "A small model on our own GPU caught every scam in our synthetic sets, with a couple of false alarms on look-alikes, and if it and the cloud both fail, keyword rules still catch roughly half to three-quarters (10 of 20 held-out, 26 of 33 test)."
 
-## Freeze gate @ f822b6b (TASK-082, eng1, ~07:00 CT; trunk HEAD when the runs started; no detection/*.py change since 3589532)
+## Freeze gate @ f822b6b (TASK-082 + TASK-086, eng1, real time ~06:10 CT; trunk HEAD when the runs started; no detection/*.py change since 3589532)
 Re-ran each headline eval exactly as stated above: local = llama nemotron-nano-4b, `P2_FAILOVER=0` (pure local), live-socket guard on (0 active sockets at start and end); prodrules = `run_eval --engine prodrules`. Synthetic data; the keyword-baseline column was not re-run (not a headline claim). Claimed = the numbers in rows 1-3 and 9 above; none were edited.
 
 | metric | claimed | now | match? |
@@ -35,6 +35,9 @@ Re-ran each headline eval exactly as stated above: local = llama nemotron-nano-4
 | Production rules, held-out v2 | 10/20 and 2/20 | 10/20 and 2/20 | YES |
 | Production rules, hardneg_v3 | 0/25 | 0/25 | YES |
 | Rules on eng3's 10 adversarial lines (s >= 0.80) | 10/10 | 10/10 (s 0.82-0.95); local also 10/10 at 0.95+ | YES |
+| Phone-quality cards (row 10), re-run at f822b6b, Riva STT, local engine, ports 8103/8193: scam rows alerted | 28 of 28, all before the ask line ended | **30 of 30** (this run used all 3 variants for every card, a superset of the 28), latest alert 0.28 s before the first ask line ended | YES |
+| Phone-quality cards: benign rows quiet | 9 of 9, highest s 0.55 | 9 of 9, highest s 0.05 (b1 at -20 dBFS no longer reaches 0.55) | YES (better) |
+| Phone-quality cards: words matched, final latency | 97% median (min 93%), finals 0.97 s median (max 2.3 s) | 97% median (min 93%), finals 0.88 s median (max 0.99 s) | YES |
 | Local latency p50 on test (informational) | 1.7 s (row 5, alone) | 1.5 s test, 1.5 s held-out; p95 2.9 s / 1.7 s | within noise |
 
-Result: 8 of 8 headline checks match, 0 mismatches. Not re-run here: the real-call numbers (rows 7, 12, 13: replayed in REAL_CALLS "Regression @ 1fbf6de"), phone-quality cards (row 10), the two-call overlap, and anything involving the cloud model.
+Result: 11 of 11 headline checks match (8 from TASK-082 + the 3 phone-quality rows from TASK-086), 0 mismatches. Not re-run here: the real-call numbers (rows 7, 12, 13: replayed in REAL_CALLS "Regression @ 1fbf6de"), the two-call overlap, and anything involving the cloud model. The phone-quality audio is synthetic voice plus a synthetic channel (see PSTN_CARDS.md).
