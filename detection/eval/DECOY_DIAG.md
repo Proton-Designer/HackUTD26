@@ -1,0 +1,30 @@
+
+## Real-call evidence (eng3, TASK decoy ALL HANDS 08:05)
+Sources: trunk `logs/p2.log` `echo.decoy` lines (speaker=decoy = what the decoy SAID; speaker=scammer = what the decoy's own STT HEARD) and P2's own `stt final` / `echo.caller` lines, 6 calls with a decoy phase (3d5a7970, e3e343de, 8ee2b3da, ba80d152, 5921f090, 19a5fd47) plus 10 one-line test calls. Aggregates and decoy lines only; no caller transcripts quoted. decoy.log (stt=/llm=/total ms, "LLM failed") is on the hub Mac and was NOT available: timeout counts below are inferred.
+
+### What the decoy said (53 spoken lines)
+- 17 of 53 = the canned OPENER, once per call (core.OPENER, plus an older "Hello? Sorry, I lost you there..." variant on the test calls). It plays before the first model reply and ignores what the scammer just asked (e3e343de: "open your banking app and send $1800 by Zelle" at +37 s, opener at +43.6 s).
+- Model replies are short (median 13-20 words), on topic, and usually end with a question that pulls the payment handle ("what's the website or where do I send this"). Weak ones: parroting ("A baking app? I think you mean a banking app"), "Right, just yeah?", and in 5921f090 a decoy that never learned the scam (fixed in 3a05bf1, below). Only 1 of 53 lines lacks end punctuation (no max_tokens cut-off pattern). 1 of 53 matches a STALLS line (replacement for a failed LLM call).
+- Latency, caller final -> first decoy line in the log: median 1.1-1.5 s per call; worst 9.3 s (8ee2b3da), 5.7 s (3d5a7970), 5.3 s (e3e343de), 5.5 s (180fa297). Those long gaps are the opener turns and merged-utterance waits, not measured LLM time.
+
+### Garbled input
+- P2 and the decoy both use Riva Parakeet. P2 finals arrive 0.24-0.28 s median (max 0.41 s) after endpoint, so STT_TIMEOUT 6 s is never close.
+- Of 35 decoy-heard lines, decoy text == P2 text on about 20; 11 differ (a split or merged utterance, a clipped start such as "Much" for "I have gotten so much"); 5 are 1-2 word fragments. Garbles that matter are in P2's text too ("banking" -> "baking", "Zelle" -> "Zell"/"zeal", "Zelle" cut at "Ze"): an STT issue, not a decoy-only one.
+- The decoy hears fewer turns than P2 in the window (e3e343de: 12 P2 finals, 5 decoy-heard; ba80d152: 13 vs 5): merged turns after handoff and the 1-reply-per-pending-batch loop.
+
+### Echo leak (decoy's own voice in its input), counted per call
+Fuzzy match (>=4-word common run against any decoy line in the previous 30 s): 0 of 6 / 0 of 5 / 0 of 2 / 0 of 10 / 1 of 5 / 0 of 7 decoy-heard lines. Single case, e3e343de: decoy said "I can't find my phone right now, like..." and the next heard line begins "I can't find my phone right now. Are you talking about" (the decoy's words glued onto the caller's). P2's own caller finals overlap the decoy's words (>=3-word run) in 1 of 11 (3d5a7970) and 1 of 10 (e3e343de). So the echo leak is real but RARE: 1 of 35 decoy-heard lines. It is not the main quality problem.
+
+### 3a05bf1 (pre-handoff context), verified by reading the diff
+- The hub /events subscriber (`decoy.app._on_hub_event`) keeps each call's `transcript.caller` finals (is_final, last 30 lines, 400 chars each) and the last non-unknown `risk.update.scam_type`. At Session creation (handoff) they are copied to `pre_lines`, and ONE user message `<caller>all pre lines joined by spaces</caller>` is appended to history (clean() applied, tail 1500 chars) BEFORE the OPENER (the opener is appended as assistant in `say(record=True)`), so the order user(story) -> assistant(opener) -> user(new line) is right.
+- The same lines seed PB.classify, core.extract (pass at session start) and the steering note; scam type and label feed the classifier.
+- Caveats: (1) history[-16:] drops that single story message after ~8 turns; later turns keep only the steering note's scam type. (2) The story is one blob without line breaks or speaker turns, and includes greetings and STT garbles as P2 heard them. (3) The opener stays canned ("who did you say was calling?") even though the model now knows the story: P1's OPENER, still incongruent after an IRS pitch. (4) Needs HUB_URL/PIPELINE_TOKEN in the decoy process env and a decoy restart; if the hub subscribe fails, pre_lines is empty and nothing changes (fail open). Not yet seen live.
+
+### Latency budget: bolt-e4b vs nemotron-3.5-super-vl-120b-a12b (thinking off)
+Same prompt per request (core.SYSTEM + 2-message history + caller line + PB.note steering), `core.chat`, max_tokens 90, temp 0.8, 20 distinct caller lines, alternating models, paced one at a time (2 s gap, live-call guard), shared key:
+| model | ok / 20 | p50 | p90 | max | mean words |
+|---|---|---|---|---|---|
+| bolt-e4b | 20 | 0.48 s | 0.73 s | 0.74 s | 22.9 |
+| super-vl-120b-a12b | 19 | 0.69 s | 1.30 s | 1.46 s | 21.1 |
+One super request hit a ReadTimeout (8 s client timeout in core.chat): 1 of 20. In app.py that is a fast-failure retry only if under 3 s, so it becomes a STALL ("Sorry, can you repeat that?") plus a 7 s dead gap. LLM_TIMEOUT 7 s is ~5x the super p90 so ordinary margin is fine; the risk is the rare hang, not the median. FILLER_AFTER_S = 0.6: bolt p50 0.48 rarely triggers the filler; super p50 0.69 would trigger it on roughly half the turns (not on the first real reply). n=20, one afternoon, one key, no concurrent load. Swap costs about +0.2 s p50, +0.6 s p90.
+Not done: decoy.log timings (not available), any quality scoring (eng2's A/B), live call under load.
