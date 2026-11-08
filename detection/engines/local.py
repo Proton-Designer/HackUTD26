@@ -1,4 +1,4 @@
-"""Local engine: Nemotron Nano 4B on this machine's GPU via Ollama. Stands in for on-device detection.
+"""Local engine: Nemotron Nano 4B on this machine's GPU via an OpenAI-compatible server (llama.cpp llama-server or Ollama). Stands in for on-device detection.
 
 Same contract as cloud.py: `async score(window_text, metadata) -> raw dict` (or raises). detect.py
 normalizes + merges with the rule backstop and fails open on any exception/timeout.
@@ -16,7 +16,7 @@ import httpx
 from detection.prompt import build_messages
 
 DEFAULT_URL = "http://127.0.0.1:11434"
-DEFAULT_MODEL = "backfire-nemotron-nano-4b"
+DEFAULT_MODEL = "nemotron-nano-4b"
 TIMEOUT_S = float(os.environ.get("LOCAL_TIMEOUT_S", "20"))
 
 
@@ -45,17 +45,17 @@ async def score(window_text: str, metadata: dict | None = None, *, client: httpx
         "model": _model(),
         "messages": build_messages(window_text, metadata or {}),
         "stream": False,
-        "think": False,
-        "format": "json",
-        "options": {"temperature": 0, "num_predict": 220, "num_ctx": 2048},
-        "keep_alive": "30m",
+        "temperature": 0,
+        "max_tokens": 220,
+        "response_format": {"type": "json_object"},
+        "chat_template_kwargs": {"enable_thinking": False},
     }
     own = client is None
     c = client or httpx.AsyncClient(timeout=TIMEOUT_S)
     try:
-        r = await c.post(f"{_url()}/api/chat", json=body)
+        r = await c.post(f"{_url()}/v1/chat/completions", json=body)
         r.raise_for_status()
-        return parse_json(r.json().get("message", {}).get("content", ""))
+        return parse_json(r.json()["choices"][0]["message"].get("content") or "")
     finally:
         if own:
             await c.aclose()

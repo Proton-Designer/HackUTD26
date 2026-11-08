@@ -24,7 +24,7 @@ def test_score_posts_ollama_chat(monkeypatch):
         seen["url"] = str(req.url)
         import json
         seen["body"] = json.loads(req.content)
-        return httpx.Response(200, json={"message": {"content": '{"s": 0.9, "asks": ["otp"]}'}})
+        return httpx.Response(200, json={"choices": [{"message": {"content": '{"s": 0.9, "asks": ["otp"]}'}}]})
 
     async def go():
         async with _client(handler) as c:
@@ -32,9 +32,9 @@ def test_score_posts_ollama_chat(monkeypatch):
 
     out = asyncio.run(go())
     assert out == {"s": 0.9, "asks": ["otp"]}
-    assert seen["url"] == "http://x:1/api/chat"
+    assert seen["url"] == "http://x:1/v1/chat/completions"
     b = seen["body"]
-    assert b["model"] == "m1" and b["options"]["temperature"] == 0 and b["format"] == "json" and b["think"] is False
+    assert b["model"] == "m1" and b["temperature"] == 0 and b["response_format"] == {"type": "json_object"}
     assert "<caller_transcript>" in b["messages"][1]["content"]
 
 
@@ -45,4 +45,4 @@ def test_score_raises_on_http_error_and_garbage():
     with pytest.raises(httpx.HTTPStatusError):
         asyncio.run(go(httpx.Response(500)))
     with pytest.raises(ValueError):
-        asyncio.run(go(httpx.Response(200, json={"message": {"content": "sorry"}})))
+        asyncio.run(go(httpx.Response(200, json={"choices": [{"message": {"content": "sorry"}}]})))

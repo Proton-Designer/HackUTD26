@@ -18,3 +18,12 @@ Run: bash detection/scripts/run.sh (:8100); tunnel: bash detection/scripts/tunne
 **Checked in a DEMO_MODE run (second port :8101, 2026-11-08):** 63 card+mock windows through `POST /detect`: 63 exact hits, 0 fuzzy, 0 misses, max 0.07 s per call. `replay_mock --real` alerted on the IRS call and not on the bank call.
 **Honest limits.** (1) Live STT text can differ from the script, so DEMO_MODE hits depend on the fuzzy match; in the real-STT acceptance run, lines outside the recorded set missed (they went live). (2) Rate budget is shared by the team key; when exhausted a window gets rules only. (3) No Super verifier (not servable). (4) `engine=local` is untested end to end here. (5) Campaign matching is only as broad as the script cards plus the dev-split eval rows. (6) Synthetic data only; thresholds were tuned on small sets.
 <!-- EVAL TABLE (eng3) -->
+## Local engine + eval (eng3)
+Local engine (`engine=local`): Nemotron 3 Nano 4B `Q4_K_M` (nvidia/NVIDIA-Nemotron-3-Nano-4B-GGUF) served by llama.cpp `llama-server` on the laptop GPU (RTX 3050 Ti 4 GB).
+This WSL2 box has NVIDIA driver 546, which Ollama (needs 550+) and the Linux CUDA-12.8 llama.cpp builds reject, so the working path is the **Windows llama.cpp CUDA-12.4 build run through WSL interop**.
+One-time setup: download `llama-b12199-bin-win-cuda-12.4-x64.zip` and `cudart-llama-bin-win-cuda-12.4-x64.zip` from github.com/ggml-org/llama.cpp releases, extract both into `/mnt/c/backfire-llama/`, and copy the GGUF there.
+Run: `bash detection/engines/run_local_llm.sh` (binds the WSL gateway IP, port 8101). Then `export LOCAL_LLM_URL=http://$(ip route | awk '/default/{print $3}'):8101 LOCAL_MODEL=nemotron-nano-4b` (127.0.0.1 does not reach a Windows process).
+Smoke: `curl $LOCAL_LLM_URL/health`; `POST /detect` with `"engine":"local"`. If the server is down, detect() fails open to rules.
+
+Eval: `.venv/bin/python -m detection.eval.run_eval --engine {rules,cloud,local} --split dev`, then `--freeze` (tunes thresholds on dev only, writes FROZEN.json), then `--engine all --split test`, then `--report` (writes RESULTS.md). Rows: `data/eval/scripts.jsonl` + `detection/eval/extra_rows.jsonl` (regenerate with `python -m detection.eval.gen_extra_rows`). Scores are cached in `detection/eval/.cache` (gitignored); cloud is throttled to 20 rpm.
+Tests: `.venv/bin/python -m pytest -q detection/tests/test_local.py detection/tests/test_eval.py` (HTTP mocked).

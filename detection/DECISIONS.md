@@ -9,3 +9,6 @@
 - eng1: DEMO_MODE cache = exact normalized key, then char n-gram cosine >= 0.92 with an asks-subset check and the rule floor, because real STT changes punctuation/case but a looser match could serve a lower-risk answer.
 - eng1: recorder windows mirror alert.py (last 6 utterances), because the cache key is the exact window text.
 - eng1: when the token bucket is empty a window gets rules only (no queueing past 0.5 s), because late alerts are worse than a rule-floor score.
+- eng3: local engine = Nemotron 3 Nano 4B Q4_K_M via Windows llama.cpp CUDA-12.4 (WSL interop), because driver 546 blocks Ollama and the Linux CUDA-12.8 builds ("kernel image invalid"); `-c 2048 -np 1` keeps ~0.6 GB VRAM free.
+- eng3: eval thresholds tuned on split=dev only (max recall minus false-alarm rate), frozen in FROZEN.json, then split=test reported once with Wilson 95% CIs, because the test numbers are quoted in the pitch.
+- eng3: eval retries and never caches windows where the model failed (detect fell back to rules), and reports the fallback count, because a silent rules fallback would inflate an LLM engine's numbers.

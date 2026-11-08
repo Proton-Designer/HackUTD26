@@ -169,10 +169,42 @@ def _load_cache(engine: str) -> dict:
     return out
 
 
+import contextvars  # noqa: E402
+
+_PROBE: contextvars.ContextVar = contextvars.ContextVar("probe", default=None)
+_PATCHED = False
+
+
+def _install_probe():
+    """Wrap detect._engine_score so we know whether the model really answered (detect() fails open to rules)."""
+    global _PATCHED
+    if _PATCHED:
+        return
+    from detection import detect as d
+    orig = d._engine_score
+
+    async def wrapped(window_text, metadata, engine):
+        out = await orig(window_text, metadata, engine)
+        probe = _PROBE.get()
+        if probe is not None:
+            probe["ok"] = True
+        return out
+    d._engine_score = wrapped
+    _PATCHED = True
+
+
 async def _pipeline_score(engine: str, call_id: str, window_text: str) -> dict:
-    """The real path: detection.detect.detect(...) (rule backstop + LLM merge + fail-open)."""
+    """The real path: detection.detect.detect(...) (rule backstop + LLM merge + fail-open).
+    Returns the dict plus "fallback": True when the model failed/timed out and detect fell back to rules."""
     from detection.detect import detect  # eng1
-    return await detect(call_id, window_text, {}, engine)
+    _install_probe()
+    probe = {"ok": False}
+    token = _PROBE.set(probe)
+    try:
+        out = await detect(call_id, window_text, {}, engine)
+    finally:
+        _PROBE.reset(token)
+    return {**out, "fallback": not probe["ok"]}
 
 
 async def score_window(engine: str, call_id: str, window_text: str, *, cache: dict, fp: str,
@@ -188,11 +220,18 @@ async def score_window(engine: str, call_id: str, window_text: str, *, cache: di
     else:
         if limiter:
             await limiter.wait()
-        t0 = time.perf_counter()
-        d = await (scorer or _pipeline_score)(engine, call_id, window_text)
-        ms = (time.perf_counter() - t0) * 1000
+        for attempt in range(3):  # model failures (timeout/429) are retried, never cached
+            t0 = time.perf_counter()
+            d = await (scorer or _pipeline_score)(engine, call_id, window_text)
+            ms = (time.perf_counter() - t0) * 1000
+            if not d.get("fallback"):
+                break
+            await asyncio.sleep(2 * (attempt + 1))
         val = {"s": float(d.get("s", 0.0)), "asks": list(d.get("asks", [])), "ms": round(ms, 1),
-               "engine_used": d.get("engine"), "addresses_ai_system": bool(d.get("addresses_ai_system", False))}
+               "engine_used": d.get("engine"), "addresses_ai_system": bool(d.get("addresses_ai_system", False)),
+               "fallback": bool(d.get("fallback"))}
+        if val["fallback"]:
+            return {**val, "cached": False}
     cache[key] = val
     if cache_file is not None:
         with cache_file.open("a") as f:
@@ -206,7 +245,8 @@ async def run_row(engine: str, row: dict, **kw) -> dict:
     for k in range(1, len(lines) + 1):
         window = "\n".join(lines[max(0, k - WINDOW_LINES):k])
         res = await score_window(engine, row["id"], window, **kw)
-        per_line.append({"k": k, "s": res["s"], "asks": res["asks"], "ms": res["ms"], "cached": res["cached"]})
+        per_line.append({"k": k, "s": res["s"], "asks": res["asks"], "ms": res["ms"], "cached": res["cached"],
+                         "fallback": bool(res.get("fallback"))})
     return {"id": row["id"], "split": row["split"], "label": row["label"], "scam_type": row["scam_type"],
             "adversarial_kind": row.get("adversarial_kind"), "expected_asks": row["expected_asks"],
             "expected_alert": row["expected_alert"], "n_lines": len(lines), "engine": engine, "per_line": per_line}
@@ -217,7 +257,7 @@ async def run_engine(engine: str, rows: list[dict], scorer=None, concurrency: in
     cache = _load_cache(engine)
     fp = pipeline_fingerprint(engine)
     limiter = RateLimiter(MAX_RPM[engine]) if engine in MAX_RPM else None
-    sem = asyncio.Semaphore(1 if limiter else concurrency)
+    sem = asyncio.Semaphore(1 if (limiter or engine == 'local') else concurrency)
     cf = _cache_path(engine)
 
     async def one(r):
@@ -310,6 +350,8 @@ def compute_metrics(recs: list[dict], thr: float, rules_by_id: dict | None = Non
         delays.append(a - h)
     m["delay_lines"] = delays
     m["delay_lines_mean"] = sum(delays) / len(delays) if delays else float("nan")
+    m["n_fallback"] = sum(bool(pl.get("fallback")) for r in recs for pl in r["per_line"])
+    m["n_windows"] = len(lat)
     m["mean_ms"] = sum(lat) / len(lat) if lat else float("nan")
     m["p95_ms"] = _quantile(lat, 0.95)
     m["p50_ms"] = _quantile(lat, 0.50)
@@ -401,6 +443,7 @@ def build_report() -> str:
         row("asks recall", lambda m: pct(*m["asks_recall"]))
         row("lines from first hard ask to alert (mean)", lambda m: "n/a" if math.isnan(m["delay_lines_mean"]) else f"{m['delay_lines_mean']:+.2f} (n={len(m['delay_lines'])})")
         row("approx seconds late (lines*3s + p50 latency)", lambda m: "n/a" if math.isnan(m["seconds_late"]) else f"{m['seconds_late']:+.1f}")
+        row("windows where the model failed (fell back to rules)", lambda m: f"{m['n_fallback']}/{m['n_windows']}")
         row("/detect latency p50 / p95 / mean (ms)", lambda m: f"{m['p50_ms']:.0f} / {m['p95_ms']:.0f} / {m['mean_ms']:.0f}")
         L.append("")
         types = sorted({t for e in have for t in ms[e]["recall_by_type"]})
