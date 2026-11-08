@@ -20,6 +20,9 @@
   const MOCK_CALL = qs.get("call") || "irs";   // substring of the mock call_id: irs | bank | crypto
   const DEBUG = qs.has("debug");
   window.BF = window.BF || {}; BF.hub = HUB; BF.onEventRef = null;
+  // Phone-free sim mode (?sim=1 or hub flag SIM_MODE): no Telnyx login, the page rings/answers from hub events and plays the caller audio itself (sim.js). Fails soft to false.
+  BF.simP = qs.has("sim") ? Promise.resolve(true) : HUB ? fetch(HUB + "/demo/status?format=json").then(r => r.json()).then(j => !!(j && j.flags && j.flags.SIM_MODE)).catch(() => false) : Promise.resolve(false);
+  BF.simP.then(v => { BF.sim = v; if (v) { const f = document.getElementById("src"); if (f) f.textContent = "· simulated call (no phone line)"; } });
   // Device pairing (TASK-014): the hub issues a per-device token after the PIN is entered once. Every hub call goes through hubFetch.
   BF.deviceToken = () => { try { return localStorage.getItem("bf.device"); } catch (e) { return null; } };
   BF.hubFetch = async (path, opts) => {

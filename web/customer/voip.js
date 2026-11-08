@@ -45,6 +45,7 @@
   };
   (async () => {
     try {
+      if (await BF.simP) { status("sim (no Telnyx)"); return; }   // phone-free mode: never log in to Telnyx
       const creds = await getToken(); await loadSdk();
       client = new TelnyxWebRTC.TelnyxRTC(creds);
       client.on("telnyx.ready", () => status("ready"));
