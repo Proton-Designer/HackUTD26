@@ -112,7 +112,7 @@
     if (!BF.talk || !ev) return;
     switch (ev.type) {
       case "call.incoming": if (active === ev.call_id) break; hubAnswered = false; end(); cid = ev.call_id; active = ev.call_id; break;   // a repeated incoming for the same call must not close the mic/socket
-      case "call.answered": cid = ev.call_id || cid; active = cid; hubAnswered = true; if ($("phone").dataset.state === "active") { open(cid); show(true); } break;   // ringing + hub-answered: wait for the customer's Answer tap
+      case "call.answered": cid = ev.call_id || cid; active = cid; hubAnswered = true; if ($("phone").dataset.state === "active") { open(cid); show(true); if (!stream) startMic(); } break;   // ringing + hub-answered: wait for the customer's Answer tap
       case "handoff.started": handed = true; render(); break;
       case "handoff.restored": handed = false; render(); break;
       case "call.ended": active = null; end(); break;
