@@ -166,3 +166,18 @@ def test_alert_retry_stops_after_call_ended(monkeypatch):
         return n, len(got)
     a, b = asyncio.run(go())
     assert a == b
+
+def test_alert_retry_stops_after_continue(monkeypatch):
+    monkeypatch.setattr(alert, "ALERT_RETRY_EVERY_S", 0.05)
+    got = []
+    async def emit(t, c, d):
+        if t == "alert.fired": got.append(1); return False
+        return True
+    async def det(cid, text, meta, engine): return R(0.9)
+    async def go():
+        m = alert.AlertMachine(emit=emit, detect=det)
+        await m.on_final("c1", {"text": "x"}); await asyncio.sleep(0.12)
+        await m.on_event({"type": "user.action", "call_id": "c1", "data": {"action": "continue"}}); n = len(got); await asyncio.sleep(0.3)
+        return n, len(got)
+    a, b = asyncio.run(go())
+    assert a == b and a >= 1

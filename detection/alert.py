@@ -164,17 +164,18 @@ class AlertMachine:
             return "realert"
         return None
 
-    async def _emit_alert(self, cid, level, chips):
+    async def _emit_alert(self, cid, c, level, chips):
         """alert.fired is the one event that must not be lost: if the hub POST fails (hub restarting, TASK-055 drill 3b), retry in the background
         for up to ALERT_RETRY_S while the call is live. hub.emit returns False on failure; other emit callables return None and are not retried."""
         data = {"level": level, "why_chips": chips}
         if await self.emit("alert.fired", cid, data) is not False:
             return
+        ep = c.epoch      # Continue / handoff.restored bumps the epoch: the user already acted on this alert, drop the retry
         async def retry():
             t_end = self.clock() + ALERT_RETRY_S
-            while self.clock() < t_end and cid not in self.ended:
+            while self.clock() < t_end and cid not in self.ended and c.epoch == ep:
                 await asyncio.sleep(ALERT_RETRY_EVERY_S)
-                if cid in self.ended: break
+                if cid in self.ended or c.epoch != ep: break
                 try:
                     if await self.emit("alert.fired", cid, data) is not False:
                         log.info("alert.fired %s delivered on retry call=%s", level, cid); return
@@ -213,14 +214,14 @@ class AlertMachine:
                     c.fired = True
                     c.known_hard = set(hard)
                     log.info("alert.fired call=%s level=first src=%s s=%.2f", cid, c.src, s)
-                    await self._emit_alert(cid, "first", chips)
+                    await self._emit_alert(cid, c, "first", chips)
             elif c.continued:
                 if s < REARM_BELOW:
                     c.armed = True
                 elif c.armed and ((bnd == "critical" and c.prev_band != "critical") or (hard - c.known_hard)):
                     c.armed = False
                     log.info("alert.fired call=%s level=realert src=%s s=%.2f", cid, c.src, s)
-                    await self._emit_alert(cid, "realert", chips)
+                    await self._emit_alert(cid, c, "realert", chips)
                 c.known_hard |= hard
         c.prev_band, c.last = bnd, r
 
