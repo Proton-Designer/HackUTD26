@@ -35,7 +35,7 @@
   }
 
   // ---- guard badge ----
-  function applyGuard() { const b = $("guard"); b.textContent = state.guardOn ? "🛡 Live Guard on" : "Live Guard off"; b.classList.toggle("off", !state.guardOn); }
+  function applyGuard() { BF.guardOn = state.guardOn; if (BF.renderBadge) BF.renderBadge(); }
 
   // ---- protection log ----
   const fmt = n => /^\+1\d{10}$/.test(n || "") ? `+1 (${n.slice(2, 5)}) ${n.slice(5, 8)}-${n.slice(8)}` : (n || "");
@@ -77,6 +77,7 @@
     if (ev.type === "blocklist.updated" && d.scope === "her" && !state.blocked.some(b => b.undo_token === d.undo_token))
       state.blocked.push({ number: d.number, reason: "Caught after Scammer Get Scammed", undo_token: d.undo_token });
     if (ev.type === "call.ended") state.calls++;
+    if ((ev.type === "blocklist.updated" || ev.type === "call.ended") && !$("protView").hidden) setTimeout(renderProtection, 0);   // live update while she is looking at the log
     if (ev.type === "voice.enrolled") { state.voiceId = d.voice_id; store.set("voice", d.voice_id); }
     if (ev.type === "voice.deleted") { state.voiceId = null; store.set("voice", null); }
   };

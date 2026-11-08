@@ -42,3 +42,10 @@ nav#tabs button.on{background:#fff;color:#000;border-color:#fff}
 .step{display:flex;flex-direction:column;gap:14px}.step[hidden]{display:none!important}
 #callView{flex:1;display:flex;flex-direction:column}#callView[hidden]{display:none!important}
 .badge.off{background:#3a2a10;color:#ffd28a;border-color:#8a6a2a}
+.badge.guard.alert{background:#4a1a1f;color:#ffd0d6;border-color:var(--bad)}
+.badge.guard.handed{background:#2a1f4a;color:#d9c9ff;border-color:var(--sc)}
+.badge.sound{background:#222a36;color:var(--mut);border-color:#3a4556;margin-left:auto;margin-right:8px}
+.badge.sound:not(.off){color:#cfd6e2}
+.status{gap:6px}#clock{margin-right:auto}
+.status .badge{white-space:nowrap;font-size:.7rem;padding:6px 10px;line-height:1.2}
+.badge.sound{margin-left:0}

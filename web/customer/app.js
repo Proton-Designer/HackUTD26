@@ -22,7 +22,7 @@
   window.BF = window.BF || {}; BF.hub = HUB; BF.onEventRef = null;
   window.__userActions = [];                  // test hook: every user.action emitted
 
-  const st = { callId: null, answered: false, alerted: false, ctx: null, timer: null, t0: 0, replay: [], tos: [] };
+  const st = { callId: null, answered: false, alerted: false, ctx: null, timer: null, t0: 0, replay: [], tos: [], badge: "watching" };
 
   const log = (...a) => { console.log("[backfire]", ...a); if (DEBUG) { const l = $("log"); l.hidden = false; l.textContent += a.map(x => typeof x === "string" ? x : JSON.stringify(x)).join(" ") + "\n"; } };
   const show = id => { for (const s of ["incoming", "active", "ended"]) $(s).hidden = s !== id; };
@@ -30,7 +30,14 @@
   // ---- audio: unlock on a user tap (mobile autoplay), then beeps are local-only ----
   function unlockAudio() {
     try { st.ctx = st.ctx || new (window.AudioContext || window.webkitAudioContext)(); if (st.ctx.state === "suspended") st.ctx.resume(); } catch (e) { log("audio unavailable", String(e)); }
+    const on = !!st.ctx && st.ctx.state !== "closed"; $("sound").textContent = on ? "🔊 Sound on" : "🔇 Sound off"; $("sound").classList.toggle("off", !on);
   }
+  document.addEventListener("pointerdown", unlockAudio, { once: true });   // first tap anywhere unlocks beeps
+
+  // ---- Live Guard badge: watching / alert / handed off / off ----
+  const BADGES = { watching: "🛡 Live Guard on", alert: "⚠ Possible scam", handed: "✓ Handled for you", off: "Live Guard off" };
+  function setBadge(k) { if (k) st.badge = k; const key = BF.guardOn === false ? "off" : st.badge; const b = $("guard"); b.textContent = BADGES[key]; b.className = "badge guard " + key; }
+  BF.renderBadge = () => setBadge();
   function beep(at, dur) {
     const c = st.ctx; if (!c) return;
     const o = c.createOscillator(), g = c.createGain();
@@ -72,20 +79,20 @@
         $("scamLabel").hidden = !(d.scam_id_score >= 0.5);
         $("attest").textContent = d.attestation === "A" ? "Caller ID verified" : "Caller ID not verified";
         $("phone").dataset.state = "ringing"; show("incoming"); break;
-      case "call.routed": $("guard").hidden = d.decision !== "LIVE_GUARD"; break;
+      case "call.routed": $("guard").hidden = d.decision !== "LIVE_GUARD"; setBadge("watching"); break;
       case "call.answered": break; // UI answers on tap
       case "call.ended": if (st.callId === ev.call_id) endCall(d.ended_by === "caller" ? "The caller hung up." : "Call ended."); break;
       case "alert.fired":
         if (d.level === "first" && st.alerted) break;      // re-alert only on level: realert
-        st.alerted = true; renderChips(d.why_chips);
+        st.alerted = true; setBadge("alert"); renderChips(d.why_chips);
         $("alertBox").hidden = false; $("idleMsg").hidden = true; $("handoffMsg").hidden = true;
         twoBeeps(); break;
       case "handoff.started": showHandoff(); break;
-      case "handoff.restored": $("handoffMsg").textContent = "You're back on the call. Backfire stepped aside."; $("handoffMsg").hidden = false; $("alertBox").hidden = true; $("idleMsg").hidden = true; break;
+      case "handoff.restored": setBadge("watching"); $("handoffMsg").textContent = "You're back on the call. Backfire stepped aside."; $("handoffMsg").hidden = false; $("alertBox").hidden = true; $("idleMsg").hidden = true; break;
       default: break;
     }
   }
-  function showHandoff() { $("handoffMsg").textContent = "We've got it. You can put the phone down."; $("alertBox").hidden = true; $("idleMsg").hidden = true; $("handoffMsg").hidden = false; }
+  function showHandoff() { setBadge("handed"); $("handoffMsg").textContent = "We've got it. You can put the phone down."; $("alertBox").hidden = true; $("idleMsg").hidden = true; $("handoffMsg").hidden = false; }
 
   // ---- buttons ----
   $("answerBtn").onclick = () => {
@@ -97,7 +104,7 @@
   };
   $("declineBtn").onclick = () => endCall("You declined the call.");
   $("endBtn").onclick = () => { emitUserAction("hang_up"); stopReplay(); endCall("You ended the call."); };
-  $("btnContinue").onclick = () => { emitUserAction("continue"); $("alertBox").hidden = true; $("idleMsg").hidden = false; };
+  $("btnContinue").onclick = () => { emitUserAction("continue"); setBadge("watching"); $("alertBox").hidden = true; $("idleMsg").hidden = false; };
   $("btnGets").onclick = () => { emitUserAction("scammer_get_scammed"); showHandoff(); };
   $("btnHang").onclick = () => { emitUserAction("hang_up"); stopReplay(); endCall("You hung up."); };
   $("replayBtn").onclick = start;
@@ -129,7 +136,7 @@
 
   function needsSetup() { try { return !localStorage.getItem("bf.done") && !qs.has("skipsetup"); } catch (e) { return false; } }
   function start() {
-    $("guard").hidden = false; $("alertBox").hidden = true; $("handoffMsg").hidden = true; $("idleMsg").hidden = false;
+    setBadge("watching"); $("guard").hidden = false; $("alertBox").hidden = true; $("handoffMsg").hidden = true; $("idleMsg").hidden = false;
     st.callId = null; window.__userActions.length = 0; show("ended"); $("endedMsg").textContent = "Waiting for a call…"; $("replayBtn").hidden = !!SERVER;
     $("src").textContent = SERVER ? "· live" : "· demo replay";
     if (SERVER) { if (!ws) connectWS(); }
