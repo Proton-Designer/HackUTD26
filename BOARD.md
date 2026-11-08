@@ -1,7 +1,7 @@
 # Team Board
 > Maintained by hackutd-delegator. H0 = Sat Nov 7, 13:00 CT (Rayan confirmed at 00:12. Entries before 00:12 used H0 = 12:00, so their H-hours are 1 h too high). Decider: Ayman.
 > Product: **Backfire**. Source of truth: `Finalized-Idea/BACKFIRE_MASTER_CONTEXT.md` (Part 1), then `01_ARCHITECTURE.md` §15 for demo stand-ins.
-> Key times (from zeroday.hackutd.co, per our research; Kareem confirms): initial Devpost submission Sat ~23:00 · final submission Sun 12:00 · judging Sun 13:00-16:00.
+> Key times (Kareem, from zeroday.hackutd.co, 00:16): final submission Sun 12:00 · judging Sun 13:00-16:00 in ECSW/ECSS · closing 17:00 in ATEC. Minutes per judge visit: not published; Kareem is asking the info desk.
 
 ## Now
 | Person | Task | Done when | Started | Est. | Status |
@@ -9,7 +9,7 @@
 | Evan | **P3 Decoy & voice** (`decoy/`): echo bot over Twilio `<Connect><Stream>` first, then persona card | `WSS /decoy/{call_id}` echoes audio on a test call (Twilio Media Streams protocol: connected/start/media/mark/stop, μ-law 8 kHz); persona card generator outputs fake values only | 22:55 (H10:55) | 90 min | In progress |
 | Ayman | **Machine A: P1 Network & call control** + contract; **Machine B: P2 Detection** | A: `contracts/events.md` + `mock/events.json` by 23:15, then server + tunnel + scam line with pre-ring `<Reject>` and caller-only `inbound_track` stream. B: model IDs pinned, `POST /detect` returns typed JSON on 3 scripts | 22:55 (H10:55) | 30 + 90 min | In progress |
 | Rayan | **P4b: T-Mobile command center** (`web/command-center/`) on `mock/events.json` (finish the Devpost initial submission first if it isn't in) | Command center plays the whole of `mock/events.json` as a timeline: caller transcript, risk + why chips, decoy turns, artifacts, lookups, agent trace, auto actions, Approve queue, campaign + immunity counter, denied log, Simulated / attested labels, cloud/local badge. A stranger gets it in 5 seconds | 23:05 (H11:05) | 150 min | In progress |
-| Kareem | **Script cards match the live intel** + fill CLAUDE.md §6 | Every ____ on the payment step of `data/script-cards.md` holds the callback / website / wallet from `intel/demo_config.py`; `python -m intel.seed_demo` then one card's values through `intel.acceptance` all hit (lookup + block); §6 has judging window, minutes per visit, final submit | 00:07 (H12:07) | 45 min | In progress (re-sent 00:09 when Kareem asked "next": 11 blanks still open in `script-cards.md`, §6 still blank. Values come from `intel/demo_config.json`) |
+| Kareem | **Finish CLAUDE.md §6, then info desk** | §6 lines filled, with zeroday.hackutd.co as the source; info desk answers posted in #15: minutes per judge visit, finalist round Y/N, our judging room/table, whether live phone calls work in ECSW/ECSS (cell signal / Wi-Fi) | 00:16 (H11:16) | 30 min | In progress |
 
 ## Up next
 - Ayman A (P1): Maria's call screen (`web/customer/`, Voice JS SDK, two local beeps, Continue / Scammer Get Scammed / Hang up) → handoff swap to `/decoy` → stub: decoy-ended caller → `confirmed_scammers` (callback rejected before ring).
@@ -18,7 +18,7 @@
 - **P4 is split (23:05):** P4a Intel = Kareem (`intel/`), P4b Command center + story = Rayan (`web/command-center/`, pitch, Devpost).
 - Rayan (P4b): switch the command center from mock to live `WS /events` when Ayman's server is up → pitch v1 opening on the moment (P4 guide outcome 6) + T-Mobile booth questions (architecture §17) → claims audit → backup video at 09:00 → final Devpost 11:30.
 - Ayman A (P1), 10 min, **by 01:00** (moved up 00:08, unblocks Kareem): pull `finalized-idea-backfire` through 867ff7c, add `NVIDIA_API_KEY` to the hub's `.env` (Kareem DMs his tested key), restart the hub, ping Kareem "hub restarted" in thread #15. Kareem runs the acceptance, not Ayman.
-- Kareem (after 00:52): reset drill for judging: write `data/RESET.md` (exact commands in order: hub reset + `python -m intel.seed_demo` + check), time it twice, under 60 s → when Ayman pings: `python -m intel.acceptance` against the shared hub, post pass count in #15 → be the 02:00 thin-slice test caller reading a card. Stuck: Ayman, then Evan.
+- Kareem (after info desk): when Ayman pings "hub restarted" (by 01:00): `python -m intel.acceptance` against the shared hub, post pass count in #15 → be the 02:00 thin-slice test caller reading a card. Stuck: Ayman, then Evan.
 
 ## Owned files and folders
 (Updated 22:55 per Ayman. One owner per folder. Plan: `Finalized-Idea/07_EXECUTION_PLAN.md`.)
@@ -41,6 +41,8 @@
 | 22:31 (H10:31) | Ayman | Backfire idea finalized, architecture v2, research | Pushed to `finalized-idea-backfire` (commit 7e4eea1) |
 | 00:07 (H12:07) | Kareem | Script cards (10) + eval set (`data/`) | Files in repo; not separately checked |
 | 00:07 (H12:07) | Kareem | P4a Tasks 1-3: real lookups (RDAP, BTC/ETH explorers, allowlist), Nemotron intel agent (fixed chain, live), policy gate (auto / Approve / denied; allowlist = poisoning), `intel.seed_demo` reset | Pushed through 867ff7c (git verified). Hub code imports intel (e641ec0, `server/routing.py`), but the **running** hub hasn't pulled it yet. P4 acceptance 7/7 locally, fail-open drill passed (reported) |
+| 00:15 (H11:15) | Kareem | Script-card payment blanks filled from `intel/demo_config.json` | Git verified (8514536); no `____` left on any card. The card → `intel.acceptance` check is still open and runs once the hub is restarted |
+| 00:15 (H11:15) | Kareem | `data/RESET.md` reset sequence, timed twice (0.15 s / 0.12 s) | Git verified (38e6312). Times are local; re-time against the shared hub at the 02:00 slice |
 
 ## Checkpoints (compressed: idea locked at H10:30)
 - **23:00** Devpost initial submission in (Rayan).
@@ -54,6 +56,7 @@
 - **11:30 (H23:30)** Final Devpost submitted (hard deadline 12:00).
 
 ## Decisions log
+- 00:16 (H11:16) | **H0 conflict reopened, with a source:** Kareem reads zeroday.hackutd.co as "Hacking Starts 12:00pm", but Rayan confirmed 13:00 at 00:12. Board labels stay at 13:00 until Rayan checks the site and settles it. Nothing moves either way because every checkpoint is a clock time. Also open: the 23:00 initial Devpost checkpoint isn't marked done. Rayan confirms it's in with all 4 teammates.
 - 00:12 (H11:12) | **H0 = 13:00 (Rayan confirmed).** This settles the 00:07 mismatch. No checkpoint moves because they are all clock times. Old entries keep their labels so history isn't rewritten. New entries use H0 = 13:00.
 - 00:08 (H12:08) | **Kareem keeps building while the shared-hub acceptance waits.** It needs only Ayman's 10-min pull + key + restart (moved up to 01:00), not Evan's `instruction_to_ai` (#16) or Rayan's agent-trace panel (#17); those two land with their own lanes and get checked in the 02:00 thin slice. Evan stays on the P3 echo bot, Rayan on the command center. Cost: shared-hub acceptance slips to ~01:00. Fallback: if the hub isn't restarted by 01:15, Kareem's local 7/7 counts for now and Ayman restarts it as step 1 of the 02:00 slice.
 - 00:07 (H12:07) | **Intel model = `nemotron-3.5-super-vl-120b-a12b`**: `3-super-120b` returns 404 on our keys (Kareem, tested live). Ayman-B records it in `contracts/models.md`. Fallback: fail-open stays in, so lookups and blocks still show if the model call fails.
