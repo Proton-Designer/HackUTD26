@@ -1,0 +1,10 @@
+.gradle/
+build/
+local.properties
+.idea/
+*.iml
+.kotlin/
+server/node_modules/
+__pycache__/
+third_party/
+.cxx/

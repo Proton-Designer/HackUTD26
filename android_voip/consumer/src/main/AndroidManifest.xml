@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Granted automatically because both apps are signed with the same key. -->
+    <uses-permission android:name="com.example.voip.permission.CALL_AUDIO" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Android 11+ package visibility: allow binding to the VoIP app. -->
+    <queries>
+        <package android:name="com.example.voip" />
+    </queries>
+
+    <application
+        android:icon="@android:drawable/ic_btn_speak_now"
+        android:label="Call Audio Receiver"
+        android:theme="@android:style/Theme.Material.Light.NoActionBar">
+        <activity
+            android:name=".ReceiverActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!--
+          Holds the connection to the VoIP app. It must be a foreground service: Android freezes
+          background apps, and a frozen app that keeps receiving ~100 audio frames/s gets killed.
+        -->
+        <service
+            android:name=".RecorderService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Receives live call audio from the companion VoIP app" />
+        </service>
+    </application>
+</manifest>
