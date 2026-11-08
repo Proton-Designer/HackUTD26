@@ -17,8 +17,8 @@
 - Evan (P3): realtime decoy loop (speech-to-text → Nemotron Lightning persona → TTS), playbook to payment details, guardrails, voice clone (03:00 decision), extractor.
 - **P4 is split (23:05):** P4a Intel = Kareem (`intel/`), P4b Command center + story = Rayan (`web/command-center/`, pitch, Devpost).
 - Rayan (P4b): switch the command center from mock to live `WS /events` when Ayman's server is up → pitch v1 opening on the moment (P4 guide outcome 6) + T-Mobile booth questions (architecture §17) → claims audit → backup video at 09:00 → final Devpost 11:30.
-- Ayman A (P1), 10 min, before 02:00: pull `finalized-idea-backfire` through 867ff7c and restart the running hub so the live intel (lookups, agent, gate) is what the 02:00 thin slice hits; run `intel.acceptance` against it once.
-- Kareem (after 00:52): reset drill for judging: write `data/RESET.md` (exact commands in order: hub reset + `python -m intel.seed_demo` + check), time it twice, under 60 s → then be the 02:00 thin-slice test caller reading a card. Stuck: Ayman, then Evan.
+- Ayman A (P1), 10 min, **by 01:00** (moved up 00:08, unblocks Kareem): pull `finalized-idea-backfire` through 867ff7c, add `NVIDIA_API_KEY` to the hub's `.env` (Kareem DMs his tested key), restart the hub, ping Kareem "hub restarted" in thread #15. Kareem runs the acceptance, not Ayman.
+- Kareem (after 00:52): reset drill for judging: write `data/RESET.md` (exact commands in order: hub reset + `python -m intel.seed_demo` + check), time it twice, under 60 s → when Ayman pings: `python -m intel.acceptance` against the shared hub, post pass count in #15 → be the 02:00 thin-slice test caller reading a card. Stuck: Ayman, then Evan.
 
 ## Owned files and folders
 (Updated 22:55 per Ayman. One owner per folder. Plan: `Finalized-Idea/07_EXECUTION_PLAN.md`.)
@@ -32,6 +32,7 @@
 | What | Who is stuck | Waiting on | Since |
 |---|---|---|---|
 | Command center build | Rayan | Ayman's `mock/events.json` + `contracts/events.md` (due 23:15; Rayan sketches the layout until then) | 22:45 |
+| P4a acceptance on the shared hub (not his current task) | Kareem | Ayman: pull 867ff7c + `NVIDIA_API_KEY` in hub `.env` + restart, by 01:00. Table question answered: `/routing/lookup` reads hub SQLite `confirmed_scammers` → `campaign_numbers` → `intel.store.is_blocked()` (trusted overrides intel only) → `trusted` (`server/routing.py`). Evan #16 / Rayan #17 are demo moments, not blockers for the acceptance run | 00:07 |
 | Eval row format must match detector output | Kareem | Uses the enums in master context §5 (`asks[]`: otp, card, ssn, gift_card, crypto, wire, p2p, remote_app, secrecy); Evan confirms at next check-in | 22:45 |
 
 ## Done
@@ -53,6 +54,7 @@
 - **11:30 (H23:30)** Final Devpost submitted (hard deadline 12:00).
 
 ## Decisions log
+- 00:08 (H12:08) | **Kareem keeps building while the shared-hub acceptance waits.** It needs only Ayman's 10-min pull + key + restart (moved up to 01:00), not Evan's `instruction_to_ai` (#16) or Rayan's agent-trace panel (#17); those two land with their own lanes and get checked in the 02:00 thin slice. Evan stays on the P3 echo bot, Rayan on the command center. Cost: shared-hub acceptance slips to ~01:00. Fallback: if the hub isn't restarted by 01:15, Kareem's local 7/7 counts for now and Ayman restarts it as step 1 of the 02:00 slice.
 - 00:07 (H12:07) | **Intel model = `nemotron-3.5-super-vl-120b-a12b`**: `3-super-120b` returns 404 on our keys (Kareem, tested live). Ayman-B records it in `contracts/models.md`. Fallback: fail-open stays in, so lookups and blocks still show if the model call fails.
 - 00:07 (H12:07) | **H0 mismatch:** board says 12:00, bot header says 13:00. Board stays at 12:00 (every timestamp uses it) until Rayan confirms; checkpoints use clock times, so they don't move.
 - 23:21 (H11:21) | **Evan has repo access** (`evan-olson31` is a collaborator on Proton-Designer/HackUTD26, verified via GitHub). Blocker cleared.
