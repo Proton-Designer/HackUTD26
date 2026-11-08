@@ -238,16 +238,16 @@ if (!Element.prototype.replaceChildren) Element.prototype.replaceChildren = func
     <button data-v="protView">Protection</button>
   </nav>
 
-  <!-- PAIRING (TASK-014): shown only when the hub answers 401 -->
+  <!-- PAIRING (TASK-014): a /app/?pair=XXXXXX link pairs by itself; the code box is the fallback, shown only when the hub answers 401 -->
   <section id="pairView" class="screen left" hidden>
     <div class="step-body">
       <img class="wordmark" src="assets/backfire-wordmark.png" alt="Backfire" width="150" height="25">
-      <h1>Connect this phone to Backfire</h1>
-      <p class="body">Backfire needs to know this is the customer's phone. Enter the 6-digit pairing code from the Backfire team.</p>
-      <input id="pairPin" inputmode="numeric" autocomplete="one-time-code" maxlength="12" aria-label="Pairing code" placeholder="000000">
-      <p class="sub" id="pairMsg" role="status"></p>
+      <h1 id="pairTitle">Connect your phone</h1>
+      <p class="body link-hide">Open the Backfire link you were sent, or type the 6-digit code from it.</p>
+      <input id="pairPin" class="link-hide" inputmode="numeric" autocomplete="one-time-code" maxlength="12" aria-label="6-digit code" placeholder="000000">
+      <p class="sub" id="pairMsg" role="status" aria-live="polite"></p>
     </div>
-    <div class="actions"><button class="big accept" id="pairBtn">Pair</button></div>
+    <div class="actions link-hide"><button class="big accept" id="pairBtn">Connect</button></div>
   </section>
 
   <footer><span id="src">Simulated call</span></footer>

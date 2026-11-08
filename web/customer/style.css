@@ -227,3 +227,5 @@ details.keep[open] summary{margin-bottom:var(--sp1)}
 #dnsList:empty,#blockedList:empty{display:none}
 .rows li>span,.rows li>div{min-width:0;overflow-wrap:anywhere}
 .card .pair .big{width:100%;align-self:stretch}
+#pairView.linking .link-hide{display:none}
+#pairView.linking #pairMsg{font-size:var(--fs-md);color:var(--fg)}
