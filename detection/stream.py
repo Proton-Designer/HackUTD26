@@ -4,7 +4,7 @@ Fail open: garbage frames are ignored; nothing here ever raises into the socket 
 import asyncio, base64, itertools, json, logging, os, time
 import numpy as np
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from . import auth, hub, stt
+from . import auth, health, hub, stt
 
 log = logging.getLogger("p2.stream")
 router = APIRouter()
@@ -94,6 +94,7 @@ async def handle_utterance(call_id, uid, pcm, t_end=None):
     try:
         text = (await stt.get_stt().transcribe(pcm)).strip()
     except Exception as e:
+        health.err("stt", e)
         log.warning("stt failed call=%s: %s", call_id, type(e).__name__)
         return
     if not text:
@@ -113,6 +114,7 @@ async def stt_ws(ws: WebSocket, call_id: str):
     if not auth.valid_call_id(call_id) or not auth.check_token(ws.headers, ws.query_params):
         await ws.close(code=1008); return      # before accept: rejected handshake
     await ws.accept()
+    health.STATE["active"] += 1
     seg, ids, tasks = Segmenter(), [1, 0], set()   # ids: [next utterance number, last submitted]
     pstate = {"busy": False, "t": 0.0, "text": ""}
     counts = {}   # frame diagnostics per event type, logged at close (P1 #31)
@@ -164,6 +166,7 @@ async def stt_ws(ws: WebSocket, call_id: str):
     except Exception:
         log.exception("stt ws error")
     finally:
+        health.STATE["active"] = max(0, health.STATE["active"] - 1)
         log.info("stt ws %s closed: frames=%s utterances=%d", call_id, counts, ids[1])
         chain.put_nowait(None)
         try:

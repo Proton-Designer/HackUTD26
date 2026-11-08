@@ -1,0 +1,14 @@
+# P2 runbook (live)
+**Start / restart the service** (supervised: restarts uvicorn 2 s after any exit and logs `uvicorn exited rc=N` with a timestamp to `logs/p2.log`):
+`bash detection/scripts/run.sh` in a tmux window (e.g. `tmux new-window -n p2svc 'bash detection/scripts/run.sh'`). Ctrl-C twice stops it; `kill <pid>` (SIGTERM) stops it. Port `P2_PORT` (default 8100). Loads `.env` without printing it.
+**Tunnel:** `bash detection/scripts/tunnel.sh` (own window `p2tun`). Quick-tunnel URL lands in `logs/p2-tunnel.log` and changes on every restart; P1's relay needs `P2_STT_URL=wss://<host>` updated when it does.
+**Is it healthy?** `curl -s localhost:8100/healthz`: `stt.backend` riva|whisper, `engines.cloud_key_present` / `local_reachable`, `hub_subscriber_connected` (false = P2 can't hear `user.action`/hub events; check HUB_URL), `active_stt_sockets`, `last_error` (source + exception class + time, never a secret).
+**Reading the frame counts:** each call logs `stt ws <call> first frame: event=<x>` and at close `stt ws <call> closed: frames={...} utterances=N`.
+- no log line at all: the relay never connected (tunnel URL stale, or 1008 reject = PIPELINE_TOKEN mismatch; look for a 403/1008 on the relay side).
+- `frames={'connected':1,'start':1}` with no `media`: relay connected but forwarded no audio (Telnyx stream not started or wrong track).
+- `media` > 0 but `utterances=0`: audio arrived but VAD heard no speech (silence, wrong track = the customer side, or very low level).
+- `utterances>0` but no transcripts on the hub: look for `stt failed` (NVIDIA key/rate limit) and `/healthz` `last_error`; whisper fallback kicks in automatically.
+**PIPELINE_TOKEN flip:** set the same `PIPELINE_TOKEN=<secret>` in the hub env (P1) and in P2's env/.env, restart both (P2 via run.sh restart: Ctrl-C twice, rerun). The relay sends it as header `x-pipeline-token` on `/stt`; P2 sends it on `POST /events`. Unset on P2 = `/stt` and `/detect` are open (a warning is logged at boot). Wrong value: WS closes 1008, `/detect` 401. To turn auth off in an emergency, unset it on both sides and restart. Never paste the value into chat or commits.
+**DEMO_MODE fallback** (P2 down or flaky): on the hub run with `DEMO_MODE=1` (loops `mock/events.json`) or `POST /demo/replay`; the web UI then runs off scripted events with no P2. `FALLBACK_DETECT=1` on the hub arms P1's own backup detector. P2 itself never raises into the call path: if it dies, calls still connect and just lose alerts.
+**Acceptance / checks:** `bash detection/scripts/acceptance.sh` (~1 min, hub :8190 + P2 :8191, real NVIDIA calls, prints PASS/FAIL table). Two-call load check: `set -a; . ./.env; set +a; .venv/bin/python detection/scripts/concurrency.py`. Unit tests: `.venv/bin/python -m pytest -q detection`.
+**Env knobs:** `P2_ENGINE` cloud|local, `P2_STT=whisper` force fallback STT, `P2_ENDPOINT_MS`, `P2_PARTIALS=0`, `ALERT_S`, `HARD_ASK_S`, `LOCAL_LLM_URL`.

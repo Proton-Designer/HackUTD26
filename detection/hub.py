@@ -1,6 +1,7 @@
 """Hub client: POST {HUB_URL}/events (fail-open, never raises) and WS {HUB_URL}/events subscriber (TASK-004 adds subscribe())."""
 import logging, os, time
 import httpx
+from . import health
 
 log = logging.getLogger("p2.hub")
 _client = None
@@ -24,10 +25,12 @@ async def emit(type_: str, call_id: str, data: dict) -> bool:
             _client = httpx.AsyncClient(timeout=2.0)
         r = await _client.post(hub_url() + "/events", json={"type": type_, "call_id": call_id, "ts": time.time(), "data": data}, headers=headers())
         if r.status_code >= 300:
+            health.err("hub.emit", f"http {r.status_code}")
             log.warning("hub rejected %s: %s", type_, r.status_code)
             return False
         return True
     except Exception as e:
+        health.err("hub.emit", e)
         log.warning("hub emit %s failed: %s", type_, type(e).__name__)
         return False
 
@@ -42,7 +45,7 @@ async def subscribe(handler, stop=None):
             if os.environ.get("HUB_TOKEN"):
                 url += "?token=" + os.environ["HUB_TOKEN"]
             async with websockets.connect(url) as ws:
-                log.info("subscribed to hub events")
+                log.info("subscribed to hub events"); health.STATE["hub_sub"] = True
                 delay = 1.0
                 async for msg in ws:
                     try:
@@ -52,6 +55,8 @@ async def subscribe(handler, stop=None):
         except asyncio.CancelledError:
             raise
         except Exception as e:
+            health.err("hub.ws", e)
             log.warning("hub ws down (%s); retry in %.0fs", type(e).__name__, delay)
+        health.STATE["hub_sub"] = False
         await asyncio.sleep(delay)
         delay = min(delay * 2, 15.0)

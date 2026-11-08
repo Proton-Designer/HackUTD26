@@ -4,7 +4,7 @@ band newly reaches critical or a NEW hard ask appears; must drop below 0.80 befo
 Quiet switch-off after QUIET_S of s<0.40 (only if no alert fired on the call). Fail open: nothing raises."""
 import asyncio, logging, os, time
 from collections import deque
-from . import hub, stream, schema
+from . import health, hub, stream, schema
 from .detect import quick
 
 log = logging.getLogger("p2.alert")
@@ -77,7 +77,7 @@ class AlertMachine:
                     try:
                         r = await self.detect(call_id, text, {"utterances": len(c.utts)})
                     except Exception:
-                        log.exception("detect failed (ignored)")
+                        log.exception("detect failed (ignored)"); health.err("detect", __import__("sys").exc_info()[1])
                         continue
                     await self._process(call_id, c, self._floor(r, quick(text, self.engine)))
             finally:

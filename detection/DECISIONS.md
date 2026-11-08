@@ -5,3 +5,4 @@
 - eng1: rule backstop only raises (floor 0.82 hard ask, 0.9 gift_card/otp, 0.95 2+ asks or ask+secrecy, 0.85 injection), negation guard ("never ask for a code"), because caller text is untrusted.
 - eng2: first alert = s>=ALERT_S(0.80) OR a hard ask with s>=0.60 (HARD_ASK_S), because gift-card/OTP asks are rarely innocent and ≤2 s latency matters; realert only on a NEW transition into critical or a NEW hard ask after Continue, re-armed when s<0.80; after handoff.restored the first-alert state resets; quiet switch-off (180 s of s<0.40) only when no alert fired on the call.
 - Acceptance suite uses TTS-synthesized calls cached in testdata/acc (1.5 MB) and one hub+P2 pair with parallel call_ids, because ask-first latency is run alone first so other calls don't inflate it (eng2).
+- Supervised run.sh (restart 2 s, Ctrl-C x2 stops), /healthz wiring fields (detection/health.py), scripts/concurrency.py, RUNBOOK.md (eng2).

@@ -179,4 +179,5 @@ async def main():
     bad = [r for r in rows if r[1] == "FAIL"]
     print("=" * 100 + f"\n{'ACCEPTANCE FAIL' if bad else 'ACCEPTANCE PASS'} ({sum(r[1]=='PASS' for r in rows)} pass, {len(bad)} fail, {sum(r[1]=='SKIP' for r in rows)} skip)")
     sys.exit(1 if bad else 0)
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())
