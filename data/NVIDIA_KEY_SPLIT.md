@@ -40,6 +40,12 @@ Notes
 - Fallbacks already in code: P2 cloud -> local Nemotron Nano 4B failover (463280f); intel -> deterministic fallback
   (shown as `engine: fallback`). A 429 degrades the demo but never breaks the call.
 
+## Agreed with P1 (02:37)
+- Ayman's Mac: hub on :8000 (intel + fallback detector) -> **Kareem's key (C)**. P3 decoy `decoy.app` on :8300, a
+  separate process -> **Evan's key (B)**, set in that process's env.
+- Ayman's Windows machine: P2 detection on :8100 -> **Ayman's key (A)**.
+- Rayan's key (D): P2 eval + spare. Ayman is collecting Evan's and Rayan's keys by DM; P1 sets per-process env.
+
 ## To verify after the split
 1. On the hub: `/demo/status` -> `NVIDIA_API_KEY_set: true`, `intel_engine: nemotron:...`.
 2. One live call, then `python detection/scripts/call_report.py` -> 429 count should be 0.
