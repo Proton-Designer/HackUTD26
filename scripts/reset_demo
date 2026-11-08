@@ -4,7 +4,8 @@
 # Run against the hub's LOCAL url (not the tunnel). x-hub-token only matters if HUB_TOKEN is set.
 set -u
 BASE="${1:-http://127.0.0.1:8000}"
-OUT=$(curl -fsS -m 15 -H "x-hub-token: ${HUB_TOKEN:-}" -X POST "$BASE/demo/reset") || { echo "reset failed: is the hub up at $BASE (and HUB_TOKEN right)?" >&2; exit 1; }
+FORCE=""; [ "${2:-}" = "--force" ] && FORCE="?force=1"   # reset is refused (409) while a call is live; --force overrides
+OUT=$(curl -fsS -m 15 -H "x-hub-token: ${HUB_TOKEN:-}" -X POST "$BASE/demo/reset$FORCE") || { echo "reset failed: is the hub up at $BASE (and HUB_TOKEN right)? A live call makes the hub refuse (409): wait for it to end, or pass --force as 2nd arg" >&2; exit 1; }
 echo "$OUT"
 echo "$OUT" | grep -q '"seeded":true' || echo "WARNING: intel not seeded (intel not mounted or seed_demo failed; see seed_error above)" >&2
 # the judge's number must route LIVE_GUARD, not BLOCKED_BACKFIRE

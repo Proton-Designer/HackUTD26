@@ -689,3 +689,22 @@ def test_f5_restore_clears_alert_dedupe_so_new_first_alert_fires(monkeypatch):
     assert first() == {"ok": True} and n() == 2                                                # new first alert after restore
     other = c.post("/events", json={"type": "alert.fired", "call_id": "F5b", "data": {"level": "first", "why_chips": []}}).json()
     assert other == {"ok": True}
+
+
+def test_f11_reset_refused_while_a_call_is_live_unless_force():
+    import asyncio
+    from server import relay
+    local = TestClient(app, client=("127.0.0.1", 5000))
+    db.add_confirmed("+15555550999")
+    async def go():
+        async def back(x): pass
+        await relay.open("F11LIVE-1", back)
+        r1 = await asyncio.to_thread(lambda: local.post("/demo/reset"))
+        kept = bool(db.list_confirmed())
+        r2 = await asyncio.to_thread(lambda: local.post("/demo/reset?force=1"))
+        await relay.close("F11LIVE-1")
+        return r1, kept, r2
+    r1, kept, r2 = asyncio.run(go())
+    assert r1.status_code == 409 and "F11LIVE-" in r1.json()["detail"] and kept            # nothing wiped
+    assert r2.status_code == 200 and not db.list_confirmed()
+    assert local.post("/demo/reset").status_code == 200                                      # no live call: normal reset

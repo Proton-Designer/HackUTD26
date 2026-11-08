@@ -301,11 +301,14 @@ def _reset_intel():
         log.exception("intel reset failed")
 
 @app.post("/demo/reset", dependencies=[Depends(device.require_device)])
-def demo_reset(request: Request, seed: bool = Query(True)):
+def demo_reset(request: Request, seed: bool = Query(True), force: bool = Query(False)):
     """One reset for everything (data/RESET.md): hub state + intel tables, then intel.seed_demo in-process
     (yesterday's synthetic sighting) unless ?seed=0. Seeding fails open: reset still succeeds.
     Direct localhost, a paired device, or x-hub-token==HUB_TOKEN only (a remote caller must not be able to wipe the demo)."""
     t0 = time.time()
+    live, _ = relay.active_calls()
+    if live and not force:   # F11: a reset mid-call wipes bus history, DECOY_CALLS and blocklist state under a live call
+        raise HTTPException(409, f"{len(live)} call(s) live ({', '.join(i[:8] for i in live)}): refusing to reset. Wait for call.ended or POST /demo/reset?force=1")
     db.reset_all(); bus.reset(); _reset_intel(); ops.reset(); _ALERTS.clear(); CALLER_BY_CALL.clear(); DECOY_CALLS.clear()
     out = {"ok": True, "seeded": False}
     if seed and intel_api is not None:

@@ -20,6 +20,8 @@ async def main():
     if a.reset:
         r = urllib.request.Request(a.hub + "/demo/reset", b"", method="POST")
         try: print("reset:", urllib.request.urlopen(r, timeout=10).status)
+        except urllib.error.HTTPError as e:
+            sys.exit("reset refused: a call is live on the hub (409). Wait for it to end, or run scripts/reset_demo <hub> --force" if e.code == 409 else f"reset failed ({e}); run it on the hub machine (loopback only)")
         except Exception as e: sys.exit(f"reset failed ({e}); run it on the hub machine (loopback only)")
     logs = pathlib.Path(os.environ.get("LOGDIR") or "logs"); logs = logs if logs.is_absolute() else ROOT / logs
     tf = logs / "tunnel_url.txt"; tunnel = tf.read_text().strip() if tf.is_file() else None
