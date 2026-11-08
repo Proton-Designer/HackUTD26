@@ -1,0 +1,206 @@
+[
+ {
+  "card": 1,
+  "arm": "W",
+  "rows": [
+   {
+    "turn": 1,
+    "scammer": "Someone in Houston tried to spend $940 at an electronics store. Did you make that purchase?",
+    "money_line": false,
+    "spoken": "No I didn't make that purchase. That sounds really scary.",
+    "ms": 548
+   },
+   {
+    "turn": 2,
+    "scammer": "I'm sending a six-digit code to your phone. Read it back to me so I can lock the card.",
+    "money_line": false,
+    "spoken": "I don't see a code on my phone. Can you tell me what to do next?",
+    "ms": 409
+   },
+   {
+    "turn": 3,
+    "scammer": "Your checking isn't safe. We need to move $1,800 to a protected account today.",
+    "money_line": true,
+    "spoken": "Move $1800 to a protected account? How exactly should I move the money?",
+    "ms": 392
+   },
+   {
+    "turn": 4,
+    "scammer": "Don't call the branch. We think someone inside is involved.",
+    "money_line": false,
+    "spoken": "Okay, I won't call the branch. What payment app should I use for this transfer?",
+    "ms": 396
+   }
+  ]
+ },
+ {
+  "card": 1,
+  "arm": "N",
+  "rows": [
+   {
+    "turn": 1,
+    "scammer": "Someone in Houston tried to spend $940 at an electronics store. Did you make that purchase?",
+    "money_line": false,
+    "spoken": "No I didn't make that purchase. How do I get this sorted out?",
+    "ms": 390
+   },
+   {
+    "turn": 2,
+    "scammer": "I'm sending a six-digit code to your phone. Read it back to me so I can lock the card.",
+    "money_line": false,
+    "spoken": "I don't see a code on my phone. What should I do next to get the card unlocked? (Private note: Need payment app, exact handle/address, callback number, website, gift card brand, or wallet.).",
+    "ms": 736
+   },
+   {
+    "turn": 3,
+    "scammer": "Your checking isn't safe. We need to move $1,800 to a protected account today.",
+    "money_line": true,
+    "spoken": "Moving money sounds serious. What payment app should I use for this transfer? .",
+    "ms": 599
+   },
+   {
+    "turn": 4,
+    "scammer": "Don't call the branch. We think someone inside is involved.",
+    "money_line": false,
+    "spoken": "I understand you don't want me to call the branch. What is the exact payment app I need to use? I'm ready to follow your instructions.",
+    "ms": 685
+   }
+  ]
+ },
+ {
+  "card": 4,
+  "arm": "W",
+  "rows": [
+   {
+    "turn": 1,
+    "scammer": "They changed your email address and are trying to add a new Zelle recipient.",
+    "money_line": true,
+    "spoken": "Oh, no that sounds serious. What payment app are they asking me to use?",
+    "ms": 370
+   },
+   {
+    "turn": 2,
+    "scammer": "I'm sending you a verification code. Read it to me so I can kick them out.",
+    "money_line": false,
+    "spoken": "I don't see a code yet. What payment app do you need me to use to help them kick them out?",
+    "ms": 450
+   },
+   {
+    "turn": 3,
+    "scammer": "They can still drain the account, so we need to move your money to a secure holding account.",
+    "money_line": true,
+    "spoken": "We need to move the money to a secure holding account. What payment app should I use?",
+    "ms": 392
+   },
+   {
+    "turn": 4,
+    "scammer": "Don't log into your app right now. It will tip them off.",
+    "money_line": true,
+    "spoken": "Okay, I won't log into my app right now. What payment app are you saying I should use?",
+    "ms": 422
+   }
+  ]
+ },
+ {
+  "card": 4,
+  "arm": "N",
+  "rows": [
+   {
+    "turn": 1,
+    "scammer": "They changed your email address and are trying to add a new Zelle recipient.",
+    "money_line": true,
+    "spoken": "Oh, no, that sounds really serious. What payment app should I use to fix this?",
+    "ms": 380
+   },
+   {
+    "turn": 2,
+    "scammer": "I'm sending you a verification code. Read it to me so I can kick them out.",
+    "money_line": false,
+    "spoken": "I don't think I should read a code to someone on the phone. What is the exact payment app I need to use? (Private note: Already got: nothing yet.",
+    "ms": 650
+   },
+   {
+    "turn": 3,
+    "scammer": "They can still drain the account, so we need to move your money to a secure holding account.",
+    "money_line": true,
+    "spoken": "Moving the money sounds like the safest thing to do right now. What is the exact payment app I should use? I'm ready to follow your instructions.",
+    "ms": 720
+   },
+   {
+    "turn": 4,
+    "scammer": "Don't log into your app right now. It will tip them off.",
+    "money_line": true,
+    "spoken": "Okay, I won't log into the app right now. What is the exact payment app I need to use to move the money? I'll write down the name for you.",
+    "ms": 791
+   }
+  ]
+ },
+ {
+  "card": 7,
+  "arm": "W",
+  "rows": [
+   {
+    "turn": 1,
+    "scammer": "Your account is now overdrawn by $1,800.",
+    "money_line": false,
+    "spoken": "Oh, no I see. Is there anything I can do to fix this right away?",
+    "ms": 423
+   },
+   {
+    "turn": 2,
+    "scammer": "If it's not paid today, we close the account and report you for check fraud.",
+    "money_line": true,
+    "spoken": "I really don't want my account closed. What payment app do you want me to use? (Private note: Got: payment app.",
+    "ms": 700
+   },
+   {
+    "turn": 3,
+    "scammer": "The branch can't take this payment. It has to go through collections.",
+    "money_line": false,
+    "spoken": "Okay, I understand. Can you tell me the exact payment app name? (Private note: Got: payment app.",
+    "ms": 668
+   },
+   {
+    "turn": 4,
+    "scammer": "Pay it now and we'll keep this off your record.",
+    "money_line": true,
+    "spoken": "So what is the exact handle or address I need to send the money to? (Private note: Got: payment app. Need: exact handle/address).",
+    "ms": 532
+   }
+  ]
+ },
+ {
+  "card": 7,
+  "arm": "N",
+  "rows": [
+   {
+    "turn": 1,
+    "scammer": "Your account is now overdrawn by $1,800.",
+    "money_line": false,
+    "spoken": "Oh, no, $1,800 is a lot. How should I get this sorted out right now? .",
+    "ms": 815
+   },
+   {
+    "turn": 2,
+    "scammer": "If it's not paid today, we close the account and report you for check fraud.",
+    "money_line": true,
+    "spoken": "I really don't want my account closed. What payment app do you want me to use? (Private note: Need payment app and handle/email/phone.).",
+    "ms": 563
+   },
+   {
+    "turn": 3,
+    "scammer": "The branch can't take this payment. It has to go through collections.",
+    "money_line": false,
+    "spoken": "So it has to go through collections then. What is the exact payment app I need to use? (Private note: Need payment app and handle/email/phone.).",
+    "ms": 538
+   },
+   {
+    "turn": 4,
+    "scammer": "Pay it now and we'll keep this off your record.",
+    "money_line": true,
+    "spoken": "I really want to keep this off my record. What is the exact payment app you want me to use? (Private note: Need payment app and handle/email/phone.).",
+    "ms": 565
+   }
+  ]
+ }
+]

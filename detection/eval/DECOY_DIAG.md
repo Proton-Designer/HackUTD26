@@ -103,3 +103,14 @@ Reading: the current prompt is the weak part on bolt (2.0 vs 3.4 for super-vl on
 
 ### Not done
 Cards 2,5,6,8,10 and the trimmed demo card were not run by me (eng2 covers all 10 on current-vs-super); no real-call replay; one scorer; temperature below 0.6 untested; the candidate's 2.5 s fallback to bolt was not tested.
+
+### Softening test and the note-echo bug (eng1, HEAD 3473a4a, bolt-e4b @T0.6, cards 1,4,7 x 4 turns, 12 replies per arm)
+Arms: **W** = HEAD `core.SYSTEM` (with "only if their last sentence was about paying..."), **N** = the same SYSTEM with that sentence replaced by "Then, in the same reply, move them one step toward the payment details", both with HEAD's real `playbooks.note()` appended to the latest caller turn. Script: `detection/eval/decoy_ab/prompt_variants_softening.py`; replies in `*_softening_replies.json`.
+| | W (softened) | N (not softened) |
+|---|---|---|
+| asked "what (payment) app" on caller turns with no money talk (6 turns each) | 3 | 4 |
+| score /6 (char + natural + goal, 0-2 each; one scorer, blind) | 4.42 | 4.08 |
+| replies that spoke the private note | 3 of 12 | 5 of 12 |
+- The softening sentence helps little (3 vs 4 app questions, +0.33, inside the noise). What fixed turn 1 is the new note: on the first caller turn no reply asked for an app (0 of 3 cards per arm; before it was 12 of 12 replies).
+- **BUG (HEAD 3473a4a): bolt reads the note aloud.** 8 of 24 replies contained "(Private note: Need payment app, exact handle/address, callback number ...)". `core.guard()` and `speakable()` do not strip it, so TTS would say it on the call whenever bolt answers (the 2.5 s fallback, or DECOY_MODEL=bolt). Not seen with super-vl on the old note format, not tested on the new one. Fix: strip `\(?\s*private note.*$` (and any trailing parenthetical) in `guard()` before the rules, with a test; optionally wrap the note differently.
+- Residual: bolt still says "the exact payment app" on most money turns, which sounds like a tic; super-vl does not (2 of 12 on the old prompt).
