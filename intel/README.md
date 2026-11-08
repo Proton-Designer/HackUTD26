@@ -24,6 +24,9 @@ caller for her. Routing: `intel.store.is_blocked(number) -> (bool, reason)`. Pro
 `intel_api.protection_entries()` / `intel_api.undo_block(token)`. Key: NVIDIA_API_KEY from env or repo-root .env.
 Model: INTEL_MODEL (default nvidia/nemotron-3.5-super-vl-120b-a12b).
 
+Demo values (domain, wallet, callback, numbers) live in intel/demo_config.json; swap with
+BACKFIRE_DEMO_DOMAIN=... BACKFIRE_DEMO_WALLET=... (env) or edit the JSON. Placeholders until the team picks real ones.
+
 Acceptance checklist against a running hub (exit 0 = all pass):
     python -m intel.acceptance --hub http://127.0.0.1:8000 [--token $HUB_TOKEN] [--domain <demo domain>] [--wallet <demo BTC>]
 
