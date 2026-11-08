@@ -142,3 +142,5 @@ nav#tabs button.on{background:#fff;color:#000;border-color:#fff}
 #active:has(#handoffMsg:not([hidden])) .handoff{font-size:1.15rem;padding:12px}
 #active:has(#handoffMsg:not([hidden])) .decoy{font-size:.85rem;padding:8px 12px}
 #active:has(#handoffMsg:not([hidden])) .keep-open{font-size:.72rem}
+
+.tips{margin:0;padding-left:1.2em;font-size:.85rem;color:#c3cad6;line-height:1.4}

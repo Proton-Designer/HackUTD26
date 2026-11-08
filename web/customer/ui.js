@@ -104,7 +104,7 @@
   $("s1on").onclick = () => { store.set("on", "1"); state.guardOn = true; store.set("done", "1"); setup(2); };
   $("s2skip").onclick = () => toDns("Backfire is on. Scammers will hear a synthetic voice. You can set up your voice later in Protection.");
   $("s2agree").onclick = () => { $("paragraph").textContent = newParagraph(); resetRec(); setup("rec"); };
-  $("recSkip").onclick = () => { stopMeter(); if (rec) { discard = true; rec.stop(); } toDns("Backfire is on. Scammers will hear a synthetic voice. You can set up your voice later in Protection."); };
+  $("recSkip").onclick = () => { if (lowQ) { lowQ = false; toDns("Your voice is set up. Backfire is on. It keeps only a short voice sample, used only if you press Scammer Get Scammed. You can delete it any time in Protection."); return; } stopMeter(); if (rec) { discard = true; rec.stop(); } toDns("Backfire is on. Scammers will hear a synthetic voice. You can set up your voice later in Protection."); };
   $("s3done").onclick = () => { view("callView"); applyGuard(); if (BF.pendingStart) { const f = BF.pendingStart; BF.pendingStart = null; f(); } };
   $("voiceSetup").onclick = () => setup(2);
   $("dnsOpen").onclick = () => { state.fromSettings = true; setup("dns"); };
@@ -144,21 +144,21 @@
 
   // ---- recording: MediaRecorder, 30-60 s, live level meter, review + re-record ----
   const MIN_S = 3, MAX_S = 60;   // Stop works after ~3 s; 60 s auto-stop
-  let rec = null, chunks = [], discard = false, blob = null, t0 = 0, tick = null, actx = null, raf = 0;
+  let lowQ = false, rec = null, chunks = [], discard = false, blob = null, t0 = 0, tick = null, actx = null, raf = 0;
   const mmss = s => Math.floor(s / 60) + ":" + String(Math.floor(s % 60)).padStart(2, "0");
   function stopMeter() { clearInterval(tick); cancelAnimationFrame(raf); $("recLevel").style.width = "0%"; try { actx && actx.close(); } catch (e) {} actx = null; }
-  function resetRec() { stopMeter(); blob = null; chunks = []; $("recTime").textContent = "0:00"; $("recBtn").hidden = false; $("recBtn").disabled = false; $("recBtn").textContent = "● Start recording"; $("recReview").hidden = true; $("recStatus").textContent = ""; $("recSkip").hidden = false; }
+  function resetRec() { lowQ = false; $("recSkip").textContent = "Skip, use a synthetic voice"; stopMeter(); blob = null; chunks = []; $("recTime").textContent = "0:00"; $("recBtn").hidden = false; $("recBtn").disabled = false; $("recBtn").textContent = "● Start recording"; $("recReview").hidden = true; $("recStatus").textContent = ""; $("recSkip").hidden = false; }
   const b64 = blob => new Promise(res => { const r = new FileReader(); r.onload = () => res(String(r.result).split(",")[1] || ""); r.readAsDataURL(blob); });
   function busyMsg(t) { const s = $("recStatus"); s.textContent = ""; const i = document.createElement("span"); i.className = "spin"; i.setAttribute("aria-hidden", "true"); s.append(i, document.createTextNode(" " + t)); }
   async function enroll(b) {
     busyMsg("Saving your voice…"); $("recSave").disabled = true; $("recAgain").disabled = true; $("recSkip").disabled = true;
     const done = () => { $("recSave").disabled = false; $("recAgain").disabled = false; $("recSkip").disabled = false; };
     try {
-      let voice_id;
+      let voice_id, quality, above4k;
       if (HUB) {
         const body = { recording: await b64(b), mime: (b.type || "audio/webm").split(";")[0], consent_version: CONSENT_VERSION };
         const r = await Promise.race([hub("POST", "/voice/enroll", body), new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), 30000))]);
-        voice_id = r && r.voice_id;
+        voice_id = r && r.voice_id; quality = r && r.quality; above4k = r && r.above_4k_pct;
       } else voice_id = "v_simulated_" + Math.random().toString(36).slice(2, 8);   // no hub configured: simulated
       if (!voice_id) {                                      // {voice_id:null, fallback:"synthetic"}: the voice service is not connected. Never claim she is enrolled.
         state.voiceId = null; store.set("voice", null); done();
@@ -166,7 +166,12 @@
         return;
       }
       state.voiceId = voice_id; store.set("voice", voice_id); done();
-      toDns("Your voice is set up" + (HUB ? "" : " (simulated)") + ". Backfire is on. It keeps only a short voice sample, used only if you press Scammer Get Scammed. You can delete it any time in Protection.");
+      if (quality && quality !== "ok") {                       // the hub graded the recording as poor: offer a re-record (the saved sample still works)
+        lowQ = true; const why = String(quality).replace(/^RE-RECORD:?\s*/i, "").trim();
+        $("recStatus").textContent = "Saved, but the recording sounds like phone quality" + (why ? " (" + why + ")" : "") + (above4k != null ? ", " + above4k + "% of the sound above 4 kHz" : "") + ". For a closer match, record again in a quiet room.";
+        $("recSkip").hidden = false; $("recSkip").textContent = "Keep this voice and continue"; return;
+      }
+      toDns("Your voice is set up" + (HUB ? "" : " (simulated)") + (quality === "ok" ? " (recording quality: good)" : "") + ". Backfire is on. It keeps only a short voice sample, used only if you press Scammer Get Scammed. You can delete it any time in Protection.");
     } catch (e) {
       console.log("[backfire] enroll failed", String(e)); done();
       $("recStatus").textContent = /\b401\b/.test(String(e)) ? "Please pair this phone first, then try again." : "Your voice wasn't saved. Press Save to try again, or skip to use a synthetic voice.";   // handled errors stay out of Maria's face; BF.onUnauthorized shows the pair screen itself
@@ -178,10 +183,10 @@
     if (rec) { if ((Date.now() - t0) / 1000 >= MIN_S) rec.stop(); return; }   // second press = stop
     try {
       if (!navigator.mediaDevices) throw new Error("no mic API");
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1, sampleRate: 48000 } });
       chunks = []; blob = null;
       const mime = ["audio/webm;codecs=opus", "audio/mp4", "audio/ogg"].find(t => { try { return MediaRecorder.isTypeSupported(t); } catch (e) { return false; } });   // iOS Safari records audio/mp4
-      rec = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+      rec = mime ? new MediaRecorder(stream, { mimeType: mime, audioBitsPerSecond: 128000 }) : new MediaRecorder(stream, { audioBitsPerSecond: 128000 });
       rec.ondataavailable = e => chunks.push(e.data);
       rec.onstop = () => {
         stream.getTracks().forEach(t => t.stop()); stopMeter(); const r = rec; rec = null;
