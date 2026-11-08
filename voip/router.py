@@ -64,7 +64,7 @@ def maria_sip_uri():
     u = os.environ.get("TELNYX_SIP_USER")
     return f"sip:{u}@sip.telnyx.com" if u else None
 
-for _v in ("TELNYX_CRED_CONNECTION_ID", "TELNYX_SIP_USER", "TELNYX_API_KEY"):
+for _v in ("TELNYX_CALL_CONTROL_APP_ID", "TELNYX_SIP_USER", "TELNYX_API_KEY"):
     if not os.environ.get(_v): log.warning("voip: %s not set; Maria cannot be dialed / Telnyx commands will fail (fail open)", _v)
 
 async def _safe(coro, what, sim=False):
@@ -121,10 +121,10 @@ async def on_answered(p):
     if role == "caller":
         conf = await _safe(telnyx.create_conference(st["caller_ccid"], f"bf-{sid[:12]}"), "create_conference", sim)
         st["conf_id"] = ((conf or {}).get("data") or {}).get("id")
-        frm = os.environ.get("TELNYX_FROM_NUMBER") or st["from"]  # UNVERIFIED which 'from' Telnyx accepts for SIP dial
-        conn, to = os.environ.get("TELNYX_CRED_CONNECTION_ID"), maria_sip_uri()
+        frm = os.environ.get("TELNYX_FROM_NUMBER") or os.environ.get("TELNYX_SCAM_LINE") or st["from"]  # UNVERIFIED which 'from' Telnyx accepts for SIP dial
+        conn, to = os.environ.get("TELNYX_CALL_CONTROL_APP_ID"), maria_sip_uri()   # POST /calls needs the Call Control App id (live: cred-connection id -> 422 10015)
         if not (conn and to) and not sim:
-            log.error("cannot dial Maria: TELNYX_CRED_CONNECTION_ID/TELNYX_SIP_USER missing"); return
+            log.error("cannot dial Maria: TELNYX_CALL_CONTROL_APP_ID/TELNYX_SIP_USER missing"); return
         r = await _safe(telnyx.dial({"connection_id": conn, "to": to, "from": frm,
                                      "client_state": _cs(sid=sid, role="maria"), "timeout_secs": 40}), "dial maria", sim)
         st["maria_ccid"] = ((r or {}).get("data") or {}).get("call_control_id")
@@ -162,6 +162,15 @@ async def webhook(req: Request):
     try:
         ev = json.loads(raw)["data"]; et, p = ev["event_type"], ev["payload"]
         sim = sim or is_sim(p.get("call_control_id"))
+        if et == "call.initiated" and not sim and not os.environ.get("TELNYX_PUBLIC_KEY"):
+            # unsigned mode: anyone with the tunnel URL could forge call.initiated. Verify the call exists on our account; fail closed.
+            try:
+                d = (await telnyx.get_call(p.get("call_control_id", ""))).get("data", {})
+                if not d.get("is_alive", True): raise telnyx.TelnyxError("call not alive")
+            except Exception as e:
+                log.warning("unsigned call.initiated rejected: call not verifiable (%s)", e)
+                from fastapi.responses import JSONResponse
+                return JSONResponse({"ok": False, "error": "unverified call"}, status_code=403)
         if et != "call.initiated":   # sim and real events may never act on each other's calls
             cs_sid = _cs_load(p.get("client_state")).get("sid") or p.get("call_session_id")
             known = CALLS.get(cs_sid)
@@ -309,9 +318,9 @@ async def restore(sid):
     if st.get("maria_alive", True) and st.get("maria_ccid"):
         if st.get("conf_id"): await _safe(telnyx.join_conference(st["conf_id"], st["maria_ccid"]), "rejoin maria", sim)
     else:   # her leg is gone: ring her again; on_answered(role=maria) joins her to the conference
-        conn, to = os.environ.get("TELNYX_CRED_CONNECTION_ID"), maria_sip_uri()
+        conn, to = os.environ.get("TELNYX_CALL_CONTROL_APP_ID"), maria_sip_uri()   # POST /calls needs the Call Control App id (live: cred-connection id -> 422 10015)
         if (conn and to) or sim:
-            frm = os.environ.get("TELNYX_FROM_NUMBER") or st["from"]
+            frm = os.environ.get("TELNYX_FROM_NUMBER") or os.environ.get("TELNYX_SCAM_LINE") or st["from"]
             r = await _safe(telnyx.dial({"connection_id": conn, "to": to, "from": frm, "client_state": _cs(sid=sid, role="maria"), "timeout_secs": 40}), "re-dial maria", sim)
             st["maria_ccid"] = ((r or {}).get("data") or {}).get("call_control_id") or st.get("maria_ccid")
     emit("handoff.restored", sid, {"restore_deadline": st["restore_deadline"]})

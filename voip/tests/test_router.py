@@ -195,7 +195,7 @@ def test_restore_redials_when_leg_gone(monkeypatch):
     fr = FakeRelay(); monkeypatch.setattr(R, "_hub_relay", lambda: fr)
     dialed = []
     async def dial(body): dialed.append(body); return {"data": {"call_control_id": "v3:newmaria123456"}}
-    monkeypatch.setattr(telnyx, "dial", dial); monkeypatch.setenv("TELNYX_CRED_CONNECTION_ID", "c"); monkeypatch.setenv("TELNYX_SIP_USER", "u")
+    monkeypatch.setattr(telnyx, "dial", dial); monkeypatch.setenv("TELNYX_CALL_CONTROL_APP_ID", "c"); monkeypatch.setenv("TELNYX_SIP_USER", "u")
     sid = "sess-r4-1234567"; R.CALLS[sid] = _state(sim=False); R.CALLS[sid].update(handed_off=True, maria_alive=False, restore_deadline=time.time() + 20)
     assert asyncio.run(R.restore(sid)) is True
     assert dialed and dialed[0]["to"] == "sip:u@sip.telnyx.com" and R.CALLS[sid]["maria_ccid"] == "v3:newmaria123456"
@@ -211,3 +211,10 @@ def test_webrtc_token_sip_login_fallback(monkeypatch, client):
     monkeypatch.setattr(R, "_require_device", lambda request=None: None)
     app = client.app if hasattr(client, "app") else None
     assert R.os.environ["TELNYX_SIP_USER"] == "u1"
+
+def test_unsigned_initiated_requires_live_call(monkeypatch, client):
+    monkeypatch.delenv("TELNYX_PUBLIC_KEY", raising=False); monkeypatch.setenv("VOIP_ALLOW_UNSIGNED", "1")
+    async def nope(c): raise telnyx.TelnyxError("404")
+    monkeypatch.setattr(telnyx, "get_call", nope)
+    body = {"data": {"event_type": "call.initiated", "payload": {"direction": "incoming", "call_control_id": "v2:forged12345", "call_session_id": "sess-forged-1", "from": "+15555550111"}}}
+    assert client.post("/telnyx/webhook", json=body).status_code == 403

@@ -13,6 +13,15 @@ async def _post(path: str, body: dict | None = None, text: bool = False):
     if r.status_code >= 400: raise TelnyxError(f"{path} -> {r.status_code} {r.text[:200]}")
     return r.text if text else r.json()
 
+async def get_call(ccid):
+    """GET /calls/{ccid}: exists only for a real, live call on OUR account (compensating control when webhooks are unsigned)."""
+    key = os.environ.get("TELNYX_API_KEY")
+    if not key: raise TelnyxError("TELNYX_API_KEY not set")
+    async with httpx.AsyncClient(timeout=5) as c:
+        r = await c.get(f"{API}/calls/{quote(ccid, safe='')}", headers={"Authorization": f"Bearer {key}"})
+    if r.status_code >= 400: raise TelnyxError(f"get_call -> {r.status_code}")
+    return r.json()
+
 def _id(x: str) -> str: return quote(x, safe="")
 
 async def answer(ccid, body=None): return await _post(f"/calls/{_id(ccid)}/actions/answer", body)
