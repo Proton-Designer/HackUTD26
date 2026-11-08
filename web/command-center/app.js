@@ -122,7 +122,8 @@
       calls: new Map(), focus: null,
       engine: null, model: '', voice: null,
       arts: new Map(), artOrder: [], orgs: [], tags: [], loose: [], instructions: [], standIn: false,
-      trace: [], traceCall: null, proposed: new Set(), inputLogged: new Set(), agent: null,
+      trace: [], traceCall: null, proposed: new Set(), inputLogged: new Set(), agent: null, agentN: 0,
+      pipeSeq: {}, lastMs: 0,
       actions: new Map(), actOrder: [],
       blocks: [], rejects: [],
       campaigns: new Map(), campaignId: null, immunityShown: 0, immunityBase: null,
@@ -350,7 +351,7 @@
       c.decision = String(d.decision || '').toUpperCase();
       c.reason = d.reason || '';
       if (c.decision.startsWith('BLOCKED')) {
-        S.rejects.push({ seq: S.seq, number: c.from, reason: c.reason });
+        S.rejects.push({ seq: S.seq, ms: S.lastMs, number: c.from, reason: c.reason });
         stage('immune', 'callback rejected');
         head(`<em>${esc(fmtPhone(c.from))}</em> called back. Rejected before it rang.`, c.reason || 'Confirmed scammer', 'win');
         S.flashSeq = S.seq;
@@ -505,6 +506,7 @@
       traceCall(e.call_id);
       const engine = String(d.engine || 'nemotron');
       S.agent = { engine, model: d.model || '', error: d.error || '' };
+      if (num(d.n_proposals) > 0) S.agentN = num(d.n_proposals);
       const fallback = /fallback/i.test(engine), mock = /mock/i.test(engine);
       const k = fallback ? 'FALLBACK' : mock ? 'MOCK LLM' : 'NEMOTRON';
       const counts = [d.n_proposals != null ? `${d.n_proposals} proposals` : '', num(d.n_baseline_added) > 0 ? `+${d.n_baseline_added} from baseline rule` : ''].filter(Boolean).join(' ');
@@ -516,6 +518,7 @@
       traceCall(e.call_id);
       const acts = arr(d.actions).filter(a => a && typeof a === 'object');
       S.proposed.add(e.call_id || '_');
+      S.agentN = acts.length || S.agentN;
       const untrusted = acts.filter(a => /instruction_to_ai/.test(a.target_source || '')).length;
       const kinds = acts.map(a => esc(a.kind)).join(', ');
       trace('propose', 'PROPOSED', `${acts.length} action${acts.length === 1 ? '' : 's'} <span class="res">· ${kinds}${untrusted ? ` · ${untrusted} from an instruction to the AI` : ''}</span>`);
@@ -542,7 +545,7 @@
       const n = normAction(d, e.call_id);
       const prev = S.actions.get(n.id);
       if (!prev) {
-        n.seq = S.seq;
+        n.seq = S.seq; n.ms = S.lastMs;
         S.actions.set(n.id, n); S.actOrder.push(n.id);
         // After an intel.proposals summary, each action gets one GATE line; otherwise PROPOSE + GATE
         if (!S.proposed.has(e.call_id || '_')) trace('propose', 'PROPOSE', `${esc(n.kind)}(${esc(shortVal(n.target))}) <span class="res">· ${esc(scopeLabel(n.scope))}</span>`);
@@ -565,7 +568,11 @@
         if (d.undo_token) prev.undo = d.undo_token;
         if (d.reason || d.rule) prev.reason = d.reason || d.rule;
         if (d.gate_status) prev.gate = d.gate_status;
-        if (before !== prev.status) { prev.seq = S.seq; prev.ui = ''; gateTrace(prev, true); }
+        if (before !== prev.status) {
+          prev.seq = S.seq; prev.ui = '';
+          if (prev.status === 'applied') prev.appliedMs = S.lastMs;
+          gateTrace(prev, true);
+        }
       }
       afterActions();
     },
@@ -575,7 +582,7 @@
       const scope = /campaign/.test(s) ? 'campaign' : /network|all/.test(s) ? 'network' : 'her';
       const prev = d.undo_token ? S.blocks.find(b => b.undo === d.undo_token) : null;
       if (prev) { prev.active = d.active !== false; prev.seq = S.seq; }
-      else S.blocks.push({ seq: S.seq, call: e.call_id, number: d.number, scope, undo: d.undo_token || '', reason: d.reason || '', active: d.active !== false });
+      else S.blocks.push({ seq: S.seq, ms: S.lastMs, call: e.call_id, number: d.number, scope, undo: d.undo_token || '', reason: d.reason || '', active: d.active !== false });
       stage('burn', burnSub());
       dirty('auto');
     },
@@ -723,11 +730,15 @@
     S.seq++; S.count++;
     const h = H[e.type];
     if (!h) return;
+    S.lastMs = Number.isFinite(e.ms) ? e.ms : Date.now();
     try {
       h(e, e.data, CALL_EVENTS.has(e.type) ? getCall(e.call_id) : null);
     } catch (err) {
       console.warn('[command-center] could not apply event', e, err); // fail open: one bad event never kills the screen
     }
+    // Agent pipeline: remember when each stage last moved, so its link animates and its node lights up
+    const stageOf = { 'artifacts.extracted': 'input', 'intel.plan': 'input', 'intel.lookup': 'lookups', 'intel.agent': 'agent', 'intel.proposals': 'agent', 'intel.action': 'gate', 'injection.denied': 'gate' }[e.type];
+    if (stageOf) { S.pipeSeq[stageOf] = S.seq; dirty('pipeline'); }
   }
 
   // ---------- approve (one click) ----------
@@ -754,7 +765,9 @@
     if (S !== st) return; // replay restarted while the request was in flight
     st.seq++;
     a.ui = ''; a.note = note;
-    if (a.status === 'queued') { a.status = 'applied'; a.seq = st.seq; gateTrace(a); }
+    if (a.status === 'queued') { a.status = 'applied'; a.seq = st.seq; a.appliedMs = Date.now(); gateTrace(a); }
+    st.pipeSeq.gate = st.seq;
+    dirty('pipeline');
     afterActions();
     stage('immune', a.label.toLowerCase().includes('network') ? 'network-wide' : 'approved');
     head(`Approved: <em>${esc(a.label)}</em>`, `Simulated network action applied${a.expiry ? ` · ${a.expiry} expiry` : ''} · reversible`, 'win');
@@ -932,6 +945,53 @@
       body.innerHTML = `<div class="arts">${cards}</div>${tags ? `<div class="art-tags">${tags}</div>` : ''}`;
     },
 
+    // Agent pipeline (after 21st.dev "AI Agent Pipeline", MIT, rebuilt in plain JS with our real stages):
+    // artifacts → lookups → Nemotron → policy gate → done / waiting / denied
+    pipeline() {
+      const body = bodyOf('pipeline');
+      const ps = S.pipeSeq;
+      const order = ['input', 'lookups', 'agent', 'gate'];
+      const latest = order.reduce((best, k) => ((ps[k] || 0) > (ps[best] || 0) ? k : best), 'input');
+      const ag = S.agent;
+      const engineWord = !ag ? 'Nemotron' : /fallback/i.test(ag.engine) ? 'Fallback rules' : /mock/i.test(ag.engine) ? 'Mock LLM' : 'Nemotron';
+      $('pipe-meta').innerHTML = `<span class="pdot${isLive() ? ' live' : ''}"></span>${isLive() ? 'live' : 'replay'} · ${esc(ag && ag.model ? ag.model.replace(/^nvidia\//, '') : engineWord)}`;
+      if (!order.some(k => ps[k])) {
+        body.innerHTML = empty('Lights up when the decoy hands over what it extracted: real lookups, then Nemotron, then the policy gate.');
+        return;
+      }
+      const arts = S.artOrder.map(k => S.arts.get(k));
+      const looks = arts.flatMap(a => a.lookups);
+      const pending = arts.filter(a => LOOKUPABLE.has(a.type) && !a.lookups.length).length;
+      const tool = re => looks.filter(l => re.test(l.tool)).length;
+      const tools = [['RDAP', tool(/rdap|whois/)], ['chain', tool(IS_CHAIN)], ['allowlist', tool(/allow/)]].filter(t => t[1]);
+      const acts = S.actOrder.map(id => S.actions.get(id));
+      const count = st => acts.filter(a => a.status === st).length;
+      const denied = S.denied.filter(d => d.kind !== 'guardrail').length;
+      const g = { auto: count('auto') + count('held'), waiting: count('queued'), applied: count('applied'), denied };
+      const state = k => (!ps[k] ? 'idle' : k === latest ? 'now' : 'done');
+      const link = k => `<i class="pc${ps[k] ? ' on' : ''}${(ps[k] || 0) > (painted.pipeline ?? 0) ? ' flow' : ''}" aria-hidden="true"></i>`;
+      const node = (k, label, value, sub, extra) => `<div class="pn ${state(k)}${extra || ''}"><b>${label}</b><span class="pv">${value}</span><span class="ps">${sub}</span></div>`;
+      const agentVal = S.agentN ? `${S.agentN} proposals` : ps.agent ? 'planned' : ps.lookups && !pending ? 'thinking…' : '—';
+      const outs = [
+        `<span class="ok">✓ ${g.auto} done automatically</span>`,
+        `<span class="wait">⏳ ${g.waiting} waiting for approval${g.applied ? ` · ${g.applied} approved` : ''}</span>`,
+        `<span class="no">⛔ ${g.denied} denied</span>`,
+      ].join('');
+      const lastTr = [...S.trace].reverse().find(t => !t.sep);
+      body.innerHTML = '<div class="pipe">'
+        + node('input', 'Input', `${arts.length} artifact${arts.length === 1 ? '' : 's'}`, S.standIn ? 'demo stand-in' : 'typed, no transcript')
+        + link('lookups')
+        + node('lookups', 'Lookups', `${looks.length} done`, pending ? `${pending} pending` : tools.map(t => `${t[0]} ${t[1]}`).join(' · ') || 'public records')
+        + link('agent')
+        + node('agent', esc(engineWord), agentVal, ag && /fallback|mock/i.test(ag.engine) ? esc(ag.engine) : 'plans from the evidence', ag && /fallback|mock/i.test(ag.engine) ? ' warn' : ' nv')
+        + link('gate')
+        + node('gate', 'Policy gate', `${g.auto + g.waiting + g.applied + g.denied} decisions`, 'code, not the model')
+        + link('gate')
+        + `<div class="pout${ps.gate ? '' : ' idle'}">${outs}</div>`
+        + '</div>'
+        + (lastTr ? `<div class="plog${lastTr.seq > (painted.pipeline ?? 0) ? ' fresh' : ''}"><span class="pk">${lastTr.k}</span> ${lastTr.html}</div>` : '');
+    },
+
     trace() {
       const body = bodyOf('trace');
       if (!S.trace.length) { body.innerHTML = empty('The intel agent starts when artifacts arrive. It gets typed values, never the transcript, and can only propose actions.'); return; }
@@ -962,13 +1022,21 @@
       }).join('');
     },
 
+    // "What we did", as an animated list (after Magic UI's Animated List, MIT): newest card drops in on top,
+    // older cards glide down (FLIP), each with an icon so the kind reads without color
     auto() {
       const body = bodyOf('auto');
       const rows = [];
       const used = new Set();
+      const ICON = k => (/block_caller|block_for/.test(k) ? ['🛡', 'shield'] : /campaign/.test(k) ? ['🔗', 'link'] : /callback_protection/.test(k) ? ['📞', 'warn'] : ['✓', 'shield']);
       for (const id of S.actOrder) {
         const a = S.actions.get(id);
         const blocks = blocksFor(a, used); // claims the blocklist rows this action produced
+        if (a.status === 'applied') {
+          // an analyst-approved network action joins the story of what we did
+          rows.push({ key: `${a.id}:applied`, seq: a.seq, ms: a.appliedMs, cls: 'net', icon: '🌐', tone: 'net', label: a.label, tgt: `${fmtVal(a.target)} · simulated: applied`, scope: scopeLabel(a.scope), undo: '' });
+          continue;
+        }
         if (a.status !== 'auto' && a.status !== 'held') continue;
         const live = blocks.filter(b => b.active);
         const undone = blocks.length && !live.length;
@@ -976,24 +1044,44 @@
         if (/campaign/.test(a.kind) && live.length) tgt += ` · blocks ${live.map(b => fmtPhone(b.number)).join(', ')} before ring`;
         if (a.status === 'held' && a.reason) tgt += ` · ${a.reason}`;
         const forHer = scopeKey(a.scope) === 'her';
+        const [icon, tone] = a.status === 'held' ? ['⏸', 'warn'] : ICON(a.kind);
         rows.push({
-          seq: a.seq, cls: a.status === 'held' ? 'held' : undone ? 'undone' : '', ic: a.status === 'held' ? '⏸' : '✓',
+          key: a.id, seq: a.seq, ms: a.ms, cls: a.status === 'held' ? 'held' : undone ? 'undone' : '', icon, tone,
           label: a.status === 'held' ? `Held: ${a.label}` : a.label, tgt, scope: scopeLabel(a.scope),
           // Maria's side of it, in her words: it's in her protection log and she can undo it there
           undo: undone ? 'undone' : forHer && (a.undo || blocks.length) ? 'her-log' : '',
         });
       }
-      const BL = { her: ['Blocked for Maria', 'Maria only'], campaign: ['Blocked before ring for Backfire users', 'Backfire users'], network: ['Blocked network-wide (simulated)', 'All customers'] };
+      const BL = { her: ['Blocked for Maria', 'Maria only', '🛡', 'shield'], campaign: ['Blocked before ring for Backfire users', 'Backfire users', '🔗', 'link'], network: ['Blocked network-wide (simulated)', 'All customers', '🌐', 'net'] };
       for (const b of S.blocks) {
         if (used.has(b)) continue;
-        rows.push({ seq: b.seq, cls: b.active ? '' : 'undone', ic: '✓', label: BL[b.scope][0], tgt: `${fmtPhone(b.number)}${b.reason ? ` · ${b.reason}` : ''}`, scope: BL[b.scope][1], undo: !b.active ? 'undone' : b.scope === 'her' ? 'her-log' : '' });
+        const [label, scope, icon, tone] = BL[b.scope];
+        rows.push({ key: `blk:${b.undo || b.seq}`, seq: b.seq, ms: b.ms, cls: b.active ? '' : 'undone', icon, tone, label, tgt: `${fmtPhone(b.number)}${b.reason ? ` · ${b.reason}` : ''}`, scope, undo: !b.active ? 'undone' : b.scope === 'her' ? 'her-log' : '' });
       }
-      for (const r of S.rejects) rows.push({ seq: r.seq, cls: 'reject', ic: '⛔', label: 'Callback rejected before it rang', tgt: `${fmtPhone(r.number)}${r.reason ? ` · ${r.reason}` : ''}`, scope: 'Maria only', undo: '' });
+      for (const r of S.rejects) rows.push({ key: `rej:${r.seq}`, seq: r.seq, ms: r.ms, cls: 'reject', icon: '⛔', tone: 'reject', label: 'Callback rejected before it rang', tgt: `${fmtPhone(r.number)}${r.reason ? ` · ${r.reason}` : ''}`, scope: 'Maria only', undo: '' });
       if (!rows.length) { body.innerHTML = empty('Blocks for Maria, campaign links and Scam Callback Protection warnings land here with no human in the loop.'); return; }
       rows.sort((x, y) => y.seq - x.seq);
       const UNDO = { undone: 'Maria undid this', 'her-log': "in Maria's protection log · she can undo" };
-      body.innerHTML = `<div class="list">${rows.map(r => `<div class="act ${r.cls}${fresh('auto', r.seq)}"><span class="ic">${r.ic}</span><span class="lbl">${esc(r.label)}</span><span class="scope">${esc(r.scope)}</span>`
-        + `<span class="tgt" title="${esc(r.tgt)}">${esc(r.tgt)}${r.undo ? ` <span class="undo">· ${UNDO[r.undo]}</span>` : ''}</span></div>`).join('')}</div>`;
+      // FLIP, step 1: where each card is now
+      const before = new Map([...body.querySelectorAll('[data-key]')].map(el => [el.dataset.key, el.getBoundingClientRect().top]));
+      body.innerHTML = `<div class="list">${rows.map(r => `<div class="act ${r.cls}${fresh('auto', r.seq)}" data-key="${esc(r.key)}">`
+        + `<span class="bub ${r.tone}" aria-hidden="true">${r.icon}</span>`
+        + `<div class="txt"><div class="lbl">${esc(r.label)}</div><div class="tgt" title="${esc(r.tgt)}">${esc(r.tgt)}${r.undo ? ` <span class="undo">· ${UNDO[r.undo]}</span>` : ''}</div></div>`
+        + `<div class="when">${esc(r.scope)}${Number.isFinite(r.ms) && r.ms > 1e12 ? `<span>${esc(fmtTime(r.ms))}</span>` : ''}</div></div>`).join('')}</div>`;
+      // FLIP, step 2: start each surviving card where it was, then let it glide to its new place
+      if (before.size && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        for (const el of body.querySelectorAll('[data-key]')) {
+          const was = before.get(el.dataset.key);
+          if (was == null) continue;
+          const dy = was - el.getBoundingClientRect().top;
+          if (!dy) continue;
+          el.style.transition = 'none';
+          el.style.transform = `translateY(${dy}px)`;
+          void el.offsetHeight;
+          el.style.transition = 'transform 0.45s cubic-bezier(0.2, 0.9, 0.3, 1)';
+          el.style.transform = '';
+        }
+      }
     },
 
     denied() {
@@ -1099,10 +1187,10 @@
   const STEP_CHAPTER = { detect: 'call', handoff: 'call', verify: 'evidence', burn: 'act', immune: 'act' };
   const CHAPTER_NAME = { call: 'the call', evidence: 'what the decoy got', act: 'what we did' };
   const LAYOUTS = {
-    all: { cols: [1, 1.25, 1.05], stacks: [[['p-risk', 0], ['p-feed', 1]], [['p-artifacts', 1.7], ['p-trace', 1]], [['p-queue', 0], ['p-auto', 1], ['p-denied', 1]]] },
-    agent: { cols: [1.25, 1], stacks: [[['p-trace', 1]], [['p-artifacts', 1.3], ['p-denied', 1]]] },
+    all: { cols: [1, 1.25, 1.05], stacks: [[['p-risk', 0], ['p-feed', 1]], [['p-artifacts', 1.5], ['p-pipeline', 0], ['p-trace', 1]], [['p-queue', 0], ['p-auto', 1], ['p-denied', 1]]] },
+    agent: { cols: [1.25, 1], stacks: [[['p-pipeline', 0], ['p-trace', 1]], [['p-artifacts', 1.3], ['p-denied', 1]]] },
     'story:call': { cols: [1.6, 1], stacks: [[['p-feed', 1]], [['p-risk', 1]]] },
-    'story:evidence': { cols: [1.45, 1], stacks: [[['p-artifacts', 1]], [['p-trace', 1]]] },
+    'story:evidence': { cols: [1.3, 1], stacks: [[['p-artifacts', 1]], [['p-pipeline', 0], ['p-trace', 1]]] },
     'story:act': { cols: [1.1, 1], stacks: [[['p-auto', 1]], [['p-queue', 0], ['p-denied', 1]]] },
   };
   const VIEW = { name: 'story', pinned: null, key: '', shown: '', shownAt: 0 };

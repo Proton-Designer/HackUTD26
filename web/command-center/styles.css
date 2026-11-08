@@ -181,8 +181,9 @@ h1, h2, p { margin: 0; }
 .app[data-view="story"] .art { padding: var(--s3) var(--s4); }
 .app[data-view="story"] .trace { gap: var(--s1); }
 .app[data-view="story"] .tr { grid-template-columns: 26px 100px minmax(0, 1fr); }
-.app[data-view="story"] .list { gap: var(--s4); }
-.app[data-view="story"] .act { grid-template-columns: 26px minmax(0, 1fr) auto; }
+.app[data-view="story"] .list { gap: var(--s3); }
+.app[data-view="story"] .act { padding: var(--s3) var(--s4); gap: var(--s4); }
+.app[data-view="story"] .act .bub { width: 46px; height: 46px; font-size: 22px; border-radius: 12px; }
 .app[data-view="story"] .btn-approve { min-height: 52px; }
 .app[data-view="story"] .q { padding: var(--s3) 0; }
 
@@ -315,17 +316,69 @@ h1, h2, p { margin: 0; }
 .applied small { display: block; font-size: var(--f12); color: var(--warn); text-transform: uppercase; letter-spacing: 0.04em; }
 
 /* ---------- done automatically + denied ---------- */
+/* "What we did" as stacked cards (after Magic UI's Animated List) */
 .list { display: flex; flex-direction: column; gap: var(--s2); }
-.act { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; gap: 2px var(--s2); align-items: baseline; }
-.act .ic { color: var(--ok-text); font-weight: 700; }
-.act .lbl { font-size: var(--f14); font-weight: 700; }
-.act .tgt { grid-column: 2 / -1; font-size: var(--f12); color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.act .scope { font-size: var(--f12); color: var(--text-3); white-space: nowrap; }
-.act.reject { background: var(--accent-tint); border-radius: 8px; padding: 6px 8px; margin: 0 -8px; }
-.act.reject .ic, .act.reject .lbl { color: var(--accent-text); }
-.act.held .ic, .act.held .lbl { color: var(--warn); }
-.act.undone .ic, .act.undone .lbl, .act.undone .tgt { color: var(--text-3); text-decoration: line-through; }
-.undo { color: var(--text-3); font-family: var(--mono); }
+.act { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--s3); align-items: center; background: var(--surface-2); border-radius: 12px; padding: var(--s2) var(--s3); will-change: transform; }
+.act .bub { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; font-size: 18px; line-height: 1; background: var(--line); }
+.act .bub.shield { background: rgba(31, 166, 74, 0.22); }
+.act .bub.link { background: var(--decoy-tint); }
+.act .bub.warn { background: var(--warn-tint); }
+.act .bub.net { background: rgba(90, 160, 255, 0.18); }
+.act .bub.reject { background: var(--accent); }
+.act .txt { min-width: 0; }
+.act .lbl { font-size: var(--f14); font-weight: 700; line-height: 1.25; }
+.act .tgt { font-size: var(--f12); color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.act .when { font-size: var(--f12); color: var(--text-3); text-align: right; white-space: nowrap; line-height: 1.35; }
+.act .when span { display: block; font-family: var(--mono); }
+.act.reject { background: var(--accent-tint); }
+.act.reject .lbl { color: var(--accent-text); }
+.act.held .lbl { color: var(--warn); }
+.act.undone .lbl, .act.undone .tgt { color: var(--text-3); text-decoration: line-through; }
+.act.undone .bub { opacity: 0.5; }
+.act.fresh { animation: drop 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.25); } /* the new card drops in on top */
+@keyframes drop { from { transform: translateY(-18px) scale(0.95); background-color: rgba(255, 255, 255, 0.12); } }
+.undo { color: var(--text-3); }
+
+/* ---------- agent pipeline (after 21st.dev "AI Agent Pipeline") ---------- */
+#pipe-meta { display: inline-flex; align-items: center; gap: 6px; }
+.pdot { width: 7px; height: 7px; border-radius: 50%; background: var(--warn); display: inline-block; }
+.pdot.live { background: var(--ok); }
+.pipe { display: grid; grid-template-columns: minmax(0, 1fr) 14px minmax(0, 1fr) 14px minmax(0, 1fr) 14px minmax(0, 1fr) 14px minmax(0, 1.2fr); align-items: center; }
+.pn { min-width: 0; display: flex; flex-direction: column; gap: 1px; padding: var(--s2) 10px; border-radius: 8px; background: var(--surface-2); box-shadow: inset 0 0 0 1px transparent; transition: box-shadow 0.3s, opacity 0.3s; }
+.pn b { font-size: var(--f12); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pn .pv { font-size: var(--f16); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pn .ps { font-size: var(--f12); color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pn.idle { opacity: 0.45; }
+.pn.done b::before { content: "✓ "; color: var(--ok-text); }
+.pn.now { box-shadow: inset 0 0 0 2px var(--accent); }
+.pn.now b::before { content: "▶ "; color: var(--accent-text); }
+.pn.nv b { color: var(--nv); }
+.pn.warn b { color: var(--warn); }
+.pc { position: relative; height: 2px; background: var(--line); }
+.pc.on { background: var(--text-3); }
+.pc.flow::after { content: ""; position: absolute; top: -3px; left: 0; width: 8px; height: 8px; border-radius: 50%; background: var(--accent-text); animation: travel 0.9s ease-in-out 2; }
+@keyframes travel { from { left: 0; } to { left: calc(100% - 8px); } }
+.pout { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.pout span { font-size: var(--f12); font-weight: 700; padding: 3px 8px; border-radius: 6px; background: var(--surface-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pout .ok { color: var(--ok-text); }
+.pout .wait { color: var(--warn); }
+.pout .no { color: var(--danger-text); }
+.pout.idle { opacity: 0.45; }
+/* the pipeline adapts to its panel's width, not the window's */
+#p-pipeline .body { container-type: inline-size; }
+.pn .pv { font-size: var(--f14); }
+@container (max-width: 760px) {
+  .pipe { grid-template-columns: minmax(0, 1fr) 12px minmax(0, 1fr) 12px minmax(0, 1fr) 12px minmax(0, 1fr); row-gap: var(--s2); }
+  .pipe > .pc:last-of-type { display: none; }
+  .pout { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; }
+}
+@container (max-width: 470px) {
+  .pipe { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--s2); }
+  .pipe > .pc { display: none; }
+}
+.plog { margin-top: var(--s3); padding-top: var(--s2); border-top: 1px solid var(--line); font-family: var(--mono); font-size: var(--f12); color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.plog .pk { color: var(--nv); font-weight: 700; margin-right: 6px; }
+.plog .res { color: var(--text-3); }
 
 .den { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px var(--s2); align-items: baseline; }
 .den + .den { margin-top: var(--s2); padding-top: var(--s2); border-top: 1px solid var(--line); }
@@ -357,7 +410,7 @@ h1, h2, p { margin: 0; }
 @keyframes flash { 50% { background-color: rgba(226, 0, 116, 0.35); } }
 @keyframes blink { 50% { opacity: 0.35; } }
 @media (prefers-reduced-motion: reduce) {
-  .fresh, .hero.flash .hero-main, .source .dot, .grid.enter { animation: none !important; }
+  .fresh, .hero.flash .hero-main, .source .dot, .grid.enter, .pc.flow::after { animation: none !important; }
   .meter i { transition: none; }
 }
 
