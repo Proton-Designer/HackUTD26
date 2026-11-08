@@ -45,9 +45,15 @@ object Hub {
         http.newCall(r).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) { Log.w(TAG, "POST $path: ${e.message}"); done(-1, null) }
             override fun onResponse(call: Call, response: Response) = response.use {
+                if (it.code == 401) forget()
                 done(it.code, runCatching { JSONObject(it.body!!.string()) }.getOrNull())
             }
         })
+    }
+
+    /** The hub no longer knows our token (e.g. it was reset): drop it so the app asks for the PIN again. */
+    private fun forget() {
+        if (Settings.now.deviceToken != null) { Log.w(TAG, "hub rejected our device token; pair again"); Settings.update { it.copy(deviceToken = null) } }
     }
 
     fun pair(pin: String, done: (Boolean, String) -> Unit) =
@@ -68,6 +74,7 @@ object Hub {
             override fun onMessage(webSocket: WebSocket, text: String) { runCatching { onEvent(JSONObject(text)) } }
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
                 Log.w(TAG, "events: ${t.message} (${response?.code})"); onState(false)
+                if (response?.code == 403 || response?.code == 401) forget()
             }
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) = onState(false)
         })
@@ -93,6 +100,7 @@ object Hub {
         http.newCall(r).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) = done(null)
             override fun onResponse(call: Call, response: Response) = response.use {
+                if (it.code == 401) forget()
                 if (!it.isSuccessful) return done(null)
                 val arr = runCatching { JSONObject(it.body!!.string()).optJSONArray("blocked") }.getOrNull() ?: JSONArray()
                 done((0 until arr.length()).map { i ->

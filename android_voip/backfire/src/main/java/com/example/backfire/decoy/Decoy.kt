@@ -212,8 +212,14 @@ Only what they actually said. JSON only."""
             .put(JSONObject().put("role", "system").put("content", PROMPT))
             .put(JSONObject().put("role", "user").put("content", "<caller>" + Prompt.clean(lines.joinToString(" ")).takeLast(6000) + "</caller>")),
             maxTokens = 600, temperature = 0.0) ?: return out
-        val arr = runCatching { JSONObject(txt.substring(txt.indexOf('{'), txt.lastIndexOf('}') + 1)).getJSONArray("artifacts") }.getOrNull() ?: return out
+        Log.i("Extractor", "model said: ${txt.take(600)}")
+        val arr = runCatching {   // {"artifacts":[...]} or a bare [...]
+            val o = txt.indexOf('{'); val l = txt.indexOf('[')
+            if (l >= 0 && (o < 0 || l < o)) JSONArray(txt.substring(l, txt.lastIndexOf(']') + 1))
+            else JSONObject(txt.substring(o, txt.lastIndexOf('}') + 1)).getJSONArray("artifacts")
+        }.getOrNull() ?: return out.also { Log.w("Extractor", "unparseable") }
         for (i in 0 until arr.length()) validate(arr.optJSONObject(i) ?: continue)?.let { out.put(it) }
+        Log.i("Extractor", "${out.length()} of ${arr.length()} artifacts passed validation")
         return out
     }
 

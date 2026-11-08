@@ -124,9 +124,11 @@ async def call_event(request: Request, body: dict = Body(...)):
     elif ev == "ended":
         st["ended"] = True
         eb = body.get("ended_by") if body.get("ended_by") in ("caller", "maria", "decoy", "system") else "system"
+        st["ended_at"] = time.time()
         emit("call.ended", cid, {"ended_by": eb, "duration_s": round(time.time() - st["t0"], 1)})
         await _close(cid)
-        CALLS.pop(cid, None)
+        for k in [k for k, v in CALLS.items() if v.get("ended_at") and time.time() - v["ended_at"] > 300]:
+            CALLS.pop(k, None)   # ended calls linger 5 min so the decoy's late artifacts.extracted still lands
     else:
         return {"ok": False, "error": "event must be answered|handoff|ended"}
     return {"ok": True}
@@ -235,8 +237,9 @@ def report(request: Request, body: dict = Body(...)):
     device.require_device(request)
     cid, t = str(body.get("call_id") or ""), body.get("type")
     st = CALLS.get(cid)
-    if t not in REPORTABLE or st is None or st["ended"]:
-        raise HTTPException(400, "type must be risk.update|alert.fired for a live call")
+    late_ok = t == "artifacts.extracted" and st is not None and st.get("handed_off") and time.time() - st.get("ended_at", time.time()) < 120
+    if t not in REPORTABLE or st is None or (st["ended"] and not late_ok):
+        raise HTTPException(400, "unknown type, or the call isn't live (artifacts.extracted: up to 2 min after a decoy call ends)")
     try:
         data = _clean_report(t, body.get("data") or {})
     except (TypeError, ValueError):
