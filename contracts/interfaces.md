@@ -20,6 +20,7 @@ All HTTP/WS paths hang off the P1 hub base URL (public tunnel in demo). Audio ev
 - `WSS /decoy/{call_id}`: Telnyx media-streaming protocol, bidirectional. **P1 is the client**: after handoff it sends `connected`, `start` (with `streamSid`/`stream_id`, `call_id` as custom parameter and in the path), then `media` frames caller->decoy; P3 returns `media` (PCMU 8 kHz base64), `mark`, `clear`. P1 relays them to the caller's leg.
 - `POST /voice/enroll` JSON body `{"recording": "<base64 of the audio bytes, no data: prefix>", "mime": "audio/webm" | "audio/ogg" (as recorded by MediaRecorder), "consent_version": "v1"}` -> `{"voice_id":"..."}`; emits `voice.enrolled`.
 - `DELETE /voice/{voice_id}` -> `{"ok":true}`; emits `voice.deleted`.
+  - Hub behaviour (server/voice.py): needs a paired device / loopback / x-hub-token. Body cap 5 MB decoded; webm/ogg/wav only (mime and magic bytes must agree). If `P3_VOICE_URL` (else `P3_BASE`) is set the hub proxies to P3 and relays its `voice_id` (emits `voice.enrolled`). If not set, or P3 is unreachable, the audio is dropped (never stored or logged) and the answer is `{"voice_id": null, "fallback": "synthetic", "reason": "voice service not connected" | "voice service unreachable"}` with no event; the UI must label the synthetic voice. DELETE is always `{"ok":true}` (idempotent), proxied to P3 when set (then emits `voice.deleted`).
 
 ## P4
 - `POST /intel/ingest` (P4 replaces the stub), `POST /intel/actions/{id}/approve` -> `{"ok":true,"status":"approved"}`.

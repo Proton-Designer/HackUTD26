@@ -228,6 +228,13 @@ if os.environ.get("DEMO_MODE") == "1":
     async def _auto_replay():
         asyncio.create_task(replay.run(None, 1.0, loop=True))
 
+# Voice enrollment (onboarding): proxies to P3 when connected, otherwise drops the audio and reports the synthetic fallback. Fail open.
+try:
+    from . import voice as _voice
+    mount_router(_voice.router)
+except Exception:
+    log.exception("voice router not mounted")
+
 # voip (Telnyx scam line: /telnyx/webhook, /media/{call_id}, /voip/webrtc-token) mounted in this one process. Fail open: hub still starts without it.
 try:
     from voip.router import router as _voip_router
