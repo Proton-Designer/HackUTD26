@@ -69,12 +69,23 @@ def require(request: Request):
         raise HTTPException(401, "loopback or x-pipeline-token only")
 
 
-async def emit(type_: str, call_id: str, data: dict):
+async def emit(type_: str, call_id: str, data: dict) -> bool:
     try:
         from detection import hub   # P2's fail-open hub client (HUB_URL + PIPELINE_TOKEN)
-        await hub.emit(type_, call_id, data)
+        return bool(await hub.emit(type_, call_id, data))
     except Exception as e:
         log.warning("emit %s failed: %s", type_, type(e).__name__)
+        return False
+
+
+async def emit_retry(type_: str, call_id: str, data: dict, tries: int = 4) -> bool:
+    """For events that must not be lost (the haul): retry with backoff, ~3.5 s worst case."""
+    for i in range(tries):
+        if await emit(type_, call_id, data):
+            return True
+        await asyncio.sleep(0.5 * (2 ** i))
+    log.error("emit %s for %s failed after %d tries", type_, call_id, tries)
+    return False
 
 
 @app.get("/healthz")
@@ -140,6 +151,9 @@ class Session:
         self.last_barge = 0.0
         self.spoke: list[tuple[float, float]] = []   # recent (start, end) of our speech, for echo-utterance filtering
         self.stalls: list[list[bytes]] = []
+        self.arts: dict[str, dict] = {}      # haul so far, deduped (incremental extraction during the call)
+        self.extracted_upto = 0
+        self.extracting = False
         self.stream_id = None
 
     def ev(self, type_, data):
@@ -246,6 +260,8 @@ class Session:
             log.info("drop %s: echo of our own words (%r)", self.call_id, text[:60])
             return
         self.scammer_lines.append(text)
+        if len(self.scammer_lines) - self.extracted_upto >= 2 and not self.extracting:
+            asyncio.create_task(self.extract_now())
         self.ev("decoy.turn", {"speaker": "scammer", "text": text, "latency_ms": 0})
         self.pending.append(text)
         if not self.busy:
@@ -262,6 +278,43 @@ class Session:
         while self.active and self.caller_talking() and time.monotonic() - t < HOLD_MAX_S:
             await asyncio.sleep(0.05)
         return not self.caller_talking()
+
+    # -------------------------------------------------- haul: incremental extraction, so a failure at hangup loses nothing
+    def ours(self, a: dict) -> bool:
+        """An extracted value that is one of OUR fake values (echo of the decoy), not the scammer's."""
+        import re
+        fakes = {re.sub(r"\D", "", str(v)) for v in self.persona.raw.values()}
+        fakes = {f for f in fakes if len(f) >= 4}
+        vals = [str(a.get(k) or "") for k in ("value", "id", "addr", "text", "last4")]
+        return any(re.sub(r"\D", "", v) in fakes for v in vals if len(re.sub(r"\D", "", v)) >= 4)
+
+    def merge(self, arts: list[dict]) -> int:
+        new = 0
+        for a in arts or []:
+            if self.ours(a):
+                log.info("haul %s: dropped our own fake value (%s)", self.call_id, a.get("kind"))
+                continue
+            k = json.dumps(a, sort_keys=True)
+            if k not in self.arts:
+                self.arts[k] = a; new += 1
+        return new
+
+    async def extract_now(self, tries: int = 1) -> bool:
+        self.extracting = True
+        try:
+            upto = len(self.scammer_lines)
+            for i in range(tries):
+                try:
+                    arts = await core.extract(list(self.scammer_lines[:upto]))
+                    self.merge(arts)
+                    self.extracted_upto = upto
+                    return True
+                except Exception as e:
+                    log.warning("extractor failed (%s), try %d/%d", type(e).__name__, i + 1, tries)
+                    await asyncio.sleep(0.7 * (i + 1))
+            return False
+        finally:
+            self.extracting = False
 
     async def reply(self):
         redo = 0
@@ -345,11 +398,18 @@ class Session:
             self.active = False
             self.out.put_nowait(None)
             send_task.cancel()
-            arts = await core.extract(self.scammer_lines)
-            if arts:
-                await emit("artifacts.extracted", self.call_id, {"artifacts": arts})
-            log.info("decoy %s done: %d scammer lines, %d artifacts, voice=%s", self.call_id, len(self.scammer_lines),
-                     len(arts), "clone" if self.voice.cloned else "synthetic")
+            t_end = time.monotonic()
+            for _ in range(40):                      # an incremental pass may still be running
+                if not self.extracting:
+                    break
+                await asyncio.sleep(0.1)
+            if len(self.scammer_lines) > self.extracted_upto:   # final pass over everything, with retries
+                await self.extract_now(tries=3)
+            arts = list(self.arts.values())
+            ok = await emit_retry("artifacts.extracted", self.call_id, {"artifacts": arts}) if arts else True
+            log.info("decoy %s done: %d scammer lines, %d artifacts (%s, %.1f s after stop), voice=%s", self.call_id,
+                     len(self.scammer_lines), len(arts), "posted" if ok else "NOT POSTED", time.monotonic() - t_end,
+                     "clone" if self.voice.cloned else "synthetic")
 
 
 @app.websocket("/decoy/{call_id}")

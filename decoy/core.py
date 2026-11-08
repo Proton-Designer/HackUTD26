@@ -223,7 +223,7 @@ async def extract(lines: list[str]) -> list[dict]:
                       {"role": "user", "content": "<caller>" + clean(" ".join(lines))[-6000:] + "</caller>"}],
                      max_tokens=600, temperature=0.0)
     if not txt:
-        return []
+        raise RuntimeError("extractor: no model response")   # caller retries; an empty haul must not look like success
     try:
         i, j = txt.find("["), txt.find("{")
         arr = json.loads(txt[i:txt.rindex("]") + 1]) if i >= 0 and (j < 0 or i < j) else json.loads(txt[j:txt.rindex("}") + 1])["artifacts"]
