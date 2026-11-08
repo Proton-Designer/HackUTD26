@@ -26,10 +26,10 @@
   ["declineBtn", "endBtn", "btnHang"].forEach(id => $(id).addEventListener("click", stop));
   // ---- decoy listen-in: after handoff the page plays Backfire's decoy live (WS /listen/{call_id}, {track:'caller'|'decoy', payload: base64 PCMU 8 kHz 20 ms}) ----
   const ULAW = (() => { const t = new Float32Array(256); for (let i = 0; i < 256; i++) { const u = ~i & 255, s = u & 128 ? -1 : 1, e = (u >> 4) & 7, m = u & 15; t[i] = s * (((m << 3) + 132) * (1 << e) - 132) / 32768; } return t; })();
-  let lws = null, dctx = null, dgain = null, dnext = 0, dcid = null, want = "decoy", lastCid = null;   // want: which /listen track to play ('caller' in listening mode until handoff, then 'decoy')
+  let lws = null, lwsCid = null, lwsExpected = false, lwsTry = 0, lwsT = null, active = null, dctx = null, dgain = null, dnext = 0, dcid = null, want = "decoy", lastCid = null;   // want: which /listen track to play ('caller' in listening mode until handoff, then 'decoy')
   const stats = BF.decoyStats = { frames: 0, bytes: 0, late: 0, state: "idle" };
   function decoyLabel(on) { const l = $("decoyMsg"); if (l) { l.textContent = want === "caller" ? "🎧 Listening to the caller" : "🎧 Listening to Backfire's decoy"; l.hidden = !on; } }
-  function decoyStop() { try { lws && lws.close(); } catch (e) {} lws = null; dnext = 0; decoyLabel(false); stats.state = "idle"; try { dgain && dgain.disconnect(); } catch (e) {} dgain = null; }
+  function decoyStop() { clearTimeout(lwsT); lwsExpected = true; try { lws && lws.close(); } catch (e) {} lws = null; lwsCid = null; lwsTry = 0; dnext = 0; decoyLabel(false); stats.state = "idle"; try { dgain && dgain.disconnect(); } catch (e) {} dgain = null; }
   function decoyPlay(b64) {
     let bin; try { bin = atob(b64); } catch (e) { return; }
     const n = bin.length; if (!n) return;
@@ -43,26 +43,33 @@
     src.start(dnext); dnext += n / 8000; stats.frames++; stats.bytes += n;
   }
   function decoyStart(cid) {
-    decoyStop(); dcid = cid; if (!(BF.sim || BF.listen) || !cid) return;
+    if (!(BF.sim || BF.listen) || !cid) return;
+    if (lws && lwsCid === cid && lws.readyState <= 1) return;     // exactly ONE /listen per call: never open a second while one is open/connecting
+    clearTimeout(lwsT); lwsExpected = true; try { lws && lws.close(); } catch (e) {} lws = null;   // a socket for another call is replaced
+    dcid = cid; lwsCid = cid; lwsExpected = false;
     let tok = null; try { tok = BF.deviceToken && BF.deviceToken(); } catch (e) {}
     try {
       const url = HUB.replace(/^http/, "ws") + "/listen/" + encodeURIComponent(cid);   // token travels as a subprotocol, never in the URL
-      lws = tok ? new WebSocket(url, ["bf-device", tok]) : new WebSocket(url);
+      const w = lws = tok ? new WebSocket(url, ["bf-device", tok]) : new WebSocket(url);
       stats.state = "connecting";
-      lws.onopen = () => { stats.state = "open"; };
-      lws.onmessage = m => { let j; try { j = JSON.parse(m.data); } catch (e) { return; } if (j && j.track === want && j.payload) { if (!stats.frames) decoyLabel(true); decoyPlay(j.payload); } };
-      lws.onclose = () => { if (stats.state !== "idle") stats.state = "closed"; };
-      lws.onerror = () => { stats.state = "error"; };   // fail soft: no decoy audio, the handoff screen still works
+      w.onopen = () => { stats.state = "open"; lwsTry = 0; };
+      w.onmessage = m => { let j; try { j = JSON.parse(m.data); } catch (e) { return; } if (j && j.track === want && j.payload) { if (!stats.frames) decoyLabel(true); decoyPlay(j.payload); } };
+      w.onclose = () => {
+        if (lws === w) lws = null;
+        if (lwsExpected || active !== cid || lwsTry >= 6) { if (!lwsExpected) stats.state = "closed"; return; }
+        stats.state = "reconnecting"; lwsT = setTimeout(() => { if (active === cid && !lws) decoyStart(cid); }, Math.min(4000, 500 * 2 ** lwsTry++));   // unexpected close during the call: back off, retry
+      };
+      w.onerror = () => { stats.state = "error"; };   // fail soft: the handoff screen still works
     } catch (e) { stats.state = "error"; }
   }
   const prev = BF.onEvent;
   BF.onEvent = ev => {
     if (prev) prev(ev);
     switch (ev && ev.type) {
-      case "call.incoming": lastCid = ev.call_id; decoyStop(); stop(); break;
+      case "call.incoming": if (active === ev.call_id) break; lastCid = ev.call_id; active = ev.call_id; decoyStop(); stop(); break;   // a repeated incoming for the same call must not tear the sockets down
       case "call.answered":
         if (!BF.sim && !BF.listen) break;
-        lastCid = ev.call_id || lastCid; t0 = Date.parse(ev.ts) || Date.now();
+        lastCid = ev.call_id || lastCid; active = lastCid; if (!t0) t0 = Date.parse(ev.ts) || Date.now();
         if ($("phone").dataset.state === "ringing") $("answerBtn").click();   // no SIP leg to answer: the page answers for Maria
         else start();
         if (BF.listen) { want = "caller"; stats.frames = 0; stats.late = 0; decoyStart(lastCid); }   // listening mode: the real caller, live
@@ -75,7 +82,7 @@
         held = false;
         if (BF.listen) { want = "caller"; stats.frames = 0; dnext = 0; decoyLabel(false); } else { decoyStop(); play(); }
         break;
-      case "call.ended": decoyStop(); stop(); break;
+      case "call.ended": active = null; decoyStop(); stop(); break;
     }
   };
 })();

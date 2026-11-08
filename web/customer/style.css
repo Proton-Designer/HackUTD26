@@ -92,3 +92,6 @@ nav#tabs button.on{background:#fff;color:#000;border-color:#fff}
 .mic[aria-pressed=true]{background:#2b3442;border-color:#aab3c0}.mic:disabled{opacity:.5}
 .mic:focus-visible{outline:4px solid #fff;outline-offset:3px}
 .talk.compact .talk-title,.talk.compact .talk-hint{display:none}.talk.compact .mic{width:56px;height:56px;font-size:1.5rem}
+
+.dot{display:inline-block;width:.7em;height:.7em;border-radius:50%;vertical-align:middle;margin-left:.3em;background:#556}.dot.live{background:#2ee66b;box-shadow:0 0 8px #2ee66b}.dot.bad{background:var(--bad)}
+.talk.compact .talk-title{display:none}
