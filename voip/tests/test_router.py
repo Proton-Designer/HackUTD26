@@ -8,6 +8,10 @@ from voip import router as R, telnyx
 from voip.security import Limiter, verify_signature
 from server import bus
 
+@pytest.fixture(autouse=True)
+def _logdir(tmp_path, monkeypatch):
+    monkeypatch.setenv("LOGDIR", str(tmp_path / "logs"))   # per-call journals must not land in the repo's logs/
+
 KEY = Ed25519PrivateKey.generate()
 PUB = base64.b64encode(KEY.public_key().public_bytes(serialization.Encoding.Raw, serialization.PublicFormat.Raw)).decode()
 
@@ -592,3 +596,27 @@ def test_media_ws_plays_hello_even_if_answered_webhook_not_processed_yet(monkeyp
         ws.send_text(json.dumps({"event": "connected"})); ws.send_text(json.dumps({"event": "start"}))
         time.sleep(0.2)
     assert started == [sid]
+
+
+def test_call_report_reads_logs_journal_and_decoy_turns(tmp_path):
+    import subprocess, sys, pathlib
+    t0 = time.time() - 100; hh = lambda dt: time.strftime("%H:%M:%S", time.localtime(t0 + dt))
+    sid = "abcd1234-5678-aaaa-bbbb-ccccddddeeee"
+    hub = tmp_path / "hub.log"; calls = tmp_path / "calls"; calls.mkdir()
+    lines = [f'INFO:     1.2.3.4:0 - "WebSocket /media/{sid}?t=SECRETTOKEN" [accepted]', f"[{hh(0.5)}] MARIA_LEG=listen: not dialing Maria for abcd1234 (answer + caller stream only)",
+             f"[{hh(1)}] hello sent for abcd1234 (2.6 s from hello.ulaw)"]
+    lines += [f"[{hh(2 + i)}] inrms abcd1234 t={i}s rms={'0' if 3 <= i <= 6 else '900'} zero={'100' if 3 <= i <= 6 else '0'}% in=50 maria_out={'20' if 3 <= i <= 5 else '0'}" for i in range(10)]
+    lines += [f"[{hh(20)}] media WS closed abcd1234 frames_in={{'connected': 1, 'start': 1, 'media:inbound': 500, 'stop': 1}} frames_to_caller={{'media': 130, 'clear': 2}} talk_frames=60 talk_dropped=1"]
+    hub.write_text("\n".join(lines) + "\n")
+    (calls / "abcd1234.jsonl").write_text("\n".join(json.dumps(r) for r in [
+        {"ts": t0, "type": "call.routed", "decision": "LIVE_GUARD"}, {"ts": t0 + 9, "type": "alert.fired", "level": "first"},
+        {"ts": t0 + 9, "type": "risk.update", "s": 0.9, "engine": "p2"}, {"ts": t0 + 12, "type": "user.action", "action": "scammer_get_scammed"},
+        {"ts": t0 + 12.2, "type": "handoff.started"}, {"ts": t0 + 30, "type": "call.ended", "ended_by": "caller", "duration_s": 30}]) + "\n")
+    dec = tmp_path / "decoy.log"; dec.write_text(f"{hh(13)} INFO p3.decoy: decoy {sid} connected\n{hh(20)} INFO p3.decoy: turn {sid}: stt=300ms llm=700ms tts_first=500ms total=1500ms voice=synthetic chars=40\n")
+    r = subprocess.run([sys.executable, str(pathlib.Path(R.__file__).resolve().parent.parent / "scripts" / "call_report"), "abcd", "--hub-log", str(hub), "--decoy-log", str(dec), "--calls-dir", str(calls)], capture_output=True, text=True)
+    o = r.stdout; assert r.returncode == 0, r.stderr
+    assert "SECRETTOKEN" not in o and "call abcd1234" in o and "abcd1234-5678" not in o
+    assert "first alert.fired      : " in o and "(+9.0s)" in o and "scammer_get_scammed" in o and "handoff.started" in o
+    assert "ended_by=caller" in o and "talk_frames=60 talk_dropped=1" in o and "decoy clears (barge-in): 2" in o
+    assert "zero stretches         : t=3..6s(4s, maria_out=60)" in o and "3 of 4 zero seconds had Maria frames out" in o
+    assert "1500" in o and "hello sent for abcd1234" in o

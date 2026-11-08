@@ -1,0 +1,160 @@
+#!/usr/bin/env python3
+"""One read-only timeline for a live call, from files only (no network, no Telnyx, no hub requests):
+  logs/hub-eng2-live.log   hub + voip log (voip lines carry [HH:MM:SS] since the 03:4x build; older lines have no clock)
+  logs/decoy.log           P3 decoy log (HH:MM:SS lines: connected / turn stt,llm,tts_first,total / done)
+  logs/calls/<sid8>.jsonl  per-call event journal written by voip (ts + allowlisted scalar fields; no transcript text, no audio)
+Usage: scripts/call_report [CALL_ID_PREFIX | --last] [--hub-log F] [--decoy-log F] [--calls-dir D]
+Ids are truncated to 8 chars. Prints no secrets (tokens in URLs are stripped). Missing sources are reported, never fatal."""
+import argparse, json, os, pathlib, re, sys, time
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+LOGS = pathlib.Path(os.environ.get("LOGDIR") or ROOT / "logs")
+TS_RE = re.compile(r"^\[(\d\d:\d\d:\d\d)\] ")
+INRMS = re.compile(r"inrms (\w+) t=(\d+)s rms=(\d+) zero=(\d+)% in=(\d+) maria_out=(\d+)")
+
+
+def read(path):
+    try: return pathlib.Path(path).read_text(errors="replace").splitlines()
+    except Exception: return None
+
+
+def hms(ts):  # epoch -> HH:MM:SS local
+    return time.strftime("%H:%M:%S", time.localtime(ts))
+
+
+def secs(h):  # HH:MM:SS -> seconds since midnight
+    a, b, c = map(int, h.split(":")); return a * 3600 + b * 60 + c
+
+
+def pick_call(hub, arg):
+    ids = [m.group(1) for l in hub for m in [re.search(r"WebSocket /media/([0-9A-Za-z_.:=-]{8,})", l)] if m and "[accepted]" in l]
+    if not ids: return None
+    if arg in (None, "--last"): return ids[-1]
+    hit = [i for i in ids if i.startswith(arg)]
+    return hit[-1] if hit else None
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("call", nargs="?", default="--last"); ap.add_argument("--last", action="store_true")
+    ap.add_argument("--hub-log", default=str(LOGS / "hub-eng2-live.log")); ap.add_argument("--decoy-log", default=str(LOGS / "decoy.log"))
+    ap.add_argument("--calls-dir", default=str(LOGS / "calls"))
+    a = ap.parse_args()
+    hub = read(a.hub_log)
+    if hub is None: sys.exit(f"cannot read {a.hub_log}")
+    cid = pick_call(hub, None if a.last else a.call)
+    if not cid: sys.exit("no call found in the hub log" + ("" if a.last else f" matching {a.call!r}"))
+    s8 = cid[:8]
+    print(f"== call {s8} ==  (sources: hub log, decoy log, journal; times are local clock where the source has one)")
+
+    # ---- hub log lines of this call: from the media accept line to the end of the call's own lines
+    own = [(i, l) for i, l in enumerate(hub) if s8 in l]
+    start_i = next((i for i, l in own if "/media/" in l and "[accepted]" in l), own[0][0] if own else 0)
+    mine = [(i, l) for i, l in own if i >= start_i - 5]
+    clean = lambda l: re.sub(r"\?t=[\w-]+", "?t=…", l).replace(cid, s8)   # no tokens, ids truncated to 8
+
+    # ---- journal
+    jf = pathlib.Path(a.calls_dir) / f"{s8}.jsonl"; journal = []
+    if jf.is_file():
+        for l in jf.read_text().splitlines():
+            try: journal.append(json.loads(l))
+            except Exception: pass
+    else:
+        print(f"[journal] none for {s8} (hub predates the journal, or the call never reached voip); event times below are limited to log clocks")
+
+    # ---- decoy log
+    dl = read(a.decoy_log) or []
+    dec = [l for l in dl if cid in l or s8 in l]
+    turns = []
+    for l in dec:
+        m = re.match(r"(\d\d:\d\d:\d\d) \w+ [\w.]+: turn \S+: stt=(\d+)ms llm=(\d+)ms tts_first=(\d+)ms total=(\d+)ms voice=(\w+)", l)
+        if m: turns.append(m.groups())
+
+    t0 = next((e["ts"] for e in journal if e["type"] in ("call.incoming", "call.routed")), journal[0]["ts"] if journal else None)
+    rows = []   # (epoch-or-None, text)
+    for e in journal:
+        d = {k: v for k, v in e.items() if k not in ("ts", "type")}
+        rows.append((e["ts"], f"event {e['type']} " + " ".join(f"{k}={v}" for k, v in d.items())))
+    for i, l in mine:
+        m = TS_RE.match(l); body = clean(TS_RE.sub("", l))
+        if body.startswith("INFO:") and "/media/" not in body and "/talk/" not in body and "/listen/" not in body: continue
+        if INRMS.search(body) or re.search(r'" 403$', body): continue   # per-second lines and refused-socket noise are summarised below
+        if re.search(r"\] ?$|^INFO:.*\[accepted\]", body) and ("/talk/" in body or "/listen/" in body): continue
+        if m and t0:
+            day = time.strftime("%Y-%m-%d", time.localtime(t0)); ep = time.mktime(time.strptime(day + " " + m.group(1), "%Y-%m-%d %H:%M:%S"))
+        else: ep = None
+        rows.append((ep, ("log   " if m else "log   (no clock) ") + body))
+    for l in dec:
+        m = re.match(r"(\d\d:\d\d:\d\d) ", l)
+        if m and t0:
+            day = time.strftime("%Y-%m-%d", time.localtime(t0)); ep = time.mktime(time.strptime(day + " " + m.group(1), "%Y-%m-%d %H:%M:%S"))
+            rows.append((ep, "decoy " + clean(l[9:])))
+    timed = sorted((r for r in rows if r[0] is not None), key=lambda r: r[0])
+    untimed = [r for r in rows if r[0] is None]
+    if timed:
+        base = t0 or timed[0][0]
+        print("\n-- timeline (+seconds from call start) --")
+        for ep, txt in timed: print(f"{hms(ep)}  +{ep - base:6.1f}s  {txt[:200]}")
+    if untimed:
+        print("\n-- hub log lines without a clock (in log order) --")
+        for ep, txt in untimed: print("          " + txt[:200])
+
+    # ---- key facts
+    def first(pred):
+        for e in journal:
+            if pred(e): return e
+    print("\n-- summary --")
+    ev_ts = lambda e: f"{hms(e['ts'])} (+{e['ts'] - t0:.1f}s)" if (e and t0) else "-"
+    al = first(lambda e: e["type"] == "alert.fired"); print("first alert.fired      :", ev_ts(al) if al else "none seen")
+    hi = first(lambda e: e["type"] == "risk.update" and e.get("s", 0) >= 0.8)
+    mx = max([e.get("s", 0) for e in journal if e["type"] == "risk.update"] or [None], key=lambda x: -1 if x is None else x)
+    print("first risk >= 0.80     :", ev_ts(hi) if hi else "none seen", f"| max risk {mx}" if mx is not None else "| no risk.update in journal")
+    engines = sorted({e.get("engine") for e in journal if e["type"] == "risk.update" and e.get("engine")}); print("risk engines           :", ",".join(engines) or "-")
+    ua = [e for e in journal if e["type"] == "user.action"]; print("user.action            :", ", ".join(f"{e.get('action')}@{ev_ts(e)}" for e in ua) or "none")
+    ho = [e for e in journal if e["type"].startswith("handoff")]; print("handoff events         :", ", ".join(f"{e['type']}@{ev_ts(e)}" for e in ho) or "none")
+    ce = first(lambda e: e["type"] == "call.ended"); print("call.ended             :", (ev_ts(ce) + f" ended_by={ce.get('ended_by')} duration_s={ce.get('duration_s')} legit={ce.get('legit', False)}") if ce else "not seen (call still live, or no journal)")
+    bl = [e for e in journal if re.search(r"block|intel|campaign|injection|approval|network|artifacts", e["type"])]
+    print("block / intel events   :", "; ".join(f"{e['type']}@{ev_ts(e)}" for e in bl[:8]) or "none seen")
+
+    # hello / talk / P2 / streams from the log
+    txt = "\n".join(l for _, l in mine)
+    hello = [TS_RE.sub("", l) for _, l in mine if "hello " in l]; print("hello                  :", "; ".join(hello)[:200] or "no hello line (before the hello-logging build, or talk mode)")
+    mc = re.search(r"media WS closed \S+ frames_in=(\{.*?\}) frames_to_caller=(\{.*?\}) talk_frames=(\d+) talk_dropped=(\d+)", txt)
+    if mc:
+        fin = re.search(r"'media:inbound': (\d+)", mc.group(1)); inb = int(fin.group(1)) if fin else 0
+        print(f"stream                 : inbound frames {inb} (~{inb / 50:.0f}s of caller audio), frames_to_caller {mc.group(2)}; Maria talk_frames={mc.group(3)} talk_dropped={mc.group(4)}")
+        clears = re.search(r"'clear': (\d+)", mc.group(2)); print("decoy clears (barge-in):", clears.group(1) if clears else 0)
+    else: print("stream                 : no 'media WS closed' line (call live or hub restarted mid-call)")
+    p2 = [TS_RE.sub("", l) for _, l in mine if "P2 connected" in l or "P2 closed" in l]; print("P2                     :", "; ".join(p2) or "no P2 connect/close line")
+    ta = len(re.findall(r"(?m)^(?:\[[\d:]+\] )?talk \S+ accepted", txt)); tr = len(re.findall(r"/talk/\S+\" 403", txt))
+    la = len(re.findall(r"(?m)^(?:\[[\d:]+\] )?listen \S+ accepted", txt)); lr = len(re.findall(r"/listen/\S+\" 403", txt))
+    print(f"page sockets           : /talk accepted {ta} refused(403) {tr}; /listen accepted {la} refused(403) {lr}")
+
+    # inrms summary
+    rm = [tuple(int(x) if x.isdigit() else x for x in m.groups()) for l in hub for m in [INRMS.search(l)] if m and m.group(1) == s8]
+    if rm:
+        speech = sum(1 for r in rm if r[2] >= 150 and r[3] < 50); zero = [r for r in rm if r[3] >= 90]; mo = sum(1 for r in rm if r[5] > 0)
+        runs, cur = [], []
+        for r in zero:
+            if cur and r[1] == cur[-1][1] + 1: cur.append(r)
+            else:
+                if cur: runs.append(cur)
+                cur = [r]
+        if cur: runs.append(cur)
+        print(f"inbound level (inrms)  : {len(rm)} s logged; speech-seconds {speech} (rms>=150 and <50% zero frames); zero seconds {len(zero)} ({100 * len(zero) // len(rm)}%); seconds with Maria audio out {mo}")
+        print("zero stretches         :", ", ".join(f"t={r[0][1]}..{r[-1][1]}s({len(r)}s, maria_out={sum(x[5] for x in r)})" for r in runs if len(r) >= 2) or "none >= 2 s")
+        both = sum(1 for r in zero if r[5] > 0); print(f"zero while Maria out   : {both} of {len(zero)} zero seconds had Maria frames out" if zero else "zero while Maria out   : n/a")
+    else: print("inbound level (inrms)  : no inrms lines for this call (hub predates the inrms build)")
+
+    # decoy turns
+    if turns:
+        print("\n-- decoy turns (P3) --"); print("time      stt   llm   tts1st total  voice")
+        for t, st, ll, tt, tot, v in turns: print(f"{t}  {st:>4}  {ll:>4}  {tt:>5}  {tot:>5}  {v}")
+        tots = sorted(int(x[4]) for x in turns); print(f"turns {len(turns)}; total ms median {tots[len(tots) // 2]}, max {tots[-1]}")
+    else: print("decoy turns            :", "decoy log has lines for this call but no 'turn' line (older P3 build?)" if dec else "no decoy lines for this call")
+    bad = [l[:120] for l in dec if re.search(r"429|STT failed|failed|Traceback|Error", l)]
+    if bad: print("decoy warnings         :", " | ".join(bad[:4]))
+
+
+if __name__ == "__main__":
+    main()

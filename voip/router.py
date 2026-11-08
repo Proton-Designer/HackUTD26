@@ -582,11 +582,36 @@ async def _decoy_lost(sid):
     _publish_demo_haul(sid)
     emit("call.ended", sid, {"ended_by": "decoy", "duration_s": round(time.time() - st["t0"], 1), **_legit(st)})
 
+# ---- per-call journal for scripts/call_report: logs/calls/<sid8>.jsonl, one line per bus event with its timestamp (allowlisted scalar fields only:
+# no transcript text, no audio, no secrets). Fail open.
+_J_KEYS = ("s", "band", "engine", "level", "action", "decision", "reason", "ended_by", "duration_s", "legit", "restore_deadline", "by", "via",
+           "scam_type", "stage", "speaker", "latency_ms", "source", "ok", "kind", "status", "route_ms", "alert_ms", "handoff_ms")
+def _journal(sid, ev):
+    try:
+        import pathlib
+        d = pathlib.Path(os.environ.get("LOGDIR") or "logs") / "calls"; d.mkdir(parents=True, exist_ok=True)
+        data = ev.get("data") or {}
+        row = {"ts": round(ev.get("ts") or time.time(), 3), "type": ev.get("type"), **{k: data[k] for k in _J_KEYS if isinstance(data.get(k), (str, int, float, bool))}}
+        if isinstance(data.get("artifacts"), list): row["n_artifacts"] = len(data["artifacts"])
+        if ev.get("type") == "transcript.caller": row["chars"] = len(str(data.get("text", "")))
+        with open(d / f"{sid[:8]}.jsonl", "a") as f: f.write(json.dumps(row) + "\n")
+    except Exception:
+        pass
+
+class _TsFilter(logging.Filter):
+    """Prefix every voip.router log line with [HH:MM:SS] (the hub's own log has no clock); scripts/call_report reads it."""
+    def filter(self, record):
+        if not getattr(record, "_ts", False):
+            record.msg = "[%s] %s" % (time.strftime("%H:%M:%S"), record.msg); record._ts = True
+        return True
+log.addFilter(_TsFilter())
+
 def _on_bus(ev):
     """Bus observer (sync, any thread): user.action and risk.update drive the Telnyx side; work is scheduled on the captured loop."""
     try:
         if LOOP is None or ev["call_id"] not in CALLS: return
         t, d, sid = ev["type"], ev["data"], ev["call_id"]
+        _journal(sid, ev)
         if (t == "risk.update" and d.get("engine") != "fallback") or (t == "transcript.caller" and not str(d.get("utterance_id", "")).startswith("fb_")):
             CALLS[sid]["p2_seen"] = True   # a real P2 event: the sim fallback detector stops
         if t == "user.action":
