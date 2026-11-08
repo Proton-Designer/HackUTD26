@@ -4,8 +4,7 @@ The judge-facing screen. One page, no build step, no dependencies.
 
 ## Run it
 
-**Demo (live):** serve this folder from the P1 server and open it there, e.g. `http://<p1-host>:8000/command-center/`. It connects to `WS /events` on the same host automatically.
-Ask for P1 (Ayman): mount it with FastAPI `app.mount("/command-center", StaticFiles(directory="web/command-center", html=True))`. Same origin means no CORS for the Approve button.
+**Demo (live):** the P1 hub serves this folder (`server/main.py`), so open `http://<hub-host>:<port>/command-center/`. It connects to `WS /events` on the same host automatically, and Approve posts to the same origin (no CORS).
 
 **Anywhere else:** open the page with the server's address:
 

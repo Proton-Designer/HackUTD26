@@ -11,7 +11,7 @@ One line each: chose X because Y.
 
 ## Data source
 - **Order: `?server=` → same origin → `http://localhost:8000` WebSocket `/events`; if none answers within 1.8 s, replay.** Ayman can mount this folder on the P1 server and it goes live with no config; on a laptop without the server it still demos.
-- **Replay prefers `../../mock/events.json` (P1's file) and falls back to `fixture.js`.** The swap is automatic the moment P1 pushes `mock/`. `?src=fixture` forces the local file.
+- **Replay prefers `../../mock/events.json` (P1's file) and falls back to `fixture.js`.** P1's file is `{calls: [{call_id, events}]}` with each call's `ts` starting at 0, so calls are laid end to end with a 4 s pause. `?src=fixture` forces the local file, which is the richer full-demo rehearsal (it follows the contract enums and P4a's real intel output).
 - **Once live, it stays live:** on disconnect it shows RECONNECTING, keeps everything on screen, and retries forever. It never silently switches to replay mid-demo.
 - **Replay squeezes silences longer than 6 s (`?gap=`) and has `?speed=`.** Rehearsals at 2-4x; the demo itself is live.
 - **Config is URL params only** (`server`, `src`, `speed`, `gap`, `mock`, `voice`). No settings UI, per the brief.
@@ -41,12 +41,14 @@ One line each: chose X because Y.
 ## Event shapes we read (seams)
 - **P1/P2/P3 events: exactly the fields in `00_SHARED_RULES.md` §3.** Unknown event types are ignored.
 - **`intel.lookup`: P4a's flat shape from `intel/lookups.py`** (`kind` domain|wallet|allowlist, `value`, `status`, `age_days`, `registrar`, `total_received`, `unit`, `tx_count`, `match`, `matched_org`, `source`, `simulated`). The page writes the one-line summary itself ("Registered 3 days ago", "2.31 BTC received, 41 transactions", "Matches Chase"). Verified live: real RDAP + allowlist results from `python -m intel.lookups` pushed through `dev/fake_p1.py` render with a REAL LOOKUP tag. Lookups attach to the artifact card with the same value (phones compared on the last 10 digits).
-- **`intel.action`, `injection.denied`, `campaign.updated`: P4 guide leaves the fields open, so this is our proposal to P4a** (the fixture uses it; the parser is tolerant of missing fields):
-  - `intel.action`: `{action_id, kind, label, target, scope: her|backfire_users|all_customers|external, approval: auto|analyst, status: auto_applied|queued|approved|applied|denied, simulated, evidence[], expiry, undo_token, reason}`
-  - `injection.denied`: `{kind: injection|poisoning, attempt, requested_action, target, source, rule}`
-  - `campaign.updated`: `{campaign_id, name, scam_type, status: observed|corroborated|confirmed, sightings, calling_numbers, strong_indicators[], immunity: {count, label, simulated}}`
-- **Agent trace is built from those events** (INPUT on `artifacts.extracted`, TOOL per `intel.lookup`, PROPOSE + GATE per `intel.action`, GATE denied per `injection.denied`, ANALYST on approve). No extra trace event needed; nothing on it is invented by the page.
-- **`blocklist.updated` merges into the matching auto action** (same number for scope her, the campaign link for scope campaign) so a block isn't listed twice; with P1's stub alone it shows as its own row.
+- **`intel.action`, `injection.denied`, `campaign.updated`, `blocklist.updated`: P4a's real shapes** (agreed in comms thread #17, checked against `python -m intel.demo_run`; older/looser shapes still parse):
+  - `intel.action`: `{action_id, kind, target, scope, status: applied|queued|approved|denied|held, gate_status, approval: 'auto rule'|analyst|null, simulated, reason, evidence[], payload?}`. Labels come from our `KIND` map of P4a's kind names; `held` rows show in "Applied automatically" with a pause icon.
+  - `injection.denied`: `{attempted_target, kind (the action kind), target, reason, source, attempted_poisoning}`. `attempted_poisoning` decides POISONING; trust changes (`mark_number_safe`, `add_trusted_contact`, `unblock_number`, `allowlist_add`) or `source: artifact:instruction_to_ai` are INJECTION; anything else is NOT CORROBORATED. P4a also sends a denied `intel.action` for the same thing; we keep one row and one trace line.
+  - `campaign.updated`: `{campaign_id, status, linked_via, sightings, independent_sightings, calling_numbers, numbers[], strong_indicators[], immunity: int, poisoning_attempt_seen}`. Immunity is P4a's count of numbers and indicators now blocked or warned for every Backfire user.
+  - `blocklist.updated`: `{number, scope: her|campaign|network, undo_token, reason, active}`. Matched to actions at render time (her → the caller block, campaign → the campaign link, network → the approved network block), so it works whichever arrives first; `active: false` strikes the row through as undone.
+- **Agent trace comes from P4a's trace events, never invented by the page:** `intel.plan` → INPUT + PLAN (and cards appear as "awaiting lookup"), `intel.lookup` → TOOL, `intel.agent` → NEMOTRON with its plan text, `intel.proposals` → PROPOSED n, `intel.action` → one GATE line each, `injection.denied` → GATE denied, approve → ANALYST. A divider marks each new call. If `intel.agent.engine` is a fallback or an offline mock, the line and the panel header say so in amber, never "Nemotron".
+- **Lookups that match no extracted artifact get their own card** (P4a's plan steps and lookups can arrive without P3's `artifacts.extracted`). Offline-fixture lookups (`simulated: true`) are tagged SIMULATED even in live mode.
+- **`instruction_to_ai` artifacts are shown as "Told the AI" chips, not cards;** the gate's `injection.denied` is the payoff.
 
 ## Test helper
 - **`dev/fake_p1.py`: stdlib-only stand-in for P1's WS `/events` + approve endpoint + a `/publish` endpoint** so live mode and P4a's real lookups can be tested before P1's server exists. Not on the demo path.
