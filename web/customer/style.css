@@ -248,3 +248,17 @@ details.keep[open] summary{margin-bottom:var(--sp1)}
 .sound-banner:focus-visible{outline:3px solid #fff;outline-offset:2px}
 .tip-line{width:100%;display:flex;align-items:center;gap:var(--sp3);text-align:left;font-size:var(--fs-sm);line-height:1.35;color:var(--mut);padding:var(--sp2) var(--sp3);border-radius:var(--r-md);background:var(--surface)}
 .tip-line button{flex:none;min-height:44px;min-width:64px;border-radius:var(--r-sm);border:1px solid var(--line);background:transparent;color:var(--fg);font:inherit;font-weight:700;cursor:pointer}
+
+/* UI review 2: fixed bottom navigation, same place and size on every tab, never covers content */
+#tabs{position:fixed;left:0;right:0;bottom:0;margin:0 auto;max-width:430px;z-index:5;display:grid;grid-template-columns:1fr 1fr;gap:0;padding:var(--sp1) var(--sp4) calc(var(--sp1) + env(safe-area-inset-bottom));background:var(--bg);border-top:1px solid var(--line);border-radius:0;box-shadow:none}
+#tabs button{min-height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:var(--fs-xs);font-weight:600;color:var(--mut);background:transparent;border-radius:var(--r-sm)}
+#tabs button .ic{width:24px;height:24px}
+#tabs button.on{background:transparent;color:var(--fg)}
+#tabs button.on .ic{color:var(--fg)}
+#tabs button.on span{font-weight:700}
+#phone.tabs-on{padding-bottom:calc(72px + env(safe-area-inset-bottom))}
+@media (min-width:700px) and (min-height:600px){
+  #phone{position:relative}
+  #tabs{position:sticky;bottom:0;left:auto;right:auto;margin:0 calc(-1 * var(--sp5));max-width:none;padding-bottom:var(--sp1)}
+  #phone.tabs-on{padding-bottom:0}
+}

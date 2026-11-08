@@ -199,6 +199,16 @@ def main():
             check("6", "summary 'Number: Checking...' resolves (Blocked for you / Reported) within ~5 s", num in ("Blocked for you", "Reported"), str(num))
             check("6", "badge reset to Live Guard on after the call", "Live Guard on" in pg.inner_text("#guard"), pg.inner_text("#guard"))
             time.sleep(0.5); pg.evaluate("BF.view('protView')"); time.sleep(0.6); shot("06-protection")
+            # 6b. fixed bottom navigation: same place/size on Home and Protection, at the top and scrolled to the bottom, never hidden by a tab switch, never covers content
+            rect = "(() => { const r = document.getElementById('tabs').getBoundingClientRect(); return [Math.round(r.bottom), Math.round(r.height), document.getElementById('tabs').hidden]; })()"
+            pg.evaluate("window.__tabHides = 0; new MutationObserver(() => { if (document.getElementById('tabs').hidden) window.__tabHides++; }).observe(document.getElementById('tabs'), {attributes: true, attributeFilter: ['hidden']})")
+            pg.click("#tabs button[data-v=callView]"); time.sleep(0.3); r_home = pg.evaluate(rect)
+            pg.click("#tabs button[data-v=protView]"); time.sleep(0.6); pg.evaluate("window.scrollTo(0, 0)"); r_top = pg.evaluate(rect)
+            pg.evaluate("window.scrollTo(0, document.scrollingElement.scrollHeight)"); time.sleep(0.3); r_bot = pg.evaluate(rect)
+            covered = pg.evaluate("(() => { const cards = document.querySelectorAll('#protView .card'); return cards[cards.length - 1].getBoundingClientRect().bottom > document.getElementById('tabs').getBoundingClientRect().top + 1; })()")
+            shot("06c-protection-bottom")
+            pg.click("#tabs button[data-v=callView]"); time.sleep(0.3)
+            check("6b", "bottom nav: identical position/size on Home and Protection (top and scrolled), never hidden on a tab switch, never covers content", r_home == r_top == r_bot and not r_home[2] and pg.evaluate("window.__tabHides") == 0 and not covered and r_home[0] == 844, f"home={r_home} prot_top={r_top} prot_bottom={r_bot} hides={pg.evaluate('window.__tabHides')} covered={covered}")
             n_inc = len([e for e in events if e["type"] == "call.incoming"]); before = len(events)
             out = subprocess.run([sys.executable, str(ROOT / "scripts" / "sim_call.py"), "--from", SCAMMER, "--hub", BASE, "--fast"], capture_output=True, text=True, timeout=40, env=dict(os.environ))
             time.sleep(1)

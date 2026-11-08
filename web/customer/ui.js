@@ -20,6 +20,9 @@
     if (v === "protView") renderProtection();
   }
   document.querySelectorAll("#tabs button").forEach(b => b.onclick = () => view(b.dataset.v));
+  // Fixed bottom bar (UI review 2): screens get bottom padding only while the bar is up, so it never covers content.
+  const padTabs = () => $("phone").classList.toggle("tabs-on", !$("tabs").hidden);
+  new MutationObserver(padTabs).observe($("tabs"), { attributes: true, attributeFilter: ["hidden"] }); padTabs();
   // a call always takes over the screen; tabs return when it is over
   new MutationObserver(() => {
     const s = $("phone").dataset.state;

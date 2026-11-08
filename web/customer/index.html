@@ -234,9 +234,9 @@ if (!Element.prototype.replaceChildren) Element.prototype.replaceChildren = func
     </div>
   </section>
 
-  <nav id="tabs" hidden>
-    <button data-v="callView" class="on">Phone</button>
-    <button data-v="protView">Protection</button>
+  <nav id="tabs" aria-label="Main" hidden>
+    <button data-v="callView" class="on"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 11 12 4l8.5 7M6 9.5V20h4.5v-5.5h3V20H18V9.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Home</span></button>
+    <button data-v="protView"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5 4.5 5.5v5.7c0 4.6 3.1 8.6 7.5 10.3 4.4-1.7 7.5-5.7 7.5-10.3V5.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span>Protection</span></button>
   </nav>
 
   <!-- PAIRING (TASK-014): a /app/?pair=XXXXXX link pairs by itself; the code box is the fallback, shown only when the hub answers 401 -->
