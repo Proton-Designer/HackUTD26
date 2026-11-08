@@ -77,11 +77,22 @@ def _campaign(out: dict, text: str) -> dict:
 
 
 def merge(raw, rules: dict, engine: str, text: str = "") -> dict:
-    return _campaign(_merge(raw, rules, engine), text)
+    return _campaign(_merge(raw, rules, engine, text), text)
 
 
-def _merge(raw, rules: dict, engine: str) -> dict:
+# Cheap text cues for "talks to the AI". The LLM's addresses_ai_system=true needs one of these (or the injection rule) to count.
+AI_CUE_RE = re.compile(
+    r"\b(a\.?i\.?|artificial intelligence|assistant|chat ?bot|bot|language model|llm|screening|screener|"
+    r"system|prompt|instructions?|guidelines?|rules|algorithm|software|program|filter|detector|detection|"
+    r"safe|legit(imate)?|authori[sz]ed|verified|trusted|low risk|risk score|score)\b", re.I)
+
+
+def _merge(raw, rules: dict, engine: str, text: str = "") -> dict:
     out = schema.normalize(raw, engine)
+    if out["addresses_ai_system"] and not rules["injection"] and not AI_CUE_RE.search(text or ""):
+        log.info("addresses_ai_system dropped: LLM said true but no AI cue in text (engine=%s)", engine)
+        out["addresses_ai_system"] = False   # flag + chip only; s is never lowered here
+        out["why_chips"] = [c for c in out["why_chips"] if c != schema.CHIP_AI]
     asks = [a for a in schema.ASKS if a in set(out["asks"]) | set(rules["asks"])]
     ai = out["addresses_ai_system"] or rules["injection"]
     s = max(out["s"], rules["floor"])
