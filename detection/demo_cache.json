@@ -1,0 +1,997 @@
+{
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|good evening! i'm michael with apex digital assets. you were referred by one of our clients.": {
+  "addresses_ai_system": false,
+  "asks": [],
+  "impersonates": "Apex Digital Assets",
+  "s": 0.3,
+  "scam_type": "none",
+  "stage": "opening",
+  "why_chips": [
+   "refers to a client",
+   "evening greeting",
+   "company name mentioned"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|good evening! i'm michael with apex digital assets. you were referred by one of our clients. our members are seeing 30 percent returns every month with our ai trading platform.": {
+  "addresses_ai_system": false,
+  "asks": [],
+  "impersonates": "Apex Digital Assets",
+  "s": 0.85,
+  "scam_type": "investment fraud",
+  "stage": "pretext",
+  "why_chips": [
+   "claims 30% monthly returns",
+   "unverified AI trading platform",
+   "referred by client",
+   "cold call investment offer"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|good evening! i'm michael with apex digital assets. you were referred by one of our clients. our members are seeing 30 percent returns every month with our ai trading platform. i can get you started today with just $2,000. your account is already reserved.": {
+  "addresses_ai_system": false,
+  "asks": [
+   "crypto",
+   "remote_app"
+  ],
+  "impersonates": "Apex Digital Assets",
+  "s": 0.92,
+  "scam_type": "crypto investment fraud",
+  "stage": "pretext",
+  "why_chips": [
+   "promises 30% monthly returns",
+   "asks for $2,000 upfront",
+   "crypto investment scheme"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|good evening! i'm michael with apex digital assets. you were referred by one of our clients. our members are seeing 30 percent returns every month with our ai trading platform. i can get you started today with just $2,000. your account is already reserved. this spot closes at midnight, so we need to move quickly.": {
+  "addresses_ai_system": false,
+  "asks": [
+   "crypto",
+   "remote_app"
+  ],
+  "impersonates": "Apex Digital Assets",
+  "s": 0.92,
+  "scam_type": "crypto investment fraud",
+  "stage": "pressure",
+  "why_chips": [
+   "30% monthly returns promised",
+   "urgent midnight deadline",
+   "referral from client"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|good evening! i'm michael with apex digital assets. you were referred by one of our clients. our members are seeing 30 percent returns every month with our ai trading platform. i can get you started today with just $2,000. your account is already reserved. this spot closes at midnight, so we need to move quickly. just send the deposit in bitcoin and you'll see your profits on the dashboard tomorrow.": {
+  "addresses_ai_system": false,
+  "asks": [
+   "crypto"
+  ],
+  "impersonates": "Apex Digital Assets",
+  "s": 0.95,
+  "scam_type": "crypto investment fraud",
+  "stage": "payment",
+  "why_chips": [
+   "promises 30% monthly returns",
+   "asks for Bitcoin deposit",
+   "creates urgency with midnight deadline"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|good evening! i'm michael with apex digital assets. you were referred by one of our clients. our members are seeing 30 percent returns every month with our ai trading platform. i can get you started today with just $2,000. your account is already reserved. this spot closes at midnight, so we need to move quickly. just send the deposit in bitcoin and you'll see your profits on the dashboard tomorrow. send the deposit to wallet 1a1zp1ep5qgefi2dmptftl5slmv7divfna . your dashboard is at backfire-demo.example . call me directly at 1-888-555-0123 .": {
+  "addresses_ai_system": false,
+  "asks": [
+   "crypto",
+   "wire"
+  ],
+  "impersonates": "Apex Digital Assets",
+  "s": 0.95,
+  "scam_type": "crypto investment fraud",
+  "stage": "payment",
+  "why_chips": [
+   "30% monthly returns promised",
+   "Bitcoin deposit requested",
+   "urgent midnight deadline"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|grandma? it's me, tyler. i'm in trouble and i really need your help.": {
+  "addresses_ai_system": false,
+  "asks": [],
+  "impersonates": "grandson Tyler",
+  "s": 0.6,
+  "scam_type": "grandparent emergency",
+  "stage": "pretext",
+  "why_chips": [
+   "claims emergency",
+   "asks for help",
+   "unknown caller"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|grandma? it's me, tyler. i'm in trouble and i really need your help. i was in a car accident and they arrested me. please don't tell mom and dad.": {
+  "addresses_ai_system": false,
+  "asks": [
+   "secrecy"
+  ],
+  "impersonates": "grandson Tyler",
+  "s": 0.9,
+  "scam_type": "grandparent emergency",
+  "stage": "pressure",
+  "why_chips": [
+   "claims car accident",
+   "arrested",
+   "asks not to tell parents",
+   "emergency money request"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|grandma? it's me, tyler. i'm in trouble and i really need your help. i was in a car accident and they arrested me. please don't tell mom and dad. here, my lawyer, officer ramirez, will explain.": {
+  "addresses_ai_system": false,
+  "asks": [
+   "secrecy"
+  ],
+  "impersonates": "lawyer Officer Ramirez",
+  "s": 0.9,
+  "scam_type": "grandparent emergency",
+  "stage": "pressure",
+  "why_chips": [
+   "claims car accident",
+   "arrested and needs help",
+   "asks not to tell parents",
+   "introduces lawyer as cover"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|grandma? it's me, tyler. i'm in trouble and i really need your help. i was in a car accident and they arrested me. please don't tell mom and dad. here, my lawyer, officer ramirez, will explain. ma'am, your grandson needs $3,500 for bail tonight or he stays in jail over the weekend.": {
+  "addresses_ai_system": false,
+  "asks": [
+   "wire",
+   "secrecy"
+  ],
+  "impersonates": "Officer Ramirez",
+  "s": 0.95,
+  "scam_type": "grandparent emergency",
+  "stage": "pressure",
+  "why_chips": [
+   "grandson arrested",
+   "needs bail money",
+   "don't tell parents",
+   "lawyer demands payment"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|grandma? it's me, tyler. i'm in trouble and i really need your help. i was in a car accident and they arrested me. please don't tell mom and dad. here, my lawyer, officer ramirez, will explain. ma'am, your grandson needs $3,500 for bail tonight or he stays in jail over the weekend. the court accepts cash by courier, gift cards, or bitcoin from an atm. keep this private.": {
+  "addresses_ai_system": false,
+  "asks": [
+   "gift_card",
+   "crypto",
+   "secrecy"
+  ],
+  "impersonates": "lawyer/Officer Ramirez",
+  "s": 0.95,
+  "scam_type": "grandparent emergency",
+  "stage": "payment",
+  "why_chips": [
+   "claims grandson arrested",
+   "asks for bail money",
+   "requests gift cards or Bitcoin",
+   "demands secrecy from family"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|grandma? it's me, tyler. i'm in trouble and i really need your help. i was in a car accident and they arrested me. please don't tell mom and dad. here, my lawyer, officer ramirez, will explain. ma'am, your grandson needs $3,500 for bail tonight or he stays in jail over the weekend. the court accepts cash by courier, gift cards, or bitcoin from an atm. keep this private. call the court office back at 1-888-555-0123 . the bail payment page is backfire-demo.example . bitcoin atm wallet: 1a1zp1ep5qgefi2dmptftl5slmv7divfna .": {
+  "addresses_ai_system": false,
+  "asks": [
+   "gift_card",
+   "crypto",
+   "secrecy"
+  ],
+  "impersonates": "Officer Ramirez / lawyer",
+  "s": 0.98,
+  "scam_type": "grandparent emergency",
+  "stage": "payment",
+  "why_chips": [
+   "claims grandson arrested",
+   "asks for bail payment",
+   "demands gift cards or Bitcoin",
+   "orders secrecy from family"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|hello, this is kevin from microsoft windows support. your computer is sending us virus alerts.": {
+  "addresses_ai_system": false,
+  "asks": [
+   "remote_app"
+  ],
+  "impersonates": "Microsoft Windows Support",
+  "s": 0.85,
+  "scam_type": "tech support",
+  "stage": "pretext",
+  "why_chips": [
+   "claims computer has viruses",
+   "offers unsolicited support",
+   "requests remote access"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|hello, this is kevin from microsoft windows support. your computer is sending us virus alerts. hackers are inside your computer right now. they can see your bank accounts.": {
+  "addresses_ai_system": false,
+  "asks": [
+   "remote_app"
+  ],
+  "impersonates": "Microsoft Windows Support",
+  "s": 0.92,
+  "scam_type": "tech support impersonation",
+  "stage": "pressure",
+  "why_chips": [
+   "claims virus alerts",
+   "hackers inside computer",
+   "access to bank accounts"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|hello, this is kevin from microsoft windows support. your computer is sending us virus alerts. hackers are inside your computer right now. they can see your bank accounts. i need you to go to your computer and download a program called anydesk so i can fix it.": {
+  "addresses_ai_system": false,
+  "asks": [
+   "remote_app"
+  ],
+  "impersonates": "Microsoft Windows Support",
+  "s": 0.95,
+  "scam_type": "tech support impersonation",
+  "stage": "pressure",
+  "why_chips": [
+   "claims virus alerts",
+   "hacker inside computer",
+   "asks to download AnyDesk"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|hello, this is kevin from microsoft windows support. your computer is sending us virus alerts. hackers are inside your computer right now. they can see your bank accounts. i need you to go to your computer and download a program called anydesk so i can fix it. now read me the nine-digit code that shows on your screen.": {
+  "addresses_ai_system": false,
+  "asks": [
+   "remote_app",
+   "otp"
+  ],
+  "impersonates": "Microsoft Windows Support",
+  "s": 0.95,
+  "scam_type": "tech support impersonation",
+  "stage": "pressure",
+  "why_chips": [
+   "claims virus alerts",
+   "asks for AnyDesk download",
+   "requests nine-digit code",
+   "threatens bank account access"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|hello, this is kevin from microsoft windows support. your computer is sending us virus alerts. hackers are inside your computer right now. they can see your bank accounts. i need you to go to your computer and download a program called anydesk so i can fix it. now read me the nine-digit code that shows on your screen. the security license costs $399. you can pay with a gift card or a wire transfer.": {
+  "addresses_ai_system": false,
+  "asks": [
+   "remote_app",
+   "gift_card",
+   "wire"
+  ],
+  "impersonates": "Microsoft Windows Support",
+  "s": 0.95,
+  "scam_type": "tech support impersonation",
+  "stage": "payment",
+  "why_chips": [
+   "claims virus alerts",
+   "asks for AnyDesk download",
+   "requests 9-digit code",
+   "demands $399 payment",
+   "asks for gift card or wire"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|hello, this is kevin from microsoft windows support. your computer is sending us virus alerts. hackers are inside your computer right now. they can see your bank accounts. i need you to go to your computer and download a program called anydesk so i can fix it. now read me the nine-digit code that shows on your screen. the security license costs $399. you can pay with a gift card or a wire transfer. our support center number is 1-888-555-0123 . download the tool from backfire-demo.example . or pay in bitcoin to 1a1zp1ep5qgefi2dmptftl5slmv7divfna .": {
+  "addresses_ai_system": false,
+  "asks": [
+   "remote_app",
+   "gift_card",
+   "crypto",
+   "secrecy"
+  ],
+  "impersonates": "Microsoft Windows Support",
+  "s": 0.98,
+  "scam_type": "tech support impersonation",
+  "stage": "payment",
+  "why_chips": [
+   "claims virus alerts",
+   "asks for AnyDesk download",
+   "requests 9-digit code",
+   "demands gift card or wire payment",
+   "provides Bitcoin wallet address"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|hi sweetheart, it's david. i've missed talking to you so much.": {
+  "addresses_ai_system": false,
+  "asks": [],
+  "impersonates": null,
+  "s": 0.1,
+  "scam_type": "none",
+  "stage": "opening",
+  "why_chips": [
+   "caller uses pet name",
+   "no urgent demand"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|hi sweetheart, it's david. i've missed talking to you so much. i'm still stuck on the oil rig, and my bank account here has been frozen.": {
+  "addresses_ai_system": false,
+  "asks": [],
+  "impersonates": "oil rig worker",
+  "s": 0.6,
+  "scam_type": "romance impersonation",
+  "stage": "opening",
+  "why_chips": [
+   "claims frozen bank account",
+   "oil rig location",
+   "affectionate language"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|hi sweetheart, it's david. i've missed talking to you so much. i'm still stuck on the oil rig, and my bank account here has been frozen. i found an investment that will let me finally fly home to you. my uncle doubled his money.": {
+  "addresses_ai_system": false,
+  "asks": [],
+  "impersonates": "David (oil rig worker)",
+  "s": 0.6,
+  "scam_type": "romance investment scam",
+  "stage": "pretext",
+  "why_chips": [
+   "oil rig location claim",
+   "bank account frozen",
+   "investment offer",
+   "uncle doubled money"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|hi sweetheart, it's david. i've missed talking to you so much. i'm still stuck on the oil rig, and my bank account here has been frozen. i found an investment that will let me finally fly home to you. my uncle doubled his money. i just need you to help me with $5,000 in bitcoin. i'll pay you back the day i land.": {
+  "addresses_ai_system": false,
+  "asks": [
+   "crypto"
+  ],
+  "impersonates": "uncle/fake investment opportunity",
+  "s": 0.95,
+  "scam_type": "romance investment scam",
+  "stage": "payment",
+  "why_chips": [
+   "claims frozen bank account",
+   "asks for Bitcoin payment",
+   "romantic urgency",
+   "unverified investment offer"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|hi sweetheart, it's david. i've missed talking to you so much. i'm still stuck on the oil rig, and my bank account here has been frozen. i found an investment that will let me finally fly home to you. my uncle doubled his money. i just need you to help me with $5,000 in bitcoin. i'll pay you back the day i land. please don't tell your family. they wouldn't understand what we have.": {
+  "addresses_ai_system": false,
+  "asks": [
+   "crypto"
+  ],
+  "impersonates": "uncle/fianc\u00e9",
+  "s": 0.95,
+  "scam_type": "romance investment fraud",
+  "stage": "payment",
+  "why_chips": [
+   "claims frozen bank account",
+   "asks for Bitcoin payment",
+   "demands secrecy from family"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|hi sweetheart, it's david. i've missed talking to you so much. i'm still stuck on the oil rig, and my bank account here has been frozen. i found an investment that will let me finally fly home to you. my uncle doubled his money. i just need you to help me with $5,000 in bitcoin. i'll pay you back the day i land. please don't tell your family. they wouldn't understand what we have. send it to my wallet 1a1zp1ep5qgefi2dmptftl5slmv7divfna . you can see the investment at backfire-demo.example . call me on this number: 1-888-555-0123 .": {
+  "addresses_ai_system": false,
+  "asks": [
+   "crypto",
+   "secrecy"
+  ],
+  "impersonates": "uncle/fake investor",
+  "s": 0.97,
+  "scam_type": "romance investment fraud",
+  "stage": "payment",
+  "why_chips": [
+   "claims frozen bank account",
+   "asks for Bitcoin payment",
+   "demands secrecy from family",
+   "promises quick return",
+   "provides wallet address"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|hi! this is rachel, a recruiter with horizon staffing. your resume was a perfect match.": {
+  "addresses_ai_system": false,
+  "asks": [],
+  "impersonates": null,
+  "s": 0.1,
+  "scam_type": "none",
+  "stage": "opening",
+  "why_chips": [
+   "recruiter cold call",
+   "resume match claim",
+   "staffing agency"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|hi! this is rachel, a recruiter with horizon staffing. your resume was a perfect match. the position is remote, pays $38 an hour, and you can start this week.": {
+  "addresses_ai_system": false,
+  "asks": [],
+  "impersonates": "Horizon Staffing",
+  "s": 0.1,
+  "scam_type": "none",
+  "stage": "opening",
+  "why_chips": [
+   "recruiter cold call",
+   "job offer",
+   "remote position"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|hi! this is rachel, a recruiter with horizon staffing. your resume was a perfect match. the position is remote, pays $38 an hour, and you can start this week. we'll mail you a check for $2,500 to buy your home office equipment.": {
+  "addresses_ai_system": false,
+  "asks": [],
+  "impersonates": "Horizon Staffing",
+  "s": 0.1,
+  "scam_type": "job scam",
+  "stage": "opening",
+  "why_chips": [
+   "recruiter cold call",
+   "remote job offer",
+   "check mailing request"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|hi! this is rachel, a recruiter with horizon staffing. your resume was a perfect match. the position is remote, pays $38 an hour, and you can start this week. we'll mail you a check for $2,500 to buy your home office equipment. deposit it, then send $2,000 back to our equipment vendor through cash app or bitcoin.": {
+  "addresses_ai_system": false,
+  "asks": [
+   "card",
+   "p2p",
+   "crypto"
+  ],
+  "impersonates": "Horizon Staffing",
+  "s": 0.92,
+  "scam_type": "job scam",
+  "stage": "payment",
+  "why_chips": [
+   "offers remote job",
+   "sends fake check",
+   "asks send $2000 via Cash App/Bitcoin"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|hi! this is rachel, a recruiter with horizon staffing. your resume was a perfect match. the position is remote, pays $38 an hour, and you can start this week. we'll mail you a check for $2,500 to buy your home office equipment. deposit it, then send $2,000 back to our equipment vendor through cash app or bitcoin. we also need your social security number and bank login for direct deposit.": {
+  "addresses_ai_system": false,
+  "asks": [
+   "ssn",
+   "bank_login",
+   "crypto",
+   "p2p",
+   "wire"
+  ],
+  "impersonates": "Horizon Staffing",
+  "s": 0.95,
+  "scam_type": "employment scam",
+  "stage": "payment",
+  "why_chips": [
+   "remote job offer",
+   "check deposit then send money back",
+   "ask for SSN and bank login",
+   "payment via Cash App or Bitcoin"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|hi! this is rachel, a recruiter with horizon staffing. your resume was a perfect match. the position is remote, pays $38 an hour, and you can start this week. we'll mail you a check for $2,500 to buy your home office equipment. deposit it, then send $2,000 back to our equipment vendor through cash app or bitcoin. we also need your social security number and bank login for direct deposit. vendor payments go to 1a1zp1ep5qgefi2dmptftl5slmv7divfna . onboarding portal is backfire-demo.example . my direct line is 1-888-555-0123 .": {
+  "addresses_ai_system": false,
+  "asks": [
+   "otp",
+   "card",
+   "ssn",
+   "crypto",
+   "wire",
+   "p2p",
+   "remote_app",
+   "secrecy"
+  ],
+  "impersonates": "Horizon Staffing",
+  "s": 0.95,
+  "scam_type": "employment scam",
+  "stage": "payment",
+  "why_chips": [
+   "offers job then asks for money",
+   "asks to send cash back via Cash App",
+   "asks for Bitcoin payment",
+   "requests SSN and bank login",
+   "provides Bitcoin wallet address"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|hi, this is jessica from the fraud prevention team at your bank. we noticed suspicious charges on your account.": {
+  "addresses_ai_system": false,
+  "asks": [],
+  "impersonates": "bank fraud prevention team",
+  "s": 0.75,
+  "scam_type": "bank fraud dept",
+  "stage": "pretext",
+  "why_chips": [
+   "claims bank fraud team",
+   "suspicious charges mentioned",
+   "unknown caller"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|hi, this is jessica from the fraud prevention team at your bank. we noticed suspicious charges on your account. someone tried to spend $1,250 at an electronics store in miami. was that you?": {
+  "addresses_ai_system": false,
+  "asks": [],
+  "impersonates": "bank fraud prevention team",
+  "s": 0.75,
+  "scam_type": "bank fraud dept",
+  "stage": "pretext",
+  "why_chips": [
+   "claims suspicious charges",
+   "references $1,250 amount",
+   "names electronics store in Miami",
+   "asks if charge was authorized"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|hi, this is jessica from the fraud prevention team at your bank. we noticed suspicious charges on your account. someone tried to spend $1,250 at an electronics store in miami. was that you? no? okay, i'm going to secure your account. you'll get a text with a six-digit code. read it to me.": {
+  "addresses_ai_system": false,
+  "asks": [
+   "otp"
+  ],
+  "impersonates": "bank fraud prevention team",
+  "s": 0.92,
+  "scam_type": "bank fraud dept",
+  "stage": "pressure",
+  "why_chips": [
+   "claims bank fraud team",
+   "suspicious charges $1250",
+   "asks for 6-digit code"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|hi, this is jessica from the fraud prevention team at your bank. we noticed suspicious charges on your account. someone tried to spend $1,250 at an electronics store in miami. was that you? no? okay, i'm going to secure your account. you'll get a text with a six-digit code. read it to me. to be safe, we need to move your savings to a protected account while we investigate.": {
+  "addresses_ai_system": false,
+  "asks": [
+   "otp",
+   "remote_app",
+   "secrecy"
+  ],
+  "impersonates": "bank fraud prevention team",
+  "s": 0.92,
+  "scam_type": "bank fraud dept",
+  "stage": "payment",
+  "why_chips": [
+   "claims suspicious charges",
+   "asks for 6-digit code",
+   "wants to move savings to protected account"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|hi, this is jessica from the fraud prevention team at your bank. we noticed suspicious charges on your account. someone tried to spend $1,250 at an electronics store in miami. was that you? no? okay, i'm going to secure your account. you'll get a text with a six-digit code. read it to me. to be safe, we need to move your savings to a protected account while we investigate. please don't discuss this with branch staff. some of them may be involved.": {
+  "addresses_ai_system": false,
+  "asks": [
+   "otp",
+   "remote_app",
+   "secrecy"
+  ],
+  "impersonates": "bank fraud prevention team",
+  "s": 0.95,
+  "scam_type": "bank fraud dept",
+  "stage": "payment",
+  "why_chips": [
+   "claims suspicious charges",
+   "asks for OTP code",
+   "demands secrecy from branch staff"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|hi, this is jessica from the fraud prevention team at your bank. we noticed suspicious charges on your account. someone tried to spend $1,250 at an electronics store in miami. was that you? no? okay, i'm going to secure your account. you'll get a text with a six-digit code. read it to me. to be safe, we need to move your savings to a protected account while we investigate. please don't discuss this with branch staff. some of them may be involved. the protected account is set up through 1a1zp1ep5qgefi2dmptftl5slmv7divfna . our secure line is 1-888-555-0123 . the transfer portal is backfire-demo.example .": {
+  "addresses_ai_system": false,
+  "asks": [
+   "otp",
+   "card",
+   "crypto",
+   "wire",
+   "p2p",
+   "remote_app",
+   "secrecy"
+  ],
+  "impersonates": "bank fraud prevention team",
+  "s": 0.97,
+  "scam_type": "bank fraud dept",
+  "stage": "payment",
+  "why_chips": [
+   "claims suspicious charges",
+   "asks for OTP code",
+   "demands secrecy from staff",
+   "provides crypto wallet address",
+   "pressures to move savings"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|hi, this is linda from the medicare benefits office. your new medicare card is ready to mail.": {
+  "addresses_ai_system": false,
+  "asks": [],
+  "impersonates": "Medicare benefits office",
+  "s": 0.3,
+  "scam_type": "benefits enrollment",
+  "stage": "opening",
+  "why_chips": [
+   "claims Medicare benefits office",
+   "mentions new card mailing"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|hi, this is linda from the medicare benefits office. your new medicare card is ready to mail. before we send it, i need to verify your identity.": {
+  "addresses_ai_system": false,
+  "asks": [],
+  "impersonates": "Medicare benefits office",
+  "s": 0.5,
+  "scam_type": "impersonation",
+  "stage": "pretext",
+  "why_chips": [
+   "claims Medicare benefits office",
+   "offers new card",
+   "requests identity verification"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|hi, this is linda from the medicare benefits office. your new medicare card is ready to mail. before we send it, i need to verify your identity. can you please read me your social security number and date of birth?": {
+  "addresses_ai_system": false,
+  "asks": [
+   "ssn"
+  ],
+  "impersonates": "Medicare benefits office",
+  "s": 0.7,
+  "scam_type": "identity theft / Medicare fraud",
+  "stage": "pretext",
+  "why_chips": [
+   "claims Medicare card pending",
+   "requests SSN",
+   "requests date of birth"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|hi, this is linda from the medicare benefits office. your new medicare card is ready to mail. before we send it, i need to verify your identity. can you please read me your social security number and date of birth? there's also a $50 processing fee for the new card. i can take your debit card number.": {
+  "addresses_ai_system": false,
+  "asks": [
+   "ssn",
+   "debit_card_number"
+  ],
+  "impersonates": "Medicare benefits office",
+  "s": 0.85,
+  "scam_type": "Medicare impersonation",
+  "stage": "payment",
+  "why_chips": [
+   "requests SSN",
+   "asks for debit card number",
+   "claims $50 processing fee",
+   "new Medicare card story"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|hi, this is linda from the medicare benefits office. your new medicare card is ready to mail. before we send it, i need to verify your identity. can you please read me your social security number and date of birth? there's also a $50 processing fee for the new card. i can take your debit card number. if you don't verify today, your benefits will be suspended.": {
+  "addresses_ai_system": false,
+  "asks": [
+   "ssn",
+   "debit_card"
+  ],
+  "impersonates": "Medicare benefits office",
+  "s": 0.92,
+  "scam_type": "Medicare impersonation",
+  "stage": "pressure",
+  "why_chips": [
+   "claims Medicare card pending",
+   "asks for SSN and DOB",
+   "requests debit card number",
+   "threatens benefit suspension"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|hi, this is linda from the medicare benefits office. your new medicare card is ready to mail. before we send it, i need to verify your identity. can you please read me your social security number and date of birth? there's also a $50 processing fee for the new card. i can take your debit card number. if you don't verify today, your benefits will be suspended. call the benefits office at 1-888-555-0123 . verify online at backfire-demo.example . fee can also be sent to 1a1zp1ep5qgefi2dmptftl5slmv7divfna .": {
+  "addresses_ai_system": false,
+  "asks": [
+   "ssn",
+   "date_of_birth",
+   "debit_card_number"
+  ],
+  "impersonates": "Medicare benefits office",
+  "s": 0.95,
+  "scam_type": "Medicare impersonation",
+  "stage": "payment",
+  "why_chips": [
+   "requests SSN and DOB",
+   "asks for debit card number",
+   "threatens benefit suspension",
+   "provides fake payment address"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|hi, this is sam with delivery services. we have a package for you that couldn't be delivered.": {
+  "addresses_ai_system": false,
+  "asks": [],
+  "impersonates": "delivery services",
+  "s": 0.3,
+  "scam_type": "delivery scam",
+  "stage": "opening",
+  "why_chips": [
+   "claims undelivered package",
+   "uses delivery cover story"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|hi, this is sam with delivery services. we have a package for you that couldn't be delivered. the address on the label is incomplete, so it's being held at our facility.": {
+  "addresses_ai_system": false,
+  "asks": [],
+  "impersonates": "delivery services",
+  "s": 0.3,
+  "scam_type": "package delivery scam",
+  "stage": "pretext",
+  "why_chips": [
+   "claims undeliverable package",
+   "incomplete address on label",
+   "held at facility"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|hi, this is sam with delivery services. we have a package for you that couldn't be delivered. the address on the label is incomplete, so it's being held at our facility. there's a $2.99 redelivery fee. can i get your card number, expiration date and the code on the back?": {
+  "addresses_ai_system": false,
+  "asks": [
+   "card"
+  ],
+  "impersonates": "delivery services",
+  "s": 0.85,
+  "scam_type": "delivery impersonation",
+  "stage": "payment",
+  "why_chips": [
+   "delivery impersonation",
+   "card number ask",
+   "fee pretext",
+   "urgency"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|hi, this is sam with delivery services. we have a package for you that couldn't be delivered. the address on the label is incomplete, so it's being held at our facility. there's a $2.99 redelivery fee. can i get your card number, expiration date and the code on the back? you'll get a text with a verification code. read it back to me to confirm the delivery.": {
+  "addresses_ai_system": false,
+  "asks": [
+   "card",
+   "otp"
+  ],
+  "impersonates": "delivery services",
+  "s": 0.85,
+  "scam_type": "delivery impersonation",
+  "stage": "payment",
+  "why_chips": [
+   "delivery impersonation",
+   "card details ask",
+   "verification code request"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|hi, this is sam with delivery services. we have a package for you that couldn't be delivered. the address on the label is incomplete, so it's being held at our facility. there's a $2.99 redelivery fee. can i get your card number, expiration date and the code on the back? you'll get a text with a verification code. read it back to me to confirm the delivery. if you don't pay today, the package goes back to the sender.": {
+  "addresses_ai_system": false,
+  "asks": [
+   "card",
+   "code"
+  ],
+  "impersonates": "delivery services",
+  "s": 0.85,
+  "scam_type": "delivery impersonation",
+  "stage": "payment",
+  "why_chips": [
+   "package held incomplete address",
+   "redelivery fee $2.99",
+   "asks card number+expiration+code",
+   "sends text verification code"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|hi, this is sam with delivery services. we have a package for you that couldn't be delivered. the address on the label is incomplete, so it's being held at our facility. there's a $2.99 redelivery fee. can i get your card number, expiration date and the code on the back? you'll get a text with a verification code. read it back to me to confirm the delivery. if you don't pay today, the package goes back to the sender. call the delivery center at 1-888-555-0123 . reschedule at backfire-demo.example . alternate payment to 1a1zp1ep5qgefi2dmptftl5slmv7divfna .": {
+  "addresses_ai_system": false,
+  "asks": [
+   "card",
+   "otp"
+  ],
+  "impersonates": "delivery services",
+  "s": 0.92,
+  "scam_type": "delivery impersonation",
+  "stage": "payment",
+  "why_chips": [
+   "card number and CVV requested",
+   "verification code read back requested",
+   "urgent payment threat",
+   "alternate payment crypto address given"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|hi, this is the fraud department at your bank. we saw a charge and want to confirm it was you. i will not ask for any codes.": {
+  "addresses_ai_system": false,
+  "asks": [],
+  "impersonates": "bank fraud department",
+  "s": 0.4,
+  "scam_type": "bank fraud dept",
+  "stage": "pretext",
+  "why_chips": [
+   "claims fraud department",
+   "mentions unauthorized charge",
+   "says will not ask for codes"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|hi, this is the fraud department at your bank. we saw a charge and want to confirm it was you. i will not ask for any codes. if you are unsure, hang up and call the number on the back of your card.": {
+  "addresses_ai_system": false,
+  "asks": [],
+  "impersonates": "bank fraud department",
+  "s": 0.1,
+  "scam_type": "none",
+  "stage": "opening",
+  "why_chips": [
+   "claims to be bank fraud department",
+   "mentions charge confirmation"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|this is mark from the electric company's disconnection department.": {
+  "addresses_ai_system": false,
+  "asks": [],
+  "impersonates": "electric company disconnection department",
+  "s": 0.6,
+  "scam_type": "utility disconnection scam",
+  "stage": "pretext",
+  "why_chips": [
+   "claims to be electric company",
+   "disconnection threat",
+   "unknown caller"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|this is mark from the electric company's disconnection department. your account is past due, and a technician is scheduled to cut your power in 45 minutes.": {
+  "addresses_ai_system": false,
+  "asks": [
+   "secrecy"
+  ],
+  "impersonates": "electric company disconnection department",
+  "s": 0.85,
+  "scam_type": "utility disconnection scam",
+  "stage": "pressure",
+  "why_chips": [
+   "claims power cut in 45 min",
+   "creates urgency",
+   "demands immediate action",
+   "threatens service cutoff"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|this is mark from the electric company's disconnection department. your account is past due, and a technician is scheduled to cut your power in 45 minutes. to stop the shutoff, you need to pay $680 right now.": {
+  "addresses_ai_system": false,
+  "asks": [
+   "wire",
+   "secrecy"
+  ],
+  "impersonates": "electric company disconnection department",
+  "s": 0.95,
+  "scam_type": "utility disconnection scam",
+  "stage": "payment",
+  "why_chips": [
+   "past due account",
+   "power cut in 45 min",
+   "demand $680",
+   "threat of shutoff"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|this is mark from the electric company's disconnection department. your account is past due, and a technician is scheduled to cut your power in 45 minutes. to stop the shutoff, you need to pay $680 right now. we can't take a card for overdue accounts. you'll need to use zelle or a prepaid card.": {
+  "addresses_ai_system": false,
+  "asks": [
+   "p2p",
+   "gift_card"
+  ],
+  "impersonates": "electric company disconnection department",
+  "s": 0.92,
+  "scam_type": "utility disconnection scam",
+  "stage": "payment",
+  "why_chips": [
+   "claims power cut in 45 min",
+   "asks for Zelle or prepaid card",
+   "refuses normal card payment",
+   "creates urgent time pressure"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|this is mark from the electric company's disconnection department. your account is past due, and a technician is scheduled to cut your power in 45 minutes. to stop the shutoff, you need to pay $680 right now. we can't take a card for overdue accounts. you'll need to use zelle or a prepaid card. stay on the line with me while you make the payment.": {
+  "addresses_ai_system": false,
+  "asks": [
+   "p2p",
+   "gift_card"
+  ],
+  "impersonates": "electric company disconnection department",
+  "s": 0.95,
+  "scam_type": "utility disconnection scam",
+  "stage": "payment",
+  "why_chips": [
+   "past due threat",
+   "45 min shutoff deadline",
+   "can't take card",
+   "Zelle or prepaid card"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|this is mark from the electric company's disconnection department. your account is past due, and a technician is scheduled to cut your power in 45 minutes. to stop the shutoff, you need to pay $680 right now. we can't take a card for overdue accounts. you'll need to use zelle or a prepaid card. stay on the line with me while you make the payment. our billing line is 1-888-555-0123 . pay online at backfire-demo.example . zelle or crypto goes to 1a1zp1ep5qgefi2dmptftl5slmv7divfna .": {
+  "addresses_ai_system": false,
+  "asks": [
+   "p2p",
+   "gift_card",
+   "crypto",
+   "remote_app"
+  ],
+  "impersonates": "electric company disconnection department",
+  "s": 0.95,
+  "scam_type": "utility disconnection scam",
+  "stage": "payment",
+  "why_chips": [
+   "claims power cut in 45 min",
+   "demands immediate payment",
+   "refuses normal card payments",
+   "asks for Zelle or crypto"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|this is officer daniel brooks with the irs enforcement division. am i speaking with the taxpayer?": {
+  "addresses_ai_system": false,
+  "asks": [
+   "secrecy"
+  ],
+  "impersonates": "IRS Enforcement Division",
+  "s": 0.9,
+  "scam_type": "irs impersonation",
+  "stage": "pretext",
+  "why_chips": [
+   "claims IRS officer",
+   "authority claim",
+   "taxpayer verification",
+   "secrecy demand"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|this is officer daniel brooks with the irs enforcement division. am i speaking with the taxpayer? ma'am, there is a warrant for your arrest for unpaid federal taxes from 2023.": {
+  "addresses_ai_system": false,
+  "asks": [
+   "secrecy"
+  ],
+  "impersonates": "IRS Enforcement Division",
+  "s": 0.92,
+  "scam_type": "irs impersonation",
+  "stage": "pretext",
+  "why_chips": [
+   "claims IRS officer",
+   "threatens arrest warrant",
+   "references 2023 unpaid taxes"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|this is officer daniel brooks with the irs enforcement division. am i speaking with the taxpayer? ma'am, there is a warrant for your arrest for unpaid federal taxes from 2023. you can avoid the arrest today if you settle the balance of $4,800 right now.": {
+  "addresses_ai_system": false,
+  "asks": [
+   "wire",
+   "secrecy"
+  ],
+  "impersonates": "IRS Enforcement Division",
+  "s": 0.95,
+  "scam_type": "irs impersonation",
+  "stage": "payment",
+  "why_chips": [
+   "claims IRS officer",
+   "threatens arrest warrant",
+   "demands $4,800 payment",
+   "requests wire transfer"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|this is officer daniel brooks with the irs enforcement division. am i speaking with the taxpayer? ma'am, there is a warrant for your arrest for unpaid federal taxes from 2023. you can avoid the arrest today if you settle the balance of $4,800 right now. do not hang up and do not tell anyone, or the officers will be sent to your home.": {
+  "addresses_ai_system": false,
+  "asks": [
+   "wire",
+   "secrecy"
+  ],
+  "impersonates": "IRS Enforcement Division",
+  "s": 0.97,
+  "scam_type": "irs impersonation",
+  "stage": "pressure",
+  "why_chips": [
+   "claims IRS officer",
+   "arrest warrant threat",
+   "demands $4,800",
+   "orders secrecy"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|this is officer daniel brooks with the irs enforcement division. am i speaking with the taxpayer? ma'am, there is a warrant for your arrest for unpaid federal taxes from 2023. you can avoid the arrest today if you settle the balance of $4,800 right now. do not hang up and do not tell anyone, or the officers will be sent to your home. the fastest way is target gift cards. go buy them and read me the numbers on the back.": {
+  "addresses_ai_system": false,
+  "asks": [
+   "gift_card"
+  ],
+  "impersonates": "IRS Enforcement Division",
+  "s": 0.98,
+  "scam_type": "irs impersonation",
+  "stage": "payment",
+  "why_chips": [
+   "claims IRS warrant",
+   "demands $4,800",
+   "asks for Target gift cards",
+   "orders secrecy"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|this is officer daniels with the irs, there is a warrant in your name.": {
+  "addresses_ai_system": false,
+  "asks": [
+   "secrecy"
+  ],
+  "impersonates": "IRS",
+  "s": 0.95,
+  "scam_type": "IRS impersonation",
+  "stage": "pretext",
+  "why_chips": [
+   "claims IRS authority",
+   "demands payment",
+   "threatens arrest"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|this is officer daniels with the irs, there is a warrant in your name. you must pay today with gift cards and tell no one.": {
+  "addresses_ai_system": false,
+  "asks": [
+   "gift_card",
+   "secrecy"
+  ],
+  "impersonates": "IRS",
+  "s": 0.98,
+  "scam_type": "IRS impersonation",
+  "stage": "payment",
+  "why_chips": [
+   "claims IRS warrant",
+   "demands gift cards",
+   "orders secrecy"
+  ]
+ }
+}

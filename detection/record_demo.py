@@ -33,7 +33,7 @@ def mock_windows():
 async def main():
     seen, n = set(), 0
     for w in list(card_windows()) + list(mock_windows()):
-        if w in seen or D._key("cloud", w) in D._CACHE:
+        if w in seen or D._demo_key(D._key("cloud", w)) in D._demo_load():
             continue
         seen.add(w)
         try:
