@@ -331,6 +331,96 @@ def _listen_authorized(ws: WebSocket):
         return True, sub
     return False, None
 
+# --- WS /talk/{call_id}: two-way Maria for role-play demos. One talker per call; her PCMU goes ONLY to voip's uplink injector
+# (voip.router.maria_uplink(call_id, pcmu_bytes)), never to P2/P3, never stored or logged. Dropped while the decoy is on the line.
+TALK_FPS = 60
+_TALKERS: set = set()
+
+def _decoy_on(call_id) -> bool:
+    s = _S.get(call_id)
+    if s is not None and s.decoy_active:
+        return True
+    try:
+        from . import bus
+        on = False
+        for e in bus.history:
+            if e.get("call_id") == call_id:
+                if e.get("type") == "handoff.started": on = True
+                elif e.get("type") in ("handoff.restored", "call.ended"): on = False
+        return on
+    except Exception:
+        return False
+
+def _call_ended(call_id) -> bool:
+    try:
+        from . import bus
+        return any(e.get("call_id") == call_id and e.get("type") == "call.ended" for e in bus.history)
+    except Exception:
+        return False
+
+def _voip():
+    try:
+        from voip import router as vr
+        return vr if hasattr(vr, "inject_maria") and hasattr(vr, "talk_enabled") else None
+    except Exception:
+        return None
+
+@router.websocket("/talk/{call_id}")
+async def talk(ws: WebSocket, call_id: str):
+    import re, base64, binascii
+    ok, proto = _listen_authorized(ws)
+    V = _voip()
+    try:
+        enabled = bool(V and V.talk_enabled(call_id))
+    except Exception:
+        enabled = False
+    if not ok or not re.fullmatch(r"[A-Za-z0-9_.:-]{1,80}", call_id) or not _known_call(call_id) or not enabled:
+        await ws.close(code=1008); return
+    if call_id in _TALKERS:
+        await ws.close(code=1013); return            # one talker per call
+    _TALKERS.add(call_id)
+    sent = dropped = 0
+    try:
+        await ws.accept(subprotocol=proto)
+        tokens, last, n = float(TALK_FPS), time.monotonic(), 0
+        while True:
+            try:
+                m = await asyncio.wait_for(ws.receive(), LISTEN_IDLE_S)
+            except asyncio.TimeoutError:
+                break
+            if m.get("type") == "websocket.disconnect":
+                break
+            b64 = None
+            if m.get("bytes") is not None:
+                b64 = base64.b64encode(m["bytes"]).decode() if len(m["bytes"]) % 160 == 0 else None
+            elif m.get("text") is not None:
+                try:
+                    b64 = json.loads(m["text"])["payload"]
+                    raw = base64.b64decode(b64, validate=True)
+                    if not raw or len(raw) % 160 or len(raw) > 960: b64 = None
+                except (ValueError, KeyError, TypeError, binascii.Error):
+                    b64 = None
+            n += 1
+            if n % 25 == 0 and _call_ended(call_id):
+                break
+            frames = max(1, len(base64.b64decode(b64)) // 160) if b64 else 1
+            now = time.monotonic()
+            tokens = min(float(TALK_FPS), tokens + (now - last) * TALK_FPS); last = now
+            if b64 is None or tokens < frames or _decoy_on(call_id):
+                dropped += 1; continue                 # bad frame, over 60 frames/s, or the decoy has the call: drop
+            tokens -= frames
+            try:
+                if await V.inject_maria(call_id, b64): sent += 1
+                else: dropped += 1                     # voip dropped it (muted by decoy / stream not ready): just continue
+            except Exception:
+                dropped += 1                           # fail open: never raises into the call
+    except Exception:
+        pass
+    finally:
+        _TALKERS.discard(call_id)
+        log.info("talk %s ended: msgs_sent=%d dropped=%d", call_id[:8], sent, dropped)
+
+
 @router.websocket("/listen/{call_id}")
 async def listen(ws: WebSocket, call_id: str):
     import re

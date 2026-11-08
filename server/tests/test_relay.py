@@ -245,3 +245,74 @@ def test_listen_live_call_paired_device_from_call_incoming_on():
         assert ws.accepted_subprotocol == "bf-device"
         assert relay.listener_count() == 1
     assert relay.listener_count() == 0
+
+
+def _talk_setup(monkeypatch, enabled=True):
+    from voip import router as V
+    got = []
+    async def inject(cid, b64):
+        got.append((cid, b64)); return True
+    monkeypatch.setattr(V, "talk_enabled", lambda cid: enabled, raising=False)
+    monkeypatch.setattr(V, "inject_maria", inject, raising=False)
+    from server import bus
+    bus.publish("call.incoming", "T1", {"from": "+15555550123", "to": "+15555550100", "attestation": "C", "scam_id_score": 0.8})
+    relay._TALKERS.clear()
+    return got
+
+
+def test_talk_auth_one_talker_and_frames_reach_voip(monkeypatch):
+    import base64, json, pytest
+    from server import device
+    got = _talk_setup(monkeypatch)
+    f = base64.b64encode(b"\xff" * 160).decode()
+    remote = TestClient(app)
+    with pytest.raises(Exception):
+        with remote.websocket_connect("/talk/T1"): pass                                  # no token
+    tok = remote.post("/pair", json={"pin": device.PIN}).json()["device_token"]
+    c = TestClient(app, base_url="http://127.0.0.1:8000", client=("127.0.0.1", 5000))
+    with remote.websocket_connect("/talk/T1", subprotocols=["bf-device", tok]) as ws:
+        assert ws.accepted_subprotocol == "bf-device"
+        with pytest.raises(Exception):                                                    # second talker refused
+            with remote.websocket_connect("/talk/T1", subprotocols=["bf-device", tok]) as w2: w2.send_text("{}"); w2.receive_text()
+        ws.send_text(json.dumps({"payload": f}))
+        ws.send_bytes(b"\xff" * 160)                                                      # binary 20 ms frame
+        ws.send_text(json.dumps({"payload": base64.b64encode(b"\xff" * 960).decode()}))   # 6 frames in one message
+        ws.send_text(json.dumps({"payload": base64.b64encode(b"\xff" * 100).decode()}))   # not a 20 ms multiple: dropped
+        ws.send_text("not json"); ws.send_text(json.dumps({"payload": "!!"}))
+    import time; time.sleep(0.2)
+    assert [g[0] for g in got] == ["T1"] * 3 and got[0][1] == f
+    assert "T1" not in relay._TALKERS
+    with pytest.raises(Exception):
+        with lw(c, "/talk/never-seen"): pass                                              # unknown call
+
+
+def test_talk_refused_when_voip_says_not_enabled_and_rate_limited(monkeypatch):
+    import base64, json, pytest, time
+    got = _talk_setup(monkeypatch, enabled=False)
+    c = TestClient(app, base_url="http://127.0.0.1:8000", client=("127.0.0.1", 5000))
+    with pytest.raises(Exception):
+        with lw(c, "/talk/T1"): pass
+    got2 = _talk_setup(monkeypatch, enabled=True)
+    f = json.dumps({"payload": base64.b64encode(b"\xff" * 160).decode()})
+    with lw(c, "/talk/T1") as ws:
+        for _ in range(200): ws.send_text(f)                                              # burst far above 60 frames/s
+    time.sleep(0.3)
+    assert 55 <= len(got2) <= 80, len(got2)
+
+
+def test_talk_frames_dropped_while_decoy_active(monkeypatch):
+    import base64, json, time
+    from server import bus
+    got = _talk_setup(monkeypatch)
+    bus.publish("handoff.started", "T1", {})
+    c = TestClient(app, base_url="http://127.0.0.1:8000", client=("127.0.0.1", 5000))
+    f = json.dumps({"payload": base64.b64encode(b"\xff" * 160).decode()})
+    with lw(c, "/talk/T1") as ws:
+        for _ in range(5): ws.send_text(f)
+    time.sleep(0.2)
+    assert got == []
+    bus.publish("handoff.restored", "T1", {})
+    with lw(c, "/talk/T1") as ws:
+        ws.send_text(f)
+    time.sleep(0.2)
+    assert len(got) == 1
