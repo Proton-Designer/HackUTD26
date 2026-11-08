@@ -24,8 +24,8 @@ Files: `index.html` markup, `style.css` look, `app.js` call screen + events, `ui
 | 14 | Active call, talk mode, mic live (green dot) | MARIA_LEG=talk (or ?talk=1) | `talk.js`, `index.html #talkBox`, `style.css .talk/.mic/.dot` |
 | 15 | Talk mode, muted | tap the mic button | `talk.js render()` |
 | 16 | "Tap for sound" badge (audio blocked by the browser) | AudioContext suspended / autoplay blocked | `app.js unlockAudio`, `sim.js` |
-| 17 | Alert: why chips + Continue / Scammer Get Scammed / Hang up | alert.fired (two beeps) | `index.html #alertBox`, `app.js`, `style.css .alert/.chips` |
-| 18 | Handed off: "We've got it" + "Listening to Backfire's decoy" | Scammer Get Scammed / handoff.started | `app.js showHandoff`, `sim.js` |
+| 17 | Alert: why chips + Continue / Fire Back / Hang up | alert.fired (two beeps) | `index.html #alertBox`, `app.js`, `style.css .alert/.chips` |
+| 18 | Handed off: "We've got it" + "Listening to Backfire's decoy" | Fire Back / handoff.started | `app.js showHandoff`, `sim.js` |
 | 19 | Restored: "You're back on the call" | handoff.restored | `app.js` |
 | 20 | Call ended | call.ended / hang up | `index.html #ended`, `app.js endCall` |
 | 21 | Protection tab: Live Guard, blocked numbers + Undo, calls handled, what we keep, voice profile (Delete my voice) | Protection tab | `index.html #protView`, `ui.js renderProtection` |

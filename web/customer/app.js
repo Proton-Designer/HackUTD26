@@ -132,7 +132,7 @@
       case "user.action": {                               // first tap wins on the hub; show an action taken on ANOTHER phone
         const mine = (window.__userActions || []).some(m => m.call_id === ev.call_id && m.data && m.data.action === d.action && Date.now() - Date.parse(m.ts) < 4000);
         const who = d.by || d.device || d.client || "another phone", n = $("actedMsg");
-        if (!mine && n && d.action) { n.textContent = ({ continue: "Continue", scammer_get_scammed: "Scammer Get Scammed", hang_up: "Hang up" }[d.action] || d.action) + " was chosen on " + (/^another/.test(who) ? who : "the " + who) + "."; n.hidden = false; }
+        if (!mine && n && d.action) { n.textContent = ({ continue: "Continue", scammer_get_scammed: "Fire Back", hang_up: "Hang up" }[d.action] || d.action) + " was chosen on " + (/^another/.test(who) ? who : "the " + who) + "."; n.hidden = false; }
         break; }
       case "handoff.started": clearTimeout(st.handT); showHandoff(); break;
       case "handoff.failed": failHandoff(d.reason); break;   // F3: the hub could not hand the call to Backfire: she is still on the call

@@ -56,7 +56,7 @@
     $("callsCount").textContent = state.calls; $("statCalls").textContent = state.calls; $("statBlocked").textContent = state.blocked.length;
     $("guardState").textContent = state.guardOn ? "On. Backfire is watching the caller's side of calls from numbers it doesn't know." + (state.voiceId ? " Turning it off also deletes your voice." : "") : "Off. Calls are not being checked.";
     $("guardToggle").textContent = state.guardOn ? "Turn Live Guard off" : "Turn Live Guard on";
-    $("voiceState").textContent = state.voiceId ? "Set up. Backfire keeps only a short voice sample, used only if you press Scammer Get Scammed." + (HUB ? "" : " (Simulated)") : "No voice profile.";
+    $("voiceState").textContent = state.voiceId ? "Set up. Backfire keeps only a short voice sample, used only if you press Fire Back." + (HUB ? "" : " (Simulated)") : "No voice profile.";
     $("voiceDelete").hidden = !state.voiceId; $("voiceSetup").hidden = !!state.voiceId;
     applyGuard();
   }
@@ -75,7 +75,7 @@
   BF.onEvent = ev => {
     const d = ev.data || {};
     if (ev.type === "blocklist.updated" && d.scope === "her" && !state.blocked.some(b => b.undo_token === d.undo_token))
-      state.blocked.push({ number: d.number, reason: "Caught after Scammer Get Scammed", undo_token: d.undo_token });
+      state.blocked.push({ number: d.number, reason: "Caught after Fire Back", undo_token: d.undo_token });
     if (ev.type === "call.ended") state.calls++;
     if (ev.type === "blocklist.updated" || ev.type === "call.ended") setTimeout(renderProtection, 0);   // live update while she is looking at the log
     if (ev.type === "voice.enrolled" && d.voice_id) { state.voiceId = d.voice_id; store.set("voice", d.voice_id); }
@@ -104,7 +104,7 @@
   $("s1on").onclick = () => { store.set("on", "1"); state.guardOn = true; store.set("done", "1"); setup(2); };
   $("s2skip").onclick = () => toDns("Backfire is on. Scammers will hear a synthetic voice. You can set up your voice later in Protection.");
   $("s2agree").onclick = () => { const p = newParagraph(); if (!CONVO) $("paragraph").textContent = p; resetRec(); setup("rec"); };
-  $("recSkip").onclick = () => { if (lowQ) { lowQ = false; toDns("Your voice is set up. Backfire is on. It keeps only a short voice sample, used only if you press Scammer Get Scammed. You can delete it any time in Protection."); return; } stopMeter(); if (rec) { discard = true; rec.stop(); } toDns("Backfire is on. Scammers will hear a synthetic voice. You can set up your voice later in Protection."); };
+  $("recSkip").onclick = () => { if (lowQ) { lowQ = false; toDns("Your voice is set up. Backfire is on. It keeps only a short voice sample, used only if you press Fire Back. You can delete it any time in Protection."); return; } stopMeter(); if (rec) { discard = true; rec.stop(); } toDns("Backfire is on. Scammers will hear a synthetic voice. You can set up your voice later in Protection."); };
   $("s3done").onclick = () => { view("callView"); applyGuard(); if (BF.pendingStart) { const f = BF.pendingStart; BF.pendingStart = null; f(); } };
   $("voiceSetup").onclick = () => setup(2);
   $("dnsOpen").onclick = () => { state.fromSettings = true; setup("dns"); };
@@ -185,7 +185,7 @@
         $("recStatus").textContent = "Saved, but the recording sounds like phone quality" + (why ? " (" + why + ")" : "") + (above4k != null ? ", " + above4k + "% of the sound above 4 kHz" : "") + ". For a closer match, record again in a quiet room.";
         $("recSkip").hidden = false; $("recSkip").textContent = "Keep this voice and continue"; return;
       }
-      toDns("Your voice is set up" + (HUB ? "" : " (simulated)") + (quality === "ok" ? " (recording quality: good)" : "") + ". Backfire is on. It keeps only a short voice sample, used only if you press Scammer Get Scammed. You can delete it any time in Protection.");
+      toDns("Your voice is set up" + (HUB ? "" : " (simulated)") + (quality === "ok" ? " (recording quality: good)" : "") + ". Backfire is on. It keeps only a short voice sample, used only if you press Fire Back. You can delete it any time in Protection.");
     } catch (e) {
       console.log("[backfire] enroll failed", String(e)); done();
       $("recStatus").textContent = /\b401\b/.test(String(e)) ? "Please pair this phone first, then try again." : "Your voice wasn't saved. Press Save to try again, or skip to use a synthetic voice.";   // handled errors stay out of Maria's face; BF.onUnauthorized shows the pair screen itself

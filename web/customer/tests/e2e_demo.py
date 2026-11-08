@@ -139,11 +139,11 @@ def main():
             http("POST", "/events", {"type": "alert.fired", "call_id": call.sid, "data": {"level": "first", "why_chips": ["Asks for gift cards", "Claims to be IRS", "Secrecy"]}})
             check("4", "alert box shown", bool(wait_for(lambda: pg.locator("#alertBox").is_visible())))
             check("4", "3 why-chips", pg.locator("#chips li").count() == 3, str(pg.locator("#chips li").count()))
-            check("4", "3 big buttons (Continue / Scammer Get Scammed / Hang up)", all(pg.locator(s).is_visible() for s in ("#btnContinue", "#btnGets", "#btnHang")))
+            check("4", "3 big buttons (Continue / Fire Back / Hang up)", all(pg.locator(s).is_visible() for s in ("#btnContinue", "#btnGets", "#btnHang")))
             check("4", "two beeps fired (oscillators created)", wait_for(lambda: pg.evaluate("window.__osc") >= 2) is not None and pg.evaluate("window.__osc") >= 2, str(pg.evaluate("window.__osc")))
             check("4", "badge = Scam Likely", "Scam Likely" in pg.inner_text("#guard"), pg.inner_text("#guard"))
             shot("04-alert")
-            # 5. Scammer Get Scammed
+            # 5. Fire Back
             pg.click("#btnGets")
             ua = wait_for(lambda: has("user.action", action="scammer_get_scammed"))
             check("5", "user.action scammer_get_scammed reached the hub (WS /events)", bool(ua))
