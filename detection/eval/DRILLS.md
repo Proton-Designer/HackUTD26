@@ -120,3 +120,21 @@ Caveats: one run per cell, one voice for the paraphrase pass, synthetic TTS (no 
 | card | dropped line (cue) | alert | fires on | s from first word | before payment line | margin | max s | risk / smallest tip |
 |---|---|---|---|---|---|---|---|---|
 | 5 Inside job | L5 "We need you to move $1,800 so we can trace where the teller sends it." | 21.9 s | the payment step itself (line 5, 0.7 s after it starts) | 20.9 s | **no** (just after it starts) | -0.7 s (full card +4.4 s) | 0.95 | the "move $1,800 so we can trace it" line is the cue; without it the alert comes on the Zelle ask. Tip: always read the "move $1,800" line, it names the money before the payment step |
+
+### Card 7 (Bounced check) repeat runs, eng1 (#147 follow-up)
+Same setup as above (frozen detector, local engine via WSL gateway, scratch hub/P2, SYNTHETIC Magpie phone-quality audio), 3 more runs per voice at normal speed + 1 run per voice at 1.15x (speed-up of the whole line audio, so the payment line starts earlier too). "s" = seconds from first word; margin = payment-line start minus alert time. All 10 runs (incl. the first, earlier row) alert on **line 5 ("Pay it now and we'll keep this off your record")**, and none after the payment line started.
+
+| voice | run | s | margin s |
+|---|---|---|---|
+| Mia | first (table above) | 23.1 | 0.63 |
+| Mia | r1 | 22.9 | 0.84 |
+| Mia | r2 | 23.1 | 0.57 |
+| Mia | r3 | 23.3 | 0.35 |
+| Mia | 1.15x | 20.3 | 1.12 |
+| Jason | first | 25.0 | 0.84 |
+| Jason | r1 | 24.6 | 1.27 |
+| Jason | r2 | 24.3 | 1.50 |
+| Jason | r3 | 24.4 | 1.45 |
+| Jason | 1.15x | 22.4 | 0.87 |
+
+Spread at normal speed: Mia margin 0.35-0.84 s (4 runs, mean 0.60), Jason 0.84-1.50 s (4 runs, mean 1.27); alert time spread 22.9-23.3 s (Mia), 24.3-25.0 s (Jason), so the alert time is stable (±0.4 s) and the margin only varies with how long the voice's line 5 + gap runs. **Smallest margin 0.35 s: it is always before the payment line but never by more than 1.5 s; one slower STT final on line 5 (finals land 0.7-2.2 s after endpoint) would push it past.** In every run the risk is 0.85 high after line 4 and crosses to the alert on line 5. Mia r2 was run before I added a paused flag to the driver (no live call was open then; its numbers match its neighbours). Not done: not a different TTS voice beyond Mia/Jason, no slower read (0.85x), no real phone line, n=4 per voice.
