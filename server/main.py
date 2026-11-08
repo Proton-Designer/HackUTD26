@@ -68,10 +68,27 @@ def post_event(request: Request, body: dict = Body(...)):
     if t in RESERVED:
         raise HTTPException(403, f"{t} is hub-only")
     data = body.get("data") or {}
+    if t == "alert.fired" and _dup_alert(cid, data.get("level") if isinstance(data, dict) else None):
+        log.warning("dup alert ignored call=%s level=%s", str(cid)[:8], (data or {}).get("level") if isinstance(data, dict) else None)
+        return {"ok": True, "duplicate": True}
     if dev_only:
         data = _device_event(request.headers.get("x-device-token"), t, cid, data)
     bus.publish(t, cid, data, None if dev_only else body.get("ts"))
     return {"ok": True}
+
+_ALERTS: dict = {}          # (call_id, level) -> time of the last accepted alert.fired from POST /events
+REALERT_DEDUP_S = 3.0       # P2 retries a failed POST within seconds; real re-alerts (a new rise) are further apart
+
+def _dup_alert(cid, level) -> bool:
+    """P2 retries POSTs, so the same alert.fired can arrive twice. Exactly one level 'first' per call, ever; a 'realert' repeated within
+    REALERT_DEDUP_S is a retry (genuine re-alerts need a dip and a new rise, so they are further apart)."""
+    now, key = time.time(), (str(cid), str(level))
+    for k in [k for k, v in _ALERTS.items() if now - v > 3600]: _ALERTS.pop(k, None)
+    last = _ALERTS.get(key)
+    if last is not None and (level != "realert" or now - last < REALERT_DEDUP_S):
+        return True
+    _ALERTS[key] = now
+    return False
 
 # ---- paired-device events: engine "device" risk.update / transcript.caller from a second client (e.g. native Android on-device detection) ----
 _BANDS = {"low", "watch", "high", "critical"}
@@ -82,12 +99,16 @@ _dev_hits: dict = {}
 
 def _device_event(token, t, cid, d):
     """Strictly validate and REBUILD the event (unknown fields dropped). Only risk.update / transcript.caller with engine == "device", only for a call
-    the hub has seen, rate-limited per device. Anything else is refused: a paired device is not a pipeline."""
+    the hub has seen that is still active and where this device holds its /listen or /talk socket, rate-limited per device. Anything else is refused: a paired device is not a pipeline."""
     import hashlib
     if t not in ("risk.update", "transcript.caller") or not isinstance(d, dict) or d.get("engine") != "device":
         raise HTTPException(403, "a paired device may post only risk.update / transcript.caller with engine 'device'")
     if cid not in CALLER_BY_CALL:
         raise HTTPException(404, "unknown call_id")
+    if relay._call_ended(cid):
+        raise HTTPException(409, "call already ended")
+    if not relay.device_holds_slot(cid, token):
+        raise HTTPException(403, "attach WS /listen or /talk for this call from this device first")
     key, now = hashlib.sha256(token.encode()).hexdigest(), time.time()
     hits = [x for x in _dev_hits.get(key, []) if now - x < DEVICE_EVENT_LIMIT[1]]
     if len(hits) >= DEVICE_EVENT_LIMIT[0]:
@@ -266,7 +287,7 @@ def demo_reset(request: Request, seed: bool = Query(True)):
     (yesterday's synthetic sighting) unless ?seed=0. Seeding fails open: reset still succeeds.
     Direct localhost, a paired device, or x-hub-token==HUB_TOKEN only (a remote caller must not be able to wipe the demo)."""
     t0 = time.time()
-    db.reset_all(); bus.reset(); _reset_intel(); ops.reset(); CALLER_BY_CALL.clear(); DECOY_CALLS.clear()
+    db.reset_all(); bus.reset(); _reset_intel(); ops.reset(); _ALERTS.clear(); CALLER_BY_CALL.clear(); DECOY_CALLS.clear()
     out = {"ok": True, "seeded": False}
     if seed and intel_api is not None:
         try:

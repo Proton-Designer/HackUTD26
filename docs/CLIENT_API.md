@@ -1,7 +1,7 @@
 # Backfire hub: client API (a second client acting as the customer)
 
 For Evan's native Android app (or any client) acting as the protected customer on a live Telnyx call. Everything here is served by the one hub process (`<HUB>` = `https://<tunnel>` or `http://127.0.0.1:8000`; use `wss://` / `ws://` for sockets). Event shapes: `contracts/events.md`. The customer's display name (default "Maria") is hub flag `CUSTOMER_NAME`; enum values such as `by:"maria"` never change.
-Never log tokens, PINs or audio. All demo data is synthetic. Everything the hub does for a call fails open: if your client is gone the call still connects.
+The hub is single-customer: every paired device is one of that customer's phones, and there is no per-customer binding (out of scope for the demo). Never log tokens, PINs or audio. All demo data is synthetic. Everything the hub does for a call fails open: if your client is gone the call still connects.
 
 ## 1. Pair (once per device)
 `POST /pair` `{"pin":"<DEVICE_PIN shown by the operator>"}` -> `200 {"device_token":"<opaque>"}`. Store it securely; it survives hub restarts and demo resets.
@@ -46,10 +46,10 @@ Client -> server frames, either JSON text `{"payload":"<base64 PCMU 8 kHz mono>"
 - Voice: `POST /voice/enroll` `{"recording":"<base64>","mime":"audio/mp4","consent_version":"v1"}` -> `{"voice_id":"..."}`, or `{"voice_id":null,"fallback":"synthetic","reason":...}` when no voice service is connected (the audio is then discarded; show "your voice wasn't saved, a synthetic voice is used"). Accepted: webm, ogg, wav, mp4/m4a/aac (mime params like `;codecs=opus` are fine); 5 MB decoded max; mime and file header must agree; `415` wrong/mismatched format, `400` bad JSON/base64, `413` too large. `DELETE /voice/{voice_id}` -> `{"ok":true}` (idempotent). Only ask for the recording after an explicit consent screen.
 
 ## 6. Device-side detection: `POST /events`
-A paired device may publish its own detector's output so the UI and hub see it. Header `x-device-token`; body `{"type","call_id","data"}`. **Only** these two, **only** with `data.engine == "device"`, **only** for a call the hub has seen:
+A paired device may publish its own detector's output so the UI and hub see it. Header `x-device-token`; body `{"type","call_id","data"}`. **Only** these two, **only** with `data.engine == "device"`, **only** for a call the hub has seen that is still active (not ended), **and only from a device that currently holds that call's `/listen` or `/talk` socket** (open one first):
 - `transcript.caller`: `{"text":str (<=500),"is_final":bool,"utterance_id":str?,"engine":"device"}`
 - `risk.update`: `{"s":0-1,"band":low|watch|high|critical,"stage":opening|pretext|pressure|payment|closing,"asks":[otp|card|ssn|gift_card|crypto|wire|p2p|remote_app|secrecy],"why_chips":[<=4 strings],"scam_type":str,"impersonates":str|null,"addresses_ai_system":bool,"engine":"device"}`
-The hub rebuilds the event from the validated fields (extras are dropped). Errors: `403` any other type or engine (including `alert.fired`, `call.*`, `handoff.*`, `user.action`), `404` unknown call, `422` invalid field, `429` over 40 events per 10 s per device, `401` no/invalid token. Notes: a `risk.update` with `engine:"device"` is treated like a real detector score by the hub (it silences the hub fallback detector briefly and can count toward restore decisions), so post honest scores at a modest rate (about 1 per utterance); the hub does not turn it into `alert.fired` for you (P2 / the fallback detector do that).
+The hub rebuilds the event from the validated fields (extras are dropped). Errors: `403` any other type or engine (including `alert.fired`, `call.*`, `handoff.*`, `user.action`), `404` unknown call, `409` call already ended, `403` also when this device holds no `/listen`/`/talk` socket for the call, `422` invalid field, `429` over 40 events per 10 s per device, `401` no/invalid token. Notes: a `risk.update` with `engine:"device"` is treated like a real detector score by the hub (it silences the hub fallback detector briefly and can count toward restore decisions), so post honest scores at a modest rate (about 1 per utterance); the hub does not turn it into `alert.fired` for you (P2 / the fallback detector do that).
 
 ## 7. Typical live-call flow
 1. Pair once; open `WS /events`; read `/demo/status` flags.

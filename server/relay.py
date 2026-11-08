@@ -351,6 +351,17 @@ async def _replace_listeners(call_id, ident, kind):
             except Exception: pass
             log.warning("%s %s: replaced by a new connection from the same device", kind, call_id[:8])
 
+def device_holds_slot(call_id, token) -> bool:
+    """True when the paired device with this token currently holds a /talk or /listen socket for the call (used to bind device events to a live participant)."""
+    import hashlib
+    if not token:
+        return False
+    ident = "dev:" + hashlib.sha256(token.encode()).hexdigest()[:10]
+    t = _TALKERS.get(call_id)
+    if t is not None and t[0] == ident:
+        return True
+    return any(_LIDENT.get(id(q), (None,))[0] == ident for q in _LQ.get(call_id, ()))
+
 def _listen_authorized(ws: WebSocket):
     """Direct loopback (no token needed), x-hub-token == HUB_TOKEN, or a paired device token. Browsers can't set headers and the token must
     not be in the URL, so the client opens new WebSocket(url, ['bf-device', <token>]): Sec-WebSocket-Protocol 'bf-device, <token>'.

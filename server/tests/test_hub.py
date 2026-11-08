@@ -544,6 +544,15 @@ def test_paired_device_may_post_only_device_risk_and_transcript(monkeypatch):
     bus.publish("call.incoming", "DV1", {"from": "+15555550123", "to": "+15555550100", "attestation": "C", "scam_id_score": 0.8})
     anon, dev = TestClient(app), paired()
     ev = lambda t, d, c=dev, cid="DV1": c.post("/events", json={"type": t, "call_id": cid, "data": d})
+    assert ev("risk.update", _dev_risk()).status_code == 403                          # paired but holds no /listen or /talk slot for the call
+    ws = dev.websocket_connect("/listen/DV1", subprotocols=["bf-device", dev.headers["x-device-token"]]); ws.__enter__()
+    try:
+        _device_body(anon, dev, ev)
+    finally:
+        ws.__exit__(None, None, None)
+
+
+def _device_body(anon, dev, ev):
     assert ev("risk.update", _dev_risk(), anon).status_code == 401                   # no token at all
     n0 = len(bus.history)
     r = ev("risk.update", _dev_risk(evil="x", extra={"a": 1}))
@@ -573,7 +582,43 @@ def test_device_event_rate_limited(monkeypatch):
     from server import main as m
     monkeypatch.setenv("PIPELINE_TOKEN", "pt-secret"); m._dev_hits.clear()
     bus.publish("call.incoming", "DV2", {"from": "+15555550123", "to": "+15555550100", "attestation": "C", "scam_id_score": 0.8})
-    dev = paired(); codes = [dev.post("/events", json={"type": "risk.update", "call_id": "DV2", "data": _dev_risk()}).status_code for _ in range(45)]
-    assert codes[:40] == [200] * 40 and set(codes[40:]) == {429}
-    other = paired()                                                                 # a different device has its own budget
-    assert other.post("/events", json={"type": "risk.update", "call_id": "DV2", "data": _dev_risk()}).status_code == 200
+    dev, other = paired(), paired()
+    post = lambda c: c.post("/events", json={"type": "risk.update", "call_id": "DV2", "data": _dev_risk()}).status_code
+    with dev.websocket_connect("/listen/DV2", subprotocols=["bf-device", dev.headers["x-device-token"]]), \
+         other.websocket_connect("/listen/DV2", subprotocols=["bf-device", other.headers["x-device-token"]]):
+        codes = [post(dev) for _ in range(45)]
+        assert codes[:40] == [200] * 40 and set(codes[40:]) == {429}
+        assert post(other) == 200                                                    # a different device has its own budget
+
+
+def test_device_events_need_active_call_and_the_slot_holder(monkeypatch):
+    from server import main as m
+    monkeypatch.setenv("PIPELINE_TOKEN", "pt-secret"); m._dev_hits.clear()
+    bus.publish("call.incoming", "DV3", {"from": "+15555550123", "to": "+15555550100", "attestation": "C", "scam_id_score": 0.8})
+    a, b = paired(), paired()
+    post = lambda c: c.post("/events", json={"type": "risk.update", "call_id": "DV3", "data": _dev_risk()}).status_code
+    with a.websocket_connect("/listen/DV3", subprotocols=["bf-device", a.headers["x-device-token"]]):
+        assert post(a) == 200
+        assert post(b) == 403                                                        # paired, but not the device attached to this call
+        bus.publish("call.ended", "DV3", {"ended_by": "caller", "duration_s": 3})
+        assert post(a) == 409                                                        # ended calls accept no device events
+
+
+def test_duplicate_alert_fired_ignored_and_logged(monkeypatch, caplog):
+    import logging
+    from server import main as m
+    monkeypatch.delenv("PIPELINE_TOKEN", raising=False); m._ALERTS.clear()
+    c = TestClient(app)
+    ws_events = lambda cid: [e for e in bus.history if e["type"] == "alert.fired" and e["call_id"] == cid]
+    post = lambda cid, lvl: c.post("/events", json={"type": "alert.fired", "call_id": cid, "data": {"level": lvl, "why_chips": ["Asks for gift cards"]}})
+    with caplog.at_level(logging.WARNING, logger="hub"):
+        assert post("DUP1", "first").json() == {"ok": True}
+        r = post("DUP1", "first"); assert r.status_code == 200 and r.json().get("duplicate") is True     # retry: acknowledged, not re-published
+        assert len(ws_events("DUP1")) == 1
+        assert post("DUP2", "first").json() == {"ok": True} and len(ws_events("DUP2")) == 1               # other call unaffected
+        assert post("DUP1", "realert").json() == {"ok": True}
+        assert post("DUP1", "realert").json().get("duplicate") is True                                   # realert retry inside 3 s
+        assert len(ws_events("DUP1")) == 2
+        m._ALERTS[("DUP1", "realert")] -= 10                                                              # a later genuine rise
+        assert post("DUP1", "realert").json() == {"ok": True} and len(ws_events("DUP1")) == 3
+    assert any("dup alert ignored call=DUP1" in r.getMessage() for r in caplog.records)
