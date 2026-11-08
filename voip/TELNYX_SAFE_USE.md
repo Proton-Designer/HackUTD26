@@ -2,13 +2,16 @@
 
 Context: on 2026-11-08 ~01:00 the backup Telnyx account started returning `401 / 10009 "This user has been marked as blocked"` right after six automated test calls (`voip/test_call.py --live`). It was restored afterwards and is Ayman's long-term account. Everything below exists so that never happens again.
 
-## What most likely tripped the block (our inference; Telnyx never said)
-1. **Self-dials via the API**: `POST /v2/calls` with `from` = `to` = our own number, repeatedly. Call pumping / traffic-pumping and "spoofed caller ID" shape (from == to is the classic spoof).
-2. **New number + burst**: a freshly bought number and ~6 calls within ~25 minutes (new account, $1 number, then volume).
-3. **Prerecorded, fixed-length robocall shape**: `audio_url` played to a callee, always 73 s (`time_limit_secs`), same file, same cadence.
-4. **Scam-script audio**: IRS / gift-card / crypto content ("warrant for your arrest", "buy Target gift cards", wallet addresses) over PSTN. Likely flagged by content/abuse review or by a carrier complaint pipeline.
-Contributing: unverified SHAKEN/STIR on our own outbound leg, and the account also hosting another product's numbers.
-We cannot tell which of the four mattered; treat all as unsafe.
+## Cause: CONFIRMED by Telnyx support
+Telnyx support told us (via the lead, 2026-11-08) the account was **"flagged for outbound voice spam usage: spam-like outbound calling patterns (high-volume/robocall-style)"**. That matches our API-originated outbound test calls (`voip/test_call.py --live`, six `POST /v2/calls` in ~25 minutes). Telnyx did not say which detail mattered, so our earlier hypotheses are still the likely contributing shape (treat all as unsafe):
+1. Self-dials via the API: `from` = `to` = our own number, repeatedly (classic spoof / call-pumping shape).
+2. New number + burst: a fresh $1 number and ~6 calls within ~25 minutes.
+3. Prerecorded fixed-length audio: the same `audio_url`, always 73 s (`time_limit_secs`), same cadence (robocall shape).
+4. Scam-script audio (IRS / gift-card / crypto) over PSTN.
+Not a cause as far as we know: inbound calls, webhooks, conferences, Maria's browser leg.
+
+## Open question for Telnyx (UNANSWERED; do not assume)
+The hub itself also originates one API call per live call: `POST /v2/calls` with `to = sip:<TELNYX_SIP_USER>@sip.telnyx.com` (Maria's own credential connection, `sip_uri_calling_preference=internal`, billed $0, never PSTN). Does Telnyx's outbound spam scoring count that SIP-URI dial as "outbound" voice? Until answered: keep live calls to a handful per hour, never loop or auto-redial, and prefer the phone-free demo (SIM_MODE sends zero Telnyx requests). Ask the lead to put this question to Telnyx support; engineers do not contact Telnyx or call its API.
 
 ## Rules from now on
 - **No PSTN outbound. Ever.** Not for tests, not for "just one". voip enforces it: `telnyx.dial()` raises unless `to` is exactly `sip:<TELNYX_SIP_USER>@sip.telnyx.com` (Maria's browser), or the human override `BACKFIRE_ALLOW_PSTN_OUTBOUND=1` is set. `voip/test_call.py --live` refuses without that same variable. Do not set it without the lead's explicit OK and Ayman's.
