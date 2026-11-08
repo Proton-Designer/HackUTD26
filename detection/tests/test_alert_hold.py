@@ -21,8 +21,15 @@ class Rig:
 
 def test_failed_window_after_critical_no_dip_no_realert():
     r = Rig([("ok", R(0.95)), ("fail", R(0.3)), ("fail", R(0.3)), ("ok", R(0.96))])
-    r.say(); r.user("continue"); r.say(); r.say(); r.say()
+    r.say(); r.say(); r.say(); r.say()          # hold applies within the same (pre-Continue) context
     assert r.ss() == [0.95, 0.95, 0.95, 0.96] and r.alerts() == ["first"]
+
+
+def test_after_continue_failed_window_does_not_hold_pre_continue_score():
+    # TASK-046 L3: Continue drops the held anchor, so an engine-failed window right after it is rules-only (restore not delayed)
+    r = Rig([("ok", R(0.95)), ("fail", R(0.3))])
+    r.say(); r.user("continue"); r.say()
+    assert r.ss() == [0.95, 0.3]
 
 
 def test_real_low_llm_score_still_restores():
@@ -144,3 +151,32 @@ def test_positive_control_without_ended_the_late_final_alerts():
     r.t += 6; n = len(r.ev)
     asyncio.run(r.m.on_final("c1", {"text": "pay with gift cards now and read me the six digit code"}))
     assert len(r.ev) > n
+
+
+def _restore(r): asyncio.run(r.m.on_event({"type": "handoff.restored", "call_id": "c1", "data": {}}))
+
+
+def test_restored_then_benign_line_does_not_realert():
+    r = Rig([("ok", R(0.95, asks=["gift_cards"])), ("ok", R(0.1))])
+    r.say(); assert r.alerts() == ["first"]
+    _restore(r); r.say()
+    assert r.alerts() == ["first"] and r.ss()[-1] == 0.1      # old window cleared: no second first-alert
+
+
+def test_restored_then_new_hard_ask_fires():
+    r = Rig([("ok", R(0.95, asks=["gift_cards"]))])
+    r.say(); _restore(r); r.t += 6
+    assert _ask_partial(r, r.t) > 0 and r.alerts() == ["first", "first"]
+
+
+def test_restored_clears_window_and_bumps_epoch():
+    r = Rig([("ok", R(0.95))])
+    r.say(); c = r.m.calls["c1"]; ep = c.epoch; _restore(r)
+    assert c.epoch == ep + 1 and not c.utts and c.llm is None
+
+
+def test_continue_resets_held_score():
+    r = Rig([("ok", R(0.95))])
+    r.say(); r.user("continue")
+    c = r.m.calls["c1"]
+    assert c.llm is None and c.llm_t == 0.0

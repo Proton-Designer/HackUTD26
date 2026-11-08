@@ -206,12 +206,14 @@ class AlertMachine:
                 c = self._call(cid)
                 c.continued, c.armed = True, True   # prev_band stays: critical must be a NEW transition after Continue
                 c.known_hard = set(c.last.get("asks", [])) & schema.HARD_ASKS if c.last else set()
-                c.utts.clear(); c.epoch += 1; c.dirty = False; c.cont_t = self.clock()   # the user saw the alert and chose Continue: score only what is said from now on, so benign talk restores s within a line or two (a new hard ask still fires on its own)
+                c.utts.clear(); c.epoch += 1; c.dirty = False; c.cont_t = self.clock(); c.llm, c.llm_t, c.fail_n, c.clean_n = None, 0.0, 0, 0   # also drop the held pre-Continue score (TASK-046 L3); the user saw the alert and chose Continue: score only what is said from now on, so benign talk restores s within a line or two (a new hard ask still fires on its own)
             elif t == "handoff.started":
                 self._call(cid).decoy = True
             elif t == "handoff.restored":
                 log.info("handoff.restored seen call=%s", cid)
                 c = self._call(cid); c.decoy = False; c.fired = False; c.continued = False; c.armed = False
+                # restored = judged legit and handed back: like Continue, score only what is said from now on (old scam text must not re-fire 'first'); in-flight results drop (TASK-046 M1)
+                c.utts.clear(); c.epoch += 1; c.dirty = False; c.cont_t = self.clock(); c.llm, c.llm_t, c.fail_n, c.clean_n = None, 0.0, 0, 0; c.prev_band = "low"; c.known_hard = set()
             elif t in ("call.ended",) or (t == "user.action" and d.get("action") == "hang_up"):
                 self._mark_ended(cid)
         except Exception:
