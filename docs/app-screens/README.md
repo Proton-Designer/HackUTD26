@@ -1,7 +1,7 @@
-# Maria's app: every screen (iPhone 13, 390x844, Chromium emulation, current build)
+# Backfire customer app: every screen (iPhone 13, 390x844, Chromium emulation, current build)
 
 Regenerate: `E2E_VENV=<venv with playwright> $E2E_VENV/bin/python web/customer/tests/make_screens.py` (static server + a mock hub inside Playwright: no hub, no Telnyx, no real calls, no secrets; fake WebSockets and a fake microphone drive the states).
-Files: `index.html` markup, `style.css` look, `app.js` call screen + events, `ui.js` onboarding/Protection, `pair.js` pairing, `sim.js` caller/decoy audio (/listen), `talk.js` Maria's mic (/talk), `judge.html` scammer card.
+Files: `index.html` markup, `style.css` look, `app.js` call screen + events, `ui.js` onboarding/Protection, `pair.js` pairing, `sim.js` caller/decoy audio (/listen), `talk.js` the customer's mic (/talk), `judge.html` scammer card.
 
 | # | Screen | Triggered by | Edit |
 |---|---|---|---|
@@ -28,5 +28,8 @@ Files: `index.html` markup, `style.css` look, `app.js` call screen + events, `ui
 | 21 | Protection tab: Live Guard, blocked numbers + Undo, calls handled, what we keep, voice profile (Delete my voice) | Protection tab | `index.html #protView`, `ui.js renderProtection` |
 | 22 | Protection > Do Not Screen manage | "Manage this list" | `index.html #stepDns`, `ui.js` |
 | 23 | judge.html: "You are the scammer" card | open /app/judge.html | `judge.html` |
+| 24 | "Add to Home Screen" hint (iOS/Android, first visit, dismiss = never again) | first visit in a mobile browser (not installed) | `index.html #a2hs`, `app.js` (A2HS block), `style.css .hint-bar` |
+| 25 | Observer: "Customer is answering on another phone" + "<action> was chosen on <device>" + alert with engine tag | /talk refused (another device talking) | `talk.js observer()`, `app.js` (user.action, alertTag), `index.html #observerMsg/#actedMsg/#alertTag` |
+| 26 | Desktop: app shown as a centered phone frame | viewport >= 700x600 | `style.css` (end of file, desktop frame rule) |
 
 Notes: the screenshots use a mock hub, so numbers and calls are synthetic. No pairing code or token appears in any image (the pair screen shows only the placeholder). The status-bar flame and wordmarks come from `assets/`.

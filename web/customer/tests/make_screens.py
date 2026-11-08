@@ -1,6 +1,6 @@
 import time,glob,os,subprocess,sys,json,math,base64,mimetypes
 from playwright.sync_api import sync_playwright
-ROOT="/Users/aymanmohammed/Documents/HackUTD26/web/customer"; OUT="/Users/aymanmohammed/Documents/HackUTD26/docs/maria-screens/"; PORT=8771; B=f"http://127.0.0.1:{PORT}"
+ROOT="/Users/aymanmohammed/Documents/HackUTD26/web/customer"; OUT="/Users/aymanmohammed/Documents/HackUTD26/docs/app-screens/"; PORT=8771; B=f"http://127.0.0.1:{PORT}"
 def ulaw(x):
     s=0x80 if x<0 else 0; x=min(abs(x)+132,32635); e=7; m=0x4000
     while e>0 and not (x&m): e-=1; m>>=1
@@ -28,10 +28,10 @@ try:
     with sync_playwright() as p:
         c=sorted(glob.glob(os.path.expanduser("~/Library/Caches/ms-playwright/chromium-*/chrome-mac*/Chromium.app/Contents/MacOS/Chromium")))
         b=p.chromium.launch(executable_path=c[-1],args=["--use-fake-ui-for-media-stream","--use-fake-device-for-media-stream"])
-        def mk(leg="",paired=True,query="",store=None,skip=True,mic=True):
+        def mk(leg="",paired=True,query="",store=None,skip=True,mic=True,hint=False,dev="iPhone 13"):
             state["leg"]=leg; state["unpaired"]=not paired
-            ctx=b.new_context(**p.devices["iPhone 13"],permissions=["microphone"]); pg=ctx.new_page()
-            pg.add_init_script(INIT+("localStorage.setItem('bf.device','demo-token');" if paired else ""))
+            ctx=(b.new_context(**p.devices[dev],permissions=["microphone"]) if dev else b.new_context(viewport={"width":1280,"height":800},permissions=["microphone"])); pg=ctx.new_page()
+            pg.add_init_script(("" if hint else "localStorage.setItem('bf.a2hs','1');")+INIT+("localStorage.setItem('bf.device','demo-token');" if paired else ""))
             if store: pg.add_init_script("".join(f"localStorage.setItem('bf.{k}','{v}');" for k,v in store.items()))
             pg.route(B+"/**",hub)
             pg.goto(B+"/index.html?server="+B+("&skipsetup" if skip else "")+query); time.sleep(1.3); return pg
@@ -74,6 +74,12 @@ try:
         # protection
         pg=mk(store={"voice":"v_demo"}); pg.evaluate("BF.view('protView')"); time.sleep(1); shot(pg,"21-protection-tab",True)
         pg.click("#dnsOpen"); time.sleep(.4); shot(pg,"22-protection-do-not-screen-manage",True); pg.context.close()
+        # PWA / observer / desktop
+        pg=mk(hint=True); shot(pg,"24-add-to-home-screen-hint"); pg.context.close()
+        pg=mk(leg="talk"); pg.add_init_script(""); call(pg); answered(pg); time.sleep(.8)
+        pg.evaluate("(()=>{BF.observer=true;document.getElementById('talkBox').hidden=true;document.getElementById('observerMsg').hidden=false})()")
+        ev(pg,"alert.fired","{level:'first',engine:'server',why_chips:['Claims to be the IRS','Asks for a one-time code']}"); ev(pg,"user.action","{action:'scammer_get_scammed',by:'android phone'}"); time.sleep(.5); shot(pg,"25-observer-other-phone-answering"); pg.context.close()
+        pg=mk(dev=None); call(pg); shot(pg,"26-desktop-phone-frame-ring"); pg.context.close()
         # judge
         pj=b.new_context(**p.devices["iPhone 13"]).new_page(); pj.goto(B+"/judge.html"); time.sleep(1); pj.screenshot(path=OUT+"23-judge-card.png",full_page=True); print("saved judge")
 finally: srv.terminate()
