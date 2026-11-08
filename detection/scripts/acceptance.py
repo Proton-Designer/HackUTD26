@@ -132,7 +132,7 @@ async def main():
     def add(name, ok, detail): rows.append((name, "PASS" if ok else ("SKIP" if ok is None else "FAIL"), detail))
     wavs = ensure_wavs()
     ids = {n: f"acc_{n}" for n in CALLS}; ids.update({"irs_l": "acc_irs_l", "bank_l": "acc_bank_l"})
-    L = Loop("cloud", list(ids.values())); await L.start()
+    L = Loop(os.environ.get("ACC_ENGINE", "cloud"), list(ids.values())); await L.start()
     try:
         # case 2 first, alone (latency not inflated by other calls)
         t0 = await L.run_call(ids["askfirst"], wavs["askfirst"])

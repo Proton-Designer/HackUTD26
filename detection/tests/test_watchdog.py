@@ -34,3 +34,30 @@ def test_restarts_missing_service_window_and_reports_new_tunnel_url(tmp_path):
         assert (tmp_path / "url.txt").read_text().strip() == "https://fake-new-one.trycloudflare.com"
     finally:
         subprocess.run(["tmux", "kill-session", "-t", sess], capture_output=True)   # kills the fake service too
+
+
+def test_restarts_dead_llama_in_its_window(tmp_path):
+    """Throwaway session; llama URL points at a dead port; WD_LLAMA_CMD is a fake that starts a /health server (200)."""
+    sess, port, lport = f"wdl{uuid.uuid4().hex[:6]}", _free(), _free()
+    (tmp_path / "ok.py").write_text(textwrap.dedent("""
+        import http.server
+        class H(http.server.BaseHTTPRequestHandler):
+            def do_GET(self):
+                self.send_response(200); self.end_headers(); self.wfile.write(b'{"ok":true,"active_stt_sockets":0}')
+            def log_message(self,*a): pass
+        import sys; http.server.HTTPServer(("127.0.0.1",int(sys.argv[1])),H).serve_forever()"""))
+    env = dict(os.environ, WD_SESSION=sess, WD_PORT=str(port), WD_TICK_S="1", WD_FAILS="3", WD_MAX_TICKS="14",
+               WD_LOG=str(tmp_path / "wd.log"), WD_URL_FILE=str(tmp_path / "url.txt"), WD_TUN_EVERY="999",
+               WD_SVC_CMD=f"{sys.executable} {tmp_path/'ok.py'} {port}",
+               WD_LLAMA_URL=f"http://127.0.0.1:{lport}", WD_LLAMA_SESS=sess, WD_LLAMA_WIN="llama", WD_LLAMA_EVERY_S="1",
+               WD_LLAMA_GRACE_S="1", WD_LLAMA_CMD=f"{sys.executable} {tmp_path/'ok.py'} {lport}")
+    subprocess.run(["tmux", "new-session", "-d", "-s", sess, "-n", "llama", "bash"], check=True)   # bare shell window
+    try:
+        subprocess.run(["bash", os.path.join(ROOT, "detection/scripts/watchdog.sh")], env=env, cwd=ROOT, timeout=90,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        log = (tmp_path / "wd.log").read_text()
+        assert "LLAMA RESTART" in log and log.count("LLAMA RESTART") == 1      # restarted once, grace stopped a restart loop
+        import urllib.request
+        assert urllib.request.urlopen(f"http://127.0.0.1:{lport}/health", timeout=3).status == 200   # the relaunched fake answers
+    finally:
+        subprocess.run(["tmux", "kill-session", "-t", sess], capture_output=True)

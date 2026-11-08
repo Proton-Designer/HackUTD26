@@ -116,3 +116,64 @@ def test_timeout_cloud_still_alerts_via_local(monkeypatch):
     import time; t = time.monotonic()
     assert run(D.detect("c", "hello there", {}, "cloud"))["engine"] == "local"
     assert time.monotonic() - t < D.OVERALL_TIMEOUT_S
+
+
+# ---- reverse failover (TASK-041): engine=local primary, cloud second ----
+@pytest.fixture
+def rev(monkeypatch):
+    monkeypatch.setenv("NVIDIA_API_KEY", "test-not-a-key")
+    D.FAILOVERS["reverse"] = 0
+    D.BREAKER.reset()
+    CLOUD_RAW = dict(LOCAL_RAW, s=0.9)
+    async def ok_cloud(): return CLOUD_RAW
+    return ok_cloud
+
+
+def test_local_error_uses_cloud(monkeypatch, rev):
+    patch(monkeypatch, rev, down)
+    out = run(D.detect("c", "hello there", {}, "local"))
+    assert out["engine"] == "cloud" and out["s"] >= 0.9 and D.FAILOVERS["reverse"] == 1
+
+
+def test_local_timeout_uses_cloud(monkeypatch, rev):
+    async def slow(): await asyncio.sleep(5); return LOCAL_RAW
+    monkeypatch.setattr(D, "LOCAL_FIRST_S", 0.2)
+    patch(monkeypatch, rev, slow)
+    out = run(D.detect("c", "hello there", {}, "local"))
+    assert out["engine"] == "cloud" and D.FAILOVERS["reverse"] == 1
+
+
+def test_local_probe_down_skips_local(monkeypatch, rev):
+    calls = []
+    async def loc(): calls.append(1); return LOCAL_RAW
+    patch(monkeypatch, rev, loc, reachable=False)
+    out = run(D.detect("c", "hello there", {}, "local"))
+    assert not calls and out["engine"] == "cloud"
+
+
+def test_local_ok_no_cloud_call(monkeypatch, rev):
+    calls = []
+    async def cl(): calls.append(1); return LOCAL_RAW
+    patch(monkeypatch, cl, ok_local)
+    out = run(D.detect("c", "hello there", {}, "local"))
+    assert not calls and out["engine"] == "local"
+
+
+def test_both_down_rules_floor(monkeypatch, rev):
+    patch(monkeypatch, boom, down)
+    out = run(D.detect("c", TXT, {}, "local"))
+    assert out["s"] >= 0.82 and "otp" in out["asks"] and D.detect.__name__
+
+
+def test_reverse_disabled_or_no_key_or_breaker_open(monkeypatch, rev):
+    calls = []
+    async def cl(): calls.append(1); return LOCAL_RAW
+    patch(monkeypatch, cl, down)
+    monkeypatch.setenv("P2_FAILOVER", "0")
+    run(D.detect("c", "hello there", {}, "local")); assert not calls
+    monkeypatch.delenv("P2_FAILOVER"); monkeypatch.delenv("NVIDIA_API_KEY")
+    run(D.detect("c", "hello there", {}, "local")); assert not calls
+    monkeypatch.setenv("NVIDIA_API_KEY", "x")
+    monkeypatch.setattr(D.BREAKER, "state", "open"); monkeypatch.setattr(D.BREAKER, "allow", lambda: False)
+    monkeypatch.setattr(D.BREAKER, "enabled", staticmethod(lambda: True))
+    run(D.detect("c", "hello there", {}, "local")); assert not calls

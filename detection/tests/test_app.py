@@ -30,7 +30,7 @@ def test_healthz_reports_wiring_without_secrets(monkeypatch):
     appmod_D._local["t"] = -1e9
     health.err("hub.emit", RuntimeError("boom with http://x?key=SECRET"))
     j = TestClient(appmod.app).get("/healthz").json()
-    assert j["ok"] and j["stt"]["backend"] in ("riva", "whisper") and j["engines"] == {"cloud_key_present": True, "local_reachable": False}
+    assert j["ok"] and j["stt"]["backend"] in ("riva", "whisper") and j["engines"]["cloud_key_present"] is True and j["engines"]["local_reachable"] is False and j["engines"]["local_probe_ms"] is None and j["engines"]["primary"] in ("cloud", "local")
     assert j["hub_subscriber_connected"] in (True, False) and isinstance(j["active_stt_sockets"], int)
     assert j["last_error"]["src"] == "hub.emit" and j["last_error"]["err"] == "RuntimeError"
     assert "SECRET" not in str(j)

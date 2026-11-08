@@ -67,3 +67,9 @@
 ## After call.ended (TASK-038)
 `AlertMachine.ended` remembers call_ids the hub reported ended (or hang_up); late STT finals/partials and in-flight detect results for them are dropped (no risk.update/alert.fired, no state re-created). Before this a late final re-created the call and fired `alert level=first` after hangup (seen offline, same code path as live). Not tied to socket close: P1's relay can reconnect mid-call.
 `P2_LOCAL_TIMEOUT_S` (default 6.0): budget for engine=local as the PRIMARY engine (llama -np 1 is 2-3.3 s alone, ~4 s with 2 concurrent; whisper shares the CPU). Cloud and failover budgets unchanged (OVERALL_TIMEOUT_S 4.0).
+
+## Local-primary hardening (TASK-041)
+- P2_ENGINE=local: local gets P2_LOCAL_FIRST_S (4 s) then falls back to cloud (breaker closed, key present, P2_FAILOVER!=0) within P2_LOCAL_TIMEOUT_S (6 s); a failed probe skips local entirely. Then the rules floor. Log: "failover: local X -> cloud".
+- /healthz engines: primary, local_probe_ms, failovers {cloud_to_local, local_to_cloud}.
+- watchdog.sh also probes $LOCAL_LLM_URL/health every 30 s; 3 failures -> "LLAMA RESTART" via run_local_llm.sh in backfire-p2-eng:llama (^C first if a process runs), 120 s grace. WD_LLAMA=0 disables.
+- Acceptance with local primary: ACC_ENGINE=local ACC_P2_PORT=8102 bash detection/scripts/acceptance.sh

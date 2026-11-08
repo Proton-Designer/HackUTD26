@@ -391,11 +391,12 @@ async def _engine_score(window_text: str, metadata: dict, engine: str, allow_net
 
 
 LOCAL_PRIMARY_S = float(os.environ.get("P2_LOCAL_TIMEOUT_S", "6.0"))   # engine=local as the PRIMARY (offline demo): llama -np 1 + whisper share the CPU, 2-3.3 s per call alone; cloud path unchanged
+LOCAL_FIRST_S = float(os.environ.get("P2_LOCAL_FIRST_S", "4.0"))   # engine=local primary WITH a cloud fallback available: local gets this long, cloud the rest of LOCAL_PRIMARY_S
 FAILOVER_CLOUD_S = 2.0     # cloud+probe cap when local is reachable; local then gets >= OVERALL_TIMEOUT_S - 2.0 = 2.0 s
 PROBE_TIMEOUT_S = 0.5
 _probe_lock = None
-_local = {"ok": False, "t": -1e9}
-FAILOVERS = {"n": 0}
+_local = {"ok": False, "t": -1e9, "ms": None}
+FAILOVERS = {"n": 0, "reverse": 0}
 ENGINE_FAILED: dict = {}   # call_id -> True when the last detect() had no LLM result (rules-only because an engine failed); read by alert.py       # count of cloud->local failovers (log/diagnostics)
 
 
@@ -424,14 +425,20 @@ async def _local_reachable() -> bool:
             try:
                 import httpx
                 base = os.environ.get("LOCAL_LLM_URL", "http://127.0.0.1:11434").rstrip("/")
+                t1 = time.monotonic()
                 async with httpx.AsyncClient(timeout=PROBE_TIMEOUT_S) as c:
                     _local["ok"] = (await asyncio.wait_for(c.get(base + "/v1/models"), PROBE_TIMEOUT_S)).status_code == 200
+                _local["ms"] = round((time.monotonic() - t1) * 1000)
             except Exception:
-                _local["ok"] = False
+                _local["ok"] = False; _local["ms"] = None
             _local["t"] = time.monotonic()
     except Exception:
         return False
     return _local["ok"]
+
+
+def local_probe_ms():
+    return _local.get("ms")   # last probe latency (ms), None if the last probe failed / none yet
 
 
 async def detect(call_id: str, window_text: str, metadata: dict | None, engine: str = "cloud") -> dict:
@@ -459,10 +466,20 @@ async def detect(call_id: str, window_text: str, metadata: dict | None, engine: 
                 except Exception as e:
                     log.warning("detect %s breaker-open local failed: %s", call_id, type(e).__name__)
             failover_ok = False
-        cap = max(0.5, FAILOVER_CLOUD_S - (time.monotonic() - t0)) if failover_ok else (LOCAL_PRIMARY_S if engine == "local" else OVERALL_TIMEOUT_S)  # probe time comes out of the cloud share
+        reverse_ok = False
+        if engine == "local" and raw is None and os.environ.get("P2_FAILOVER", "1") != "0" and os.environ.get("NVIDIA_API_KEY"):
+            try:   # mirrored failover: local primary, cloud second (only if its breaker is closed / lets a probe through)
+                reverse_ok = (not BREAKER.enabled()) or BREAKER.state == "closed" or BREAKER.allow()
+            except Exception:
+                reverse_ok = False
+        skip_local = reverse_ok and not await _local_reachable()   # known-down llama: straight to cloud, no 4 s wait
+        cap = max(0.5, FAILOVER_CLOUD_S - (time.monotonic() - t0)) if failover_ok else ((LOCAL_FIRST_S if reverse_ok else LOCAL_PRIMARY_S) if engine == "local" else OVERALL_TIMEOUT_S)  # probe time comes out of the cloud share
         try:
-            if raw is None and not cloud_skipped:
+            if raw is None and not cloud_skipped and not skip_local:
                 raw = await asyncio.wait_for(_engine_score(text, metadata, engine), cap)
+            elif skip_local:
+                note = "LocalUnreachable"
+                log.warning("detect %s local probe down, straight to cloud", call_id)
         except Exception as e:  # fail open to rules only
             note = type(e).__name__
             code = getattr(getattr(e, "response", None), "status_code", None)   # 429 shows up in call_report
@@ -478,6 +495,17 @@ async def detect(call_id: str, window_text: str, metadata: dict | None, engine: 
                     log.warning("detect %s failover: cloud %s -> local", call_id, note)
             except Exception as e:
                 log.warning("detect %s failover to local failed: %s", call_id, type(e).__name__)
+        if raw is None and reverse_ok:
+            left = LOCAL_PRIMARY_S - (time.monotonic() - t0)
+            try:
+                if left <= 0.3:
+                    log.warning("detect %s reverse failover skipped: no budget left (%.2fs)", call_id, left)
+                else:
+                    raw = await asyncio.wait_for(_engine_score(text, metadata, "cloud"), left)
+                    engine = "cloud"; FAILOVERS["reverse"] += 1
+                    log.warning("detect %s failover: local %s -> cloud", call_id, note)
+            except Exception as e:
+                log.warning("detect %s reverse failover to cloud failed: %s", call_id, type(e).__name__)
         out = merge(raw, rules, engine, text)
         _set_failed(call_id, raw is None)
         if raw is None:
