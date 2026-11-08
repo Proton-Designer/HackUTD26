@@ -63,3 +63,7 @@
 - `KEEP_UP=1` leaves it running to show the pages; `AUTO_TAP=0` = you press the button; `DEMO_WAV=<8 kHz mono wav>`; `DEMO_NO_DECOY=1` = hub echo stand-in instead of P3.
 - `OFFLINE=1` = P2_STT=whisper + P2_ENGINE=local (needs llama-server on :8101). P2 then needs no internet; P3 decoy and P4 intel still call NVIDIA.
 - Measured (cloud, 2026-11-08 02:3x): incoming 0.0 s -> answered 1.5 -> first alert 6.2-7.8 -> handoff.started ~9.8 -> blocklist.updated ~41 s; P2 finals 0.2-0.4 s after endpoint, all 4 events present. OFFLINE (whisper+local, no decoy): first alert +9.0-10.6 s, finals 1-4.7 s after endpoint (whisper CPU and llama share the box), 2 engine timeouts fell back to rules.
+
+## After call.ended (TASK-038)
+`AlertMachine.ended` remembers call_ids the hub reported ended (or hang_up); late STT finals/partials and in-flight detect results for them are dropped (no risk.update/alert.fired, no state re-created). Before this a late final re-created the call and fired `alert level=first` after hangup (seen offline, same code path as live). Not tied to socket close: P1's relay can reconnect mid-call.
+`P2_LOCAL_TIMEOUT_S` (default 6.0): budget for engine=local as the PRIMARY engine (llama -np 1 is 2-3.3 s alone, ~4 s with 2 concurrent; whisper shares the CPU). Cloud and failover budgets unchanged (OVERALL_TIMEOUT_S 4.0).

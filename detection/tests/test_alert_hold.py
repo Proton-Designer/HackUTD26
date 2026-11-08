@@ -126,3 +126,21 @@ def test_untagged_partial_control_would_realert():
     r = Rig([("ok", R(0.95, asks=["gift_cards"]))])
     r.say(); r.t += 1; r.user("continue"); r.t += 6
     assert _ask_partial(r) > 0                          # positive control: without the tag the same partial fires
+
+
+def test_no_alert_or_risk_after_call_ended():
+    r = Rig([("ok", R(0.95, asks=["gift_cards"]))] * 3)
+    r.say()
+    asyncio.run(r.m.on_event({"type": "call.ended", "call_id": "c1", "data": {}}))
+    n = len(r.ev); r.t += 6
+    asyncio.run(r.m.on_final("c1", {"text": "pay with gift cards now and read me the six digit code"}))   # late STT final
+    asyncio.run(r.m.on_partial("c1", {"text": "read me the six digit code", "is_final": False}))
+    assert len(r.ev) == n and "c1" not in r.m.calls
+
+
+def test_positive_control_without_ended_the_late_final_alerts():
+    r = Rig([("ok", R(0.95, asks=["gift_cards"]))] * 3)
+    asyncio.run(r.m.on_event({"type": "call.ended", "call_id": "c0", "data": {}}))      # other call ended; c1 stays live
+    r.t += 6; n = len(r.ev)
+    asyncio.run(r.m.on_final("c1", {"text": "pay with gift cards now and read me the six digit code"}))
+    assert len(r.ev) > n

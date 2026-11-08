@@ -390,6 +390,7 @@ async def _engine_score(window_text: str, metadata: dict, engine: str, allow_net
     return raw
 
 
+LOCAL_PRIMARY_S = float(os.environ.get("P2_LOCAL_TIMEOUT_S", "6.0"))   # engine=local as the PRIMARY (offline demo): llama -np 1 + whisper share the CPU, 2-3.3 s per call alone; cloud path unchanged
 FAILOVER_CLOUD_S = 2.0     # cloud+probe cap when local is reachable; local then gets >= OVERALL_TIMEOUT_S - 2.0 = 2.0 s
 PROBE_TIMEOUT_S = 0.5
 _probe_lock = None
@@ -458,7 +459,7 @@ async def detect(call_id: str, window_text: str, metadata: dict | None, engine: 
                 except Exception as e:
                     log.warning("detect %s breaker-open local failed: %s", call_id, type(e).__name__)
             failover_ok = False
-        cap = max(0.5, FAILOVER_CLOUD_S - (time.monotonic() - t0)) if failover_ok else OVERALL_TIMEOUT_S  # probe time comes out of the cloud share
+        cap = max(0.5, FAILOVER_CLOUD_S - (time.monotonic() - t0)) if failover_ok else (LOCAL_PRIMARY_S if engine == "local" else OVERALL_TIMEOUT_S)  # probe time comes out of the cloud share
         try:
             if raw is None and not cloud_skipped:
                 raw = await asyncio.wait_for(_engine_score(text, metadata, engine), cap)

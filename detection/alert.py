@@ -32,6 +32,7 @@ class AlertMachine:
         self.clock = clock
         self.engine = engine or os.environ.get("P2_ENGINE", "cloud")
         self.calls: dict[str, Call] = {}
+        self.ended: dict[str, float] = {}      # call_ids the hub said ended: late STT finals/partials must not re-create state or alert (TASK-038)
 
     async def detect(self, call_id, text, meta):
         if self._detect is None:
@@ -42,9 +43,16 @@ class AlertMachine:
     def _call(self, cid):
         return self.calls.setdefault(cid, Call())
 
+    def _mark_ended(self, cid):
+        self.calls.pop(cid, None); self.ended[cid] = self.clock()
+        while len(self.ended) > 500:
+            self.ended.pop(next(iter(self.ended)))
+
     async def on_partial(self, call_id, utt):
         """Interim text: rules-only fast path on window + partial. Never calls the LLM, never changes window state."""
         try:
+            if call_id in self.ended:
+                return
             c = self._call(call_id)
             if c.muted:
                 return
@@ -65,6 +73,8 @@ class AlertMachine:
 
     async def on_final(self, call_id, utt):
         try:
+            if call_id in self.ended:
+                log.info("drop final: call already ended call=%s", call_id); return
             c = self._call(call_id)
             if c.muted:
                 return
@@ -151,6 +161,8 @@ class AlertMachine:
         return None
 
     async def _process(self, cid, c, r):
+        if cid in self.ended:
+            log.info("drop result: call already ended call=%s", cid); return      # in-flight detect landing after call.ended
         if not isinstance(r, dict) or not isinstance(r.get("s"), (int, float)):
             return
         s, asks = float(r["s"]), set(r.get("asks") or [])
@@ -201,7 +213,7 @@ class AlertMachine:
                 log.info("handoff.restored seen call=%s", cid)
                 c = self._call(cid); c.decoy = False; c.fired = False; c.continued = False; c.armed = False
             elif t in ("call.ended",) or (t == "user.action" and d.get("action") == "hang_up"):
-                self.calls.pop(cid, None)
+                self._mark_ended(cid)
         except Exception:
             log.exception("on_event failed (ignored)")
 
