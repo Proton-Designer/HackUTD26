@@ -333,14 +333,10 @@ DEMO_HAUL_DELAY_S = float(os.environ.get("DEMO_HAUL_DELAY_S", "8"))
 # logs/sim_scam.wav, timed across the WAV's length) into server/fallback_detect so the hub itself emits transcript.caller + risk.update
 # (engine "fallback") + alert.fired. Stops the moment a real P2 event arrives. Never runs for real (non-sim) calls.
 P2_WAIT_S = float(os.environ.get("PHONEFREE_P2_WAIT_S", "6"))
-DEFAULT_SCRIPT = ("This is the fraud department at your bank. Your account has been compromised. To protect your money you must act now. "
-                  "Please read me the six digit code we just texted you, and do not tell anyone, including the bank staff. "
-                  "Then buy gift cards and read me the numbers on the back.")
-
 def _script_timeline():
-    """[(offset_s, sentence)] spread over the caller WAV's duration by character share (fallback 14 chars/s)."""
-    text = os.environ.get("DEMO_SCRIPT_TEXT") or DEFAULT_SCRIPT
-    sents = [x.strip() for x in re.split(r"(?<=[.!?])\s+", text) if x.strip()]
+    """[(offset_s, sentence)] for the caller WAV. Default = the IRS card lines from voip/test_call.card_text (the SAME source that voiced
+    logs/sim_scam.wav via `test_call.py --script irs --wav-out`), each line followed by test_call.PAUSE_S of silence: speech time is split by
+    character share of (WAV duration - pauses). DEMO_SCRIPT_TEXT overrides (sentences spread by character share). Fail open to no lines."""
     dur = None
     try:
         import pathlib, wave
@@ -348,11 +344,21 @@ def _script_timeline():
         with wave.open(str(w)) as f: dur = f.getnframes() / f.getframerate()
     except Exception:
         pass
+    pause = 0.0
+    txt = os.environ.get("DEMO_SCRIPT_TEXT")
+    if txt:
+        sents = [x.strip() for x in re.split(r"(?<=[.!?])\s+", txt) if x.strip()]
+    else:
+        try:
+            from . import test_call as tc
+            sents, pause = tc.card_text(os.environ.get("PHONEFREE_SCRIPT", "irs")), float(tc.PAUSE_S)
+        except (Exception, SystemExit) as e:
+            log.warning("sim fallback: cannot load card lines (%s)", e); return []
     total = sum(len(x) for x in sents) or 1
-    dur = dur or total / 14.0
-    out, acc = [], 0
+    speech = max(1.0, (dur if dur else total / 14.0 + pause * len(sents)) - pause * len(sents))
+    out, t = [], 0.0
     for x in sents:
-        out.append((dur * acc / total, x)); acc += len(x)
+        out.append((t, x)); t += speech * len(x) / total + pause
     return out
 
 async def _p2_fallback(sid):

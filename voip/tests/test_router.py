@@ -389,4 +389,8 @@ def test_script_timeline_spans_wav(tmp_path, monkeypatch):
     with wave.open(str(w), "wb") as f: f.setnchannels(1); f.setsampwidth(2); f.setframerate(8000); f.writeframes(b"\0\0" * 8000 * 20)
     monkeypatch.setenv("DEMO_CALLER_WAV", str(w))
     tl = R._script_timeline()
-    assert tl[0][0] == 0 and len(tl) >= 4 and tl[-1][0] < 20 and [t for t, _ in tl] == sorted(t for t, _ in tl)
+    from voip import test_call as tc
+    assert [x for _, x in tl] == tc.card_text("irs")                       # same source as the WAV
+    assert tl[0][0] == 0 and tl[-1][0] < 20 and [t for t, _ in tl] == sorted(t for t, _ in tl)
+    monkeypatch.setenv("DEMO_SCRIPT_TEXT", "One. Two words. Three.")
+    assert [x for _, x in R._script_timeline()] == ["One.", "Two words.", "Three."]
