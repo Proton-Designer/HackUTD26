@@ -24,6 +24,8 @@ def main(argv=None) -> int:
     ap.add_argument("--token", default=None, help="HUB_TOKEN if the hub requires one")
     ap.add_argument("--domain", default=CFG["domain"])
     ap.add_argument("--wallet", default=CFG["wallet"]["addr"])
+    ap.add_argument("--require-nemotron", action="store_true",
+                    help="demo readiness: fail 2a unless the agent ran on Nemotron (not the template fallback)")
     ap.add_argument("--drill", action="store_true",
                     help="fail-open drill: hub runs with INTEL_*_BASE pointed at a dead host; expect 'unavailable' lookups")
     a = ap.parse_args(argv)
@@ -67,7 +69,10 @@ def main(argv=None) -> int:
         check(dom.get("status") in ("ok", "not_found") and wal.get("status") == "ok" and not wal.get("simulated"),
               "1 real domain age + on-chain inflows", detail)
     acts = out.get("actions", [])
-    check(out.get("engine") in ("nemotron", "fallback"), "2a agent ran", f"engine={out.get('engine')}")
+    ok_engines = ("nemotron",) if a.require_nemotron else ("nemotron", "fallback")
+    check(out.get("engine") in ok_engines, "2a agent ran" + (" on Nemotron" if a.require_nemotron else ""),
+          f"engine={out.get('engine')}" + ("" if out.get("engine") == "nemotron"
+                                           else "  (no NVIDIA_API_KEY on the hub machine? see intel/README.md)"))
     auto = [x["kind"] for x in acts if x.get("status") == "applied"]
     check("block_caller_for_customer" in auto, "2b auto actions applied", ", ".join(auto))
     q = [x for x in acts if x.get("kind") == "network_number_block" and x.get("status") == "queued"]

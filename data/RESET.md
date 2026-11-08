@@ -49,5 +49,5 @@ sequence 1-3 wall-clock:
 ## Optional full check (about 6 s, uses live Nemotron + real lookups; adds test rows, so reset again after)
 
 ```bash
-python -m intel.acceptance --hub $HUB --token "$HUB_TOKEN"   # expect 7/7 pass
+python -m intel.acceptance --hub $HUB --token "$HUB_TOKEN" --require-nemotron   # expect 7/7; 2a must say engine=nemotron
 ```
