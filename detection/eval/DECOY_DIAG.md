@@ -43,3 +43,22 @@ Facts:
 - ASK finals lost: 0 by keyword. All 12 dropped finals are 1-9 words (acknowledgements, "hold on", tails). One drop is a worry: ba80d152 +76.0 and e3e343de +105.3 ("hold on, just stop") are the caller reacting to the decoy.
 - Why: the decoy answers `self.pending` as one batch (app.py reply(): `heard = " ".join(self.pending)`, redo up to REDO_MAX when more arrives while the LLM thinks), and finals that arrive while it is speaking or in `hold_floor` are folded in or ignored. ba80d152 shows the worst case: 5 finals over 9 s -> 1 decoy reply 0.6 s later, so the decoy answers the last thing only.
 - Merged lines did not make the decoy answer the wrong ask in these logs; the cost is slower reaction (e3e343de decoy line at +103.6 for an ask begun at +98.5) and no reply to interjections.
+
+## OPENER test (eng3, 08:52 task): canned OPENER vs generated first line
+Cases: v3 bucket cards 1-8 (pre-handoff lines = card lines up to the line where the alert fires in my replay, 1-6 lines) + the trimmed demo card (line 1). I assumed "8 bucket cards" = cards 1-8 (cards 9, 10 not run). Generated line = core.SYSTEM (current, P1's draft) + the pre-handoff story as ONE earlier `<caller>` turn (how 3a05bf1 seeds it) + a trailing system line: "Your first line on this call: react to what they just said (their last sentence), in one or two short spoken sentences. Do not ask who is calling unless they never said." Models: bolt-e4b and nemotron-3.5-super-vl-120b-a12b (thinking off), core.chat defaults (max_tokens 90, temp 0.8), one request at a time, 2 s pacing, live-call guard. 1 sample per cell.
+Scoring: 0 = does not fit what the scammer just said, 1 = partly (reacts to an earlier line or misses the point), 2 = fits the last thing they said/asked. Labels shuffled per case; scored by ONE scorer (eng3), but the canned line is recognisable, so it is not truly blind for that arm.
+| arm | scores per case (c1..c8, demo) | total /18 | mean |
+|---|---|---|---|
+| canned OPENER | 0,0,0,0,0,0,0,0,0 | 0 | 0.00 |
+| generated, bolt-e4b | 2,1,1,2,2,1,2,2,2 | 15 | 1.67 |
+| generated, super-vl-120b | 2,2,2,2,2,2,2,2,2 | 18 | 2.00 |
+The canned opener asks "who did you say was calling?" after the scammer has already said who they are and what they want, in all 9 cases (0 of 9 fit). Generation latency in this test: bolt p50 0.53 s (max 1.18), super p50 0.57 s (max 1.01), n=9 each.
+Examples (decoy generated line | what the scammer just said, shortened):
+- bolt, card 1 (2): "Oh no, a suspicious charge? I'll check my phone for that code right now. Should I enter it into my banking app?" | six-digit code, read it back so I can lock the card.
+- bolt, card 2 (1): "Oh no, $1,800 is a lot to lose. Can I send that through my banking app right now?" | it's not a real payment, it goes to our refunds account and comes back. (misses the reversal pretext)
+- bolt, card 6 (1): "Oh no, AnyDesk? I'm a little worried about this. Should I just open my banking app first?" | download AnyDesk from the app store. (drifts to the banking app)
+- super, card 2 (2): "Wait, they took $1,800? So you want me to send it back to get it back? What's the address for the refunds account?"
+- super, card 3 (2): "Wait, my account gets frozen? I don't want that. So I just open my banking app and Zelle it to that email?"
+- super, card 4 (2): "Oh no, a new phone in Miami? I really need to get them out right away. Should I just type the code into my banking app now?"
+- canned, all cases (0): "Oh, hi, sorry about that, I think the line cut out for a second there, who did you say was calling?"
+Observations: both generated arms say "my banking app" on most cards (allowed by SYSTEM, but repetitive); bolt on the demo card used "Oh no, why can't I tell anyone at the branch?" (2). One generated super line was 2 sentences + a line break. Caveats: 9 cases, 1 sample each, one scorer, the pre-handoff story here is the card's clean text, not P2's noisy STT; a real handoff may arrive mid-sentence; the opener also plays at once from a pre-rendered cache, a generated first line costs about 0.5 s of LLM + TTS before the decoy first speaks (call sees silence for that time unless a filler plays).
