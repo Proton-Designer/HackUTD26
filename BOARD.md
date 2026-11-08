@@ -6,22 +6,26 @@
 ## Now
 | Person | Task | Done when | Started | Est. | Status |
 |---|---|---|---|---|---|
-| Evan | Twilio scam line + Nemotron detector: first real response from each | Calling the scam line streams caller-only audio (`inbound_track`) to the backend websocket, AND one script through Nemotron returns the typed detector JSON (`scam_type`, `stage`, `asks[]`, `impersonates`, `addresses_ai_system`); model IDs confirmed with `GET /v1/models` | 22:45 (H10:45) | 90 min | In progress |
-| Ayman | Event contract + mock events, then local server skeleton | `contracts/events.md` + `mock/events.json` committed by 23:15 so Rayan and Kareem can build; then server runs locally behind a public tunnel that Twilio can reach, SQLite lists in place, pre-ring `<Reject>` works for one listed number | 22:45 (H10:45) | 30 + 90 min | In progress |
+| Evan | **P3 Decoy & voice** (`decoy/`): echo bot over Twilio `<Connect><Stream>` first, then persona card | `WSS /decoy/{call_id}` echoes audio on a test call (Twilio Media Streams protocol: connected/start/media/mark/stop, μ-law 8 kHz); persona card generator outputs fake values only | 22:55 (H10:55) | 90 min | In progress |
+| Ayman | **Machine A: P1 Network & call control** + contract; **Machine B: P2 Detection** | A: `contracts/events.md` + `mock/events.json` by 23:15, then server + tunnel + scam line with pre-ring `<Reject>` and caller-only `inbound_track` stream. B: model IDs pinned, `POST /detect` returns typed JSON on 3 scripts | 22:55 (H10:55) | 30 + 90 min | In progress |
 | Rayan | Devpost project + initial submission (urgent, ~23:00 cutoff) | Devpost project exists, all 4 invited and accepted, initial submission in | 22:45 (H10:45) | 10 min | In progress |
 | Kareem | Confirm event facts | `HackUTD-2026-Kit/CLAUDE.md` §6 filled: exact Devpost cutoffs, judging window and room, minutes per judge visit, finalist round Y/N | 22:45 (H10:45) | 15 min | In progress |
 
 ## Up next
-- Evan: decoy agent over Twilio `<Connect><Stream>` with a synthetic voice first (voice clone only after the synthetic voice works end to end); then the extractor → typed artifacts.
-- Ayman: call state machine + policy gate as plain code, emitting the events in `contracts/events.md`; then the intel-agent tool calls (real RDAP + public-blockchain lookup) wired to `propose_action()`.
-- Rayan: T-Mobile command center screen against `mock/events.json` (live caller transcript, score + why chips, campaign forming, artifacts, auto actions, analyst Approve button, immunity counter, injection `denied` log, "Simulated" labels). Then pitch script v1 + T-Mobile booth questions.
-- Kareem: synthetic scripts: 10 judge script cards + first 30 eval rows; then grow the eval set toward ~150.
+- Ayman A (P1): Maria's call screen (`web/customer/`, Voice JS SDK, two local beeps, Continue / Scammer Get Scammed / Hang up) → handoff swap to `/decoy` → stub: decoy-ended caller → `confirmed_scammers` (callback rejected before ring).
+- Ayman B (P2): fusion + state machine (architecture §6) emitting `risk.update` / `alert.fired` → streaming speech-to-text → local Nemotron 3 Nano 4B behind `/detect engine=local` → eval table.
+- Evan (P3): realtime decoy loop (speech-to-text → Nemotron Lightning persona → TTS), playbook to payment details, guardrails, voice clone (03:00 decision), extractor.
+- **P4 (intel, real lookups, gate, command center, story): starts by 02:00.** Owner TBD. Never-cut real lookups depend on it.
+- Rayan: Devpost initial submission; then pitch script v1 + booth questions (command center joins P4).
+- Kareem: 10 judge script cards, then eval rows in the detector enums for P2's harness.
 
 ## Owned files and folders
-(Proposed at 22:45; Ayman can rename folders when he creates the server, but keep one owner per folder.)
-- Evan: `voip/` (Twilio scam line, conference, media streams, Maria's call app), `nemotron/` (detector, decoy, extractor, local 4B model)
-- Ayman: `contracts/`, `mock/`, `server/` (router, state machine, policy gate, intel agent, SQLite), merges
-- Rayan: `web/command-center/`, Devpost text, pitch, `HackUTD-2026-Kit/` pitch files
+(Updated 22:55 per Ayman. One owner per folder. Plan: `Finalized-Idea/07_EXECUTION_PLAN.md`.)
+- Ayman, machine A (P1): `contracts/`, `mock/`, `server/`, `voip/`, `web/customer/`, merges
+- Ayman, machine B (P2): `detection/`, `contracts/models.md`
+- Evan (P3): `decoy/`
+- P4 (owner TBD, from 02:00): `intel/`, `web/command-center/`
+- Rayan: Devpost text, pitch, `HackUTD-2026-Kit/` pitch files
 - Kareem: `data/` (script cards, eval set), `HackUTD-2026-Kit/CLAUDE.md` §6
 
 ## Blocked
@@ -47,6 +51,7 @@
 - **11:30 (H23:30)** Final Devpost submitted (hard deadline 12:00).
 
 ## Decisions log
+- 22:55 (H10:55) | **Lanes reassigned by Ayman (Decider):** Ayman runs P1 Network & call control (machine A) and P2 Detection (machine B) in two Claude sessions; Evan runs P3 Decoy & voice; P4 Intel + command center + story starts later (by 02:00, owner TBD). Overrides the 22:45 lane split. Cost: Ayman carries Decider + integrator + two lanes; P4 starts late. Fallback: P1 ships a stub that adds decoy-ended callers to `confirmed_scammers`, so "callback rejected before ring" works without P4; real lookups are P4's first task at 02:00.
 - 22:45 (H10:45) | Lanes set by the team: Evan owns everything Nemotron + the VoIP app; Ayman owns the product workflow starting from the local server. This overrides the delegator default (Evan as integrator): **Ayman owns the shared event contract and merges**, because his server is the hub every screen reads from. Cost: Ayman carries both Decider and integrator load. Fallback: Evan takes merges if Ayman is stuck past 30 min.
 - 22:45 (H10:45) | Schedule compressed because the idea was locked at H10:30: feature freeze 05:00, code freeze 08:00, rehearsals from 09:00. Cost: about 6 hours of build time for the full path. Fallback: cut order below.
 - 22:45 (H10:45) | Cut order if behind (first to go first): (1) voice clone → synthetic voice; (2) live local-4B toggle → offline cloud-vs-local accuracy table on the eval set; (3) Twilio coaching beeps → app plays beeps locally; (4) analyst network-wide actions → show proposed + one approve click on mock data. Never cut: judge calls the scam line, alert + Scammer Get Scammed, real lookups, callback rejected before ring.
