@@ -4,6 +4,7 @@ Paths: POST /telnyx/webhook · WS /media/{call_id}?t=<token> · GET /voip/webrtc
 call_id == Telnyx call_session_id. Fail open: no exception here may hang up or block a call."""
 import asyncio, base64, json, logging, os, re, secrets, time
 from fastapi import APIRouter, Depends, HTTPException, Request, WebSocket, WebSocketDisconnect
+from fastapi.responses import JSONResponse
 from . import telnyx
 from .relay import Relay, make_p2_sink
 from .security import Limiter, verify_signature
@@ -30,6 +31,12 @@ RELAYS: dict[str, Relay] = {}
 MAX_STREAM_FRAMES = 50 * 60 * 10  # 10 min of 20 ms frames
 
 def sim_mode() -> bool: return os.environ.get("SIM_MODE") == "1"
+PROXY_HEADERS = ("cf-connecting-ip", "cf-ray", "x-forwarded-for", "x-forwarded-host", "forwarded", "x-real-ip")
+def direct_local(conn) -> bool:
+    """Same rule as server.device.is_direct_local: loopback peer AND no proxy/tunnel headers (cloudflared connects from 127.0.0.1 but adds them)."""
+    c = getattr(conn, "client", None)
+    return bool(c and c.host in ("127.0.0.1", "::1")) and not any(h in conn.headers for h in PROXY_HEADERS)
+
 def is_sim(ccid, headers=None) -> bool:
     """SIM_MODE only: simulator calls (ccid 'v3:sim_*' or x-sim-call header) never hit the real Telnyx API."""
     return sim_mode() and (str(ccid or "").startswith("v3:sim_") or bool(headers and headers.get("x-sim-call")))
@@ -181,6 +188,9 @@ async def webhook(req: Request):
     global LOOP
     LOOP = asyncio.get_running_loop()
     sim = is_sim(None, req.headers)
+    if sim and not direct_local(req):
+        log.warning("sim webhook refused: SIM_MODE accepts x-sim-call only from a direct loopback client")
+        return JSONResponse({"detail": "sim webhooks are loopback-only"}, status_code=403)   # via the tunnel a valid Telnyx signature is required
     hub_token = os.environ.get("HUB_TOKEN")   # simulator traffic must also present the hub token when one is set
     if sim and hub_token and not secrets.compare_digest(req.headers.get("x-hub-token", ""), hub_token): raise HTTPException(401, "bad token")
     if not sim and not verify_signature(raw, req.headers.get("telnyx-signature-ed25519"), req.headers.get("telnyx-timestamp")):
@@ -195,7 +205,6 @@ async def webhook(req: Request):
                 if not d.get("is_alive", True): raise telnyx.TelnyxError("call not alive")
             except Exception as e:
                 log.warning("unsigned call.initiated rejected: call not verifiable (%s)", e)
-                from fastapi.responses import JSONResponse
                 return JSONResponse({"ok": False, "error": "unverified call"}, status_code=403)
         if et != "call.initiated":   # sim and real events may never act on each other's calls
             cs_sid = _cs_load(p.get("client_state")).get("sid") or p.get("call_session_id")
@@ -222,6 +231,8 @@ async def media(ws: WebSocket, call_id: str, t: str = ""):
     st = CALLS.get(call_id)
     if not (st and st.get("token") and secrets.compare_digest(st["token"], t)):
         await ws.close(code=1008); return
+    if st.get("sim") and not direct_local(ws):   # simulated call: its media may only come from a direct loopback client, never via the tunnel
+        log.warning("sim media WS refused (not direct loopback)"); await ws.close(code=1008); return
     await ws.accept()
     hub = _hub_relay(); local = None
     sent = {}   # evidence: frames written back to the caller leg (decoy/echo audio), by event type (counts only)

@@ -48,7 +48,7 @@ def client(monkeypatch):
     for fn in ("answer", "reject", "hangup", "dial", "create_conference", "join_conference"):
         async def boom(*a, **k): raise AssertionError("real Telnyx call from simulator: " + fn)
         monkeypatch.setattr(telnyx, fn, boom)
-    app = FastAPI(); app.include_router(R.router); return TestClient(app)
+    app = FastAPI(); app.include_router(R.router); return TestClient(app, client=("127.0.0.1", 50000))
 
 def types(sid="sess-1234567890"): return [e["type"] for e in bus.history if e["call_id"] == sid]
 
@@ -260,3 +260,20 @@ def test_safe_reports_telnyx_result(monkeypatch):
     assert asyncio.run(R._safe(bad(), "y")) is None
     assert calls[0] == (True, "") and calls[1][0] is False and "10009" in calls[1][1]
     n = len(calls); c = good(); asyncio.run(R._safe(c, "sim", sim=True)); assert len(calls) == n   # sim: no Telnyx call, no report
+
+
+def test_sim_only_from_direct_loopback(client):
+    h = {"x-sim-call": "1"}
+    # through the tunnel (proxy headers) or from a non-loopback peer: refused, never treated as a sim call
+    for extra in ({"x-forwarded-for": "9.9.9.9"}, {"cf-connecting-ip": "9.9.9.9"}):
+        assert client.post("/telnyx/webhook", content=wh("call.initiated"), headers={**h, **extra}).status_code == 403
+    app = FastAPI(); app.include_router(R.router)
+    remote = TestClient(app, client=("203.0.113.5", 4000))
+    assert remote.post("/telnyx/webhook", content=wh("call.initiated"), headers=h).status_code == 403
+    assert "sess-1234567890" not in R.CALLS
+    r = client.post("/telnyx/webhook", content=wh("call.initiated"), headers=h)       # direct loopback: ok
+    assert r.status_code == 200 and r.json().get("stream_url")
+    path = r.json()["stream_url"].replace("ws://testserver", "")
+    with pytest.raises(Exception):   # media from the tunnel side: refused even with the right token
+        with client.websocket_connect(path, headers={"x-forwarded-for": "9.9.9.9"}): pass
+    with client.websocket_connect(path) as ws: ws.send_text(json.dumps({"event": "connected"}))
