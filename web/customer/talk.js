@@ -20,7 +20,9 @@
   let hubAnswered = false;   // mic frames flow only after the hub's call.answered
   const sending = () => !muted && !handed && hubAnswered && gateOpen && ws && ws.readyState === 1;
 
+  let lastAudio = 0, fixTries = 0;
   function onAudio(e) {
+    lastAudio = Date.now();
     const x = e.inputBuffer.getChannelData(0), ratio = ctx.sampleRate / 8000; let peak = 0, ss = 0;
     for (let i = 0; i < x.length; i++) ss += x[i] * x[i];
     const rms = Math.sqrt(ss / x.length), now = Date.now();
@@ -70,8 +72,20 @@
   const TAB = Math.random().toString(36).slice(2), lock = k => { try { const j = JSON.parse(localStorage.getItem(k) || "null"); return j && j.tab !== TAB && Date.now() - j.ts < 4000; } catch (e) { return false; } };
   const hold = k => { try { localStorage.setItem(k, JSON.stringify({ tab: TAB, ts: Date.now() })); } catch (e) {} };
   setInterval(() => { if (ws && ws.readyState <= 1 && wsCid) hold("bf.lock.talk." + wsCid); }, 1500);
+  // Mic watchdog (P1 09:45, live call eb66fef0: the browser stopped delivering mic audio mid-session; track 'live', context
+  // 'running', but onaudioprocess never fired again, so nothing reached the caller). If no mic audio for 1.5 s on a call:
+  // resume the context, then rebuild the pipeline; if the browser still refuses, ask for one tap (a gesture always works).
+  setInterval(() => {
+    if (!active || !hubAnswered || !stream || handed || muted || starting) { fixTries = 0; return; }
+    const age = Date.now() - (lastAudio || 0);
+    if (age < 1500) { fixTries = 0; return; }
+    fixTries++; stats.watchdog = fixTries;
+    if (fixTries === 1) { try { ctx && ctx.resume(); } catch (e) {} return; }
+    if (fixTries === 2) { stopMic(); lastAudio = Date.now(); startMic(); return; }
+    if (fixTries === 4) { hint("Tap the mic button to reconnect your microphone."); render0(); }
+  }, 1000);
   // Diagnostics (P1 09:20, silent calls): every 3 s while on a call, tell the hub the mic state (never audio). Logged in hub.log as 'talk <id> diag'.
-  setInterval(() => { try { if (ws && ws.readyState === 1 && active) ws.send(JSON.stringify({ diag: { mic: stats.mic, state: stats.state, frames: stats.frames, gate: stats.gate, duck: stats.duck, rms: stats.rms, floor: stats.floor, play: stats.play, muted, handed, hubAnswered, earphones, ctx: ctx && ctx.state, track: stream && stream.getAudioTracks()[0] ? [stream.getAudioTracks()[0].readyState, stream.getAudioTracks()[0].muted, stream.getAudioTracks()[0].enabled].join("/") : "none" } })); } catch (e) {} }, 3000);
+  setInterval(() => { try { if (ws && ws.readyState === 1 && active) ws.send(JSON.stringify({ diag: { mic: stats.mic, state: stats.state, frames: stats.frames, gate: stats.gate, duck: stats.duck, rms: stats.rms, floor: stats.floor, play: stats.play, muted, handed, hubAnswered, earphones, ctx: ctx && ctx.state, audioAge: lastAudio ? Date.now() - lastAudio : -1, wd: stats.watchdog || 0, track: stream && stream.getAudioTracks()[0] ? [stream.getAudioTracks()[0].readyState, stream.getAudioTracks()[0].muted, stream.getAudioTracks()[0].enabled].join("/") : "none" } })); } catch (e) {} }, 3000);
   function open(id) {
     if (!BF.talk || !id) return;
     if (lock("bf.lock.talk." + id)) { stats.state = "other-tab"; return; }   // another tab of this phone already talks on this call
@@ -106,7 +120,8 @@
 
   const eb = $("earBox"); if (eb) { eb.checked = earphones; eb.onchange = () => { earphones = eb.checked; try { localStorage.setItem("bf.earphones", earphones ? "1" : "0"); } catch (e) {} }; }
   setInterval(() => { const d = $("micDot"); if (!d) return; const on = !!stream && Date.now() - lastSend < 1000; d.className = "dot " + (on ? "live" : stats.mic === "blocked" || stats.state === "error" ? "bad" : "idle"); d.title = on ? "Your voice is reaching the call" : "Not sending"; d.setAttribute("aria-label", d.title); }, 300);
-  $("micBtn").addEventListener("click", () => { if (handed) return; if (!stream) { BF.resumed = false; startMic(); return; } muted = !muted; render(); });   // first tap also (re)starts a blocked mic
+  $("micBtn").addEventListener("click", () => { if (handed) return; if (stream && fixTries >= 3) { stopMic(); fixTries = 0; lastAudio = Date.now(); startMic(); return; }   // frozen mic: a tap rebuilds it inside the gesture
+    if (!stream) { BF.resumed = false; startMic(); return; } muted = !muted; render(); });   // first tap also (re)starts a blocked mic
   $("answerBtn").addEventListener("click", () => { if (!BF.talk) return; show(true); startMic(); if (hubAnswered) open(cid); });   // the tap is the gesture iOS wants for the mic prompt
   ["endBtn", "btnHang", "declineBtn"].forEach(id => $(id).addEventListener("click", end));
   new MutationObserver(() => { const a = $("alertBox"), b = $("talkBox"); if (a && b) b.classList.toggle("compact", !a.hidden); }).observe($("alertBox"), { attributes: true, attributeFilter: ["hidden"] });
