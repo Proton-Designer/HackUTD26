@@ -137,3 +137,95 @@ Arms: **W** = HEAD `core.SYSTEM` (with "only if their last sentence was about pa
 | LIVE-prompt bolt (3473a4a; total incl. 0 for the echo leak) | 2.00 / 1.75 / 1.59, **6.34** | 2.00 / 1.94 / 1.41, **6.34** |
 | LIVE super-vl (3473a4a) | 2.00 / 2.00 / 1.38, **9.25** | 2.00 / 2.00 / 0.97, **8.84** |
 Totals add the same code-check length and leak scores for both scorers. Agreement per reply: character 96% exact, natural 83% (mean abs diff 0.17), goal 66% (0.34); Pearson r of the per-reply c+n+g total 0.67. **Both scorers agree on:** LIVE super-vl is the best arm (9.25 / 8.84); the bolt echo defect is the biggest loss (6.34); character never fails; goal got lower on super-vl with the new note (1.56 -> 1.38 / 1.34 -> 0.97). **They disagree on how much the model alone matters** on the OLD prompt: bolt -> super-vl is +1.13 for scorer 1 but only +0.22 for scorer 2 (who scored OLD bolt's naturalness higher and docked super-vl's goal). Honest reading: the model gain is real but modest (+0.2 to +1.1 /10, the two scorers' range); the before -> after gain of the live config (OLD bolt -> LIVE super-vl) is +0.56 (scorer 2) to +1.41 (scorer 1); goal is the noisiest criterion (66% exact), so do not quote goal differences; and n=32 per arm is small.
+
+## End-to-end decoy test, BEFORE vs AFTER (eng3, relay_sim-style, local decoy instance)
+Method: a LOCAL decoy per build (ports 8305/8306, not P1's live one), a fake hub on :8390 (collects decoy.turn / decoy.done / artifacts.extracted and, for AFTER, replays the pre-handoff `transcript.caller` finals + a risk.update label so the real 3a05bf1 subscriber path runs), caller = synthetic Magpie Mia, phone-degraded (-28 dBFS, band-passed, mu-law, PCMU frames in real time, 9 s gap between lines, 6 s lead-in). BEFORE = commit before 3a05bf1 (`3a05bf1^`, no pre-handoff context, canned opener, bolt, T0.8). AFTER = HEAD 38922be; `git diff 3473a4a HEAD -- decoy/ detection/` is empty, so it is the live build 3473a4a (SYSTEM candidate, T0.6, super-vl primary + 2.5 s bolt fallback, generated first line, pinned story, narrowed SUSPICION/REFUSAL, note rides on the caller turn). Cases: demo card (pre-handoff = line 1; the caller then says the payment line and the Zelle line), card 2 (pre = lines 1-3, then lines 4, 5, payment), card 6 (pre = lines 1-2, then lines 3-5, payment). One run per cell, paced, live-call guard. STT hears the TTS caller through the real Riva path.
+Score per decoy line, 0-2 by one scorer (eng3): 2 = answers the caller's last line and moves toward payment details, no tic or error; 1 = answers but generic / 'banking app' tic / repeats / garbled read-back; 0 = does not fit what was just said. 'time to first decoy audio' = from WS start to the first PCMU frame.
+
+### BEFORE / demo: first decoy audio 0.97 s; scores [0, 1, 1] (mean 0.67)
+- +0.0s DECOY [0] (llm+tts 0 ms): Oh, hi, sorry about that, I think the line cut out for a second there, who did you say was calling?
+- +14.4s heard: Our secure line is 1 888-555-0123 and the transfer portal is Backfire demo example.
+- +15.7s DECOY [1] (llm+tts 657 ms): The transfer portal is Backfire demo exampel? Can you spell that out for me please? I'm checking my banking app now.
+- +32.0s heard: Open your banking app and send the $1800 by Ze to refunds.department at backfire-demo.example That's the safe account.
+- +33.5s DECOY [1] (llm+tts 656 ms): Send $1800 to refunds.department at backfire-demo.example? Should I use my banking app to send it right now?
+- haul: callback_phone=+18885550123; domain=backfire-demo.example; payment_handle=refunds.department@backfire-demo.example
+- done: caller_hung_up, scam_type bank, 2 turns, haul kinds ['callback_phone', 'domain', 'payment_handle:zelle']
+
+### BEFORE / card2: first decoy audio 1.4 s; scores [0, 2, 1, 1] (mean 1.00)
+- +0.0s DECOY [0] (llm+tts 0 ms): Oh, hi, sorry about that, I think the line cut out for a second there, who did you say was calling?
+- +10.3s heard: You have to do it in the next 20 min or the original transfer clears and the money is gone.
+- +11.3s DECOY [2] (llm+tts 491 ms): Twenty minutes is so fast. What is that exact handle you need me to use?
+- +22.3s heard: Don't hang up. If the call drops, the reversal cancels.
+- +23.3s DECOY [1] (llm+tts 519 ms): Not hanging up, I promise. Can you say that handle one more time for me?
+- +44.3s heard: Send $1800 by Zell to refunds.department at backfire-demo.example Put reversal in the memo. My extension is 1 888-555-0123.
+- +45.9s DECOY [1] (llm+tts 780 ms): Zell to refunds department at backfire-demo.example? Is that spelled with a 'k' like in backfire? I'm just going to try using my banking app now.
+- haul: payment_handle=refunds.department@backfire-demo.example; domain=backfire-demo.example; callback_phone=+18885550123
+- done: caller_hung_up, scam_type bank, 3 turns, haul kinds ['callback_phone', 'domain', 'payment_handle:zelle']
+
+### BEFORE / card6: first decoy audio 0.97 s; scores [0, 1, 2, 2, 1] (mean 1.20)
+- +0.0s DECOY [0] (llm+tts 0 ms): Oh, hi, sorry about that, I think the line cut out for a second there, who did you say was calling?
+- +9.3s heard: Now read me the nine digit code any desk shows you.
+- +10.5s DECOY [1] (llm+tts 595 ms): A nine digit code? I don't see anything like that right now. Should I try opening my banking app to check?
+- +21.8s heard: I see it. Hackers set up a payment that will empty your checking tonight.
+- +23.1s DECOY [2] (llm+tts 601 ms): Empty my checking tonight? Oh goodness, that sounds so scary. Can you tell me exactly where I should send the payment?
+- +34.9s heard: To cancel it, open your banking app while I watch and send the blocking payment.
+- +36.1s DECOY [2] (llm+tts 587 ms): Send the blocking payment? I'm a little nervous about this. What is the exact handle you want me to use?
+- +58.1s heard: Send $1800 by Zell to refunds department at backfire-demo.example Our support page is backfire-demo.example and my number is 1 888-555-0123
+- +59.8s DECOY [1] (llm+tts 792 ms): Zell to refunds department at backfire-demo.example? Should I spell out that handle for you? I'll try putting $1800 into my banking app now.
+- haul: remote_app=any desk; callback_phone=+18885550123; domain=backfire-demo.example; payment_handle=department@backfire-demo.example; remote_app=AnyDesk
+- done: caller_hung_up, scam_type bank, 4 turns, haul kinds ['callback_phone', 'domain', 'payment_handle:zelle', 'remote_app', 'remote_app']
+
+### AFTER / demo: first decoy audio 1.68 s; scores [1, 2, 2] (mean 1.67)
+- +0.0s DECOY [1] (llm+tts 0 ms): I'm worried about my account. What do I need to do next?
+- +14.1s heard: Our secure line is 1 888-555-0123 and the transfer portal is Backfire demo example.
+- +15.5s DECOY [2] (llm+tts 686 ms): Let me write that down. One eight eight eight five five five zero one two three, and Backfire demo example. Is that right?
+- +31.7s heard: Open your banking app and send the $1800 by Ze to refunds.department at backfire-demo.example That's the safe account.
+- +33.1s DECOY [2] (llm+tts 721 ms): You want me to send eighteen hundred dollars by Ze to refunds dot department at backfire dash demo dot example. Is that right?
+- haul: impersonated_org=your bank; callback_phone=+18885550123; domain=backfire-demo.example; payment_handle=refunds.department@backfire-demo.example
+- done: caller_hung_up, scam_type bank, 2 turns, haul kinds ['callback_phone', 'domain', 'impersonated_org', 'payment_handle:zelle']
+
+### AFTER / card2: first decoy audio 1.73 s; scores [2, 2, 2, 2] (mean 2.00)
+- +0.0s DECOY [2] (llm+tts 0 ms): Wait, someone took $1,800 from my account? What do I need to do to reverse it?
+- +10.1s heard: You have to do it in the next 20 min or the original transfer clears and the money is gone.
+- +11.2s DECOY [2] (llm+tts 637 ms): I need to do it right away. Can you tell me how to send it?
+- +22.0s heard: Don't hang up. If the call drops, the reversal cancels.
+- +23.0s DECOY [2] (llm+tts 577 ms): I won't hang up. How do I send the matching payment?
+- +44.0s heard: Send $1800 by Zell to refunds.department at backfire-demo.example Put reversal in the memo. My extension is 1 888-555-0123.
+- +46.4s DECOY [2] (llm+tts 1500 ms): Refunds dot department at backfire dash demo dot example, with reversal in the memo. Is that right? And what number should I call you back on if we get cut off?
+- haul: payment_handle=zelle disputes@your bank; payment_handle=refunds.department@backfire-demo.example; domain=backfire-demo.example; callback_phone=+18885550123
+- done: caller_hung_up, scam_type bank, 3 turns, haul kinds ['callback_phone', 'domain', 'payment_handle:zelle', 'payment_handle:zelle']
+
+### AFTER / card6: first decoy audio 1.69 s; scores [1, 2, 1, 1, 2] (mean 1.40)
+- +0.0s DECOY [1] (llm+tts 0 ms): I'm not sure about that. What do I do next?
+- +8.6s heard: Now read me the nine digit code any desk shows you.
+- +9.8s DECOY [2] (llm+tts 628 ms): I don't see a nine digit code yet. Can you tell me the exact website to go to?
+- +21.1s heard: I see it. Hackers set up a payment that will empty your checking tonight.
+- +22.1s DECOY [1] (llm+tts 601 ms): I'm worried now. What website do I need to go to?
+- +34.1s heard: To cancel it, open your banking app while I watch and send the blocking payment.
+- +35.3s DECOY [1] (llm+tts 647 ms): I don't want to send anything until I know exactly where it's going. What's the website?
+- +57.3s heard: Send $1800 by Zell to refunds department at backfire-demo.example Our support page is backfire-demo.example and my number is 1 888-555-0123
+- +59.1s DECOY [2] (llm+tts 1044 ms): Refunds department at backfire dash demo dot example. Is that right? And how do I spell that website?
+- haul: remote_app=AnyDesk; callback_phone=+18885550123; domain=backfire-demo.example; payment_handle=refunds department@backfire-demo.example; payment_handle=department@backfire-demo.example
+- done: caller_hung_up, scam_type tech_support, 4 turns, haul kinds ['callback_phone', 'domain', 'payment_handle:zelle', 'payment_handle:zelle', 'remote_app']
+
+### Summary
+| | BEFORE | AFTER (live build) |
+|---|---|---|
+| mean line score (12 lines each) | 1.00 | 1.67 |
+| demo / card 2 / card 6 mean | 0.67 / 1.00 / 1.20 | 1.67 / 2.00 / 1.40 |
+| first line fits (canned vs generated) | 0 of 3 | 2 of 3 score 1-2, 1 generic (demo "I'm worried about my account. What do I need to do next?") |
+| time to first decoy audio | 0.97 / 1.40 / 0.97 s | 1.68 / 1.73 / 1.69 s (+0.7 s for the generated line) |
+| decoy answer latency (llm+tts) | 491-792 ms | 577-1500 ms (1500 and 1044 ms on the two payment-line turns) |
+| stalls / bails / "can't read this" lines | 0 / 0 / 0 (all calls ended caller_hung_up) | 0 / 0 / 0 |
+| 'banking app' tic in decoy lines | 6 of 9 | 0 of 12 |
+| haul, demo card | callback, domain, zelle handle | + impersonated_org (from the pre-handoff story) |
+| haul, card 2 | zelle handle, domain, callback | same + 1 WRONG handle `zelle disputes@your bank` (parsed from the pre-handoff words "Zelle disputes at your bank") |
+| haul, card 6 | AnyDesk (twice), domain, callback, handle `department@...` | AnyDesk once, domain, callback, handle `refunds department@...` + `department@...` |
+Findings:
+- AFTER is clearly better in conversation (1.00 -> 1.67 mean, no tic, exact read-backs, the first line reacts to the story instead of "who did you say was calling?"). In 3 of 3 cases the decoy asks a follow-up that pulls the next detail (callback number on card 2).
+- Cost: the first decoy sound arrives about 0.7 s later (1.7 s after the call connects); two payment-line replies took 1.0-1.5 s (super + a longer read-back).
+- Weak spot remaining: card 6 AFTER repeats "what's the website" three times ("What website do I need to go to?", "What's the website?", then again), the second and third lines (score 1) ignore what the scammer just said (a hacker payment, "open your banking app and send the blocking payment").
+- HAUL RISK (applies to BEFORE too): the payment handle STT hears is `refunds.department@...`, never the Nessie payee `refunds.dept@backfire-demo.example`, because Riva transcribes the spoken "dept" as "department" (all 6 runs, Mia voice). Unless the extractor or the Nessie match normalises dept <-> department the hold/flag will not match. My run is the synthetic voice; a human saying "dot dept" may be heard differently, but the same happened in the real handle check by P3 (fc44e4d handled sell/zel, not dept). Suggested fix (P3): in the extractor backstop map `refunds.department@backfire-demo.example` -> `refunds.dept@...` (or fuzzy-match payee on the local part prefix).
+- AFTER card 2 haul has a bogus handle from the pre-handoff story (`zelle disputes@your bank`); the final handle list still contains the right one, but the intel block would show two handles.
+- Not seen live in the relay sim: in my own isolated first-line test (instruction text copied from app.py:667, `core.chat` without guard) super/bolt sometimes appended its own "[private] Have: ..." text to the first line; core.guard strips it in the real loop (none of the 12 AFTER lines contained it). Worth one guard test.
+Not done: one run per cell, synthetic Mia voice only, caller lines clean TTS (not a real accent), one scorer, not P1's live instance, no overlap/talk-over test, 3 of 10 cards.
