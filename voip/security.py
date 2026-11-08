@@ -31,14 +31,16 @@ class Limiter:
         self.hits: dict[str, deque] = defaultdict(deque)
         self.active: set[str] = set()
 
-    def check(self, caller: str, call_id: str, now: float | None = None) -> str | None:
-        """Return a reject reason or None (and register the call)."""
+    def check(self, caller: str, call_id: str, now: float | None = None, exempt: bool = False) -> str | None:
+        """Return a reject reason or None (and register the call). exempt=True (demo numbers, env VOIP_LIMIT_EXEMPT) skips ONLY the per-caller
+        window; the global concurrency cap still applies and the call is registered as active."""
         now = now if now is not None else time.time()
         q = self.hits[caller]
         while q and now - q[0] > self.window_s: q.popleft()
-        if len(q) >= self.per_caller: return "Too many calls from this number"
+        if not exempt and len(q) >= self.per_caller: return "Too many calls from this number"
         if len(self.active) >= self.max_concurrent: return "Line is busy"
-        q.append(now); self.active.add(call_id)
+        if not exempt: q.append(now)
+        self.active.add(call_id)
         return None
 
     def release(self, call_id: str): self.active.discard(call_id)

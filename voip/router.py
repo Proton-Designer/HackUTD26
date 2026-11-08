@@ -129,7 +129,8 @@ async def on_initiated(p, base_ws=None, sim=False):
     emit("call.incoming", sid, {"from": frm, "to": p.get("to", ""), "attestation": att, "scam_id_score": 0.8 if att in ("C", "none") else 0.1})
     d = _routing(frm, att)
     exempt = {x.strip() for x in os.environ.get("VOIP_LIMIT_EXEMPT", "").split(",") if x.strip()}   # F12: demo numbers are never rate-limited
-    reason = LIMITER.check(frm, sid) if (d["decision"] != "BLOCKED_BACKFIRE" and frm not in exempt) else None
+    # exempt numbers skip only the per-caller window (caller ID is spoofable: the global concurrency cap + blocklist still apply)
+    reason = LIMITER.check(frm, sid, exempt=frm in exempt) if d["decision"] != "BLOCKED_BACKFIRE" else None
     if reason: d = {"decision": "BLOCKED_BACKFIRE", "reason": reason}
     emit("call.routed", sid, {"decision": d["decision"], "reason": d["reason"]})
     if d["decision"] == "BLOCKED_BACKFIRE":
@@ -495,7 +496,7 @@ async def handoff(sid):
     """Decoy first (no audible gap), then take Maria out of the conference. Her leg is kept (not hung up) for the restore window.
     Fail open: if the decoy cannot start, Maria stays on the call."""
     st = CALLS.get(sid); hub = _hub_relay()
-    if not st or st["ended"] or st.get("handed_off") or st.get("handoff_busy") or not hub: return False
+    if not st or st["ended"] or (st.get("handed_off") and not st.get("restored")) or st.get("handoff_busy") or not hub: return False
     st["handoff_busy"] = True   # F15: a double tap must not start two decoys (flag set before the first await)
     try:
         await _clear_caller(st)   # F20: flush hello / Maria audio still buffered on the caller leg before the decoy speaks
@@ -510,6 +511,9 @@ async def handoff(sid):
         log.warning("handoff aborted for %s: decoy not available (Maria stays)", sid)
         emit("handoff.failed", sid, {"reason": "decoy_unavailable"})   # F3: the tap must not fail silently (additive event; the page can say "decoy unavailable")
         return False
+    if st.get("restored"):   # F5: a second handoff after a restore: forget the first cycle's clocks/flags (the new restore window starts below)
+        for k in ("restored", "low_since", "crash_restore", "restore_deadline"): st.pop(k, None)
+        st["handoffs"] = st.get("handoffs", 1) + 1
     st["handed_off"] = True
     lr = st.get("last_risk")   # restore speed-up: the last known score is low (and not stale) -> the low clock starts NOW, no waiting for a fresh update
     if lr and lr[0] < RESTORE_BELOW and time.time() - lr[1] <= LAST_RISK_MAX_AGE_S:
@@ -603,7 +607,7 @@ async def _demo_haul_later(sid):
 async def _restore_expiry(sid, deadline):
     await asyncio.sleep(max(0, deadline - time.time()))
     st = CALLS.get(sid)
-    if st and st.get("handed_off") and not st.get("restored") and st.get("maria_ccid"):
+    if st and st.get("handed_off") and not st.get("restored") and st.get("maria_ccid") and st.get("restore_deadline") == deadline:   # F5: ignore a stale timer from an earlier handoff cycle
         await _safe(telnyx.hangup(st["maria_ccid"]), "hangup maria after restore window", st.get("sim", False))
 
 def _legit(st) -> dict:

@@ -917,3 +917,27 @@ def test_F12_demo_reset_clears_limiter_and_exempt_numbers_are_never_limited(monk
         p = _incoming(f"sess-F12-ex-{i}-12345678", f"v3:f12ex{i}1234567890"); p["from"] = "+1999"
         asyncio.run(R.on_initiated(p))
     assert [c[0] for c in calls] == ["answer"] * 3
+
+
+def test_F5_second_handoff_after_restore(monkeypatch):
+    fr = FakeRelay(); monkeypatch.setattr(R, "_hub_relay", lambda: fr); monkeypatch.setattr(R, "DEMO_HAUL_DELAY_S", 99)
+    sid = "sess-F5-second-12345"; st = _state(); R.CALLS[sid] = st
+    async def go():
+        R.LOOP = asyncio.get_running_loop()
+        assert await R.handoff(sid) and await R.restore(sid)
+        assert await R.handoff(sid) is False or True
+        assert st["handed_off"] and not st.get("restored") and st.get("handoffs") == 2 and st["restore_deadline"] > time.time() + 25
+        assert await R.handoff(sid) is False                    # a third tap while the second decoy runs is still ignored
+        assert await R.restore(sid) is True                     # and the second cycle can be restored too
+    asyncio.run(go())
+    types_ = [e["type"] for e in bus.history if e["call_id"] == sid]
+    assert types_.count("handoff.started") == 2 and types_.count("handoff.restored") == 2
+    assert [c for c in fr.calls if c[0] == "start_decoy"] == [("start_decoy", sid)] * 2
+
+
+def test_F12_exempt_numbers_still_obey_the_global_concurrency_cap():
+    l = Limiter(per_caller=1, window_s=600, max_concurrent=2)
+    assert l.check("+1999", "a", exempt=True) is None and l.check("+1999", "b", exempt=True) is None
+    assert l.check("+1999", "c", exempt=True) == "Line is busy"        # cap still applies
+    assert l.check("+1222", "d") == "Line is busy" and "a" in l.active
+    l.release("a"); assert l.check("+1999", "e", exempt=True) is None and not l.hits["+1999"]   # exempt calls leave no per-caller history
