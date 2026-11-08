@@ -99,3 +99,28 @@ def test_coalesce_one_in_flight():
         await asyncio.gather(*[m.on_final("c", {"text": str(i)}) for i in range(5)])
     asyncio.run(go())
     assert n["max"] == 1 and n["i"] <= 2
+
+def test_fast_path_alerts_before_llm_returns():
+    import time
+    t0 = {}
+    async def emit(t, c, d):
+        if t == "alert.fired": t0["alert"] = time.time()
+    async def slow(cid, text, meta, engine):
+        await asyncio.sleep(0.4); t0["llm"] = time.time(); return R(0.3)
+    m = alert.AlertMachine(emit=emit, detect=slow)
+    asyncio.run(m.on_final("c", {"text": "You must pay today with gift cards and tell no one"}))
+    assert t0["alert"] < t0["llm"] - 0.3          # fired from rule floor, not after the LLM
+    # same-window floor: LLM saying 0.3 does not lower the emitted s; the next window scores fresh
+    ev = []
+    async def emit2(t, c, d): ev.append((t, d))
+    m = alert.AlertMachine(emit=emit2, detect=slow)
+    asyncio.run(m.on_final("c", {"text": "hello how are you"}))
+    assert [d["s"] for t, d in ev if t == "risk.update"] == [0.3]
+    assert [d["level"] for t, d in ev if t == "alert.fired"] == []
+
+def test_s_can_fall_after_fast_path():
+    r = Rig([R(0.2), R(0.1)])
+    r.say("pay with gift cards now")             # fast path fires, llm 0.2 floored to quick s
+    r.say("goodbye", dt=100)
+    s_vals = [d["s"] for t, d in r.events if t == "risk.update"]
+    assert s_vals[-1] == 0.1 and max(s_vals) >= 0.8

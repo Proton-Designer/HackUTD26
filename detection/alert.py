@@ -5,6 +5,7 @@ Quiet switch-off after QUIET_S of s<0.40 (only if no alert fired on the call). F
 import asyncio, logging, os, time
 from collections import deque
 from . import hub, stream, schema
+from .detect import quick
 
 log = logging.getLogger("p2.alert")
 ALERT_S = float(os.environ.get("ALERT_S", "0.80"))
@@ -49,6 +50,10 @@ class AlertMachine:
             while len(c.utts) > WINDOW_N or (c.utts and now - c.utts[0][0] > WINDOW_S):
                 c.utts.popleft()
             c.dirty = True
+            q = quick("\n".join(t for _, t in c.utts), self.engine)      # rules only, no I/O: alert before the LLM returns
+            if self._decide(c, q):
+                log.info("fast-path alert call=%s s=%.2f", call_id, q["s"])
+                await self._process(call_id, c, q)
             if c.busy:
                 return                       # coalesce: the running loop re-scores the newest window
             c.busy = True
@@ -61,11 +66,33 @@ class AlertMachine:
                     except Exception:
                         log.exception("detect failed (ignored)")
                         continue
-                    await self._process(call_id, c, r)
+                    await self._process(call_id, c, self._floor(r, quick(text, self.engine)))
             finally:
                 c.busy = False
         except Exception:
             log.exception("on_final crashed (ignored, fail-open)")
+
+    @staticmethod
+    def _floor(r, q):
+        """max(quick, llm) for the SAME window only; later windows are scored fresh so s can fall."""
+        if not (isinstance(r, dict) and isinstance(r.get("s"), (int, float))) or not isinstance(q, dict) or q.get("s", 0) <= r["s"]:
+            return r
+        out = dict(r); out["s"] = q["s"]; out["band"] = schema.band(q["s"])
+        out["asks"] = [a for a in schema.ASKS if a in set(r.get("asks") or []) | set(q.get("asks") or [])]
+        out["why_chips"] = list(dict.fromkeys([*(q.get("why_chips") or []), *(r.get("why_chips") or [])]))[:6]
+        return out
+
+    def _decide(self, c, r):
+        """Pure: which alert level (if any) this result would fire now."""
+        if c.decoy or c.muted or not isinstance(r, dict) or not isinstance(r.get("s"), (int, float)):
+            return None
+        s = float(r["s"]); hard = set(r.get("asks") or []) & schema.HARD_ASKS
+        bnd = r.get("band") or schema.band(s)
+        if not c.fired:
+            return "first" if (s >= ALERT_S or (hard and s >= HARD_ASK_S)) else None
+        if c.continued and c.armed and s >= REARM_BELOW and ((bnd == "critical" and c.prev_band != "critical") or (hard - c.known_hard)):
+            return "realert"
+        return None
 
     async def _process(self, cid, c, r):
         if not isinstance(r, dict) or not isinstance(r.get("s"), (int, float)):
