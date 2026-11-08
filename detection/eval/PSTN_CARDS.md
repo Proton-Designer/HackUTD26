@@ -13,7 +13,7 @@ Columns: *words matched* = share of the card's reference words (lines 1-5) found
 - No fixes were needed: no VAD endpointing failure on phone audio and no rules miss from STT mishearings in this set (so no changes to rules or thresholds; thresholds untouched).
 
 ## Not done / caveats
-- Whisper pass (P2_STT=whisper) NOT run (eng3's STT_FALLBACK.md covers the fallback on these cards). The -38 dBFS stress variant (q38) is implemented but NOT run. Cards 9 and 10 have no p20 row, card 8 has no p28/fast overlap issues but only p20+p28+fast across two files; rows missing: s9 p20, s10 p20 (total 37 of 39 planned).
+- Whisper pass (P2_STT=whisper) NOT run (eng3's STT_FALLBACK.md covers the fallback on these cards). The -38 dBFS stress variant (q38) is implemented but NOT run. Missing rows: s9 p20 and s10 p20 (total 37 of 39 planned).
 - Synthetic TTS voice with a synthetic channel, not a real handset/PSTN leg; the one real PSTN call measured earlier (a99a2060) was only 2 words. Real judge accents, echo and cross-talk are untested.
 - Rules-on-mishearing ("Irs", "6th digit") were not stress-tested separately because every card alerted anyway.
 
