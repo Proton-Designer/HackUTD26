@@ -59,3 +59,5 @@ Team actor reading a known script, n=1. Quoted lines are team-actor speech.
 | +25 to +33 s | later benign-sounding lines, scores held | s=0.95 critical |
 | +45.4 s | u7 "give me your money" | dropped, arrived after the call ended (expected) |
 Finals arrived 0.23-0.35 s after endpoint; 1 alert, 0 failovers, 0 429s, 7 utterances (4 finals scored). Caveat: n=1, a team actor, a script the team knows; this shows the path works on a real phone line, not a detection rate.
+
+**adad65a0 full chain (numbers from P1's hub journal, not measured by P2):** alert +12.5 s, takeover ("Scammer Get Scammed") +18.2 s, decoy 4 turns (median 1.09 s, max 1.45 s), caller hung up +46 s, intel block +75 s. This is the first full real-PSTN chain (detect, takeover, decoy, hang-up, block). P2's own log timing above (alert +12.3 s) agrees within 0.2 s. Same caveat: n=1, team actor, known script.
