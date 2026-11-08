@@ -66,3 +66,21 @@ Range 10.6-42.3 s, median 17.4 s; every card alerts (no silent card); 3 and 9 al
 - Real 429 responses from NVIDIA, real Cloudflare tunnel churn, a hub restart under a real PSTN call, a P1 relay that reconnects after P2 dies.
 - Each drill ran once. The risk.update during hub downtime is dropped (only alert.fired is retried).
 Reproduce: `ACC_P2_PORT=8102 .venv/bin/python detection/scripts/drills.py 1a 1b 2 3a 3b 4` (source .env, LOCAL_LLM_URL set; drill 2 waits for `:8100` active_stt_sockets==0).
+
+## Judge bucket verification (#147), eng1: cards 6, 7, 8, 10
+Frozen detector (detection/ runtime unchanged since p2-known-good-0750), local engine (llama via WSL gateway :8101, rules + LLM), scratch hub :8193 + P2 :8103 (live hub never touched). SYNTHETIC phone-quality TTS (Magpie Mia + Jason, -28 dBFS, 300-3400 Hz, mu-law), data/script-cards-v3-bank.md verbatim (6 lines each, last = payment step), 1 run per card+voice, socket guard on. "s" = seconds from the judge's first word (stream t minus the 1.0 s lead silence). Card 8 line 3 is read with its "(as the detective)" stage direction (cached TTS). A first pass without LOCAL_LLM_URL fell back to rules (card 7 did not alert) and was discarded.
+
+| card | voice | alert | fires on (line) | s | before payment | margin s | cue / risk |
+|---|---|---|---|---|---|---|---|
+| 6 Screen share | Mia | yes | L2 "Download AnyDesk from the app store" | 11.5 | yes | 15.1 | remote-access ask (chip "Asks for remote access"); STT must hear "AnyDesk" |
+| 6 Screen share | Jason | yes | L3 "read me the nine-digit code AnyDesk shows you" | 14.2 | yes | 14.3 | same chip, one line later (L2 not enough for Jason) |
+| 7 Bounced check | Mia | yes | L5 "Pay it now and we'll keep this off your record" | 23.1 | yes | **0.6** | collections claim + counterfeit check + overdrawn; only crosses on the pay-now line |
+| 7 Bounced check | Jason | yes | L5 same | 25.0 | yes | **0.8** | same |
+| 8 Bank plus police | Mia | yes | L4 "move your money to a verified account today" | 19.5 | yes | 8.2 | detective impersonation + "Unverified threat"; transfer ask on L4 |
+| 8 Bank plus police | Jason | yes | L4 same | 22.8 | yes | 8.1 | chip "Asks for a wire transfer" |
+| 10 Account verification | Mia | yes | L4 "$1,800 verification deposit" | 18.4 | yes | 10.2 | compliance claim + one-time code + card details (L3) + deposit |
+| 10 Account verification | Jason | yes | L4 same | 19.3 | yes | 11.1 | same |
+
+Greeting-only (d) is eng2's. Findings: 8/8 alert, all before the payment line, but **card 7 is the tight one: 0.6 / 0.8 s margin, so a slower read or a missed line 5 means the alert lands with or after the Zelle line.** Latest alerts on my cards: card 7 (both voices), then card 8 Jason (22.8 s) and card 8 Mia (19.5 s).
+Smallest tip for a loose read: card 7, say lines 3 and 5 exactly ("If it's not paid today, we close the account and report you for check fraud", "Pay it now") and do not skip line 4; card 6, say "AnyDesk" clearly and keep line 3 (the code ask); card 8, keep line 4 ("move your money to a verified account"); card 10, keep line 3 (account number + texted code) and line 4 (the $1,800 deposit). Paraphrase tests are eng2's pass, not mine: the cue column comes from the alert chips, not from dropping lines.
+Not done: n=1 per card+voice (±1-2 s run to run, LLM latency varies), no real PSTN, no greeting-only, no dropped-cue run, no 2nd run for card 7 to measure the margin spread.
