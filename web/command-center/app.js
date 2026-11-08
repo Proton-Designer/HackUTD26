@@ -478,9 +478,9 @@
       traceCall(e.call_id);
       S.inputLogged.add(e.call_id || '_');
       if (standIn) {
-        trace('input', 'INPUT', `${list.length} typed artifacts from the demo stand-in <span class="res">· extractor simulated · raw transcript never read</span>`);
-        stage('extract', `${n} artifacts (stand-in)`);
-        head(`<em>${n} artifacts</em> loaded from the demo stand-in`, 'Extractor simulated with the script-card values; the lookups that follow are real', 'alert');
+        trace('input', 'INPUT', `${list.length} typed artifacts, SIMULATED stand-in <span class="res">· extractor not wired yet · raw transcript never read</span>`);
+        stage('extract', `${n} artifacts (simulated)`);
+        head(`<em>${n} artifacts</em> loaded · simulated stand-in`, 'The extractor is simulated with the script-card values; the lookups that follow are real', 'alert');
       } else {
         trace('input', 'INPUT', `${list.length} typed artifacts from the extractor <span class="res">· raw transcript never read</span>`);
         stage('extract', `${n} artifacts`);
@@ -932,7 +932,7 @@
     artifacts() {
       const body = bodyOf('artifacts');
       const meta = $('artifacts-meta');
-      if (S.standIn) meta.innerHTML = '<span class="pill sim">Demo stand-in · extractor simulated</span>';
+      if (S.standIn) meta.innerHTML = '<span class="pill sim">Simulated · demo stand-in</span>';
       else meta.textContent = 'checked against public records';
       // Money trail first, so the payoff is visible without scrolling. Stable within a type.
       const prio = ['domain', 'wallet', 'payment_handle', 'callback_phone', 'bank', 'gift_card_brand', 'remote_app', 'url'];
@@ -983,7 +983,7 @@
       ].join('');
       const lastTr = [...S.trace].reverse().find(t => !t.sep);
       body.innerHTML = '<div class="pipe">'
-        + node('input', 'Input', `${arts.length} artifact${arts.length === 1 ? '' : 's'}`, S.standIn ? 'demo stand-in' : 'typed, no transcript')
+        + node('input', 'Input', `${arts.length} artifact${arts.length === 1 ? '' : 's'}`, S.standIn ? 'simulated stand-in' : 'typed, no transcript')
         + link('lookups')
         + node('lookups', 'Lookups', `${looks.length} done`, pending ? `${pending} pending` : tools.map(t => `${t[0]} ${t[1]}`).join(' · ') || 'public records')
         + link('agent')
@@ -1120,7 +1120,7 @@
     const cls = worst === 'bad' ? ' hit' : worst === 'conflict' ? ' conflict' : '';
     const chainTxt = a.meta && (a.meta.chain || a.meta.rail);
     const chain = chainTxt || a.standIn
-      ? `<span>${a.standIn ? '<span class="standin" title="Demo stand-in: extractor simulated">stand-in</span> ' : ''}${esc(chainTxt || '')}</span>` : '';
+      ? `<span>${a.standIn ? '<span class="standin" title="Simulated: demo stand-in, the extractor is not wired yet">simulated</span> ' : ''}${esc(chainTxt || '')}</span>` : '';
     const lks = a.lookups.length
       ? a.lookups.map(lookupHtml).join('')
       : LOOKUPABLE.has(a.type) ? '<div class="lk pending"><div class="sum">awaiting lookup…</div></div>' : '';
@@ -1373,13 +1373,17 @@
   });
 
   // ---------- live ----------
+  // The team hub (P1). Its public tunnel URL changes when the tunnel restarts: update it here,
+  // or open the page from the hub itself (https://<hub>/command-center/), or pass ?server=.
+  const TEAM_HUB = 'https://reg-subjects-curriculum-whenever.trycloudflare.com';
   function serverCandidates() {
     if (CFG.server) return [CFG.server];
     const c = [];
-    if (/^https?:$/.test(location.protocol)) c.push(location.origin);
-    c.push('http://localhost:8000');
+    if (/^https?:$/.test(location.protocol)) c.push(location.origin); // served by the hub = same origin, Approve needs no CORS
+    c.push(TEAM_HUB, 'http://localhost:8000');
     return [...new Set(c)];
   }
+  const isRemote = base => !/^https?:\/\/(localhost|127\.0\.0\.1)(:|$)/.test(base);
   const wsUrl = base => `${base.replace(/^http/, 'ws')}/events`;
 
   function connect(base, onFail) {
@@ -1387,7 +1391,8 @@
     const fail = () => { if (!failed && !opened) { failed = true; onFail(); } };
     let ws;
     try { ws = new WebSocket(wsUrl(base)); } catch (err) { fail(); return; }
-    const timer = setTimeout(() => { if (!opened) { try { ws.close(); } catch (err) { /* ignore */ } fail(); } }, 1800);
+    // a tunnel handshake can take a few seconds; local servers answer or refuse at once
+    const timer = setTimeout(() => { if (!opened) { try { ws.close(); } catch (err) { /* ignore */ } fail(); } }, isRemote(base) ? 5000 : 1800);
     ws.onopen = () => {
       opened = true; clearTimeout(timer);
       if (MODE.kind === 'replay') pause();
