@@ -36,7 +36,12 @@ def allowed(host: str | None, headers) -> bool:
     """Direct loopback (the hub on the same machine), or the team's PIPELINE_TOKEN in x-pipeline-token. Fail closed."""
     import os, secrets
     if host in ("127.0.0.1", "::1") and not any(h in headers for h in PROXY_HEADERS):
-        return True
+        from urllib.parse import urlsplit   # loopback Host name (no DNS rebinding) and no foreign Origin (no browser CSRF)
+        hh = headers.get("host", "")
+        origin = headers.get("origin")
+        if (urlsplit("//" + hh).hostname or "") in ("127.0.0.1", "localhost", "::1") and \
+                (origin is None or urlsplit(origin).netloc.lower() == hh.lower()):
+            return True
     tok = os.environ.get("PIPELINE_TOKEN")
     return bool(tok) and secrets.compare_digest(headers.get("x-pipeline-token", ""), tok)
 

@@ -43,12 +43,23 @@ def emit(type_, cid, data=None):
         log.exception("emit %s failed", type_)
 
 
+def _origin_ok(headers) -> bool:
+    """Loopback bypass only for non-browser clients or a page served by this hub: the Host header must be a loopback name
+    (blocks DNS rebinding) and any Origin must match it (blocks cross-site requests / WS hijacking from the operator's browser)."""
+    from urllib.parse import urlsplit
+    host = headers.get("host", "")
+    if (urlsplit("//" + host).hostname or "") not in ("127.0.0.1", "localhost", "::1"):
+        return False
+    origin = headers.get("origin")
+    return origin is None or urlsplit(origin).netloc.lower() == host.lower()
+
+
 def _local(host, headers) -> bool:
     try:
         from server.device import PROXY_HEADERS
     except Exception:
         PROXY_HEADERS = ("x-forwarded-for", "cf-connecting-ip")
-    return host in ("127.0.0.1", "::1") and not any(h in headers for h in PROXY_HEADERS)
+    return host in ("127.0.0.1", "::1") and not any(h in headers for h in PROXY_HEADERS) and _origin_ok(headers)
 
 
 def _hub_token_ok(given) -> bool:
