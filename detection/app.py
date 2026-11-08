@@ -24,7 +24,7 @@ async def healthz():
     backend = ("whisper" if getattr(cur, "name", "").startswith("whisper") or cur.__class__.__name__ == "WhisperSTT" else "riva") if cur else \
         ("whisper" if os.environ.get("P2_STT") == "whisper" else "riva")
     return {"ok": True, "engine": os.environ.get("P2_ENGINE", "cloud"),
-            "stt": {"backend": backend, "initialized": cur is not None, "whisper_fallback_loaded": bool(getattr(cur, "_fb", None))},
+            "stt": {"backend": backend, "initialized": cur is not None, "whisper_fallback_loaded": bool(getattr(cur, "_fb", None)), "primary_failures": getattr(cur, "fails", 0), "primary_bypassed": bool(getattr(cur, "bypassing", False)), "whisper_model": os.environ.get("P2_WHISPER_MODEL", "base.en")},
             "engines": {"cloud_key_present": bool(os.environ.get("NVIDIA_API_KEY")), "local_reachable": await _local_reachable()},
             "cloud_breaker": breaker_info(),
             "hub_subscriber_connected": health.STATE["hub_sub"], "active_stt_sockets": health.STATE["active"],

@@ -109,6 +109,11 @@ async def handle_utterance(call_id, uid, pcm, t_end=None):
         except Exception:
             log.exception("on_final failed (ignored, fail-open)")
 
+SLOW_PARTIAL_EVERY_S = float(os.environ.get("P2_SLOW_PARTIAL_EVERY_S", "1.5"))
+def _stt_slow():
+    cur = stt._stt
+    return bool(cur is not None and (getattr(cur, "slow", False) or getattr(cur, "bypassing", False)))
+
 @router.websocket("/stt/{call_id}")
 async def stt_ws(ws: WebSocket, call_id: str):
     if not auth.valid_call_id(call_id) or not auth.check_token(ws.headers, ws.query_params):
@@ -124,10 +129,14 @@ async def stt_ws(ws: WebSocket, call_id: str):
             item = await chain.get()
             if item is None:
                 return
-            await handle_utterance(call_id, *item)
+            try:
+                await handle_utterance(call_id, *item)
+            finally:
+                health.STATE["finals_pending"] = max(0, health.STATE.get("finals_pending", 0) - 1)
     w = asyncio.create_task(worker())
     def submit(arrs):
         for a in arrs:
+            health.STATE["finals_pending"] = health.STATE.get("finals_pending", 0) + 1
             chain.put_nowait((f"{call_id}-u{ids[0]}", a, time.time())); ids[1] = ids[0]; ids[0] += 1; pstate["text"] = ""
     async def partial(n, pcm, t_snap):
         try:
@@ -152,7 +161,8 @@ async def stt_ws(ws: WebSocket, call_id: str):
             if ev == "media" and audio:
                 try:
                     submit(seg.feed(stt.mulaw_decode(audio)))
-                    if PARTIALS and not pstate["busy"] and time.monotonic() - pstate["t"] >= PARTIAL_EVERY_S:
+                    if PARTIALS and not pstate["busy"] and time.monotonic() - pstate["t"] >= (SLOW_PARTIAL_EVERY_S if _stt_slow() else PARTIAL_EVERY_S) \
+                            and not (_stt_slow() and health.STATE.get("finals_pending", 0)):   # CPU whisper: finals first, partials are best-effort
                         snap = seg.snapshot()
                         if snap is not None:
                             pstate["busy"], pstate["t"] = True, time.monotonic()

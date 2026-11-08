@@ -37,7 +37,7 @@ class RivaSTT(STT):
         key = key or os.environ.get("NVIDIA_API_KEY")
         if not key:
             raise RuntimeError("NVIDIA_API_KEY missing")
-        auth = riva.client.Auth(None, True, "grpc.nvcf.nvidia.com:443", [["function-id", self.FUNC_ID], ["authorization", "Bearer " + key]])
+        auth = riva.client.Auth(None, True, os.environ.get("RIVA_URI", "grpc.nvcf.nvidia.com:443"), [["function-id", self.FUNC_ID], ["authorization", "Bearer " + key]])
         self.svc = riva.client.ASRService(auth)
         self.cfg = riva.client.RecognitionConfig(encoding=riva.client.AudioEncoding.LINEAR_PCM, sample_rate_hertz=RATE,
                                                  language_code="en-US", max_alternatives=1, enable_automatic_punctuation=True, audio_channel_count=1)
@@ -49,6 +49,7 @@ class RivaSTT(STT):
 
 class WhisperSTT(STT):
     name = "faster-whisper"
+    slow = True    # CPU: ~0.65 s per call and throughput-bound, so concurrent calls queue; stream.py throttles partials
     def __init__(self, model=None):
         from faster_whisper import WhisperModel
         self.m = WhisperModel(model or os.environ.get("P2_WHISPER_MODEL", "base.en"), device="cpu", compute_type="int8")
@@ -60,17 +61,42 @@ class WhisperSTT(STT):
         return await asyncio.to_thread(self._run, pcm)
 
 class FallbackSTT(STT):
-    """Primary, then whisper (lazy-loaded) if the primary errors."""
-    def __init__(self, primary):
+    """Primary (Riva), then local whisper if it errors. Whisper preloads in a background thread at startup (so the first failure does not pay the
+    model load) and, after BYPASS_AFTER consecutive primary failures, Riva is skipped for BYPASS_S seconds (no 6 s timeout per utterance) then re-probed."""
+    BYPASS_AFTER, BYPASS_S = 2, 30.0
+    def __init__(self, primary, preload=True, whisper_factory=None):
+        import threading, time
         self.primary, self._fb, self.name = primary, None, primary.name
-    async def transcribe(self, pcm):
-        try:
-            return await self.primary.transcribe(pcm)
-        except Exception as e:
-            log.warning("primary STT failed (%s); trying whisper", type(e).__name__)
+        self._mk = whisper_factory or WhisperSTT
+        self._lock, self._time = threading.Lock(), time.monotonic
+        self.fails, self.bypass_until, self.fb_error = 0, 0.0, None
+        if preload:
+            threading.Thread(target=self._load_fb, daemon=True).start()
+    def _load_fb(self):
+        with self._lock:                       # one load, shared by the preload thread and a first failure
             if self._fb is None:
-                self._fb = await asyncio.to_thread(WhisperSTT)
-            return await self._fb.transcribe(pcm)
+                try:
+                    self._fb = self._mk(); self.fb_error = None
+                    log.info("whisper fallback loaded")
+                except Exception as e:
+                    self.fb_error = type(e).__name__; raise
+        return self._fb
+    @property
+    def bypassing(self):
+        return self._time() < self.bypass_until
+    async def transcribe(self, pcm):
+        if not self.bypassing:
+            try:
+                r = await self.primary.transcribe(pcm)
+                self.fails = 0
+                return r
+            except Exception as e:
+                self.fails += 1
+                log.warning("primary STT failed (%s) x%d; using whisper", type(e).__name__, self.fails)
+                if self.fails >= self.BYPASS_AFTER:
+                    self.bypass_until = self._time() + self.BYPASS_S
+                    log.warning("primary STT bypassed for %.0f s", self.BYPASS_S)
+        return await (await asyncio.to_thread(self._load_fb)).transcribe(pcm)
 
 _stt = None
 def get_stt() -> STT:

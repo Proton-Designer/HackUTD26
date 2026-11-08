@@ -86,6 +86,9 @@ class Loop:
         bc = os.environ.get("ACC_BREAK_CLOUD")
         if bc == "1": env["NVIDIA_BASE_URL"] = "http://127.0.0.1:9/v1"  # cloud LLM refuses connections for this P2 only (failover check)
         elif bc == "blackhole": env["NVIDIA_BASE_URL"] = "http://10.255.255.1/v1"  # cloud LLM connect hangs (timeout path, not fast-fail)
+        bs = os.environ.get("ACC_BREAK_STT")
+        if bs == "1": env["RIVA_URI"] = "127.0.0.1:9"          # Riva refuses (fast fail) for this P2 only: STT must fall back to whisper
+        elif bs == "blackhole": env["RIVA_URI"] = "10.255.255.1:443"   # Riva connect hangs (P2_STT_TIMEOUT path)
         env.update(HUB_DB=f"{self.tmp}/hub.db", HUB_URL=f"http://localhost:{HUB}", P2_ENGINE=self.engine)
         self.env = env
         self.log = open(f"{self.tmp}/p2.log", "w")

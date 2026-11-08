@@ -91,3 +91,39 @@ def test_ws_emits_partials_then_final(monkeypatch):
     parts = [e for e in emitted if not e["is_final"]]
     assert all(p["utterance_id"] == emitted[-1]["utterance_id"] for p in parts)
     assert emitted.index(emitted[-1]) == len(emitted) - 1   # no partial after the final
+
+
+class _Prim(stt.STT):
+    name = "prim"
+    def __init__(self): self.calls, self.down = 0, True
+    async def transcribe(self, pcm):
+        self.calls += 1
+        if self.down: raise RuntimeError("riva down")
+        return "from riva"
+
+
+class _Wh(stt.STT):
+    name = "whisper"
+    async def transcribe(self, pcm): return "from whisper"
+
+
+def test_fallback_uses_whisper_then_bypasses_riva_then_recovers():
+    import asyncio, numpy as np
+    pcm = np.zeros(800, dtype=np.int16)
+    p, now = _Prim(), [1000.0]
+    f = stt.FallbackSTT(p, preload=False, whisper_factory=_Wh)
+    f._time = lambda: now[0]
+    run = lambda: asyncio.run(f.transcribe(pcm))
+    assert run() == "from whisper" and run() == "from whisper" and p.calls == 2 and f.bypassing   # 2 fails -> bypass
+    assert run() == "from whisper" and p.calls == 2                                               # positive control: Riva NOT called while bypassed
+    now[0] += 31; p.down = False
+    assert run() == "from riva" and f.fails == 0 and not f.bypassing                              # re-probed and recovered
+
+
+def test_fallback_preloads_whisper_in_background():
+    import time
+    f = stt.FallbackSTT(_Prim(), preload=True, whisper_factory=_Wh)
+    for _ in range(50):
+        if f._fb: break
+        time.sleep(0.05)
+    assert f._fb is not None

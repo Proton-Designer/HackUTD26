@@ -45,3 +45,10 @@
 - Every 60 s GET `<tunnel>/healthz` (URL from `logs/p2_tunnel_url.txt`, else the current one hard-coded). 3 fails while local is OK -> restarts `p2tunnel` (tunnel.sh), parses the new trycloudflare URL into `logs/p2_tunnel_url.txt` and logs `!!!! TUNNEL URL CHANGED ... !!!!`. **The lead must then tell P1** (`P2_STT_URL=wss://<new host>`); the script never posts anywhere.
 - Never restarts the tunnel while `active_stt_sockets>0`. The service is only restarted when refused (nothing to lose).
 - Env overrides: WD_SESSION WD_SVC_WIN WD_TUN_WIN WD_PORT WD_TUNNEL_URL WD_TICK_S WD_TUN_EVERY WD_FAILS WD_MAX_TICKS WD_SVC_CMD WD_TUN_CMD. Test: `pytest detection/tests/test_watchdog.py` (throwaway tmux session, fake service+tunnel).
+
+## STT fallback (TASK-031): Riva down -> local Whisper
+- Whisper = faster-whisper `base.en`, **CPU int8** (no GPU, so no OOM risk for llama-server). Override model with `P2_WHISPER_MODEL=tiny.en` (faster, less accurate). Measured: ~0.65 s per call on 16 cores, throughput-bound (2 concurrent calls ~1.3 s each, 4 ~2.6 s).
+- Triggers: Riva init fails, or a Riva call errors/times out (`P2_STT_TIMEOUT`, 6 s). Whisper preloads in a background thread at startup (`whisper_fallback_loaded` in /healthz). After 2 consecutive Riva failures Riva is bypassed for 30 s (no 6 s wait per utterance), then re-probed. `/healthz` stt: `primary_failures`, `primary_bypassed`, `whisper_model`.
+- Demo override: `P2_STT=whisper` (Riva never used). While on whisper, partials slow to every 1.5 s (`P2_SLOW_PARTIAL_EVERY_S`) and pause while a final is waiting, so finals are not starved.
+- Test it: `ACC_BREAK_STT=1 ACC_P2_PORT=8102 bash detection/scripts/acceptance.sh` (dead Riva URI via `RIVA_URI` for that P2 only; `blackhole` = hanging connect). Result 9/9 with Riva down.
+- Whisper mishears sometimes (e.g. "6th digit"); rules still match the ask words, accuracy is the cost, availability is the gain.
