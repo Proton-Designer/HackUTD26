@@ -46,20 +46,22 @@ def _url(env, path, default=None):
     return f"{base.rstrip('/')}{path}" if base else default
 
 async def _connect_p2(url):
-    """Open WS /stt/{call_id} on P2. When PIPELINE_TOKEN is set send it as x-pipeline-token (header); if this websockets build
-    can't take headers, fall back to ?token=. Never logged."""
-    import websockets
+    """Open WS /stt/{call_id} on P2. When PIPELINE_TOKEN is set it goes ONLY in the x-pipeline-token header (never in the URL: URLs
+    land in proxy/tunnel logs) and never over plaintext ws:// to a non-loopback host. Either failure raises, so the relay treats P2 as
+    unreachable (call still connects, fail open). The token is never logged."""
+    import inspect, websockets
+    from urllib.parse import urlsplit
     tok = os.environ.get("PIPELINE_TOKEN")
     if not tok:
         return await websockets.connect(url)
-    try:
-        return await websockets.connect(url, additional_headers={"x-pipeline-token": tok})
-    except TypeError:   # older websockets (extra_headers) or unknown kwarg
-        try:
-            return await websockets.connect(url, extra_headers={"x-pipeline-token": tok})
-        except TypeError:
-            from urllib.parse import quote
-            return await websockets.connect(url + ("&" if "?" in url else "?") + "token=" + quote(tok, safe=""))
+    sp = urlsplit(url)
+    if sp.scheme == "ws" and sp.hostname not in ("127.0.0.1", "localhost", "::1"):
+        raise ConnectionError("refusing to send PIPELINE_TOKEN over plaintext ws:// to a non-loopback host; use wss://")
+    params = inspect.signature(websockets.connect).parameters
+    kw = "additional_headers" if "additional_headers" in params else "extra_headers" if "extra_headers" in params else None
+    if kw is None:
+        raise ConnectionError("this websockets build cannot set headers; not sending PIPELINE_TOKEN in the URL")
+    return await websockets.connect(url, **{kw: {"x-pipeline-token": tok}})
 
 async def open(call_id, send_to_caller, on_decoy_lost=None):
     try:

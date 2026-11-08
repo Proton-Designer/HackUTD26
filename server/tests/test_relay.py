@@ -94,20 +94,15 @@ def test_p2_gets_pipeline_token_header_only_when_set(monkeypatch):
     assert run(go("s3cret")) == ["s3cret"]
     assert run(go(None)) == [None]
 
-def test_p2_token_query_fallback(monkeypatch):
+def test_p2_token_never_in_url_or_plaintext_remote(monkeypatch):
     async def go():
-        got = []
-        async def h2(ws):
-            got.append(ws.request.path)
-            async for m in ws: pass
-        s2, port2 = await _server(h2)
-        monkeypatch.setenv("PIPELINE_TOKEN", "a b&c")
-        real = websockets.connect
-        def no_headers(url, **kw):
-            if kw: raise TypeError("no headers")
-            return real(url)
-        monkeypatch.setattr(websockets, "connect", no_headers)
-        ws = await relay._connect_p2(f"ws://127.0.0.1:{port2}/stt/x")
-        await ws.close(); s2.close()
-        return got
-    assert run(go()) == ["/stt/x?token=a%20b%26c"]
+        monkeypatch.setenv("PIPELINE_TOKEN", "tok")
+        for url in ("ws://203.0.113.5:9/stt/x",):
+            try: await relay._connect_p2(url); return "connected"
+            except ConnectionError as e: assert "tok" not in str(e) and "wss" in str(e)
+        def nohdr(url): return None          # signature without a headers kwarg
+        monkeypatch.setattr(websockets, "connect", nohdr)
+        try: await relay._connect_p2("wss://p2.example.com/stt/x"); return "connected"
+        except ConnectionError as e: assert "URL" in str(e) and "tok" not in str(e)
+        return "refused"
+    assert run(go()) == "refused"
