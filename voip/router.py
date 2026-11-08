@@ -82,12 +82,20 @@ def maria_sip_uri():
 for _v in ("TELNYX_CALL_CONTROL_APP_ID", "TELNYX_SIP_USER", "TELNYX_API_KEY"):
     if not os.environ.get(_v): log.warning("voip: %s not set; Maria cannot be dialed / Telnyx commands will fail (fail open)", _v)
 
+def _ops_result(ok, detail=""):
+    """Feed eng1's ops.telnyx_result (hub /demo/status telnyx_ok). Never raises; absent outside the hub process."""
+    try:
+        from server import ops
+        ops.telnyx_result(ok, detail)
+    except Exception: pass
+
 async def _safe(coro, what, sim=False):
     if sim:
-        coro.close(); return {"data": {}}   # simulated call: skip real Telnyx
-    try: return await coro
+        coro.close(); log.warning("sim: would %s (no Telnyx request sent)", what); return {"data": {}}   # simulated call: skip real Telnyx
+    try:
+        r = await coro; _ops_result(True); return r
     except Exception as e:
-        log.warning("%s failed: %s", what, e); return None
+        log.warning("%s failed: %s", what, e); _ops_result(False, str(e)); return None
 
 async def on_initiated(p, base_ws=None, sim=False):
     ccid, sid, frm = p.get("call_control_id"), p.get("call_session_id"), p.get("from", "")

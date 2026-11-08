@@ -247,3 +247,16 @@ def test_own_maria_leg_initiated_is_ignored(monkeypatch):
     assert len(bus.history) == before and "sess-marialeg-12345" not in R.CALLS
     p2 = dict(p, client_state=None, call_session_id="sess-marialeg-67890")   # even without client_state, `to` = her SIP user
     assert asyncio.run(R.on_initiated(p2)) == {}
+
+
+def test_safe_reports_telnyx_result(monkeypatch):
+    import types as _t, sys as _s
+    calls = []
+    fake = _t.SimpleNamespace(telnyx_result=lambda ok, detail="": calls.append((ok, detail)))
+    import server; monkeypatch.setattr(server, "ops", fake, raising=False); monkeypatch.setitem(_s.modules, "server.ops", fake)
+    async def good(): return {"data": 1}
+    async def bad(): raise RuntimeError("POST /calls -> 401 {10009 user marked as blocked}")
+    assert asyncio.run(R._safe(good(), "x")) == {"data": 1}
+    assert asyncio.run(R._safe(bad(), "y")) is None
+    assert calls[0] == (True, "") and calls[1][0] is False and "10009" in calls[1][1]
+    n = len(calls); c = good(); asyncio.run(R._safe(c, "sim", sim=True)); assert len(calls) == n   # sim: no Telnyx call, no report

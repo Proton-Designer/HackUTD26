@@ -57,6 +57,7 @@ async def main():
     a = argparse.ArgumentParser()
     a.add_argument("--from", dest="frm", required=True); a.add_argument("--to", default="+15555550100")
     a.add_argument("--attestation", default="none", choices=["A", "B", "C", "none"])
+    a.add_argument("--script", choices=["irs", "bank", "crypto", "benign"], help="voice a synthetic card with macOS say + ffmpeg (voip/test_call.py), real-time paced")
     a.add_argument("--wav"); a.add_argument("--tone", action="store_true"); a.add_argument("--fast", action="store_true")
     a.add_argument("--hub", default="http://127.0.0.1:8000"); a.add_argument("--webhook-path", default="/telnyx/webhook")
     a.add_argument("--media-token", default=""); a.add_argument("--dry-run", action="store_true")
@@ -89,6 +90,19 @@ async def main():
     print("POST call.answered ->", post(hook, webhook(*steps[1]))[0])
     print("POST streaming.started ->", post(hook, webhook(*steps[2]))[0])
     url = resp.get("stream_url") or f"{hub_ws}/media/{sid}" + (f"?t={a.media_token}" if a.media_token else "")
+    if a.script and not a.wav:
+        import pathlib, subprocess, tempfile
+        sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "voip"))
+        import test_call as tc
+        d = tempfile.mkdtemp(prefix="bf_sim_"); mp3 = tc.make_audio(a.script, d); a.wav = str(pathlib.Path(d) / "s.wav")
+        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(mp3), "-ar", "8000", "-ac", "1", "-c:a", "pcm_s16le", a.wav], check=True)
+    if not a.wav and not a.tone:   # default: the SAME file the hub serves at GET /demo/caller.wav (env DEMO_CALLER_WAV, else $LOGDIR/sim_scam.wav)
+        import os, pathlib
+        root = pathlib.Path(__file__).resolve().parent.parent
+        w = pathlib.Path(os.environ.get("DEMO_CALLER_WAV") or (pathlib.Path(os.environ.get("LOGDIR") or "logs") / "sim_scam.wav"))
+        w = w if w.is_absolute() else root / w
+        if w.is_file(): a.wav = str(w); print(f"caller audio: {w} (same file as GET /demo/caller.wav)")
+        else: print(f"no caller WAV at {w} (run scripts/make_scam_wav.sh or set DEMO_CALLER_WAV); using a 3 s tone")
     audio = pcmu_from_wav(a.wav) if a.wav else pcmu_tone()
     frames = [audio[i:i + 160] for i in range(0, len(audio), 160)]
     import websockets
@@ -96,6 +110,14 @@ async def main():
     try:
         async with websockets.connect(url) as ws:
             sj = lambda o: ws.send(json.dumps(o))
+            back = {"media": 0}
+            async def rx():
+                try:
+                    async for m in ws:
+                        try: back["media"] += 1 if json.loads(m).get("event") == "media" else 0
+                        except Exception: pass
+                except Exception: pass
+            rxt = asyncio.create_task(rx())
             await sj({"event": "connected", "protocol": "Call", "version": "1.0.0"})
             await sj({"event": "start", "sequence_number": "1", "stream_id": "sim-stream",
                       "start": {"call_control_id": ccid, "call_session_id": sid, "stream_id": "sim-stream", "tracks": ["inbound"],
@@ -106,6 +128,8 @@ async def main():
                 sent += 1
                 if not a.fast: await asyncio.sleep(0.02)
             await sj({"event": "stop", "sequence_number": str(len(frames) + 2), "stream_id": "sim-stream", "stop": {"call_control_id": ccid}})
+            await asyncio.sleep(0.5); rxt.cancel()
+            print(f"frames returned to the caller (decoy/echo audio): {back['media']}")
     except Exception as e:
         print(f"media WS failed ({type(e).__name__}: {str(e)[:80]}); pass --media-token if voip needs ?t=")
     print(f"sent {sent} media frames ({sent * 20 / 1000:.1f}s of SIMULATED caller audio)")
