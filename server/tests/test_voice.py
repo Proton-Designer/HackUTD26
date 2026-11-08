@@ -7,6 +7,8 @@ from server.main import app
 
 WEBM = b"\x1a\x45\xdf\xa3" + b"\x00" * 2000
 OGG = b"OggS" + b"\x00" * 2000
+MP4 = b"\x00\x00\x00\x18ftypM4A \x00\x00\x00\x00M4A mp42isom" + b"\x00" * 2000   # real ISO-BMFF header: size, 'ftyp', brand
+ADTS = b"\xff\xf1\x50\x80\x02\x1f\xfc" + b"\x00" * 2000
 WAV = b"RIFF\x00\x00\x00\x00WAVE" + b"\x00" * 2000
 b64 = lambda b: base64.b64encode(b).decode()
 
@@ -84,3 +86,13 @@ def test_delete_idempotent_without_p3_and_odd_ids(c):
     assert c.delete("/voice/never-existed").json() == {"ok": True}
     assert c.delete("/voice/..%2Fetc").status_code in (200, 404)           # never proxied: the id regex gates it
     assert not vevents()
+
+
+def test_ios_safari_mp4_aac_accepted_with_mime_params(c):
+    for rec, mime in ((MP4, "audio/mp4"), (MP4, "audio/mp4;codecs=mp4a.40.2"), (MP4, "audio/x-m4a"), (MP4, "audio/m4a"),
+                      (MP4, "audio/aac"), (ADTS, "audio/aac")):
+        r = c.post("/voice/enroll", json=body(rec=rec, mime=mime))
+        assert r.status_code == 200, (mime, r.text)
+    assert c.post("/voice/enroll", json=body(rec=WEBM, mime="audio/mp4")).status_code == 415      # mime/content mismatch still refused
+    assert c.post("/voice/enroll", json=body(rec=MP4, mime="audio/webm")).status_code == 415
+    assert c.post("/voice/enroll", json=body(rec=b"\x00" * 2000, mime="audio/mp4")).status_code == 415

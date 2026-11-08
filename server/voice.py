@@ -15,7 +15,8 @@ log = logging.getLogger("hub.voice")
 router = APIRouter()
 MAX_AUDIO = 5 * 1024 * 1024                    # decoded audio bytes
 MAX_BODY = (MAX_AUDIO * 4) // 3 + 4096         # base64 + JSON envelope
-MIMES = {"audio/webm": "webm", "audio/ogg": "ogg", "audio/wav": "wav", "audio/x-wav": "wav", "audio/wave": "wav"}
+MIMES = {"audio/webm": "webm", "audio/ogg": "ogg", "audio/wav": "wav", "audio/x-wav": "wav", "audio/wave": "wav",
+         "audio/mp4": "mp4", "audio/x-m4a": "mp4", "audio/m4a": "mp4", "audio/aac": "aac"}   # iOS Safari MediaRecorder = audio/mp4 (AAC)
 VID_RE = re.compile(r"[A-Za-z0-9_.-]{1,80}")
 CONSENT_RE = re.compile(r"[A-Za-z0-9._-]{1,32}")
 
@@ -30,7 +31,8 @@ def _hdrs():
     return {"x-pipeline-token": t} if t else {}
 
 def _magic_ok(kind: str, b: bytes) -> bool:
-    return (kind == "webm" and b[:4] == b"\x1a\x45\xdf\xa3") or (kind == "ogg" and b[:4] == b"OggS") or (kind == "wav" and b[:4] == b"RIFF" and b[8:12] == b"WAVE")
+    return (kind == "webm" and b[:4] == b"\x1a\x45\xdf\xa3") or (kind == "ogg" and b[:4] == b"OggS") or (kind == "wav" and b[:4] == b"RIFF" and b[8:12] == b"WAVE") \
+        or (kind == "mp4" and b[4:8] == b"ftyp") or (kind == "aac" and (b[4:8] == b"ftyp" or (b[0] == 0xFF and b[1] & 0xF0 == 0xF0)))
 
 async def _read_body(request: Request) -> bytes:
     cl = request.headers.get("content-length")
@@ -58,7 +60,7 @@ async def enroll(request: Request):
         raise HTTPException(400, "bad consent_version")
     kind = MIMES.get(mime)
     if not kind:
-        raise HTTPException(415, "accepted formats: webm, ogg, wav")
+        raise HTTPException(415, "accepted formats: webm, ogg, wav, mp4/m4a/aac")
     try:
         audio = base64.b64decode(rec, validate=True)
     except (binascii.Error, ValueError):
