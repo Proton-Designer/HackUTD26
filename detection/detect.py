@@ -233,7 +233,8 @@ async def _engine_score(window_text: str, metadata: dict, engine: str) -> dict:
 
 FAILOVER_CLOUD_S = 2.5     # cloud attempt cap when local is reachable, so local still has budget inside OVERALL_TIMEOUT_S
 _local = {"ok": False, "t": -1e9}
-FAILOVERS = {"n": 0}       # count of cloud->local failovers (log/diagnostics)
+FAILOVERS = {"n": 0}
+ENGINE_FAILED: dict = {}   # call_id -> True when the last detect() had no LLM result (rules-only because an engine failed); read by alert.py       # count of cloud->local failovers (log/diagnostics)
 
 
 async def _local_reachable() -> bool:
@@ -276,6 +277,9 @@ async def detect(call_id: str, window_text: str, metadata: dict | None, engine: 
             except Exception as e:
                 log.warning("detect %s failover to local failed: %s", call_id, type(e).__name__)
         out = merge(raw, rules, engine, text)
+        ENGINE_FAILED[call_id] = raw is None
+        if len(ENGINE_FAILED) > 2000:
+            ENGINE_FAILED.clear()
         if raw is None:
             out["scam_type"] = out["scam_type"] if out["asks"] else "unknown"
         return out

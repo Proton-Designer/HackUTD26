@@ -5,7 +5,7 @@ Quiet switch-off after QUIET_S of s<0.40 (only if no alert fired on the call). F
 import asyncio, logging, os, time
 from collections import deque
 from . import health, hub, stream, schema
-from .detect import quick
+from .detect import quick, ENGINE_FAILED
 
 log = logging.getLogger("p2.alert")
 ALERT_S = float(os.environ.get("ALERT_S", "0.80"))
@@ -13,6 +13,7 @@ HARD_ASK_S = float(os.environ.get("HARD_ASK_S", "0.60"))   # decision: a hard as
 REARM_BELOW = 0.80
 QUIET_S = float(os.environ.get("QUIET_S", "180"))
 WINDOW_N, WINDOW_S = 6, 60.0
+HOLD_S, HOLD_N = 10.0, 3     # engine-failed (rules-only) window: hold last LLM-backed s for <=10 s / 3 windows, then decay
 
 class Call:
     def __init__(self):
@@ -22,6 +23,7 @@ class Call:
         self.prev_band = "low"; self.known_hard = set()
         self.decoy = False; self.muted = False; self.normal_since = None
         self.last = None
+        self.llm = None; self.llm_t = 0.0; self.fail_n = 0     # last LLM-backed result, its time, consecutive failed windows
 
 class AlertMachine:
     def __init__(self, emit=None, detect=None, clock=time.time, engine=None):
@@ -50,6 +52,8 @@ class AlertMachine:
             if self._decide(c, q):
                 log.info("fast-path alert (partial) call=%s s=%.2f", call_id, q["s"])
                 await self._process(call_id, c, q)
+            if q.get("s", 0) >= 0.5 and q["s"] >= (c.llm or {"s": 0})["s"]:
+                c.llm, c.llm_t = q, now          # hold anchor (rules never lower risk)
         except Exception:
             log.exception("on_partial crashed (ignored)")
 
@@ -67,6 +71,8 @@ class AlertMachine:
             if self._decide(c, q):
                 log.info("fast-path alert call=%s s=%.2f", call_id, q["s"])
                 await self._process(call_id, c, q)
+            if isinstance(q, dict) and q.get("s", 0) >= (c.llm or {"s": 0})["s"] and q.get("s", 0) >= 0.5:
+                c.llm, c.llm_t = q, now          # rule-backed score is a valid hold anchor too (rules never lower risk)
             if c.busy:
                 return                       # coalesce: the running loop re-scores the newest window
             c.busy = True
@@ -79,11 +85,31 @@ class AlertMachine:
                     except Exception:
                         log.exception("detect failed (ignored)"); health.err("detect", __import__("sys").exc_info()[1])
                         continue
-                    await self._process(call_id, c, self._floor(r, quick(text, self.engine)))
+                    r = self._floor(r, quick(text, self.engine))
+                    await self._process(call_id, c, self._hold(call_id, c, r))
             finally:
                 c.busy = False
         except Exception:
             log.exception("on_final crashed (ignored, fail-open)")
+
+    def _hold(self, cid, c, r):
+        """An engine-failed window (detect flagged it; NOT 'the LLM said low') must not dip s and re-arm the alert machine:
+        keep max(last LLM-backed s, rules s) for HOLD_S / HOLD_N windows, then let it decay. Real low LLM scores pass through."""
+        try:
+            if not isinstance(r, dict) or not isinstance(r.get("s"), (int, float)):
+                return r
+            if not ENGINE_FAILED.pop(cid, False):
+                c.llm, c.llm_t, c.fail_n = r, self.clock(), 0
+                return r
+            c.fail_n += 1
+            if c.llm is None or c.fail_n > HOLD_N or self.clock() - c.llm_t > HOLD_S or c.llm["s"] <= r["s"]:
+                return r
+            out = dict(r); out["s"] = c.llm["s"]; out["band"] = schema.band(out["s"])
+            out["asks"] = [a for a in schema.ASKS if a in set(r.get("asks") or []) | set(c.llm.get("asks") or [])]
+            log.info("hold last score call=%s s=%.2f (engine failed, window %d)", cid, out["s"], c.fail_n)
+            return out
+        except Exception:
+            return r
 
     @staticmethod
     def _floor(r, q):

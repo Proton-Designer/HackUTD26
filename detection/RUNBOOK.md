@@ -25,3 +25,8 @@
 - `detect(engine=cloud)`: on cloud exception/timeout/429/exhausted P2_CLOUD_RPM budget, if the local server answered a cached (10 s) `GET $LOCAL_LLM_URL/v1/models` probe, it retries ONCE on local inside the 4 s overall budget (cloud attempt is capped at 2.5 s when local is reachable). Output `engine="local"`, WARNING log `detect <id> failover: cloud <Err> -> local`, counter `detect.FAILOVERS`. Then the rule floor as always. `P2_FAILOVER=0` disables it. The cloud rate bucket never gates local.
 - Real check: `ACC_BREAK_CLOUD=1 ACC_P2_PORT=8102 bash detection/scripts/acceptance.sh` (cloud LLM base URL pointed at a dead port for that P2 only; STT unaffected).
 - Limit: llama-server runs `-np 1`, so many parallel calls queue; a local call that misses the remaining budget falls to rules-only for that window (score dips to the rule floor, then can re-arm the alert state: acceptance 4a flaked in that mode). One or two calls is fine (~1.7 s each).
+
+## Hold last score on an engine-failed window (TASK-019)
+- `detect()` sets `detect.ENGINE_FAILED[call_id]` (no schema/contract change) when a window had no LLM result (rules-only because every engine failed). `alert.py _hold`: for such a window it keeps max(last anchor s, rules s) for 10 s / 3 windows (anchor = last LLM-backed result or rule fast-path score >= 0.5), then decays. A real low LLM score passes through unchanged (restore still works). Log: `hold last score` (INFO).
+- Trade-off: while engines are failing, restore after normal talk can lag up to ~10 s.
+- Real check: `ACC_BREAK_CLOUD=1 ACC_P2_PORT=8102 bash detection/scripts/acceptance.sh` with 5 parallel calls on the single-slot llama: 4a PASS (was FAIL); case 5 restore passed in 2 of 3 runs (one run held 0.95 at the last normal line).
