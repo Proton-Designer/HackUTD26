@@ -151,3 +151,24 @@ def test_chips_dedupe_llm_repeats():
     assert len({c.lower() for c in o["why_chips"]}) == len(o["why_chips"]) <= 4
     o = schema.normalize({"asks": ["otp"], "why_chips": ["urgent deadline"]})
     assert o["why_chips"] == ["Asks for a one-time code", "Urgent deadline"]
+
+
+def test_two_concurrent_calls_bucket_exhausted_fast_rules(monkeypatch):
+    import time
+    monkeypatch.setenv("P2_CLOUD_RPM", "1"); monkeypatch.delenv("DEMO_MODE", raising=False)
+    D._bucket.update(tokens=None, t=0.0); D._CACHE.clear()
+    calls = []
+    async def fake_score(w, m):
+        calls.append(w); await asyncio.sleep(0.05); return {"s": 0.3, "asks": [], "scam_type": "none", "stage": "opening"}
+    import detection.engines.cloud as C
+    monkeypatch.setattr(C, "score", fake_score)
+    monkeypatch.setattr(D, "MAX_BUCKET_WAIT_S", 0.1)
+    async def both():
+        t = time.monotonic()
+        r = await asyncio.wait_for(asyncio.gather(
+            D.detect("a", "buy gift cards and tell no one", {}, "cloud"),
+            D.detect("b", "hello this is a courtesy call", {}, "cloud")), 3)
+        return r, time.monotonic() - t
+    (ra, rb), dt = asyncio.run(both())
+    assert len(calls) == 1 and dt < 1.0           # one got the token, the other fell back to rules without starving
+    assert ra["s"] >= 0.9 and isinstance(rb["s"], float)

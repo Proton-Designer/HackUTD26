@@ -169,7 +169,9 @@ async def _engine_score(window_text: str, metadata: dict, engine: str) -> dict:
     if os.environ.get("DEMO_MODE") == "1":
         hit = _demo_load().get(_demo_key(k))
         if isinstance(hit, dict):
+            log.info("demo cache hit")
             return hit
+        log.info("demo cache miss: %s", _norm(window_text)[-60:])
     if not await _acquire(engine):
         log.warning("cloud rate budget exhausted: rules-only result")
         raise RuntimeError("rate budget exhausted")

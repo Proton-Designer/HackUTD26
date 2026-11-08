@@ -1,10 +1,17 @@
-"""Record LLM responses for DEMO_MODE: cumulative caller windows of data/script-cards.md + mock calls.
+"""Record LLM responses for DEMO_MODE: rolling (last 6 utterances, as alert.py) caller windows of data/script-cards.md + mock calls.
 Run: DEMO_RECORD=1 PYTHONPATH=. .venv/bin/python detection/record_demo.py   (<=18 rpm, synthetic data only)"""
 import asyncio, json, os, re, sys
 from pathlib import Path
 os.environ["DEMO_RECORD"] = "1"
 ROOT = Path(__file__).resolve().parents[1]
 from detection import detect as D
+from detection.alert import WINDOW_N   # live window = last WINDOW_N caller utterances joined with "\n" (alert.py); _norm makes "\n" == " "
+
+
+def roll(lines):
+    """Yield the live rolling window after each utterance."""
+    for i in range(len(lines)):
+        yield " ".join(lines[max(0, i + 1 - WINDOW_N):i + 1])
 
 
 def card_windows():
@@ -14,20 +21,16 @@ def card_windows():
         pay = re.findall(r'### Payment step\s+\*\*"(.+?)"\*\*', c, re.S)
         opt = re.findall(r'Optional demo line:\*\* \*\*"(.+?)"\*\*', c)
         seq = lines + pay
-        acc = ""
-        for l in seq:
-            acc = (acc + " " + l).strip(); yield acc
+        yield from roll(seq)
         for o in opt:
-            yield (acc + " " + o).strip()
+            yield from list(roll(seq + [o]))[-1:]
 
 
 def mock_windows():
     d = json.load(open(ROOT / "mock/events.json"))
     for c in d["calls"]:
-        acc = ""
-        for e in c["events"]:
-            if e["type"] == "transcript.caller" and e["data"].get("is_final", True):
-                acc = (acc + " " + e["data"]["text"]).strip(); yield acc
+        yield from roll([e["data"]["text"] for e in c["events"]
+                         if e["type"] == "transcript.caller" and e["data"].get("is_final", True)])
 
 
 async def main():
