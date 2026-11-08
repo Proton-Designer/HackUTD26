@@ -18,6 +18,8 @@ def _announce():
     import sys
     if "pytest" in sys.modules or os.environ.get("HUB_NO_PIN_FILE") == "1":
         return
+    if os.environ.get("DEVICE_PIN"):   # operator-chosen PIN lives in .env: never copy it into hub.log or logs/
+        print("DEVICE PIN: set by DEVICE_PIN env (not printed)", flush=True); return
     try:
         d = pathlib.Path(os.environ.get("LOGDIR") or pathlib.Path(__file__).resolve().parent.parent / "logs"); d.mkdir(parents=True, exist_ok=True)
         (d / "device_pin.txt").write_text(PIN + "\n")

@@ -61,7 +61,7 @@ if [ -n "$PUBLIC" ]; then
 elif [ "${NO_TUNNEL:-}" != "1" ]; then
   echo "no tunnel URL yet; see $LOGDIR/tunnel.log"
 fi
-PIN=$(cat "$LOGDIR/device_pin.txt" 2>/dev/null)
-echo "DEVICE PIN for Maria's phone: ${DEVICE_PIN:-$PIN}   (enter once on first run; protects protection log, buttons, WebRTC token)"
+if [ -n "${DEVICE_PIN:-}" ]; then echo "DEVICE PIN: set by DEVICE_PIN (not printed; see .env)"
+else echo "DEVICE PIN for Maria's phone: $(cat "$LOGDIR/device_pin.txt" 2>/dev/null)   (enter once on first run; protects protection log, buttons, WebRTC token)"; fi
 echo "Ctrl-C to stop."
 wait

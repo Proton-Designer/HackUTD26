@@ -505,3 +505,16 @@ def test_status_hides_call_ids_and_activity_from_remote():
     remote, local = asyncio.run(go())
     assert remote["flags"]["active_calls"] == 1 and "active_call_ids" not in remote and "last_call_activity_ts" not in remote["flags"]
     assert local["active_call_ids"] == ["REMOTE-H"] and local["flags"]["last_call_activity_ts"] > 0
+
+
+def test_device_pin_from_env_is_not_printed_or_written(tmp_path):
+    import subprocess, sys, os
+    env = dict(os.environ, DEVICE_PIN="987654", LOGDIR=str(tmp_path), HUB_DB=str(tmp_path / "h.db"), INTEL_DB=str(tmp_path / "i.db"))
+    env.pop("HUB_NO_PIN_FILE", None)
+    r = subprocess.run([sys.executable, "-c", "import server.main"], env=env, capture_output=True, text=True, timeout=60)
+    assert r.returncode == 0 and "987654" not in r.stdout + r.stderr and "not printed" in r.stdout
+    assert not (tmp_path / "device_pin.txt").exists()
+    env.pop("DEVICE_PIN")
+    r = subprocess.run([sys.executable, "-c", "import server.main"], env=env, capture_output=True, text=True, timeout=60)
+    pin = (tmp_path / "device_pin.txt").read_text().strip()
+    assert pin and pin in r.stdout                                     # random PIN: still shown once for the operator

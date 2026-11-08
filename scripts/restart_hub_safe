@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 # Restart the hub ONLY when no call is live. Reads GET /demo/status (flags.active_calls = calls with an open media session).
 # Refuses (exit 2) and prints the call-id prefixes while active_calls>0; --force overrides. --check = only report, never restart.
-# Usage: scripts/restart_hub_safe [--force] [--check] [--port 8000]   (restart = stop the listener on the port, then exec scripts/run_hub)
+# Reuses the RUNNING cloudflared tunnel by default (new URL would break the Telnyx webhook): if $LOGDIR/tunnel_url.txt exists and cloudflared
+# is serving this port, sets NO_TUNNEL=1 + PUBLIC_WS=wss://<host>. --new-tunnel opts out (run_hub starts a fresh tunnel).
+# Usage: scripts/restart_hub_safe [--force] [--check] [--new-tunnel] [--port 8000]   (restart = stop the listener on the port, then exec scripts/run_hub)
 set -u
-FORCE=0; CHECK=0; PORT="${HUB_PORT:-8000}"
-while [ $# -gt 0 ]; do case "$1" in --force) FORCE=1;; --check) CHECK=1;; --port) PORT="$2"; shift;; *) echo "unknown arg $1" >&2; exit 64;; esac; shift; done
+FORCE=0; CHECK=0; NEWT=0; PORT="${HUB_PORT:-8000}"
+while [ $# -gt 0 ]; do case "$1" in --force) FORCE=1;; --check) CHECK=1;; --new-tunnel) NEWT=1;; --port) PORT="$2"; shift;; *) echo "unknown arg $1" >&2; exit 64;; esac; shift; done
 cd "$(dirname "$0")/.."
 OUT=$(curl -fsS -m 4 "http://127.0.0.1:$PORT/demo/status" 2>/dev/null) || OUT=""
 if [ -n "$OUT" ]; then
@@ -19,6 +21,14 @@ else
   echo "no hub answering on :$PORT (status unreadable); nothing live to protect"
 fi
 [ "$CHECK" = 1 ] && exit 0
+if [ "$NEWT" != 1 ]; then
+  URL=$(grep -Eo 'https://[a-z0-9-]+\.trycloudflare\.com' "${LOGDIR:-logs}/tunnel_url.txt" 2>/dev/null | head -1)
+  if [ -n "$URL" ] && pgrep -f "cloudflared.*127.0.0.1:$PORT" >/dev/null 2>&1; then
+    export NO_TUNNEL=1 PUBLIC_WS="wss://${URL#https://}"; echo "reusing running tunnel: $URL"
+  else
+    echo "no running cloudflared for :$PORT (or no tunnel_url.txt): run_hub will start a NEW tunnel (new URL; re-point Telnyx)"
+  fi
+fi
 PIDS=$(lsof -nP -tiTCP:"$PORT" -sTCP:LISTEN 2>/dev/null)
 [ -n "$PIDS" ] && { echo "stopping hub pid(s): $PIDS"; kill $PIDS; for _ in $(seq 1 20); do lsof -nP -tiTCP:"$PORT" -sTCP:LISTEN >/dev/null 2>&1 || break; sleep 0.5; done; }
 exec scripts/run_hub
