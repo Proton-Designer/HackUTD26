@@ -6,7 +6,7 @@ Shower (drives the screen): Kareem when Ayman answers, and the reverse.
 ## Cards
 
 **1. "How accurate is it? How many false alarms?"** (Owner: Ayman)
-- Answer: On our 60 held-back synthetic test calls the on-device Nemotron Nano 4B alerted on **33 of 33** scams (CI 90-100%) and falsely alarmed on **2 of 27** legitimate calls (CI 2-23%). The baseline, a plain keyword scorer measured the same way, got 28 of 33 and 5 of 27. Thresholds were tuned on dev only. The rows are small and team-written, so read the interval, not the point.
+- Answer: On our 60 held-back synthetic test calls the local Nemotron Nano 4B (run through llama.cpp on a laptop GPU) alerted on **33 of 33** scams (CI 90-100%) and falsely alarmed on **2 of 27** legitimate calls (CI 2-23%). The baseline, a plain keyword scorer measured the same way, got 28 of 33 and 5 of 27. Thresholds were tuned on dev only. The rows are small and team-written, so read the interval, not the point.
 - Show: `detection/eval/RESULTS.md`, top table (test split), local vs rules columns. Kareem pulls it up.
 - Follow-up: "Is 33/33 not overfit?" -> Partly, yes: the test split was scored again after we changed the code, so it is no longer blind. The clean check is a held-out set of 40 fresh rows written afterwards (20 scams incl. 8 with no classic keywords, 4 Spanish, 4 injection, 4 slow-build; 20 legit incl. 10 keyword-bait), scored once with frozen thresholds: local **20 of 20** scams (CI 84-100%), **2 of 20** false alarms (CI 3-30%; **1 of 20** when rerun on the final prompt, pure local, all windows scored by the local model); keyword baseline 8 of 20 and 6 of 20; production rules 9 of 20 and 2 of 20. n=40, so read the intervals. Show: RESULTS.md "Held-out v2".
 - Don't say: "100% accurate", "99%", "production-ready". Don't quote dev numbers as results (dev is tuned).
@@ -24,7 +24,7 @@ Shower (drives the screen): Kareem when Ayman answers, and the reverse.
 - Don't say: "real-time" without the number; "instant".
 
 **4. "Why a local model next to the cloud one?"** (Owner: Ayman)
-- Answer: Privacy and resilience. The local 4B runs on the laptop GPU, so the scoring text need not leave the device (stand-in for an enclave/on-device deployment). The cloud 30B is the default. If the cloud fails or is slow, the same window is rescored locally; a circuit breaker (3 failures in 30 s opens it for 60 s) stops waiting on a dead cloud.
+- Answer: Privacy and resilience. In the demo the live path scores with Nemotron Nano 4B via llama.cpp on a laptop GPU (the call is a Telnyx phone call plus the mobile web app; this is a server-side model, not on the phone), so scoring text stays on our machine. NVIDIA's hosted 30B model is the fallback: if the local model is down or slow, the window is rescored in the cloud, and a circuit breaker (3 failures in 30 s opens it for 60 s) stops waiting on a dead engine. Running on the phone is a variant (the Android build), not what we demo.
 - Show: `/healthz` field `cloud_breaker`; README "Reliability" section; RESULTS.md local column. Kareem.
 - Follow-up: "Is local as good as cloud?" -> We could not score cloud on test (shared NVIDIA key returned 429s), so we make no cloud-vs-local accuracy claim, only local-vs-keywords.
 - Don't say: "local beats cloud", "fully offline" (STT is hosted unless `P2_STT=whisper`).
@@ -32,7 +32,7 @@ Shower (drives the screen): Kareem when Ayman answers, and the reverse.
 **5. "What do you record? Whose audio?"** (Owner: Ayman)
 - Answer: Caller audio only, never the customer's. The service stores nothing: no audio, no database. Audio is decoded in memory. P2 writes only a local log (`logs/`, gitignored) with timestamps, scores and the first 60 characters of each utterance. `P2_DUMP_AUDIO=1` would save WAVs locally; it is off by default.
 - Show: `detection/stream.py` (the dump flag), `.gitignore` (`logs/`), RUNBOOK line on `P2_DUMP_AUDIO`.
-- Follow-up: "Where does the audio go?" -> Speech-to-text is NVIDIA's hosted Parakeet, so caller audio is sent to NVIDIA for transcription; the whisper fallback (`P2_STT=whisper`) keeps it local. Cloud scoring sends transcript text, not audio. The demo uses synthetic or consenting-team callers only. Before real users: on-device STT, call-recording consent rules per state.
+- Follow-up: "Where does the audio go?" -> Speech-to-text is NVIDIA's hosted Parakeet, so caller audio is sent to NVIDIA for transcription; the whisper fallback (`P2_STT=whisper`) keeps it local. Cloud scoring sends transcript text, not audio. The demo uses synthetic or consenting-team callers only. Before real users: self-hosted STT, call-recording consent rules per state.
 - Don't say: "nothing leaves the device", "HIPAA/GDPR compliant", "we don't store anything" without the log caveat.
 
 **6. "Is this real or scripted?"** (Owner: Ayman)
@@ -42,7 +42,7 @@ Shower (drives the screen): Kareem when Ayman answers, and the reverse.
 - Don't say: "it's all live" if DEMO_MODE is on. Say it is on.
 
 **7. "What happens when something fails?"** (Owner: Ayman)
-- Answer: It degrades and never blocks the call: cloud 429/slow -> local model (cloud gets 2 s, whole window 4 s cap); both down -> rules only, which on test catch **24 of 33** scams (CI 56-85%) with **1 of 27** false alarms. STT down -> local Whisper. Hold-last-score stops a failed window from dipping the alert. On the fresh held-out set rules-only caught only **9 of 20** (no-keyword scams 1 of 8, Spanish 1 of 4), so rules-only is a floor, not a detector.
+- Answer: It degrades and never blocks the call: local model down or slow -> NVIDIA cloud (and the reverse order if configured; cloud gets 2 s, whole window 4 s cap); both down -> rules only, which on test catch **24 of 33** scams (CI 56-85%) with **1 of 27** false alarms. STT down -> local Whisper. Hold-last-score stops a failed window from dipping the alert. On the fresh held-out set rules-only caught only **9 of 20** (no-keyword scams 1 of 8, Spanish 1 of 4), so rules-only is a floor, not a detector.
 - Show: README "Reliability" section; RESULTS.md prodrules column; acceptance run `ACC_BREAK_CLOUD=1`.
 - Follow-up: "Did you test both-down live?" -> Cloud-down failover and STT-down were run on the acceptance suite; both-LLMs-down was measured offline by the eval's prodrules engine, not live end to end.
 - Don't say: "it always works", "five nines".
@@ -77,13 +77,13 @@ Shower (drives the screen): Kareem when Ayman answers, and the reverse.
 - "Alert 20+ s before the first ask on the demo recording": now measured, see `detection/eval/DEMO_TIMING.md` (alert +7.5 s; secrecy line ~28.7 s; gift-card ask ended 36.3 s; n=1).
 
 ## Known gaps (disclose, do not patch during judging)
-- Cloud not scored on test (429). Disclose: "we have no cloud test number; the key was rate-limited."
+- Cloud not scored on test (429). Disclose: "we have no cloud test number; the key was rate-limited, and the demo scores locally."
 - Test split was scored before and after the fixes, so it is not blind; held-out v2 is the blind check (20/20 recall; 1-2 of 20 false alarms depending on prompt version).
 - STT audio goes to NVIDIA hosted unless `P2_STT=whisper`.
 - Breaker state is per process; half-open recovery was unit-tested, not exercised live.
 
 ## Tradeoff lines
-- "Given 24 hours and a shared rate-limited API key, we chose a cloud model with an on-device fallback over cloud only, because a call must still be screened when the key 429s. It costs us a slower and noisier 4B model; if the key were dedicated we'd drop the failover."
+- "Given 24 hours and a shared rate-limited API key, we chose a local 4B model on our own GPU with NVIDIA's cloud model as the fallback, because a call must still be screened when the shared key 429s. It costs us a smaller and noisier model than the 30B (no cloud-vs-local accuracy number: the cloud was never scored); with a dedicated key we would score both and pick on numbers."
 - "We chose rules that only raise risk over a model-only verdict because caller text is untrusted. It costs us some false alarms on look-alikes; if we had real calls we'd tune that on dev only."
 
 **11. "What if my real bank (or doctor, or grandchild) calls me?"** (Owner: Ayman)
@@ -117,9 +117,9 @@ Same rules as above: n is small, all scam scripts are team-written, real calls a
 - Don't say: "we tested long calls live".
 
 **16. "Two calls at once?"** (Owner: Ayman)
-- Answer: The product is built and run one call at a time: the local model has one slot, and P2 state is keyed by call id but two simultaneous calls are not verified end to end. eng2 is measuring this now; until that number is in `RESULTS.md`/`DEMO_DAY.md`, say "one call at a time, by design" and do not claim concurrency.
-- Show: `docs/DEMO_DAY_RUNBOOK.md` ("keep one call at a time").
-- Don't say: "scales", "handles many calls".
+- Answer: eng2 replayed two overlapping calls from real-call audio on the llama server as it runs today (TASK-065): scam+scam alerted at +11.7 s and +14.9 s, scam+benign alerted at +15.1 s with the benign call quiet; 0 failovers, 0 false alarms, under 1 s extra delay versus a solo call. Not tried: 3 or more calls, and live phone lines (replayed audio only). We still run one call at a time for judging.
+- Show: eng2's TASK-065 result (board note); `docs/DEMO_DAY_RUNBOOK.md` ("keep one call at a time").
+- Don't say: "scales", "handles many calls". Say "two overlapping calls tested on replayed audio, n=2 runs".
 
 **17. "What about Spanish?"** (Owner: Ayman)
 - Answer: The speech-to-text is English-only (Parakeet via Riva), so a Spanish caller is transcribed badly and we do not claim Spanish detection on a phone call. The text rules and model were tested on written Spanish and Spanglish lines (held-out v2: 4 Spanish scams, local caught all 4, production rules 1 of 4; hardneg_v3: 5 Spanglish look-alikes, one false alarm, hn-22), which says nothing about Spanish audio.
