@@ -302,3 +302,18 @@ def test_demo_haul_not_with_p3_or_after_restore_or_real(monkeypatch):
     monkeypatch.delenv("P3_DECOY_URL")
     s3 = "sess-haul-rest-123456"; R.CALLS[s3] = _state(); R.CALLS[s3].update(handed_off=True, restored=True)
     R._publish_demo_haul(s3); assert n(s3) == 0
+
+
+def test_dial_guard_refuses_pstn_without_flag(monkeypatch):
+    sent = []
+    async def fake_post(path, body=None, text=False): sent.append((path, body)); return {"data": {}}
+    monkeypatch.setattr(telnyx, "_post", fake_post)
+    monkeypatch.setenv("TELNYX_SIP_USER", "mariauser"); monkeypatch.delenv("BACKFIRE_ALLOW_PSTN_OUTBOUND", raising=False)
+    for bad in ("+14695550100", "+14699088594", "sip:someoneelse@sip.telnyx.com", "sip:mariauser@evil.example", "", None):
+        with pytest.raises(telnyx.TelnyxError): asyncio.run(telnyx.dial({"to": bad, "connection_id": "x"}))
+    assert sent == []                                                       # nothing reached the (mock) API
+    asyncio.run(telnyx.dial({"to": "sip:mariauser@sip.telnyx.com"})); assert len(sent) == 1   # our own SIP user is allowed
+    monkeypatch.delenv("TELNYX_SIP_USER")
+    with pytest.raises(telnyx.TelnyxError): asyncio.run(telnyx.dial({"to": "sip:mariauser@sip.telnyx.com"}))   # no configured user: refuse
+    monkeypatch.setenv("BACKFIRE_ALLOW_PSTN_OUTBOUND", "1")
+    asyncio.run(telnyx.dial({"to": "+14695550100"})); assert len(sent) == 2   # explicit override only

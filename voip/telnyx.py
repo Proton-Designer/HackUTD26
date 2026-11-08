@@ -27,7 +27,17 @@ def _id(x: str) -> str: return quote(x, safe="")
 async def answer(ccid, body=None): return await _post(f"/calls/{_id(ccid)}/actions/answer", body)
 async def reject(ccid, cause="CALL_REJECTED"): return await _post(f"/calls/{_id(ccid)}/actions/reject", {"cause": cause})
 async def hangup(ccid): return await _post(f"/calls/{_id(ccid)}/actions/hangup")
-async def dial(body): return await _post("/calls", body)
+def dial_allowed(to) -> bool:
+    """HARD GUARD: POST /v2/calls may only dial our own Maria SIP URI (sip:<TELNYX_SIP_USER>@sip.telnyx.com). Any PSTN number is refused unless
+    BACKFIRE_ALLOW_PSTN_OUTBOUND=1 (outbound PSTN self-dials with scam audio got an account blocked)."""
+    if os.environ.get("BACKFIRE_ALLOW_PSTN_OUTBOUND") == "1": return True
+    u = os.environ.get("TELNYX_SIP_USER")
+    return bool(u) and str(to or "").strip().lower() == f"sip:{u}@sip.telnyx.com".lower()
+
+async def dial(body):
+    if not dial_allowed((body or {}).get("to")):
+        raise TelnyxError("dial refused: only sip:<our SIP user> may be dialed; PSTN outbound needs BACKFIRE_ALLOW_PSTN_OUTBOUND=1")
+    return await _post("/calls", body)
 async def create_conference(ccid, name): return await _post("/conferences", {"call_control_id": ccid, "name": name, "beep_enabled": "never"})
 async def join_conference(conf_id, ccid, **kw): return await _post(f"/conferences/{_id(conf_id)}/actions/join", {"call_control_id": ccid, **kw})
 async def leave_conference(conf_id, ccid): return await _post(f"/conferences/{_id(conf_id)}/actions/leave", {"call_control_id": ccid})
