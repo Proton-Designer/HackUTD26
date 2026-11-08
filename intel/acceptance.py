@@ -118,7 +118,13 @@ def main(argv=None) -> int:
         applied = [x for x in hold if x.get("status") == "applied"]
         check(bool(applied), "N3 hold_transfer applied (auto, her scope, simulated)",
               applied[0].get("reason", "") if applied else f"hold actions: {[x.get('gate_status') for x in hold]}")
-        st = [N.transfer_status(x["target"]) for x in applied]
+        st = []
+        for x in applied:  # one retry: a None is either "not found" or Nessie unreachable; say which
+            s_ = N.transfer_status(x["target"]) or (time.sleep(1) or N.transfer_status(x["target"]))
+            if s_ is None:
+                r = N.get(f"/transfers/{x['target']}")
+                s_ = f"None ({'not found (deleted?)' if r['code'] == 404 else r['error']}, id {x['target'][:8]})"
+            st.append(s_)
         check(bool(st) and all(s_ == "cancelled" for s_ in st), "N4 transfer shows cancelled in Nessie", str(st))
         flag = [x for x in acts if x.get("kind") == "flag_payee_bankwide"]
         check(bool(flag) and flag[0].get("status") == "queued", "N5 flag_payee_bankwide queued for analyst",

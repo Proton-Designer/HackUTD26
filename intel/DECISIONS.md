@@ -64,3 +64,7 @@
 - /intel/map: a standalone page I own (intel/chain_map.html), not part of P4b's command center. Self-contained HTML +
   inline SVG + vanilla JS, fetches only same-origin `chain` every 3 s, with a paste-JSON fallback. Both routes sit under
   P1's intel guard (paired device / localhost / HUB_TOKEN), so over the public tunnel they need P1 to allow them.
+- Reset race (shared hub 11/12, #51): two overlapping POST /demo/reset each listed the old pending transfer, deleted
+  it, and created one, which left 2 pending (reproduced locally). Fix: the reset hook runs under a process lock, and after
+  creating its transfer it re-lists and deletes any other pending demo transfer, so the next reset also cleans up a
+  cross-process race. acceptance N4 now retries once and says whether a None is "not found" or Nessie unreachable.

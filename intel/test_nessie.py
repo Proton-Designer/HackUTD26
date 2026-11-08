@@ -304,3 +304,17 @@ def test_chain_fails_open_to_seeded_values(bank, tmp_path):
     bank.down = True
     g = c.get("/intel/chain").json()
     assert g["status"] == "unavailable" and g["mule_total_in"] == 18100 and len(g["edges"]) == 11
+
+
+def test_concurrent_resets_leave_exactly_one_pending(bank):
+    """Shared-hub 11/12 (#51): two overlapping /demo/reset calls each created a transfer."""
+    import threading
+    seed_nessie.seed(quiet=True)
+    maria = N.load_ids()["maria"]["account_id"]
+    ts = [threading.Thread(target=seed_demo.start_pending_transfer) for _ in range(4)]
+    [t.start() for t in ts]; [t.join() for t in ts]
+    assert len(N.pending_transfers(maria, description_contains=HANDLE)["transfers"]) == 1
+    # cross-process race (lock doesn't help): a stray pending created by someone else is removed on the next start
+    bank.add_transfer(maria, "pending", 1800, f"Zelle to {HANDLE}")
+    seed_demo._start_pending_transfer()
+    assert len(N.pending_transfers(maria, description_contains=HANDLE)["transfers"]) == 1

@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+import threading
 import time
 from datetime import date, timedelta
 
@@ -35,7 +36,15 @@ def reset(store: Store) -> None:
         store.db.commit()
 
 
+_PENDING_LOCK = threading.Lock()  # resets in the same hub process run one at a time here
+
+
 def start_pending_transfer() -> dict | None:
+    with _PENDING_LOCK:
+        return _start_pending_transfer()
+
+
+def _start_pending_transfer() -> dict | None:
     """Scripted demo moment: Maria starts a Zelle transfer to the scammer's destination in her banking app.
     Deletes leftover pending demo transfers first (usually none), then ONE POST; 3 s timeouts; skipped silently with no key, no seed (python -m intel.seed_nessie) or any error,
     so /demo/reset stays fast and never fails because of Nessie."""
@@ -56,7 +65,14 @@ def start_pending_transfer() -> dict | None:
                 "amount": int(dest.get("demo_transfer_amount", 1800)), "description": f"Zelle to {dest['id']}"}
         r = N.request("POST", f"/accounts/{maria}/transfers", body=body, params={"payee_id": payee}, timeout=3)
         tid = N.created_id(r)
-        return {"id": tid, "amount": body["amount"], "description": body["description"]} if tid else None
+        if not tid:
+            return None
+        # Concurrent resets (two POST /demo/reset at once, or the CLI + the hub) can each create one; keep only ours.
+        again = N.pending_transfers(maria, description_contains=str(dest["id"]), timeout=3)
+        for t in again.get("transfers", []):
+            if t["id"] != tid:
+                N.request("DELETE", f"/transfers/{t['id']}", timeout=3)
+        return {"id": tid, "amount": body["amount"], "description": body["description"]}
     except Exception:
         return None
 
