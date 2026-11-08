@@ -48,7 +48,22 @@
     try { st.ctx = st.ctx || new (window.AudioContext || window.webkitAudioContext)(); if (st.ctx.state === "suspended") st.ctx.resume(); } catch (e) { log("audio unavailable", String(e)); }
     const on = !!st.ctx && st.ctx.state !== "closed"; BF.soundBadge(on);
   }
-  document.addEventListener("pointerdown", unlockAudio, { once: true });
+  // Ringtone as an <audio> element (P1 08:12, "incoming call is silent"): Web Audio is muted by the iPhone ring/silent
+  // switch and gets suspended when the page is backgrounded; a media element primed by a tap keeps playing.
+  const ringEl = (() => { try {
+    const sr = 8000, n = sr * 3, b = new ArrayBuffer(44 + n * 2), v = new DataView(b), w = (o, s) => [...s].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+    w(0, "RIFF"); v.setUint32(4, 36 + n * 2, true); w(8, "WAVEfmt "); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, sr, true); v.setUint32(28, sr * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, "data"); v.setUint32(40, n * 2, true);
+    for (let i = 0; i < n; i++) { const t = i / sr, on = t < 2 && (t % 1) < 0.9;   // US ring: 440+480 Hz, 2 s on, 1 s off
+      v.setInt16(44 + i * 2, on ? Math.round(6000 * (Math.sin(2 * Math.PI * 440 * t) + Math.sin(2 * Math.PI * 480 * t))) : 0, true); }
+    const a = new Audio(URL.createObjectURL(new Blob([b], { type: "audio/wav" }))); a.loop = true; a.preload = "auto"; return a;
+  } catch (e) { return null; } })();
+  let ringPrimed = false;
+  function primeRing() { if (!ringEl || ringPrimed) return; ringEl.muted = true;
+    const p = ringEl.play(); if (p && p.then) p.then(() => { ringEl.pause(); ringEl.currentTime = 0; ringEl.muted = false; ringPrimed = true; }).catch(() => { ringEl.muted = false; }); }
+  BF.ringEl = ringEl;
+  document.addEventListener("pointerdown", () => { unlockAudio(); primeRing(); });   // every tap (not once): iOS suspends audio after backgrounding
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && st.ctx && st.ctx.state !== "running") st.ctx.resume().catch(() => {}); });
   $("sound").addEventListener("click", unlockAudio);   // first tap anywhere unlocks beeps
 
   // ---- Live Guard badge: watching / alert / handed off / off ----
@@ -69,8 +84,11 @@
   // ---- phone feel: ringtone (WebAudio, needs the tap-unlocked context), vibrate, 45 s no-answer, screen wake lock ----
   const RING_TIMEOUT_MS = 45000; let ringI = null, ringTO = null, wake = null;
   function ringBurst() { const c = st.ctx; if (c && c.state === "running") for (const [at, f] of [[0, 440], [0.45, 480], [0.9, 440], [1.35, 480]]) { const o = c.createOscillator(), g = c.createGain(); o.type = "sine"; o.frequency.value = f; o.connect(g); g.connect(c.destination); const t = c.currentTime + at; g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.25, t + 0.03); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.38); o.start(t); o.stop(t + 0.42); } if (navigator.vibrate) navigator.vibrate([700, 300, 700, 300]); }
-  function startRing() { stopRing(); ringBurst(); ringI = setInterval(ringBurst, 3000); ringTO = setTimeout(() => { if ($("phone").dataset.state === "ringing") { emitUserAction("decline"); if (BF.voip) BF.voip.hangup(); endCall("Missed call."); } }, RING_TIMEOUT_MS); }
-  function stopRing() { clearInterval(ringI); clearTimeout(ringTO); ringI = ringTO = null; if (navigator.vibrate) navigator.vibrate(0); }
+  function startRing() { stopRing();
+    let viaEl = false; if (ringEl) { try { ringEl.currentTime = 0; const p = ringEl.play(); viaEl = true; if (p && p.catch) p.catch(() => { viaEl = false; ringBurst(); ringI = ringI || setInterval(ringBurst, 3000); }); } catch (e) { viaEl = false; } }
+    if (!viaEl) { if (st.ctx && st.ctx.state !== "running") st.ctx.resume().catch(() => {}); ringBurst(); ringI = setInterval(ringBurst, 3000); }
+    else if (navigator.vibrate) { navigator.vibrate([700, 300, 700, 300]); ringI = setInterval(() => navigator.vibrate && navigator.vibrate([700, 300, 700, 300]), 3000); } ringTO = setTimeout(() => { if ($("phone").dataset.state === "ringing") { emitUserAction("decline"); if (BF.voip) BF.voip.hangup(); endCall("Missed call."); } }, RING_TIMEOUT_MS); }
+  function stopRing() { clearInterval(ringI); clearTimeout(ringTO); ringI = ringTO = null; if (ringEl) { try { ringEl.pause(); ringEl.currentTime = 0; } catch (e) {} } if (navigator.vibrate) navigator.vibrate(0); }
   async function lockScreen() { try { if (navigator.wakeLock && !wake && document.visibilityState === "visible") { wake = await navigator.wakeLock.request("screen"); wake.addEventListener("release", () => { wake = null; }); } } catch (e) { wake = null; } }
   function unlockScreen() { try { wake && wake.release(); } catch (e) {} wake = null; }
   let hiddenAt = 0;
