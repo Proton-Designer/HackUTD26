@@ -584,7 +584,7 @@ async def _restore_expiry(sid, deadline):
 def _legit(st) -> dict:
     """Additive call.ended flag: the caller looked legitimate -> hub must NOT blocklist. Only counts if the low-risk hold was completed INSIDE the
     restore window (or a restore actually happened); a long-after-the-window low score on a scam call must not cancel its block (REVIEW F2)."""
-    if not st.get("handed_off"): return {}
+    if not st.get("handed_off") or st.get("crash_restore"): return {}   # a restore forced by a decoy crash says nothing about the caller (F13)
     if st.get("restored"): return {"legit": True}
     ls = st.get("low_since")
     return {"legit": True} if ls and ls + RESTORE_LOW_S <= st.get("restore_deadline", 0) and time.time() - ls >= RESTORE_LOW_S else {}
@@ -613,10 +613,10 @@ async def _low_watch(sid, deadline):
     except Exception:
         log.exception("low_watch failed")
 
-async def restore(sid):
+async def restore(sid, force=False):
     """Bring Maria back before the deadline: stop decoy, rejoin her leg (re-dial her SIP if it was hung up), emit handoff.restored."""
     st = CALLS.get(sid)
-    if not st or st["ended"] or not st.get("handed_off") or st.get("restored") or time.time() > st.get("restore_deadline", 0): return False
+    if not st or st["ended"] or not st.get("handed_off") or st.get("restored") or (not force and time.time() > st.get("restore_deadline", 0)): return False
     sim = st.get("sim", False)
     st["restored"] = True
     await _stop_decoy(sid)
@@ -636,6 +636,12 @@ async def _decoy_lost(sid):
     """P3 closed/crashed: the decoy session is over. End the caller's call (ended_by decoy) so the hub blocklists the number."""
     st = CALLS.get(sid)
     if not st or st["ended"] or st.get("restored"): return
+    if listen_mode() and st.get("handed_off") and not st.get("haul_seen"):
+        # F13: the decoy died BEFORE delivering its haul (a polite wrap-up always publishes artifacts first): there is no Maria leg to fall back to
+        # but there is the customer's page, so hand the call back instead of hanging up on the caller and blocklisting on a crash.
+        st["crash_restore"] = True
+        log.warning("decoy lost before any haul for %s: restoring the customer (listen/talk) instead of hanging up", sid[:8])
+        await restore(sid, force=True); return
     st["ended"] = True; LIMITER.release(sid)
     sim = st.get("sim", False)
     for k in ("caller_ccid", "maria_ccid"):
@@ -675,6 +681,7 @@ def _on_bus(ev):
         _journal(sid, ev)
         if (t == "risk.update" and d.get("engine") != "fallback") or (t == "transcript.caller" and not str(d.get("utterance_id", "")).startswith("fb_")):
             CALLS[sid]["p2_seen"] = True   # a real P2 event: the sim fallback detector stops
+        if t == "artifacts.extracted": CALLS[sid]["haul_seen"] = True   # P3 delivers its haul before a polite wrap-up closes the stream
         if t == "user.action":
             if d.get("action") == "answer": asyncio.run_coroutine_threadsafe(answer_call(sid), LOOP)
             elif d.get("action") == "decline": asyncio.run_coroutine_threadsafe(decline_call(sid), LOOP)

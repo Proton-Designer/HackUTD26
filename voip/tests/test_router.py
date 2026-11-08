@@ -821,3 +821,20 @@ def test_F7_listen_mode_streams_even_normal_routed_calls(monkeypatch):
     calls2 = _ring_setup(monkeypatch, mode="sip"); monkeypatch.setattr(R, "_routing", lambda frm, att: {"decision": "NORMAL", "reason": "trusted"})
     asyncio.run(R.on_initiated(_incoming("sess-F7-sip-123456789", "v3:f7sip12345678901")))
     assert "stream_url" not in (calls2[0][2] or {})                                                # SIP mode: NORMAL calls are untouched (Maria's leg is the call)
+
+
+def test_F13_decoy_crash_in_listen_mode_restores_instead_of_hanging_up(monkeypatch):
+    monkeypatch.setenv("MARIA_LEG", "talk"); calls = _no_telnyx(monkeypatch); fr = FakeRelay(); monkeypatch.setattr(R, "_hub_relay", lambda: fr)
+    sid = "sess-F13-crash-12345"; st = _state(sim=False, conf=False); st.pop("maria_ccid"); st.update(listen=True, handed_off=True, restore_deadline=time.time() - 100); R.CALLS[sid] = st
+    asyncio.run(R._decoy_lost(sid))                                  # decoy died with no haul, even after the restore window
+    assert st["ended"] is False and st["restored"] is True and ("stop_decoy", sid) in fr.calls
+    assert "handoff.restored" in [e["type"] for e in bus.history if e["call_id"] == sid] and "hangup" not in calls
+    assert R._legit(st) == {}                                       # a crash-restore must not mark a scam caller legit
+    # polite wrap-up: the haul was delivered first -> normal end (hang up, ended_by decoy)
+    sid2 = "sess-F13-polite-1234"; st2 = _state(sim=False, conf=False); st2.update(listen=True, handed_off=True, haul_seen=True); R.CALLS[sid2] = st2
+    asyncio.run(R._decoy_lost(sid2))
+    ev = [e for e in bus.history if e["call_id"] == sid2][-1]
+    assert ev["type"] == "call.ended" and ev["data"]["ended_by"] == "decoy" and "hangup" in calls
+    # SIP mode keeps the old behaviour (Maria's leg exists)
+    monkeypatch.setenv("MARIA_LEG", "sip"); sid3 = "sess-F13-sip-12345678"; st3 = _state(sim=False); st3.update(handed_off=True); R.CALLS[sid3] = st3
+    asyncio.run(R._decoy_lost(sid3)); assert st3["ended"] is True
