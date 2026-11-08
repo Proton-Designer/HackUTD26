@@ -246,10 +246,22 @@ class Session:
     async def say(self, text: str, latency_ms: int = 0, record: bool = False) -> int:
         """Speaks text sentence by sentence. Returns ms until the first sentence's audio was queued (TTS time)."""
         t0, first_ms = time.monotonic(), 0
-        for sentence in [s for s in __import__("re").split(r"(?<=[.!?])\s+", text) if s.strip()]:
+        sentences = [s for s in __import__("re").split(r"(?<=[.!?])\s+", text) if s.strip()]
+        self.said = (self.said + sentences)[-6:]
+        # Whole reply per TTS request (#102): per-sentence synthesis gave every sentence its own flat, final-sounding
+        # contour and no natural pauses (pitch spread 4.7 vs the speaker's own 5.7 semitones; 1 vs 7 mid-reply pauses).
+        # Same first-audio latency (one request ~0.8 s). Long replies go in ~240-char chunks.
+        chunks, cur = [], ""
+        for snt in sentences:
+            if cur and len(cur) + len(snt) > 240:
+                chunks.append(cur); cur = snt
+            else:
+                cur = (cur + " " + snt).strip()
+        if cur:
+            chunks.append(cur)
+        for sentence in chunks:
             if not self.active:
                 return first_ms
-            self.said = (self.said + [sentence])[-6:]
             fr = await self.voice.frames(sentence)
             if not fr and self.voice.cloned and (self.stalls or self.fillers):
                 # clone TTS failed mid-call: a pre-rendered line in the SAME clone voice, never the synthetic one (#100)

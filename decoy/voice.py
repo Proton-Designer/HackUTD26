@@ -46,17 +46,44 @@ def _enc_table() -> np.ndarray:
 _ENC = _enc_table()
 
 
+# Anti-alias corner before 8 kHz (#102). Measured trade-off (ECAPA likeness on the phone line, 3 runs each): old 3-tap
+# average 0.74 but buzzy aliasing; strict 3.6 kHz 0.65; 3.9 kHz 0.71. 3.9 kHz keeps nearly the whole phone band and still
+# removes what folds down from above 4 kHz. DECOY_ANTIALIAS_HZ=off restores the old behaviour (decide by ear).
+ANTIALIAS = os.environ.get("DECOY_ANTIALIAS_HZ", "3900")
+
+
+def _lowpass(rate: int, cutoff: float = 3900.0, taps: int = 255) -> np.ndarray:
+    """Blackman-windowed sinc low-pass (anti-alias before 8 kHz). Cached per rate."""
+    k = (rate, cutoff, taps)
+    if k not in _LP:
+        n = np.arange(taps) - (taps - 1) / 2
+        h = np.sinc(2 * cutoff / rate * n) * np.blackman(taps)
+        _LP[k] = (h / h.sum()).astype(np.float32)
+    return _LP[k]
+
+
+_LP: dict = {}
+
+
 def to_pcmu_frames(pcm16: bytes, rate: int) -> list[bytes]:
-    """16-bit mono PCM at any rate -> list of 160-byte mu-law frames (20 ms at 8 kHz)."""
+    """16-bit mono PCM at any rate -> list of 160-byte mu-law frames (20 ms at 8 kHz).
+    Proper anti-alias filter before resampling (#102: the old 3-tap average let 4-10 kHz TTS sibilants/breath fold
+    into the phone band as metallic buzz), and a steady speech level (RMS ~-20 dBFS, peaks under -3 dBFS)."""
     x = np.frombuffer(pcm16, dtype="<i2").astype(np.float32)
     if len(x) == 0:
         return []
-    if rate != 8000:  # band-limit by averaging, then linear interpolation down to 8 kHz
-        k = max(1, int(round(rate / 8000)))
-        if k > 1:
-            x = np.convolve(x, np.ones(k) / k, mode="same")
+    if rate != 8000 and ANTIALIAS.lower() in ("off", "0", "legacy"):
+        k = max(1, int(round(rate / 8000)))   # legacy: 3-tap average (lets 4-10 kHz fold into the band)
+        x = np.convolve(x, np.ones(k) / k, mode="same")
         t = np.arange(0, len(x) - 1, rate / 8000)
         x = np.interp(t, np.arange(len(x)), x)
+    elif rate != 8000:
+        x = np.convolve(x, _lowpass(rate, float(ANTIALIAS)), mode="same")
+        t = np.arange(0, len(x) - 1, rate / 8000)
+        x = np.interp(t, np.arange(len(x)), x)   # band-limited to 3.6 kHz first, so interpolation is clean
+    rms = float(np.sqrt(np.mean(x ** 2))) if len(x) else 0.0
+    if rms > 50:   # same loudness for every reply (no level jumps between turns), never clipping
+        x = x * min(3277.0 / rms, 23197.0 / (float(np.abs(x).max()) or 1.0))
     u = _ENC[(np.clip(x, -32768, 32767).astype(np.int32) + 32768)].tobytes()
     u += b"\xff" * (-len(u) % 160)  # pad with mu-law silence
     return [u[i:i + 160] for i in range(0, len(u), 160)]
