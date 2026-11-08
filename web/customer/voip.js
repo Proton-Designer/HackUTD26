@@ -14,9 +14,12 @@
   const audio = document.createElement("audio"); audio.autoplay = true; audio.setAttribute("playsinline", ""); document.body.append(audio);
 
   async function getToken() {
-    if (dev) return dev;
+    if (dev) return { login_token: dev };
     const r = await BF.hubFetch("/voip/webrtc-token"); if (!r.ok) throw new Error("token " + r.status);
-    return (await r.json()).token;
+    const j = await r.json();   // {token} (JWT) or {login, password} (SIP credentials, paired device only); held in memory, never stored
+    if (j.token) return { login_token: j.token };
+    if (j.login && j.password) return { login: j.login, password: j.password };
+    throw new Error("no credentials in response");
   }
   function loadSdk() {
     return new Promise((res, rej) => { if (window.TelnyxWebRTC) return res(); const s = document.createElement("script"); s.src = SDK; s.onload = res; s.onerror = () => rej(new Error("sdk load")); document.head.append(s); });
@@ -40,8 +43,8 @@
   };
   (async () => {
     try {
-      const token = await getToken(); await loadSdk();
-      client = new TelnyxWebRTC.TelnyxRTC({ login_token: token });
+      const creds = await getToken(); await loadSdk();
+      client = new TelnyxWebRTC.TelnyxRTC(creds);
       client.on("telnyx.ready", () => status("ready"));
       client.on("telnyx.error", e => status("error: " + (e && (e.message || (e.error && (e.error.message || e.error.code)) || JSON.stringify(e)) || e)));
       client.on("telnyx.socket.close", () => status("closed"));
