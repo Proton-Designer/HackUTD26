@@ -91,7 +91,11 @@ nav#tabs button.on{background:#fff;color:#000;border-color:#fff}
 .mic{width:76px;height:76px;flex:none;border-radius:50%;border:4px solid #fff;background:var(--ok);font-size:2rem;cursor:pointer;color:#fff}
 .mic[aria-pressed=true]{background:#2b3442;border-color:#aab3c0}.mic:disabled{opacity:.5}
 .mic:focus-visible{outline:4px solid #fff;outline-offset:3px}
-.talk.compact .talk-title,.talk.compact .talk-hint{display:none}.talk.compact .mic{width:56px;height:56px;font-size:1.5rem}
+.talk.compact .talk-title{display:none}.talk.compact .mic{width:56px;height:56px;font-size:1.5rem}
 
 .dot{display:inline-block;width:.7em;height:.7em;border-radius:50%;vertical-align:middle;margin-left:.3em;background:#556}.dot.live{background:#2ee66b;box-shadow:0 0 8px #2ee66b}.dot.bad{background:var(--bad)}
 .talk.compact .talk-title{display:none}
+
+.talk-hint{margin:0;font-size:1.05rem;font-weight:800;color:#ffd166;text-align:center}
+.ear{display:flex;align-items:center;gap:10px;font-size:.95rem;min-height:44px}.ear input{width:26px;height:26px}
+.talk.compact .talk-hint{display:block;font-size:.85rem}.talk.compact .ear{display:none}

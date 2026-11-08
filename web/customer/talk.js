@@ -7,13 +7,34 @@
   const $ = id => document.getElementById(id);
   let ws = null, wsCid = null, wsExpected = false, wsTry = 0, wsT = null, active = null, lastSend = 0, ctx = null, stream = null, proc = null, src = null, cid = null, muted = false, handed = false, starting = false;
   let acc = new Uint8Array(160), n = 0, sum = 0, cnt = 0, t = 0, level = 0;
+  // Echo control. (1) voice gate: send only while the mic is above an adaptive floor (3x median of the last 2 s, with a 300 ms hangover).
+  // (2) half-duplex duck: while the caller is audible on the speaker, send only if the mic is clearly louder (+10 dB) than the playback, unless she says she wears earphones.
+  const GATE_MIN = 0.006, FLOOR_X = 3, HANG_MS = 300, PLAY_T = 0.01, DUCK_X = 3.16;
+  let nf = 0.002, gateUntil = 0, playHist = [], earphones = false, fbuf = null;
+  try { earphones = localStorage.getItem("bf.earphones") === "1"; } catch (e) {}
+  const stats0 = { gate: "closed", duck: false };
   const stats = BF.talkStats = { frames: 0, state: "idle", mic: "off" };
   const ulaw = s => { s = Math.max(-1, Math.min(1, s)) * 32767 | 0; let sign = 0; if (s < 0) { s = -s; sign = 0x80; } s = Math.min(s, 32635) + 132; let e = 7; for (let m = 0x4000; (s & m) === 0 && e > 0; e--, m >>= 1); return ~(sign | (e << 4) | ((s >> (e + 3)) & 15)) & 255; };
   const b64 = u8 => { let s = ""; for (let i = 0; i < u8.length; i++) s += String.fromCharCode(u8[i]); return btoa(s); };
-  const sending = () => !muted && !handed && ws && ws.readyState === 1;
+  let gateOpen = false;
+  const sending = () => !muted && !handed && gateOpen && ws && ws.readyState === 1;
 
   function onAudio(e) {
-    const x = e.inputBuffer.getChannelData(0), ratio = ctx.sampleRate / 8000; let peak = 0;
+    const x = e.inputBuffer.getChannelData(0), ratio = ctx.sampleRate / 8000; let peak = 0, ss = 0;
+    for (let i = 0; i < x.length; i++) ss += x[i] * x[i];
+    const rms = Math.sqrt(ss / x.length), now = Date.now();
+    // noise floor: drops to quiet immediately, creeps up only slowly (0.1 %/block), so a long sentence can't raise the floor above her own voice (a plain median would)
+    nf = rms < nf ? nf + (rms - nf) * 0.5 : nf + (rms - nf) * 0.001;
+    nf = Math.min(nf, 0.03);                                   // room noise never needs a floor above ~-30 dBFS
+    const floor = Math.max(GATE_MIN, FLOOR_X * nf);
+    let pr = 0; const an = BF.decoyAnalyser;                                    // how loud the caller is on the speaker right now
+    if (an && !handed && an.context && an.context.state === "running") {   /* a suspended context would freeze the analyser and duck forever */ try { fbuf = fbuf && fbuf.length === an.fftSize ? fbuf : new Float32Array(an.fftSize); an.getFloatTimeDomainData(fbuf); let s2 = 0; for (let i = 0; i < fbuf.length; i++) s2 += fbuf[i] * fbuf[i]; pr = Math.sqrt(s2 / fbuf.length); } catch (er) {} }
+    playHist.push(pr); if (playHist.length > 5) playHist.shift(); const play = Math.max.apply(null, playHist);   // last ~200 ms
+    let open = rms > floor;
+    stats.duck = !earphones && play > PLAY_T && !(rms > DUCK_X * play);        // caller audible and Maria not clearly louder: treat as echo
+    if (stats.duck) open = false;
+    if (open) gateUntil = now + HANG_MS;
+    gateOpen = now < gateUntil; stats.gate = gateOpen ? "open" : "closed"; stats.rms = +rms.toFixed(4); stats.can = [muted, handed, gateOpen, !!ws, ws && ws.readyState].join(); stats.floor = +floor.toFixed(4); stats.play = +play.toFixed(4);
     for (let i = 0; i < x.length; i++) {
       const v = x[i]; sum += v; cnt++; t += 1; if (Math.abs(v) > peak) peak = Math.abs(v);
       if (t >= ratio) {                                    // box-filter downsample to 8 kHz
@@ -30,7 +51,7 @@
       ctx = new (window.AudioContext || window.webkitAudioContext)(); if (ctx.state === "suspended") ctx.resume().catch(() => {});
       src = ctx.createMediaStreamSource(stream); proc = ctx.createScriptProcessor(2048, 1, 1);
       proc.onaudioprocess = onAudio; src.connect(proc); proc.connect(ctx.destination);   // output stays silent (we never write to outputBuffer)
-      stats.mic = "on"; hint("Wear earphones so the caller doesn't hear themselves.");
+      stats.mic = "on"; hint("Use earphones so the caller doesn't hear himself.");
     } catch (e) { stats.mic = "blocked"; stream = null; hint("The microphone is blocked. Allow it in your browser, then tap the mic button."); }
     starting = false;
   }
@@ -41,7 +62,7 @@
     b.disabled = handed; b.setAttribute("aria-pressed", String(muted));
     b.textContent = handed ? "🛡" : muted ? "🔇" : "🎤";
     b.setAttribute("aria-label", handed ? "Backfire is talking for you" : muted ? "Muted. Tap to unmute" : "Microphone on. Tap to mute");
-    if (handed) hint("Backfire is talking to the caller for you."); else if (muted) hint("You are muted. The caller can't hear you."); else if (stats.mic === "on") hint("Wear earphones so the caller doesn't hear themselves.");
+    if (handed) hint("Backfire is talking to the caller for you."); else if (muted) hint("You are muted. The caller can't hear you."); else if (stats.mic === "on") hint("Use earphones so the caller doesn't hear himself.");
   }
   function open(id) {
     if (!BF.talk || !id) return;
@@ -66,6 +87,7 @@
   function show(on) { const b = $("talkBox"); if (b) b.hidden = !(on && BF.talk); }
   function end() { active = null; close(); stopMic(); show(false); handed = false; muted = false; render(); }
 
+  const eb = $("earBox"); if (eb) { eb.checked = earphones; eb.onchange = () => { earphones = eb.checked; try { localStorage.setItem("bf.earphones", earphones ? "1" : "0"); } catch (e) {} }; }
   setInterval(() => { const d = $("micDot"); if (!d) return; const on = !!stream && Date.now() - lastSend < 1000; d.className = "dot " + (on ? "live" : stats.mic === "blocked" || stats.state === "error" ? "bad" : "idle"); d.title = on ? "Your voice is reaching the call" : "Not sending"; d.setAttribute("aria-label", d.title); }, 300);
   $("micBtn").addEventListener("click", () => { if (handed) return; if (!stream) { startMic(); return; } muted = !muted; render(); });   // first tap also (re)starts a blocked mic
   $("answerBtn").addEventListener("click", () => { if (!BF.talk) return; show(true); startMic(); });   // the tap is the gesture iOS wants for the mic prompt
