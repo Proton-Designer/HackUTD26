@@ -9,6 +9,8 @@
     // Always load the newest files: fixes land all night, and a cached copy on the demo laptop would hide them.
     window.__v = Date.now();
     document.write('<link rel="stylesheet" href="styles.css?v=' + window.__v + '">');
+    // Capital One co-brand for the Nessie track: ?brand=capitalone (navy instead of T-Mobile magenta)
+    if (/[?&]brand=(capitalone|c1)(&|$)/i.test(location.search)) document.documentElement.classList.add('brand-c1');
     // Light look (after a Dribbble sales dashboard) is the default; ?look=dark brings back the original magenta on dark.
     if (!/[?&]look=dark\b/.test(location.search)) {
       document.documentElement.classList.add('look-analytics');
@@ -23,7 +25,8 @@
       <div class="brand">
         <img class="logo-flame" src="assets/backfire-flame.png" alt="">
         <img class="logo-word" src="assets/backfire-wordmark.png" alt="Backfire">
-        <span class="title">T-Mobile command center</span>
+        <span class="cobrand"><span class="x" aria-hidden="true">×</span><b>Capital One</b></span>
+        <span class="title" id="brand-title">T-Mobile command center</span>
       </div>
       <nav class="views" role="tablist" aria-label="View">
         <button role="tab" data-view="call" title="The live call (key 1)">Live call</button>
@@ -31,9 +34,6 @@
       </nav>
       <div class="top-right">
         <button id="follow" class="follow" hidden>Pinned · back to live</button>
-        <span class="pill sim">Simulated carrier network</span>
-        <span id="engine" class="engine"></span>
-        <span id="source" class="source"></span>
       </div>
     </header>
 
@@ -49,10 +49,6 @@
     <main id="grid" class="grid"></main>
 
     <footer class="foot">
-      <div id="p-attest" class="privacy" aria-label="Privacy">
-        <span class="pill sim">Simulated attestation</span>
-        <div class="body"></div>
-      </div>
       <div class="timeline">
         <button id="tl-play" class="tl-btn" title="Pause / play (Space)" aria-label="Pause or play"></button>
         <button id="tl-restart" class="tl-btn" title="Restart (R)" aria-label="Restart">&#8634;</button>
@@ -77,7 +73,6 @@
       <div class="body"></div>
     </section>
     <section class="panel" id="p-payoff">
-      <h2><span>Scammer get scammed</span><small>Capital One Nessie sandbox · mock bank data</small></h2>
       <div class="body"></div>
     </section>
   </div>

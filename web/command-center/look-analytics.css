@@ -212,3 +212,26 @@
 @media (max-width: 560px) {
   .look-analytics .app { margin: 0; border-radius: 0; padding: var(--s3) var(--s4); }
 }
+
+/* ---------- Capital One co-brand (?brand=capitalone): navy replaces T-Mobile magenta; red stays for danger ---------- */
+:root.look-analytics.brand-c1 {
+  --accent: #004977;          /* Capital One navy, 9.6:1 on white */
+  --accent-text: #004977;
+  --accent-tint: rgba(0, 73, 119, 0.08);
+}
+.brand-c1.look-analytics body {
+  background:
+    radial-gradient(900px 520px at -5% -10%, rgba(0, 73, 119, 0.14), transparent 60%),
+    radial-gradient(900px 620px at 105% 0%, rgba(208, 48, 39, 0.08), transparent 60%),
+    #eef1f4;
+}
+.brand-c1.look-analytics .logo-flame { background: #004977; }
+.brand-c1.look-analytics .hero-main { background: linear-gradient(120deg, #eaf2f9 0%, #ffffff 45%, #effaf3 100%); }
+.brand-c1.look-analytics .hero.alert .hero-main { background: linear-gradient(120deg, #dde9f4 0%, #ffffff 60%); box-shadow: inset 0 0 0 1.5px rgba(0, 73, 119, 0.35), var(--shadow); }
+.brand-c1.look-analytics .rail .step.now {
+  background: repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0 6px, transparent 6px 12px), linear-gradient(180deg, #0a5f93, #00365a);
+  box-shadow: 0 10px 22px rgba(0, 73, 119, 0.32);
+}
+.brand-c1.look-analytics .app[data-view="story"] .rail .step.now.showing { box-shadow: inset 0 0 0 2px #fff, 0 10px 22px rgba(0, 73, 119, 0.32); }
+.brand-c1.look-analytics .mt-tile.pending { background: linear-gradient(180deg, #eaf2f9, #fff 70%); box-shadow: inset 0 0 0 1px rgba(0, 73, 119, 0.3); }
+.brand-c1 .po-btn { background: linear-gradient(180deg, #0a5f93, #004977); box-shadow: 0 6px 18px rgba(0, 73, 119, 0.3); }

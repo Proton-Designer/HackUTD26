@@ -22,7 +22,8 @@ http://localhost:5180/web/command-center/?server=http://192.168.1.20:8000
 | `src=live\|mock\|fixture` | Force a source. Default: live if reachable, else replay |
 | `speed=2` | Replay speed |
 | `gap=6` | Replay: squeeze silences longer than this many seconds |
-| `voice=clone\|synthetic` | Decoy-voice wording if `voice.enrolled` happened before the page opened |
+| `voice=clone|synthetic` |
+| `brand=capitalone` | Capital One co-brand for the Nessie track: "Backfire × Capital One" lockup, "Fraud desk" title, Capital One navy instead of T-Mobile magenta. Leave it off for T-Mobile and NVIDIA judges |\|synthetic` | Decoy-voice wording if `voice.enrolled` happened before the page opened |
 
 ## Views and keys
 

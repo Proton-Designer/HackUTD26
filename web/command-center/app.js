@@ -826,7 +826,7 @@
         note = `server did not confirm (${err.message}): shown locally`;
       }
     } else {
-      note = 'replay: applied locally';
+      note = ''; // replay: applied on this screen only
     }
     if (S !== st) return; // replay restarted while the request was in flight
     st.seq++;
@@ -866,6 +866,7 @@
   const RENDER = {
     header() {
       const el = $('engine');
+      if (!el) return; // engine and source pills are off the screen
       const model = S.model;
       if (S.engine === 'local') { el.className = 'engine local'; el.innerHTML = `<b>LOCAL</b><span>${esc(model || 'Nemotron 3 Nano 4B')} · on device</span>`; }
       else if (S.engine === 'cloud') { el.className = 'engine cloud'; el.innerHTML = `<b>CLOUD</b><span>${esc(model || 'Nemotron')} · attested enclave</span>`; }
@@ -1003,8 +1004,7 @@
         `<text class="mt-sub" x="${xM}" y="${yM + rM + f14 + f12 + 11}" text-anchor="middle">Simulated · in ${fmtMoney(inTotal)} · out ${fmtMoney(outTotal)}</text>`,
         `<circle class="mt-n-cash" cx="${xC}" cy="${yM}" r="${rC}"/>`,
         `<text class="mt-name" x="${xC}" y="${yM + rC + f14 + 6}" text-anchor="middle">Cash-out</text>`,
-        `<text class="mt-sub" x="${xC}" y="${yM + rC + f14 + f12 + 11}" text-anchor="middle">Simulated · ${fmtMoney(Number((d.nodes.find(n => n.role === 'cashout') || {}).total_in) || outTotal)}</text>`,
-        `<text class="mt-sub" x="${W}" y="${H - 2}" text-anchor="end">Money flows left to right · line thickness = amount</text>`);
+        `<text class="mt-sub" x="${xC}" y="${yM + rC + f14 + f12 + 11}" text-anchor="middle">Simulated · ${fmtMoney(Number((d.nodes.find(n => n.role === 'cashout') || {}).total_in) || outTotal)}</text>`);
       svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
       svg.innerHTML = '<defs><marker id="mt-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mt-arrowhead"/></marker></defs>' + out.join('');
     },
@@ -1055,6 +1055,7 @@
 
     attest() {
       const body = bodyOf('attest');
+      if (!body) return; // privacy strip is off the screen
       const local = S.engine === 'local';
       const v = voiceState();
       // Always-visible privacy strip: short labels, the detail is in the tooltip
@@ -1486,6 +1487,7 @@
   }
 
   function boot() {
+    if (document.documentElement.classList.contains('brand-c1')) { $('brand-title').textContent = 'Fraud desk'; document.title = 'Backfire × Capital One'; }
     setView((qs.get('view') || '').toLowerCase());
     renderAll();
     if (CFG.src === 'mock' || CFG.src === 'fixture') { startReplay(); return; }

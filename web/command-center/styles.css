@@ -524,3 +524,11 @@ h1, h2, p { margin: 0; }
 .mt-svg .mt-tag.flag text { fill: #fff; }
 .mt-flag-ring { fill: none; stroke: var(--danger); stroke-width: 2.5px; stroke-dasharray: 5 4; }
 @media (prefers-reduced-motion: reduce) { .po.now .po-dot { animation: none; } }
+
+/* ---------- Capital One co-brand (?brand=capitalone): lockup in the header ---------- */
+.cobrand { display: none; align-items: baseline; gap: 8px; margin-left: 6px; }
+.brand-c1 .cobrand { display: inline-flex; }
+.cobrand .x { color: var(--text-3); font-weight: 400; }
+.cobrand b { font-size: 19px; font-weight: 800; letter-spacing: -0.01em; color: #004977; padding-bottom: 1px; border-bottom: 3px solid #d03027; border-radius: 0 0 40% 40% / 0 0 6px 6px; }
+@keyframes flash-c1 { 50% { background-color: rgba(0, 73, 119, 0.25); } }
+.brand-c1 .hero.flash .hero-main { animation-name: flash-c1; }
