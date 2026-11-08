@@ -1,6 +1,6 @@
 # Backfire: execution plan (v3: lanes as assigned by Ayman, 10:55pm)
 
-Sat Nov 7, 2026. **Decider's call (22:55):** Ayman runs **P1 and P2 on two separate machines** (two Claude Code sessions). Evan runs **P3**. **P4 starts later.** This supersedes the lane split in `BOARD.md` (updated to match).
+Sat Nov 7, 2026. **Telephony = Telnyx** (22:59). **Per-pipeline guides: `pipelines/`** (agents decide implementation details within them). **Decider's call (22:55):** Ayman runs **P1 and P2 on two separate machines** (two Claude Code sessions). Evan runs **P3**. **P4 starts later.** This supersedes the lane split in `BOARD.md` (updated to match).
 
 | Fact | Value |
 |---|---|
@@ -16,9 +16,9 @@ What we build: `01_ARCHITECTURE.md` v2. Every component is traced to a step in �
 ## 0. Lanes, machines and folders
 | Pipeline | Who / where | Owns | Folders (one owner each) |
 |---|---|---|---|
-| **P1: Network & call control** (+ contract, merges) | **Ayman, machine A** (Claude account 1) | Contract + mock events, server + event bus, Twilio scam line, pre-ring routing + reject, conference, caller-only stream, Maria's call screen, handoff/restore, deploy, reset | `contracts/`, `mock/`, `server/`, `voip/`, `web/customer/` |
+| **P1: Network & call control** (+ contract, merges) | **Ayman, machine A** (Claude account 1) | Contract + mock events, server + event bus, Telnyx scam line, pre-ring routing + reject, conference, caller-only stream, Maria's call screen, handoff/restore, deploy, reset | `contracts/`, `mock/`, `server/`, `voip/`, `web/customer/` |
 | **P2: Detection brain** (cloud + local) | **Ayman, machine B** (Claude account 2) | Speech-to-text, cloud Nemotron detector, local Nemotron 4B detector, fusion + state machine (beeps / buttons / handoff trigger), eval harness | `detection/` |
-| **P3: Decoy & voice** | **Evan** (Claude account 3) | Realtime decoy over Twilio `<Connect><Stream>`, fake persona card, guardrails, voice clone + consent capture, extractor | `decoy/` |
+| **P3: Decoy & voice** | **Evan** (Claude account 3) | Realtime decoy over Telnyx Telnyx bidirectional streaming, fake persona card, guardrails, voice clone + consent capture, extractor | `decoy/` |
 | **P4: Intel, command center & story** | **Later** (owner TBD, Claude account 4) | Intel DB, real lookups (RDAP, chain), Nemotron intel agent, policy gate + auto actions, command center, Devpost/pitch | `intel/`, `web/command-center/` |
 | Support | Rayan, Kareem (per board) | Devpost initial submission, event facts, judge script cards, eval rows | `data/` |
 
@@ -37,7 +37,7 @@ What we build: `01_ARCHITECTURE.md` v2. Every component is traced to a step in �
 |---|---|---|---|---|---|
 | 23:00 | Devpost initial (Rayan) | — | — | — | — |
 | **23:15** | Contract committed | `contracts/events.md` + `mock/events.json` | model IDs pinned | persona card schema | — |
-| **00:30** | First real responses | Scam line → conference; caller-only frames reach the server | Nemotron typed JSON on 3 scripts; speech-to-text partials on a test clip | Echo bot over `<Connect><Stream>`; clone sample plays | — |
+| **00:30** | First real responses | Scam line → conference; caller-only frames reach the server | Nemotron typed JSON on 3 scripts; speech-to-text partials on a test clip | Echo bot over Telnyx bidirectional streaming; clone sample plays | — |
 | **02:00** | **Thin slice** | Call → caller transcript (via P2) → beeps + 3 buttons on Maria's screen | Live detector on streamed transcript → `risk.update` → `alert.fired` | Decoy LLM loop talking over a test call | **P4 kicks off** (owner TBD) |
 | 03:00 | Voice decision | — | — | Clone working? else synthetic voice (labeled) | real RDAP + chain lookups |
 | **05:00** | **Full path + FEATURE FREEZE** | Handoff → decoy; callback rejected before ring | State machine complete; local 4B behind `/detect` | Decoy reaches ≥ 2 artifact types; guardrails; extractor → artifacts | Agent trace + gate + Approve on the command center |
@@ -48,7 +48,7 @@ What we build: `01_ARCHITECTURE.md` v2. Every component is traced to a step in �
 **Cut order (board):**
 1. voice clone → synthetic voice;
 2. live local toggle → offline cloud vs local table;
-3. Twilio coaching beeps → app plays beeps locally;
+3. Telnyx coaching beeps → app plays beeps locally;
 4. network-wide actions → proposed + one approve click on mock data.
 
 **Never cut:** judge calls the scam line, alert + Scammer Get Scammed, real lookups, callback rejected before ring.
@@ -73,7 +73,8 @@ Envelope: `{type, call_id, ts, data}`.
 **Interfaces:**
 1. `GET /routing/lookup?from=` (P1, SQLite, under 50 ms) → NORMAL / BLOCKED_BACKFIRE / LIVE_GUARD + reason.
 2. `POST /detect {call_id, window_text, metadata, engine: cloud|local}` (P2) → typed JSON + s.
-3. `WSS /decoy/{call_id}` (P3): Twilio Media Streams protocol, bidirectional, μ-law 8 kHz.
+3. `WSS /decoy/{call_id}` (P3): Telnyx media-streaming protocol, bidirectional, PCMU 8 kHz.
+6. `POST /voice/enroll` and `DELETE /voice/{id}` (P3). **Onboarding screens are P1** (in Maria's app); **voice enrollment/cloning is P3** behind this endpoint.
 4. `POST /intel/ingest {call_id, scammer_transcript, artifacts}` (P4; stub logs only until P4 starts).
 5. `POST /intel/actions/{id}/approve` (P4).
 
@@ -85,13 +86,13 @@ All UIs subscribe to `WS /events` on the P1 server.
 | # | Step | After | Done when |
 |---|---|---|---|
 | **1.1** | Contract + `mock/events.json` (3 mock calls: IRS gift-card scam, legit bank-fraud call, crypto scam) | — | Committed 23:15 |
-| **1.2** | Server: FastAPI + in-process event bus + `WS /events` + SQLite (`confirmed_scammers`, `campaign_numbers`, `trusted`) + public tunnel (cloudflared; ngrok fallback) | 1.1 | Twilio can reach it |
-| **1.3** | Twilio scam-line number (upgraded account): webhook → `/routing/lookup` → `<Reject>` or Conference (caller + Maria's client) | 1.2 | A listed number is rejected; others bridged |
-| **1.4** | Caller-only stream: `<Start><Stream track="inbound_track">` on the caller's call → server WS → hand frames to P2's speech-to-text | 1.3 | Caller frames arrive; Maria's audio never sent |
-| **1.5** | Maria's phone = `web/customer/` with the Twilio Voice JS SDK: standard call layout, "Live Guard on," **two local beeps** on `alert.fired`, **Continue / Scammer Get Scammed / Hang up** + why chips → `user.action` | 1.2 (mocks) | Plays a mock call; rings on a phone browser |
-| **1.6** | Handoff: Scammer Get Scammed → remove Maria from the Conference (30 s restore handle) → add a participant with `<Connect><Stream url=wss://…/decoy/{id}>` (P3; echo bot until then) | 1.3 | Scammer hears the decoy with no hold music |
+| **1.2** | Server: FastAPI + in-process event bus + `WS /events` + SQLite (`confirmed_scammers`, `campaign_numbers`, `trusted`) + public tunnel (cloudflared; ngrok fallback) | 1.1 | Telnyx can reach it |
+| **1.3** | Telnyx scam-line number (upgraded account): webhook → `/routing/lookup` → Telnyx `reject` or Conference (caller + Maria's client) | 1.2 | A listed number is rejected; others bridged |
+| **1.4** | Caller-only stream: Telnyx `streaming_start` with `stream_track=inbound_track` on the caller's call → server WS → hand frames to P2's speech-to-text | 1.3 | Caller frames arrive; Maria's audio never sent |
+| **1.5** | Maria's phone = `web/customer/` with the Telnyx WebRTC JS SDK: standard call layout, "Live Guard on," **two local beeps** on `alert.fired`, **Continue / Scammer Get Scammed / Hang up** + why chips → `user.action` | 1.2 (mocks) | Plays a mock call; rings on a phone browser |
+| **1.6** | Handoff: Scammer Get Scammed → remove Maria from the Conference (30 s restore handle) → add a participant with a Telnyx bidirectional stream to `wss://…/decoy/{id}` (P3; echo bot until then) | 1.3 | Scammer hears the decoy with no hold music |
 | **1.7** | Stub (keeps the never-cut item alive without P4): on decoy `call.ended` → insert the caller into `confirmed_scammers` → emit `blocklist.updated` | 1.6 | **Judge calls back → rejected before ring** |
-| 1.8 | Caller-ID verification: `StirVerstat` if present, else a toggle; mock Scam ID score; scam-line rate limit + 5-min cap | 1.3 | `call.incoming` has attestation |
+| 1.8 | Caller-ID verification: Telnyx SHAKEN/STIR attestation fields if present, else a toggle; mock Scam ID score; scam-line rate limit + 5-min cap | 1.3 | `call.incoming` has attestation |
 | 1.9 | `reset_demo` script; `DEMO_MODE` cached replay; protection log tab with undo | 1.7 | Reset in under 30 s |
 | 1.10 | Restore Maria on `handoff.restored` | 1.6 | Rejoins within 30 s (after freeze only if green) |
 
@@ -109,7 +110,7 @@ All UIs subscribe to `WS /events` on the P1 server.
 ## 5. P3: Decoy & voice (Evan)
 | # | Step | After | Done when |
 |---|---|---|---|
-| **3.1** | Echo/scripted bot at `WSS /decoy/{id}` speaking the Twilio protocol (`streamSid`, μ-law, mark events) so machine A can integrate early | — | Echo works on a test call by 00:30 |
+| **3.1** | Echo/scripted bot at `WSS /decoy/{id}` speaking the Telnyx protocol (`streamSid`, μ-law, mark events) so machine A can integrate early | — | Echo works on a test call by 00:30 |
 | **3.2** | Persona card generator (code): fake name/bank/balance, Luhn-invalid cards, test gift codes, unique canary values; `request_detail(kind)` | — | The LLM never invents values |
 | **3.3** | Realtime loop: speech-to-text → Nemotron 3.5 Lightning (persona prompt) → TTS → μ-law; barge-in; filler; opener silence or "Sorry, I lost you there for a second." | 3.1 | Natural turns of 0.7–1.5 s |
 | **3.4** | Playbook toward payment details (callback number, website, wallet, gift card brand, payment handle) | 3.3 | ≥ 2 artifact types from a script card |
@@ -156,12 +157,17 @@ All UIs subscribe to `WS /events` on the P1 server.
 | Simulated attestation panel | 4.4 |
 | Evaluation | 2.6 (+ Kareem's rows) |
 
-## 9. Kickoff prompts (paste into each Claude Code session, in the repo root)
+## 9. Kickoff prompts (paste into each Claude Code session, at the repo root)
+Each prompt points at a **pipeline guide** that states outcomes, interfaces and hard constraints, and leaves implementation decisions to the session.
+
 **Machine A (P1):**
-> Read `Finalized-Idea/AGENT_CONTEXT.md`, `Finalized-Idea/07_EXECUTION_PLAN.md` §0–3 and `01_ARCHITECTURE.md` §3, §6, §15. You own P1 only: folders `contracts/`, `mock/`, `server/`, `voip/`, `web/customer/`. Step 1: write `contracts/events.md` and `contracts/interfaces.md` exactly from plan §2, plus `mock/events.json` with 3 mock calls (IRS gift-card scam, legitimate bank-fraud-department call, crypto scam) as event streams; commit. Step 2: FastAPI server with an in-process event bus, `WS /events`, SQLite tables `confirmed_scammers`, `campaign_numbers`, `trusted`, `GET /routing/lookup`, and a cloudflared tunnel. Step 3: the Twilio scam-line webhook → `<Reject>` or Conference, and caller-only `<Start><Stream track="inbound_track">` into a server WS that forwards frames to a pluggable `detection` consumer. Commit after each step. Stop and report after step 3.
+> You are the P1 Network & call control session for Backfire. Read `Finalized-Idea/pipelines/00_SHARED_RULES.md`, then `Finalized-Idea/pipelines/P1_NETWORK.md`, then the architecture sections it lists. You own only the folders named in your guide. Your first outcome (due 23:15) is the shared contract + mock events. Then work toward the 00:30 and 02:00 outcomes in your own order, recording each meaningful choice in your folder's `DECISIONS.md`. Escalate only what the shared rules say to escalate.
 
 **Machine B (P2):**
-> Read `Finalized-Idea/AGENT_CONTEXT.md`, `Finalized-Idea/07_EXECUTION_PLAN.md` §0–2 and §4, and `01_ARCHITECTURE.md` §5–6. You own P2 only: folder `detection/` (+ `contracts/models.md`). Step 1: call `GET https://integrate.api.nvidia.com/v1/models` with `NVIDIA_API_KEY`, pin the IDs of Nemotron 3.5 Lightning, Nemotron 3 Super and Nemotron 3 Nano 4B. Step 2: build `POST /detect` (FastAPI router importable by the P1 server) returning strict JSON with the enums in plan §2, treating caller text as untrusted data; test on 3 hand-written caller scripts. Step 3: implement the fusion + state machine from architecture §6 as pure Python with unit tests, emitting `risk.update` and `alert.fired`. Step 4: streaming speech-to-text from μ-law 8 kHz frames. Commit after each step.
+> You are the P2 Detection session for Backfire. Read `Finalized-Idea/pipelines/00_SHARED_RULES.md`, then `Finalized-Idea/pipelines/P2_DETECTION.md`, then the architecture sections it lists. You own only `detection/` and `contracts/models.md`. Start by pinning the Nemotron model IDs, then work toward the 00:30 and 02:00 outcomes, recording choices in `detection/DECISIONS.md`.
 
 **Evan (P3):**
-> Read `Finalized-Idea/AGENT_CONTEXT.md`, `Finalized-Idea/07_EXECUTION_PLAN.md` §0, §2 and §5, and `01_ARCHITECTURE.md` §5. You own P3 only: folder `decoy/`. Step 1: a FastAPI WebSocket endpoint `WSS /decoy/{call_id}` implementing Twilio Media Streams bidirectional (connected/start/media/mark/stop, μ-law 8 kHz, `streamSid`) that echoes audio back; test with a Twilio `<Connect><Stream>` number. Step 2: a persona card generator in pure Python (fake values only, canary ids). Step 3: replace the echo with speech-to-text → Nemotron 3.5 Lightning persona → TTS → μ-law, with a playbook steering to payment details and guardrails from plan §5. The decoy must have no tools and no real data. Commit after each step.
+> You are the P3 Decoy & voice session for Backfire. Read `Finalized-Idea/pipelines/00_SHARED_RULES.md`, then `Finalized-Idea/pipelines/P3_DECOY_VOICE.md`, then the architecture and privacy sections it lists. You own only `decoy/`. Your first outcome is an echo bot on the Telnyx bidirectional stream by 00:30 so P1 can prove the handoff, then the decoy, voice enrollment and extractor. Record choices in `decoy/DECISIONS.md`.
+
+**P4 (from 02:00):**
+> You are the P4 Intel, command center & story session for Backfire. Read `Finalized-Idea/pipelines/00_SHARED_RULES.md`, then `Finalized-Idea/pipelines/P4_INTEL_STORY.md`. You own `intel/` and `web/command-center/`. Real lookups first (never cut), then the agent, gate and command center.

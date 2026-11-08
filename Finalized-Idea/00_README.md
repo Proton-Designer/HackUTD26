@@ -21,6 +21,7 @@ Home for everything about the idea the team is building. Last updated Nov 7, 202
 | `03_TMOBILE_EXISTING_PROTECTIONS.md` | Everything T-Mobile already offers, what it doesn't, competitors |
 | `04_PRIVACY_LEGAL_TRUST.md` | Consent, voice-clone safeguards, the decoy's legal line, trust stats |
 | `05_COST_MODEL.md` | Rough cost per screened minute and at scale |
+| `pipelines/` | **Per-pipeline guides for each Claude session:** `00_SHARED_RULES.md` (contract, non-negotiables, checkpoints) + `P1_NETWORK.md`, `P2_DETECTION.md`, `P3_DECOY_VOICE.md`, `P4_INTEL_STORY.md`. Outcomes and constraints only; each session picks its own implementation |
 | `AGENT_CONTEXT.md` | Rules and context for AI coding agents working on this project |
 | `reviews/` | Two independent Opus architecture reviews, the brief they were given, and the v1 synthesis |
 | `source/` | Whiteboard v1 photo + transcription, original Backfire concept note |

@@ -63,7 +63,7 @@ flowchart LR
 | Implementations | **Two:** (1) NVIDIA confidential-computing cloud container; (2) local Nemotron 3 Nano 4B / Bolt E4B 4GB on the device, doing detection |
 | Name / surface | **Backfire**; inside T-Life in production; standalone app for the demo |
 | Business model | Not stated |
-| Demo | A public number anyone can call to play the scammer; two screens (customer app + T-Mobile command center) |
+| Demo | A public number anyone can call to play the scammer (**Telnyx**); two screens (customer app + T-Mobile command center) |
 
 ---
 
@@ -392,6 +392,19 @@ Detail is in `04_PRIVACY_LEGAL_TRUST.md`.
 ---
 
 ## 15. Demo build (production → stand-in)
+> **Telephony provider changed to Telnyx (team decision, 22:59).** Read "Twilio" below as Telnyx, mapped like this:
+>
+> | Twilio item | Telnyx equivalent |
+> |---|---|
+> | `<Start><Stream track="inbound_track">` | Call Control `streaming_start` with `stream_track=inbound_track` (or TeXML `<Start><Stream>`) |
+> | `<Connect><Stream>` (bidirectional) | Bidirectional streaming: `stream_bidirectional_mode=rtp`, PCMU 8 kHz, `stream_bidirectional_target_legs`. Only one bidirectional stream per call |
+> | Conference participant API | Telnyx conference commands (join/leave), or Call Control bridge/unbridge |
+> | Voice JS SDK | Telnyx WebRTC JS SDK |
+> | `<Reject>` | Call Control `reject` / TeXML `<Reject>` |
+> | `StirVerstat` | SHAKEN/STIR attestation fields in the `call.initiated` webhook (verify) |
+>
+> Docs: https://developers.telnyx.com/docs/voice/programmable-voice/media-streaming
+
 | Production | Demo |
 |---|---|
 | IMS call server + media server | **Twilio.** A **public "scam line" number** anyone can call (rate-limited, minute caps) → Conference with the caller + Maria's app/phone |
