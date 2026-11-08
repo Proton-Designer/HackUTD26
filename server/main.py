@@ -79,6 +79,9 @@ async def ws_events(ws: WebSocket, call_id: str | None = None, token: str | None
     finally:
         bus.unsubscribe(q)
 
+# Types tied to a real call: accepted over POST /events only for calls the hub saw (call.incoming), live or ended < 30 min ago.
+CALL_BOUND = {"transcript.caller", "risk.update", "alert.fired", "decoy.turn", "decoy.fake_value", "guardrail.tripped", "artifacts.extracted"}
+
 @app.post("/events")
 def post_event(request: Request, body: dict = Body(...)):
     pt = os.environ.get("PIPELINE_TOKEN")   # P2/P3/P4 present x-pipeline-token; when set it is required (fail closed) and separate from HUB_TOKEN
@@ -96,6 +99,9 @@ def post_event(request: Request, body: dict = Body(...)):
         return {"ok": False, "error": "type and call_id required"}
     if t in RESERVED:
         raise HTTPException(403, f"{t} is hub-only")
+    if t in CALL_BOUND and not bus.call_known(cid):
+        log.warning("event for unknown call dropped type=%s call=%s", t, str(cid)[:8])   # e.g. a pipeline drill: must not appear as a fake call on the command center
+        raise HTTPException(404, "unknown call_id")
     data = body.get("data") or {}
     lvl = data.get("level") if isinstance(data, dict) else None
     if dev_only:

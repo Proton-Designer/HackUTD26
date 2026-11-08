@@ -46,9 +46,9 @@ def test_fail_open(monkeypatch):
 def test_ws_events_and_post():
     c = paired()
     with c.websocket_connect("/events") as ws:
+        bus.publish("call.incoming", "x", {"from": "+15555550001"}); assert ws.receive_json()["type"] == "call.incoming"
         assert c.post("/events", json={"type": "risk.update", "call_id": "x", "data": {"s": 0.1}}).json()["ok"]
         ev = ws.receive_json(); assert ev["type"] == "risk.update" and ev["call_id"] == "x" and "ts" in ev
-        bus.publish("call.incoming", "x", {"from": "+15555550001"}); ws.receive_json()
         c.post("/user/action", json={"call_id": "x", "action": "hang_up"})
         assert ws.receive_json()["data"]["action"] == "hang_up"
 
@@ -294,6 +294,7 @@ def test_forged_artifacts_and_trusted_numbers_cannot_poison():
 
 def test_pipeline_token_gates_post_events(monkeypatch):
     c = TestClient(app)
+    bus.publish("call.incoming", "p1", {"from": "+15555550001", "to": "+15555550100", "attestation": "C", "scam_id_score": 0.5})
     ev = {"type": "risk.update", "call_id": "p1", "data": {"s": 0.9}}
     assert c.post("/events", json=ev).json()["ok"]                       # unset: open (dev)
     monkeypatch.setenv("PIPELINE_TOKEN", "pt")
@@ -348,6 +349,7 @@ def test_hub_routing_intel_relay_work_with_telnyx_unreachable(monkeypatch):
     c = paired()
     assert c.get("/routing/lookup", params={"from": "+15555550123"}).json()["decision"] == "LIVE_GUARD"
     assert c.get("/healthz").json()["ok"] and c.get("/demo/status").status_code == 200
+    bus.publish("call.incoming", "tz", {"from": "+15555550001", "to": "+15555550100", "attestation": "C", "scam_id_score": 0.5})
     assert c.post("/events", json={"type": "risk.update", "call_id": "tz", "data": {"s": .5, "band": "med", "engine": "cloud"}}).status_code in (200, 202, 204)
     assert c.post("/demo/reset").json()["ok"]
     # voip's REST wrapper swallows the failure (returns None) instead of raising into the call path
@@ -609,6 +611,9 @@ def test_duplicate_alert_fired_ignored_and_logged(monkeypatch, caplog):
     from server import main as m
     monkeypatch.delenv("PIPELINE_TOKEN", raising=False); m._ALERTS.clear()
     c = TestClient(app)
+    bus.publish("call.incoming", "DUP1", {"from": "+15555550001", "to": "+15555550100", "attestation": "C", "scam_id_score": 0.5})
+    bus.publish("call.incoming", "DUP2", {"from": "+15555550001", "to": "+15555550100", "attestation": "C", "scam_id_score": 0.5})
+    bus.publish("call.incoming", "DUP1b", {"from": "+15555550001", "to": "+15555550100", "attestation": "C", "scam_id_score": 0.5})
     ws_events = lambda cid: [e for e in bus.history if e["type"] == "alert.fired" and e["call_id"] == cid]
     post = lambda cid, lvl: c.post("/events", json={"type": "alert.fired", "call_id": cid, "data": {"level": lvl, "why_chips": ["Asks for gift cards"]}})
     with caplog.at_level(logging.WARNING, logger="hub"):
@@ -681,6 +686,8 @@ def test_f5_restore_clears_alert_dedupe_so_new_first_alert_fires(monkeypatch):
     from server import main as m
     monkeypatch.delenv("PIPELINE_TOKEN", raising=False); m._ALERTS.clear()
     c = TestClient(app)
+    bus.publish("call.incoming", "F5", {"from": "+15555550001", "to": "+15555550100", "attestation": "C", "scam_id_score": 0.5})
+    bus.publish("call.incoming", "F5b", {"from": "+15555550001", "to": "+15555550100", "attestation": "C", "scam_id_score": 0.5})
     first = lambda: c.post("/events", json={"type": "alert.fired", "call_id": "F5", "data": {"level": "first", "why_chips": ["x"]}}).json()
     n = lambda: len([e for e in bus.history if e["type"] == "alert.fired" and e["call_id"] == "F5"])
     assert first() == {"ok": True} and first().get("duplicate") and n() == 1
@@ -782,3 +789,30 @@ def test_handoff_failed_is_hub_only_type(monkeypatch):
     monkeypatch.delenv("PIPELINE_TOKEN", raising=False)
     assert TestClient(app).post("/events", json={"type": "handoff.failed", "call_id": "x", "data": {"reason": "decoy_unavailable"}}).status_code == 403
     assert bus.publish("handoff.failed", "x", {"reason": "decoy_unavailable"})["type"] == "handoff.failed"
+
+
+def test_unknown_call_events_dropped_for_pipeline_token_and_open_modes(monkeypatch, caplog):
+    import logging
+    c = TestClient(app)
+    drill = lambda t, cid="DRILL-1", **h: c.post("/events", json={"type": t, "call_id": cid, "data": {"s": 0.9, "text": "x", "is_final": True, "level": "first", "why_chips": []}}, headers=h)
+    for pt in (None, "pt-secret"):
+        if pt: monkeypatch.setenv("PIPELINE_TOKEN", pt)
+        else: monkeypatch.delenv("PIPELINE_TOKEN", raising=False)
+        hdr = {"x-pipeline-token": pt} if pt else {}
+        n0 = len(bus.history)
+        with caplog.at_level(logging.WARNING, logger="hub"):
+            for t in ("transcript.caller", "risk.update", "alert.fired", "decoy.turn", "decoy.fake_value", "guardrail.tripped", "artifacts.extracted"):
+                assert drill(t, **hdr).status_code == 404, t
+        assert not any(e["call_id"] == "DRILL-1" for e in bus.history[n0:])               # nothing broadcast, no fake call
+        assert any("event for unknown call dropped" in r.getMessage() for r in caplog.records)
+    # a real call: accepted while live and for 30 min after it ends, refused later
+    monkeypatch.delenv("PIPELINE_TOKEN", raising=False)
+    bus.publish("call.incoming", "REAL-1", {"from": "+15555550123", "to": "+15555550100", "attestation": "C", "scam_id_score": 0.8})
+    assert drill("risk.update", "REAL-1").status_code == 200
+    bus.publish("call.ended", "REAL-1", {"ended_by": "caller", "duration_s": 5})
+    assert drill("artifacts.extracted", "REAL-1").status_code == 200                       # late post-call artifacts still land
+    bus.CALLS["REAL-1"]["t_end"] -= 1900
+    assert drill("artifacts.extracted", "REAL-1").status_code == 404
+    # types that are not call-bound (intel/campaign traces) and hub-internal publishes are unaffected
+    assert c.post("/events", json={"type": "intel.agent", "call_id": "any-id", "data": {}}).status_code == 200
+    assert bus.publish("risk.update", "internal-only", {"s": 0.1}) is not None
