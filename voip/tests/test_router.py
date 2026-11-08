@@ -429,7 +429,7 @@ def test_sip_mode_default_still_bridges(monkeypatch):
 
 def test_listen_hello_plays_once_then_silence(tmp_path, monkeypatch):
     f = tmp_path / "hello.ulaw"; f.write_bytes(b"\xff" * 160 * 5)
-    monkeypatch.setattr(R._persona, "generate_hello", lambda force=False: f)
+    monkeypatch.setattr(R._persona, "generate_hello", lambda force=False: f); monkeypatch.setattr(R._persona, "cached_hello", lambda: f)
     got = []
     async def send(fr): got.append(fr)
     sid = "sess-hello-1234567"; R.CALLS[sid] = _state(sim=False)
@@ -437,7 +437,7 @@ def test_listen_hello_plays_once_then_silence(tmp_path, monkeypatch):
     assert len(got) == 5 and all(g["event"] == "media" for g in got)
     got.clear(); R.CALLS[sid]["handed_off"] = True
     asyncio.run(R._listen_hello(sid, send)); assert got == []     # decoy owns the line once handed off
-    monkeypatch.setattr(R._persona, "generate_hello", lambda force=False: None)
+    monkeypatch.setattr(R._persona, "generate_hello", lambda force=False: None); monkeypatch.setattr(R._persona, "cached_hello", lambda: None)
     R.CALLS[sid]["handed_off"] = False; asyncio.run(R._listen_hello(sid, send)); assert got == []   # no audio -> silent, no error
 
 
@@ -561,3 +561,34 @@ def test_inrms_line_per_second(monkeypatch, caplog):
     msgs = [r.getMessage() for r in caplog.records if "inrms" in r.getMessage()]
     assert msgs and "zero=100%" in msgs[0] and "maria_out=" in msgs[0] and "rms=0" in msgs[0]
     assert R._MU[0xFF] == 0 and R._MU[0x7F] == 0 and abs(R._MU[0x10]) > 1000
+
+
+def test_hello_plays_instantly_from_cache_even_when_key_stale_and_logs(tmp_path, monkeypatch, caplog):
+    import logging; caplog.set_level(logging.WARNING, logger="voip.router")
+    from voip import persona as P
+    monkeypatch.setenv("DECOY_LINES_DIR", str(tmp_path)); (tmp_path / "hello.ulaw").write_bytes(b"\xff" * 160 * 3); (tmp_path / "hello.key").write_text("stale")
+    slow = []
+    monkeypatch.setattr(P, "generate_hello", lambda force=False: slow.append(1) or time.sleep(2) or None)   # a stale-key regeneration must NOT delay playback
+    got = []
+    async def send(fr): got.append(fr)
+    sid = "sess-hello-9234567"; R.CALLS[sid] = _state(sim=False)
+    el = []
+    async def go():
+        t = time.monotonic(); await R._listen_hello(sid, send); el.append(time.monotonic() - t)   # (asyncio.run itself waits for the slow thread at shutdown)
+    asyncio.run(go())
+    assert len(got) == 3 and el[0] < 1.5 and slow
+    assert any("hello sent for" in r.getMessage() for r in caplog.records)
+
+def test_media_ws_plays_hello_even_if_answered_webhook_not_processed_yet(monkeypatch):
+    """Race seen on call 497ef1d4: media WS connects before call.answered set st['listen']. Hello must be decided by MARIA_LEG, not that flag."""
+    monkeypatch.setenv("MARIA_LEG", "listen"); monkeypatch.setattr(R, "_hub_relay", lambda: FakeRelay())
+    started = []
+    async def fake_hello(sid, send): started.append(sid)
+    monkeypatch.setattr(R, "_listen_hello", fake_hello)
+    sid = "sess-race-1234567"; st = _state(sim=False); st["token"] = "tok"; R.CALLS[sid] = st
+    assert "listen" not in st
+    app = FastAPI(); app.include_router(R.router)
+    with TestClient(app).websocket_connect(f"/media/{sid}?t=tok") as ws:
+        ws.send_text(json.dumps({"event": "connected"})); ws.send_text(json.dumps({"event": "start"}))
+        time.sleep(0.2)
+    assert started == [sid]

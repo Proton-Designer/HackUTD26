@@ -278,7 +278,9 @@ async def media(ws: WebSocket, call_id: str, t: str = ""):
         k = str(frame.get("event", "?")) if isinstance(frame, dict) else "?"; sent[k] = sent.get(k, 0) + 1
         if k == "media" and sent[k] == 1: log.warning("first decoy->caller media frame sent on %s", call_id[:8])
     st["send_to_caller"] = send_to_caller
-    hello = asyncio.create_task(_listen_hello(call_id, send_to_caller)) if st.get("listen") and not talk_mode() else None   # talk mode: Maria says hello herself
+    # the media WS can connect BEFORE the call.answered webhook sets st["listen"] (race seen on call 497ef1d4): decide from the mode, not the flag
+    hello = asyncio.create_task(_listen_hello(call_id, send_to_caller)) if (listen_mode() and not talk_mode()) else None   # talk mode: Maria says hello herself
+    if listen_mode() and talk_mode(): log.warning("hello skipped for %s: MARIA_LEG=talk (Maria greets herself)", call_id[:8])
     try:
         if hub: await _maybe_await(hub.open(call_id, send_to_caller, on_decoy_lost=_decoy_lost))
         else:
@@ -365,21 +367,29 @@ async def inject_maria(sid, payload_b64: str) -> bool:
         log.warning("inject_maria dropped (%s)", type(e).__name__); return False
 
 async def _listen_hello(sid, send):
-    """MARIA_LEG=listen: play a short pre-recorded 'Hello? ... Yes?' (SIMULATED synthetic voice) to the caller once, then silence.
-    Fail open: no audio / any error just means silence."""
+    """MARIA_LEG=listen: play the pre-recorded 'Hello? ... Yes, this is Maria.' (SIMULATED synthetic voice) to the caller once, then silence.
+    ALWAYS plays the cached file instantly; a stale cache (voice/text changed) is regenerated in the background for the NEXT call only.
+    Every outcome logs one line (sent / skipped + reason). Fail open: any error = silence."""
     try:
-        st = CALLS.get(sid)
-        f = await asyncio.get_running_loop().run_in_executor(None, _persona.generate_hello)
-        if not f: log.warning("listen hello: no audio available (say/ffmpeg missing?); silent"); return
+        st = CALLS.get(sid); loop = asyncio.get_running_loop()
+        f = _persona.cached_hello()
+        if f is None:   # nothing cached yet: one blocking attempt (bounded), else silent
+            f = await asyncio.wait_for(loop.run_in_executor(None, _persona.generate_hello), 35)
+        else:
+            loop.run_in_executor(None, _persona.generate_hello)   # refresh in the background if the key is stale (no-op when current)
+        if not f: log.warning("hello skipped for %s: no audio (nothing cached; Magpie/say unavailable)", sid[:8]); return
         await asyncio.sleep(0.4)
         data = f.read_bytes()
         for k in range(0, len(data), _persona.FRAME_BYTES):
-            if not st or st["ended"] or st.get("handed_off"): return   # the decoy owns the caller's ears once it starts
+            if not st or st["ended"] or st.get("handed_off"):
+                log.warning("hello skipped/stopped for %s: call %s", sid[:8], "ended" if (not st or st["ended"]) else "handed off to the decoy"); return   # the decoy owns the caller's ears once it starts
             await send({"event": "media", "media": {"payload": base64.b64encode(data[k:k + _persona.FRAME_BYTES]).decode()}})
             await asyncio.sleep(0.02)
-    except asyncio.CancelledError: raise
+        log.warning("hello sent for %s (%.1f s from %s)", sid[:8], len(data) / 8000, f.name)
+    except asyncio.CancelledError:
+        log.warning("hello cancelled for %s (media stream closed first)", sid[:8]); raise
     except Exception as e:
-        log.warning("listen hello skipped (fail open): %s", e)
+        log.warning("hello skipped for %s: %s %s", sid[:8], type(e).__name__, e)
 
 async def _maybe_await(x):
     if asyncio.iscoroutine(x) or isinstance(x, asyncio.Future): return await x

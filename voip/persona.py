@@ -97,6 +97,11 @@ def generate_lines(force=False) -> list[pathlib.Path]:
 
 HELLO_TEXT = "Hello? ... Yes, this is Maria."
 
+def cached_hello():
+    """The cached greeting file if there is one (regardless of cache key), else None. Instant; used at call time."""
+    f = lines_dir() / "hello.ulaw"
+    return f if f.is_file() and f.stat().st_size >= FRAME_BYTES else None
+
 def generate_hello(force=False):
     """MARIA_LEG=listen greeting: raw PCMU 8 kHz in lines_dir()/hello.ulaw (rebuilt when voice/rate/text change). None when unavailable."""
     f = lines_dir() / "hello.ulaw"
