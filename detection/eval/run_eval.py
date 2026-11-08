@@ -255,8 +255,7 @@ async def score_window(engine: str, call_id: str, window_text: str, *, cache: di
     else:
         if limiter:
             await limiter.wait()
-        if engine == "local":
-            await wait_live_idle()
+        await wait_live_idle()      # local shares the llama slot, cloud shares the NVIDIA key (Riva STT) with the live call
         for attempt in range(3):  # model failures (timeout/429) are retried, never cached
             t0 = time.perf_counter()
             d = await (scorer or _pipeline_score)(engine, call_id, window_text)
@@ -268,6 +267,8 @@ async def score_window(engine: str, call_id: str, window_text: str, *, cache: di
                "engine_used": d.get("engine"), "addresses_ai_system": bool(d.get("addresses_ai_system", False)),
                "fallback": bool(d.get("fallback"))}
         if val["fallback"]:
+            if os.environ.get("EVAL_STOP_ON_FALLBACK") == "1":
+                raise SystemExit("EVAL_STOP_ON_FALLBACK: model failure (429/timeout); stopping, nothing cached for this window")
             return {**val, "cached": False}
     cache[key] = val
     if cache_file is not None:
