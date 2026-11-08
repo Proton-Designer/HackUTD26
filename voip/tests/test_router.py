@@ -324,6 +324,7 @@ def test_persona_decoy_streams_pcmu_lines_with_gaps(tmp_path, monkeypatch):
     monkeypatch.setenv("DECOY_LINES_DIR", str(tmp_path)); monkeypatch.setattr(persona, "GAP_S", 0.3)
     for i in range(len(persona.LINES)): (tmp_path / f"line{i}.ulaw").write_bytes(b"\x7f" * 480)   # 3 frames each; no say/ffmpeg needed
     app = FastAPI(); app.include_router(R.router); c = TestClient(app, client=("127.0.0.1", 50000))
+    R.CALLS["sess-persona-123"] = _state()
     with c.websocket_connect("/decoy-standin/sess-persona-123") as ws:
         got = [json.loads(ws.receive_text()) for _ in range(7)]       # 3 + 3 frames of line0/line1, then line1 started: loops across lines
     assert all(g["event"] == "media" and len(base64.b64decode(g["media"]["payload"])) == 160 for g in got)
@@ -333,3 +334,17 @@ def test_persona_silent_when_no_audio(tmp_path, monkeypatch):
     from voip import persona
     monkeypatch.setenv("DECOY_LINES_DIR", str(tmp_path)); monkeypatch.setattr(persona.shutil, "which", lambda x: None)
     assert persona.generate_lines() == []
+
+
+def test_persona_ws_only_for_local_relay_and_known_calls(tmp_path, monkeypatch):
+    from voip import persona
+    monkeypatch.setenv("DECOY_LINES_DIR", str(tmp_path))
+    for i in range(len(persona.LINES)): (tmp_path / f"line{i}.ulaw").write_bytes(b"\x7f" * 320)
+    app = FastAPI(); app.include_router(R.router); R.CALLS["sess-persona-known"] = _state()
+    local = TestClient(app, client=("127.0.0.1", 50000)); remote = TestClient(app, client=("203.0.113.9", 50000))
+    for cl, path, hdr in ((local, "/decoy-standin/sess-unknown-1234", None), (remote, "/decoy-standin/sess-persona-known", None),
+                          (local, "/decoy-standin/sess-persona-known", {"x-forwarded-for": "9.9.9.9"})):
+        with pytest.raises(Exception):
+            with cl.websocket_connect(path, headers=hdr or {}): pass
+    assert persona._active == 0
+    with local.websocket_connect("/decoy-standin/sess-persona-known") as ws: assert json.loads(ws.receive_text())["event"] == "media"
