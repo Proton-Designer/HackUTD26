@@ -8,6 +8,8 @@ from pathlib import Path
 import numpy as np
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
+VOICE = os.environ.get("PSTN_VOICE", "Mia")      # TASK-098: a second voice for the v3 bank cards; cache key only changes for non-default voices
+CARDS_MD = os.environ.get("PSTN_CARDS_MD", "data/script-cards.md")
 CACHE = Path(os.environ.get("PSTN_CACHE", ROOT / "detection/testdata/pstn"))
 SIL = 1.2
 BENIGN = {
@@ -22,28 +24,32 @@ BENIGN = {
 
 def parse_cards(md):
     cards = {}
-    for block in re.split(r"(?m)^# Card ", md)[1:]:
+    for block in re.split(r"(?m)^#{1,2} Card ", md)[1:]:
         n, title = re.match(r"(\d+): (.*)", block).groups()
-        lines = [m.group(1) for m in re.finditer(r'(?m)^\d\. \*\*"(.*)"\*\*', block)]
+        lines = [m.group(1) or m.group(2) for m in re.finditer(r'(?m)^\d\. (?:\*\*"(.*)"\*\*|"(.*)"\s*$)', block)]
         for h in ("### Payment step", "### Zelle step"):
             m = re.search(re.escape(h) + r'[^\n]*\n\*\*"(.*)"\*\*', block)
             if m: lines.append(m.group(1))
+        m = re.search(r'(?m)^\*\*Payment step:\*\* "(.*)"\s*$', block)     # v3 bank cards: inline payment step
+        if m: lines.append(m.group(1))
         cards[n] = (title.strip(), [re.sub(r"\s+([.,])", r"\1", l) for l in lines])
     return cards
 
 def synth_line(text):
-    f = CACHE / "tts" / (hashlib.sha1(text.encode()).hexdigest()[:16] + ".npy")
+    f = CACHE / "tts" / (hashlib.sha1((text if VOICE == "Mia" else VOICE + "|" + text).encode()).hexdigest()[:16] + ".npy")
     if f.exists(): return np.load(f)
     import riva.client
     from dotenv import dotenv_values
+    wait_idle()   # the shared key also serves the LIVE decoy TTS and Riva STT: never generate while a real call is open
     key = os.environ.get("NVIDIA_API_KEY") or dotenv_values(ROOT / ".env").get("NVIDIA_API_KEY")
     auth = riva.client.Auth(None, True, "grpc.nvcf.nvidia.com:443", [["function-id", "877104f7-e885-42b9-8de8-f6e4c6303969"], ["authorization", "Bearer " + key]])
     # wallets/URLs/phone numbers are read as written by the judge; spell the dotted forms the way a person would say them
     spoken = text.replace("refunds.dept@backfire-demo.example", "refunds dot dept at backfire dash demo dot example").replace("backfire-demo.example", "backfire dash demo dot example")
     svc = riva.client.SpeechSynthesisService(auth)
     for attempt in range(8):
+        wait_idle()
         try:
-            pcm = np.frombuffer(svc.synthesize(spoken, language_code="en-US", sample_rate_hz=8000, voice_name="Magpie-Multilingual.EN-US.Mia").audio, dtype="<i2"); break
+            pcm = np.frombuffer(svc.synthesize(spoken, language_code="en-US", sample_rate_hz=8000, voice_name=f"Magpie-Multilingual.EN-US.{VOICE}").audio, dtype="<i2"); break
         except Exception as e:   # shared team key: back off on rate limit, keep what is cached
             if "exceeded rate limit" not in str(e) or attempt == 7: raise
             print("TTS rate limited, waiting 25 s", flush=True); time.sleep(25)
@@ -136,7 +142,7 @@ def wait_idle(max_wait_s=1800):
 async def main(a):
     from detection import detect as D
     from detection.scripts.acceptance import Loop, fmt
-    md = (ROOT / "data/script-cards.md").read_text()
+    md = (ROOT / CARDS_MD).read_text()
     cards = {f"s{n}": v for n, v in parse_cards(md).items()}; cards.update(BENIGN)
     want = a.cards.split(",") if a.cards else list(cards)
     want = [("s" + w if w.isdigit() else w) for w in want]

@@ -7,7 +7,7 @@ import httpx, numpy as np, websockets
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from detection import stream
-HUB, P2 = 8190, int(os.environ.get("ACC_P2_PORT", "8191"))
+HUB, P2 = int(os.environ.get("ACC_HUB_PORT", "8190")), int(os.environ.get("ACC_P2_PORT", "8191"))
 ACC = ROOT / "detection/testdata/acc"
 PY = str(ROOT / ".venv/bin/python")
 SIL = 1.2   # seconds of silence between lines (> endpoint)
