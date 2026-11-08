@@ -36,6 +36,11 @@ All scripts are synthetic. No real people.
 ### Payment step
 **"The protected account is set up through 1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa . Our secure line is 1-888-555-0123 . The transfer portal is backfire-demo.example ."**
 
+### Zelle step (say this last)
+**"Open your banking app now and send $1,800 by Zelle to refunds.dept@backfire-demo.example . That's the protected account, so do it while I'm on the line."**
+
+*Read the address as: "refunds dot dept at backfire dash demo dot example."*
+
 <div style="page-break-after: always;"></div>
 
 # Card 3: Crypto Investment

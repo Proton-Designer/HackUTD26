@@ -50,8 +50,27 @@ def approve(action_id: str):
         raise HTTPException(404, "unknown action")
 
 
+def _undo_hold(token: str) -> dict | None:
+    """Undo a Nessie transfer hold: transfer back to pending (PUT status, verified on the sandbox)."""
+    from . import nessie
+    row = _store().q("SELECT * FROM holds WHERE undo_token=? AND active=1", token)
+    if not row or not nessie.release_transfer(row[0]["transfer_id"]):
+        return None  # unknown token, or Nessie down: hold stays (fail safe for her money)
+    _store().undo_hold(token)
+    _cfg["emit"]("intel.action", row[0]["call_id"], {
+        "action_id": row[0]["action_id"], "kind": "hold_transfer", "target": row[0]["transfer_id"], "scope": "her",
+        "status": "applied", "gate_status": "undone by customer: transfer back to pending", "active": False,
+        "simulated": True, "undo_token": token, "reason": "Hold released by the customer (Nessie sandbox)"})
+    return row[0]
+
+
 @router.post("/blocklist/{undo_token}/undo")
 def undo(undo_token: str):
+    if undo_token.startswith("hold-"):
+        row = _undo_hold(undo_token)
+        if not row:
+            raise HTTPException(404, "unknown or already undone, or Nessie unavailable")
+        return {"undone": True, "kind": "hold_transfer", "transfer_id": row["transfer_id"]}
     row = _store().undo(undo_token)
     if not row:
         raise HTTPException(404, "unknown or already undone")
@@ -141,7 +160,10 @@ def protection_entries(scope: str = "her") -> list[dict]:
 
 
 def undo_block(undo_token: str) -> bool:
-    """In-process undo for P1's POST /protection-log/undo. Emits blocklist.updated with active=false."""
+    """In-process undo for P1's POST /protection-log/undo. Emits blocklist.updated with active=false
+    (or, for a 'hold-' token, releases the Nessie transfer hold)."""
+    if str(undo_token).startswith("hold-"):
+        return _undo_hold(undo_token) is not None
     row = _store().undo(undo_token)
     if row:
         _cfg["emit"]("blocklist.updated", None, {"number": row["number"], "scope": row["scope"],

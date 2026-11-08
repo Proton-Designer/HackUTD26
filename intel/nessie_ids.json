@@ -1,0 +1,48 @@
+{
+  "_note": "Synthetic Nessie sandbox objects for the Backfire demo (python -m intel.seed_nessie). No real people.",
+  "created": "2026-11-08T02:09:11",
+  "base": "https://api.nessieisreal.com",
+  "maria": {
+    "name": "Maria Sandbox",
+    "customer_id": "d5bb3b81-4229-4ff5-8e53-f1c83befca94",
+    "account_id": "e423c8f1-e812-4216-9f37-b99f7f9c9c27"
+  },
+  "others": [
+    {
+      "name": "Alex Sandbox",
+      "customer_id": "c6249f71-b8f9-4806-8518-90fb4acd37fd",
+      "account_id": "33f3b466-0808-4bc4-89e9-6f01122d35ac"
+    },
+    {
+      "name": "Priya Sandbox",
+      "customer_id": "7afae452-e71a-4186-bc8f-3cfef8ec1c45",
+      "account_id": "3c4bdbd4-8634-4de0-b1b5-f6a82ad5cc9b"
+    },
+    {
+      "name": "Jordan Sandbox",
+      "customer_id": "4b2fbbb1-865f-42cc-b199-fe723b92f457",
+      "account_id": "19904540-94ff-4495-b28b-49e0886d12df"
+    }
+  ],
+  "payee": {
+    "label": "SIMULATED scammer destination",
+    "customer_id": "cc4e9000-7659-455d-912f-07aa7010d27a",
+    "account_id": "7292b6d8-9b55-41f2-a9e3-89d6a96d64bd"
+  },
+  "merchants": [
+    "f99aa06a-761c-4bca-b23e-dd5eb9808a74",
+    "57dc3024-2858-4d42-b5c9-70360d8dcb16",
+    "3c866610-c59f-4192-8c8f-beb3aaf8fb30",
+    "891cd36e-8d00-402e-94a2-d9b1cf190dda",
+    "483f01ee-be5b-4d7f-95bb-1c21c0f659df",
+    "b1e271d6-190c-4fd7-9418-447fd76a9c6d",
+    "fdd4e8cc-9c4b-4314-8bcb-a6b00d7a8ba4",
+    "d5da32ae-7eba-49f9-91f5-c9d6fed4af58",
+    "607c353c-12e0-426e-bb2e-314c00a469e9"
+  ],
+  "evidence_transfer_ids": [
+    "147a277d-f2bb-4f22-a53f-230bdc21b7c8",
+    "cc5afc50-08c2-481f-bbf2-265b61e3c4d4",
+    "4f4d8357-a268-4eaa-85c0-5e18b0ac66cc"
+  ]
+}

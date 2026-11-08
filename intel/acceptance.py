@@ -26,6 +26,9 @@ def main(argv=None) -> int:
     ap.add_argument("--wallet", default=CFG["wallet"]["addr"])
     ap.add_argument("--require-nemotron", action="store_true",
                     help="demo readiness: fail 2a unless the agent ran on Nemotron (not the template fallback)")
+    ap.add_argument("--nessie", action="store_true",
+                    help="Capital One Nessie check: POST /demo/reset first (starts Maria's pending transfer), then expect "
+                         "hold_transfer applied and the transfer cancelled in Nessie. Run on the hub machine.")
     ap.add_argument("--drill", action="store_true",
                     help="fail-open drill: hub runs with INTEL_*_BASE pointed at a dead host; expect 'unavailable' lookups")
     a = ap.parse_args(argv)
@@ -41,6 +44,22 @@ def main(argv=None) -> int:
         results.append((ok, name, detail))
         print(f"{'PASS' if ok else 'FAIL'}  {name}  {detail}", flush=True)
 
+    if a.nessie:
+        from . import nessie as N
+        ids, dest = N.load_ids(), CFG.get("payout_destination") or {}
+        maria = (ids or {}).get("maria", {}).get("account_id")
+        from .seed_nessie import resolves
+        check(bool(ids) and resolves(ids) is True, "N1 Nessie seed exists and resolves (intel/nessie_ids.json)",
+              f"maria={'set' if maria else None} payee={'set' if dest.get('nessie_payee_account_id') else None}")
+        try:
+            rr = c.post("/demo/reset", headers={"x-hub-token": a.token or ""})
+            rr.raise_for_status()
+        except Exception as e:
+            print(f"FAIL  /demo/reset: {type(e).__name__}: {e}")
+            return 2
+        pend = N.pending_transfers(maria, description_contains=str(dest.get("id"))) if maria else {"transfers": []}
+        check(len(pend.get("transfers", [])) >= 1, "N2 /demo/reset started Maria's pending Zelle transfer (Nessie)",
+              ", ".join(f"${t['amount']:,} '{t['description']}'" for t in pend.get("transfers", [])))
     try:
         before = c.get("/routing/lookup", params={"from": JUDGE_NUMBER}).json()
         print(f"before: {before}")
@@ -93,6 +112,17 @@ def main(argv=None) -> int:
             == "".join(ch for ch in CFG["real_bank_callback"] if ch.isdigit())[-7:]
             and "poisoning" in str(x.get("gate_status", ""))]
     check(bool(pois), "5 real bank's number flagged as attempted poisoning, never actioned")
+    if a.nessie:
+        from . import nessie as N
+        hold = [x for x in acts if x.get("kind") == "hold_transfer"]
+        applied = [x for x in hold if x.get("status") == "applied"]
+        check(bool(applied), "N3 hold_transfer applied (auto, her scope, simulated)",
+              applied[0].get("reason", "") if applied else f"hold actions: {[x.get('gate_status') for x in hold]}")
+        st = [N.transfer_status(x["target"]) for x in applied]
+        check(bool(st) and all(s_ == "cancelled" for s_ in st), "N4 transfer shows cancelled in Nessie", str(st))
+        flag = [x for x in acts if x.get("kind") == "flag_payee_bankwide"]
+        check(bool(flag) and flag[0].get("status") == "queued", "N5 flag_payee_bankwide queued for analyst",
+              (flag[0].get("evidence") or [""])[0] if flag else "")
     n_ok = sum(ok for ok, _, _ in results)
     print(f"\n{n_ok}/{len(results)} pass (run {run}; synthetic numbers; network actions simulated)")
     return 0 if n_ok == len(results) else 1

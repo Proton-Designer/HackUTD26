@@ -29,6 +29,8 @@ CREATE TABLE IF NOT EXISTS blocklist(undo_token TEXT PRIMARY KEY, number TEXT, s
 CREATE TABLE IF NOT EXISTS callback_warnings(number TEXT PRIMARY KEY, campaign_id TEXT, created REAL);
 CREATE TABLE IF NOT EXISTS denied(id INTEGER PRIMARY KEY AUTOINCREMENT, call_id TEXT, kind TEXT, target TEXT,
   reason TEXT, created REAL);
+CREATE TABLE IF NOT EXISTS holds(undo_token TEXT PRIMARY KEY, action_id TEXT, call_id TEXT, transfer_id TEXT,
+  amount INTEGER, destination TEXT, active INTEGER, created REAL);
 """
 
 BLOCK_REASON = {"her": "Confirmed scammer (blocked for her)",
@@ -70,6 +72,20 @@ class Store:
         if not row:
             return None
         self.x("UPDATE blocklist SET active=0 WHERE undo_token=?", token)
+        return row[0]
+
+    # ---- Nessie transfer holds (mock bank) ----
+    def add_hold(self, action_id: str, call_id: str, transfer_id: str, amount, destination: str) -> str:
+        tok = "hold-" + uuid.uuid4().hex[:10]
+        self.x("INSERT INTO holds VALUES(?,?,?,?,?,?,1,?)", tok, action_id, call_id, transfer_id, amount, destination,
+               time.time())
+        return tok
+
+    def undo_hold(self, token: str) -> dict | None:
+        row = self.q("SELECT * FROM holds WHERE undo_token=? AND active=1", token)
+        if not row:
+            return None
+        self.x("UPDATE holds SET active=0 WHERE undo_token=?", token)
         return row[0]
 
     def is_blocked(self, number: str) -> tuple[bool, str | None]:
@@ -126,7 +142,8 @@ class Store:
         return {"campaigns": camps, "queue": self.actions("pending_approval"), "actions": self.actions(),
                 "denied": self.q("SELECT * FROM denied ORDER BY id"),
                 "blocklist": self.q("SELECT * FROM blocklist WHERE active=1"),
-                "callback_warnings": self.q("SELECT * FROM callback_warnings"), "immunity": self.immunity()}
+                "callback_warnings": self.q("SELECT * FROM callback_warnings"),
+                "holds": self.q("SELECT * FROM holds WHERE active=1"), "immunity": self.immunity()}
 
 
 def _decode(r: dict) -> dict:

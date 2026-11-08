@@ -24,6 +24,17 @@ caller for her. Routing: `intel.store.is_blocked(number) -> (bool, reason)`. Pro
 `intel_api.protection_entries()` / `intel_api.undo_block(token)`. Key: NVIDIA_API_KEY from env or repo-root .env.
 Model: INTEL_MODEL (default nvidia/nemotron-3.5-super-vl-120b-a12b).
 
+Capital One Nessie (mock bank sandbox; all data synthetic):
+    NESSIE_API_KEY in repo-root .env (or env). Base NESSIE_BASE (default https://api.nessieisreal.com; port 80 is closed).
+    python -m intel.seed_nessie        # one-time, idempotent: Maria + history, 3 other customers, SIMULATED scammer payee,
+                                       #   3 completed transfers to it; ids -> intel/nessie_ids.json (committed)
+    /demo/reset (or python -m intel.seed_demo) then starts ONE pending $1,800 "Zelle to <handle>" from Maria (scripted).
+    When the decoy captures payment_handle zelle:refunds.dept@backfire-demo.example (Card 2) or the payee's bank
+    hash/last4, intel looks it up in Nessie (intel.lookup source "nessie"), the gate auto-applies hold_transfer
+    (her scope; PUT status cancelled; undo token "hold-..." puts it back to pending) and queues flag_payee_bankwide
+    (analyst Approve, simulated). Nessie down -> lookup "unavailable", no bank actions, everything else unchanged.
+    python -m intel.acceptance --hub http://127.0.0.1:8000 --require-nemotron --nessie   # 12/12 expected
+
 Rehearsal reset (idempotent, ~5 ms, no network): `python -m intel.seed_demo` clears the intel DB and seeds one
 synthetic sighting from "yesterday" sharing the demo wallet + callback, so the judge's call confirms the campaign live.
 `--check` prints counts only.

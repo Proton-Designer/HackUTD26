@@ -19,7 +19,10 @@ from .lookups import emit as default_emit, norm_domain, norm_phone
 CUSTOMER_AUTO = {"block_caller_for_customer", "link_campaign", "callback_protection_warning"}
 NETWORK_QUEUE = {"network_number_block", "dns_block_registrar_report", "exchange_freeze_request", "ftc_ic3_packet"}
 TRUST_INCREASING = {"mark_number_safe", "add_trusted_contact", "unblock_number", "allowlist_add"}
-ALL_KINDS = CUSTOMER_AUTO | NETWORK_QUEUE | TRUST_INCREASING
+# Capital One Nessie (mock bank) actions. Targets are found by CODE (Nessie lookup on her own account), never by the LLM.
+BANK_AUTO = {"hold_transfer"}            # her own pending transfer to the scammer's captured destination
+BANK_QUEUE = {"flag_payee_bankwide"}     # every customer's payments to that payee: analyst approve, simulated
+ALL_KINDS = CUSTOMER_AUTO | NETWORK_QUEUE | TRUST_INCREASING | BANK_AUTO | BANK_QUEUE
 
 
 def _norm(v) -> str:
@@ -59,10 +62,21 @@ def decide(proposals: list[dict], ctx: Context) -> list[dict]:
             out.append({"proposal": p, "kind": kind, "target": raw, "outcome": outcome, "reason": reason,
                         "scope": scope or ("network" if kind in NETWORK_QUEUE else "her")})
 
+        dest_allow = _norm(p.get("destination_allow_key")) if p.get("destination_allow_key") else None
         if tgt and tgt in hits:
             d("not_actioned", "attempted_poisoning: target is a verified business (allowlist match)")
+        elif dest_allow and dest_allow in hits:
+            d("not_actioned", "attempted_poisoning: payout destination is a verified business (allowlist match)")
         elif kind in TRUST_INCREASING:
             d("denied", "trust change requested by untrusted input; only the customer can do this in her app")
+        elif kind in BANK_AUTO:
+            d("auto", "customer-scoped: holds only her own pending transfer to the scammer's captured destination", "her") \
+                if p.get("target_source") == "nessie:pending_transfer" \
+                else d("denied", "bank holds only on transfers code found in her own account (never on supplied ids)")
+        elif kind in BANK_QUEUE:
+            d("queued", "bank-wide payee flag: one-click analyst approval (simulated)", "network") \
+                if p.get("target_source") == "nessie:payee" \
+                else d("denied", "bank-wide flags only on payees matched by code to the captured destination")
         elif kind not in ALL_KINDS:
             d("denied", f"unknown action kind '{kind}'")
         elif not in_evidence:
@@ -82,6 +96,15 @@ def decide(proposals: list[dict], ctx: Context) -> list[dict]:
             else:
                 d("denied", "uncorroborated untrusted target: never actioned without corroboration + human approval")
     return out
+
+
+def bank_payload(kind: str, proposal: dict) -> dict | None:
+    """Simulated bank-wide action (what the analyst Approve would send to the bank's fraud team)."""
+    if kind != "flag_payee_bankwide":
+        return None
+    return {"api": "simulated/bank-payee-flag/v0", "method": "POST", "path": "/payee-flags",
+            "body": {"bank": "Capital One Nessie sandbox (mock)", "payeeAccountId": proposal.get("payee_account_id"),
+                     "rail": proposal.get("rail"), "reason": "scam payout destination", "expiresInDays": 30}}
 
 
 def camara_payload(kind: str, target: str) -> dict:
@@ -109,7 +132,21 @@ def apply(decisions: list[dict], store, call_id: str, ctx: Context, emit=default
         kind, tgt, outcome = d["kind"], d["target"], d["outcome"]
         aid = "act-" + uuid.uuid4().hex[:8]
         evidence = d["proposal"].get("evidence", [])
-        status, simulated = outcome, True
+        status, simulated, reason, extra = outcome, True, d["reason"], {}
+        if outcome == "auto" and kind == "hold_transfer":
+            from . import nessie  # executed by code; the transfer id came from the Nessie lookup, never the LLM
+            h = nessie.hold_transfer(str(tgt))
+            if not h["ok"]:  # fail open: nothing changed in the bank, so no action is shown as applied
+                results.append({"action_id": aid, "kind": kind, "target": tgt, "status": "skipped",
+                                "gate_status": f"not applied: Nessie unavailable ({h.get('error')})"})
+                continue
+            amt = d["proposal"].get("amount")
+            tok = store.add_hold(aid, call_id, str(tgt), amt, d["proposal"].get("destination"))
+            amt_s = f"${amt:,}" if isinstance(amt, (int, float)) else "the"
+            reason = (f"Held {amt_s} Zelle transfer to the scammer's captured destination "
+                      f"(Capital One Nessie sandbox, mock bank data)")
+            extra = {"undo_token": tok, "undoable": h["undoable"], "bank_status": h["status"], "amount": amt,
+                     "source": "nessie"}
         if outcome == "auto":
             status = "auto: applied"
             if kind == "block_caller_for_customer":
@@ -131,7 +168,8 @@ def apply(decisions: list[dict], store, call_id: str, ctx: Context, emit=default
             status = "pending_approval"
             store.add_action({"id": aid, "call_id": call_id, "campaign_id": ctx.campaign_id, "kind": kind,
                               "scope": d["scope"], "target": tgt, "status": status, "approval": None,
-                              "simulated": True, "evidence": evidence, "payload": camara_payload(kind, tgt)})
+                              "simulated": True, "evidence": evidence,
+                              "payload": camara_payload(kind, tgt) or bank_payload(kind, d["proposal"])})
         elif outcome in ("denied", "not_actioned"):
             status = "denied" if outcome == "denied" else "not_actioned: attempted_poisoning"
             store.add_denied(call_id, kind, str(tgt), d["reason"])
@@ -147,7 +185,7 @@ def apply(decisions: list[dict], store, call_id: str, ctx: Context, emit=default
         ev = {"action_id": aid, "kind": kind, "target": tgt, "scope": d["scope"], "status": CONTRACT_STATUS[outcome],
               "gate_status": status,
               "approval": "auto rule" if outcome == "auto" else ("analyst" if outcome == "queued" else None),
-              "simulated": simulated, "reason": d["reason"], "evidence": evidence}
+              "simulated": simulated, "reason": reason, "evidence": evidence, **extra}
         emit("intel.action", call_id, ev)
         results.append(ev)
     return results

@@ -26,7 +26,8 @@ intel DB reset + seeded in 2 ms -> .../intel/intel.db
   campaign camp-xxxxxx: observed, 1 sighting (caller +1 469 555 0100, seed-carrier, <yesterday>)
   shared indicators: wallet:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa, callback_phone:8885550123
   next: the judge's call with this wallet or callback = sighting #2 -> campaign confirms live
-{'campaigns': 1, 'queue': 0, 'actions': 0, 'denied': 0, 'blocklist': 0, 'callback_warnings': 0, 'immunity': 0}
+  Nessie: pending $1,800 'Zelle to refunds.dept@backfire-demo.example' from Maria (scripted, mock bank)
+{'campaigns': 1, 'queue': 0, 'actions': 0, 'denied': 0, 'blocklist': 0, 'callback_warnings': 0, 'holds': 0, 'immunity': 0}
 {"decision":"LIVE_GUARD","reason":"Caller ID not verified","attestation":"none"}
 ```
 
@@ -35,6 +36,11 @@ Good state: exactly **1 campaign**, everything else **0**, and the judge number 
 While the demo values are still placeholders, `seed_demo` adds `(PLACEHOLDER values: ...)` to its first line.
 That's expected until the real domain and wallet are set (env `BACKFIRE_DEMO_DOMAIN` / `BACKFIRE_DEMO_WALLET`, or
 `intel/demo_config.json`; then refill `data/script-cards.md` with the same values).
+
+Note: `POST /demo/reset` now seeds intel itself (P1, 79cd0f2) and starts Maria's pending Nessie transfer, so step 2 is
+redundant on the hub (harmless to run). Nessie needs a one-time `python -m intel.seed_nessie` and NESSIE_API_KEY in .env;
+without them the Nessie line says "skipped" and everything else is unchanged. With Nessie the reset takes 0.18-0.31 s (3 s worst
+case if Nessie is unreachable).
 
 ## Timing (must be under 60 s)
 

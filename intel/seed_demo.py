@@ -22,7 +22,7 @@ from . import campaigns
 from .demo_config import CFG, SEED_NUMBER, seed_haul
 from .store import Store, default_store
 
-TABLES = ("campaigns", "indicators", "sightings", "actions", "blocklist", "callback_warnings", "denied")
+TABLES = ("campaigns", "indicators", "sightings", "actions", "blocklist", "callback_warnings", "denied", "holds")
 SEED_CALL_ID = "seed-yesterday"
 
 
@@ -35,6 +35,26 @@ def reset(store: Store) -> None:
         store.db.commit()
 
 
+def start_pending_transfer() -> dict | None:
+    """Scripted demo moment: Maria starts a Zelle transfer to the scammer's destination in her banking app.
+    ONE Nessie call, 3 s timeout; skipped silently with no key, no seed (python -m intel.seed_nessie) or any error,
+    so /demo/reset stays fast and never fails because of Nessie."""
+    try:
+        from . import nessie as N
+        ids, dest = N.load_ids(), CFG.get("payout_destination") or {}
+        payee = (ids or {}).get("payee", {}).get("account_id")
+        maria = (ids or {}).get("maria", {}).get("account_id")
+        if not (payee and maria and dest.get("id")):
+            return None
+        body = {"transaction_date": date.today().isoformat(), "status": "pending",
+                "amount": int(dest.get("demo_transfer_amount", 1800)), "description": f"Zelle to {dest['id']}"}
+        r = N.request("POST", f"/accounts/{maria}/transfers", body=body, params={"payee_id": payee}, timeout=3)
+        tid = N.created_id(r)
+        return {"id": tid, "amount": body["amount"], "description": body["description"]} if tid else None
+    except Exception:
+        return None
+
+
 def seed(store: Store | None = None, quiet: bool = False) -> dict:
     store = store or default_store()
     t0 = time.perf_counter()
@@ -43,6 +63,7 @@ def seed(store: Store | None = None, quiet: bool = False) -> dict:
     info = campaigns.link_sighting(store, SEED_CALL_ID, seed_haul(), calling_number=SEED_NUMBER,
                                    carrier="seed-carrier", day=yesterday, stages=CFG["stages"],
                                    emit=lambda *a, **k: None)  # silent: the screen starts clean
+    info["nessie_pending_transfer"] = start_pending_transfer()
     ms = (time.perf_counter() - t0) * 1000
     if not quiet:
         ph = " (PLACEHOLDER values: set BACKFIRE_DEMO_DOMAIN / BACKFIRE_DEMO_WALLET)" if CFG.get("placeholder") else ""
@@ -51,6 +72,9 @@ def seed(store: Store | None = None, quiet: bool = False) -> dict:
               f"(caller {SEED_NUMBER}, seed-carrier, {yesterday})")
         print(f"  shared indicators: {', '.join(info['indicators'])}")
         print("  next: the judge's call with this wallet or callback = sighting #2 -> campaign confirms live")
+        pt = info["nessie_pending_transfer"]
+        print(f"  Nessie: pending ${pt['amount']:,} '{pt['description']}' from Maria (scripted, mock bank)" if pt
+              else "  Nessie: skipped (no key, not seeded, or unreachable)")
     return info
 
 

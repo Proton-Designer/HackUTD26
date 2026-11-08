@@ -15,8 +15,9 @@ import httpx
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from . import gate, lookups as L
+from . import gate, lookups as L, nessie as N
 from .campaigns import key, link_sighting, normalize_artifacts
+from .envkeys import env_secret
 
 MODEL = os.getenv("INTEL_MODEL", "nvidia/nemotron-3.5-super-vl-120b-a12b")
 BASE = os.getenv("NVIDIA_BASE_URL", "https://integrate.api.nvidia.com/v1")
@@ -39,17 +40,7 @@ Reply with JSON only: {"plan": "<one sentence>", "actions": [{"kind": "...", "ta
 
 def _api_key() -> str | None:
     """Env first; else the repo-root .env (P1's hub doesn't load it). Value is never logged."""
-    if os.getenv("NVIDIA_API_KEY"):
-        return os.getenv("NVIDIA_API_KEY")
-    try:
-        env = Path(__file__).resolve().parent.parent / ".env"
-        for line in env.read_text().splitlines():
-            k, _, v = line.strip().partition("=")
-            if k.removeprefix("export ").strip() == "NVIDIA_API_KEY" and v.strip():
-                return v.strip().strip('"').strip("'")
-    except OSError:
-        pass
-    return None
+    return env_secret("NVIDIA_API_KEY")
 
 
 def call_nemotron(messages: list[dict], client: httpx.Client | None = None) -> str:
@@ -108,13 +99,40 @@ def fallback_actions(arts: list[dict], results: list[dict], camp: dict, calling_
     return acts
 
 
+def bank_proposals(bank: list[tuple]) -> list[dict]:
+    """hold_transfer for each of HER pending transfers to the matched payee (auto, scope her) and
+    flag_payee_bankwide (queued, analyst). Nessie down / no match -> nothing."""
+    out = []
+    for hit, res, transfers in bank:
+        if res.get("status") != "ok":
+            continue
+        d = hit["dest"]
+        dest, allow = N.dest_key(d), N.allow_key(str(d.get("id")))
+        n = res.get("activity_count", 0)
+        for t in transfers:
+            out.append({"kind": "hold_transfer", "target": t["id"], "target_source": "nessie:pending_transfer",
+                        "amount": t["amount"], "destination": dest, "destination_allow_key": allow,
+                        "evidence": [f"Maria's pending transfer '{t['description']}' (${t['amount']:,}) goes to the "
+                                     f"payout destination the scammer gave the decoy",
+                                     f"{n} other customers sent money to this payee (Nessie enterprise read)"],
+                        "rationale": "stop her money before it leaves", "proposer": "code (Nessie match)"})
+        out.append({"kind": "flag_payee_bankwide", "target": dest, "target_source": "nessie:payee",
+                    "payee_account_id": d.get("nessie_payee_account_id"), "rail": d.get("rail"),
+                    "destination": dest, "destination_allow_key": allow,
+                    "evidence": [f"{n} other customers sent money to this payee "
+                                 f"(${res.get('activity_total', 0):,}, Nessie enterprise read)",
+                                 "payout destination captured by the decoy on a confirmed scam call"],
+                    "rationale": "warn the bank before more customers pay", "proposer": "code (Nessie match)"})
+    return out
+
+
 def default_tools() -> dict:
     return {"rdap": L.lookup_domain, "explorer": L.lookup_wallet, "allowlist": L.check_allowlist}
 
 
 def run(call_id: str, artifacts, store, calling_number: str | None = None, attestation: str | None = None,
         carrier: str | None = None, stages: list[str] | None = None, llm=None, tools: dict | None = None,
-        emit=L.emit, use_llm: bool = True, llm_label: str = "nemotron") -> dict:
+        emit=L.emit, use_llm: bool = True, llm_label: str = "nemotron", use_bank: bool = True) -> dict:
     """Process one decoy haul. `llm(messages) -> str` is injectable; default calls Nemotron 3 Super."""
     arts = normalize_artifacts(artifacts)
     tools = tools or default_tools()
@@ -126,13 +144,20 @@ def run(call_id: str, artifacts, store, calling_number: str | None = None, attes
             plan.append(("explorer", a["value"]))
         elif a["type"] == "callback_phone":
             plan.append(("allowlist", a["value"]))
+        elif a["type"] == "payment_handle" and N.allow_key(a["value"]):
+            plan.append(("allowlist", N.allow_key(a["value"])))   # a real bank's handle = attempted poisoning
     plan = list(dict.fromkeys(plan))
-    emit("intel.plan", call_id, {"steps": [{"tool": t, "arg": v} for t, v in plan],
+    bank_hits = N.match_destinations(arts) if use_bank else []
+    emit("intel.plan", call_id, {"steps": [{"tool": t, "arg": v} for t, v in plan] +
+                                          [{"tool": "nessie", "arg": N.dest_key(h["dest"])} for h in bank_hits],
                                  "inputs": "typed artifacts only (raw transcript never read)"})
 
     # Parallel: a dead/slow public API costs one timeout, not the sum. Order (and the trace) stays the plan's.
-    with ThreadPoolExecutor(max_workers=max(1, min(8, len(plan)))) as pool:
+    with ThreadPoolExecutor(max_workers=max(1, min(8, len(plan) + len(bank_hits)))) as pool:
+        bank_futs = [pool.submit(N.lookup_destination, h, call_id) for h in bank_hits]
         results = list(pool.map(lambda tv: tools[tv[0]](tv[1], call_id=call_id), plan))
+        bank = [(h, *f.result()) for h, f in zip(bank_hits, bank_futs)]
+    results += [r for _, r, _ in bank]   # public result only (no transfer ids) -> also what the LLM sees
     hits = {r["value"] for r in results if r.get("kind") == "allowlist" and r.get("match")}
     camp = link_sighting(store, call_id, arts, calling_number=calling_number, carrier=carrier,
                          stages=stages, allowlist_hits=hits, emit=emit)
@@ -169,6 +194,9 @@ def run(call_id: str, artifacts, store, calling_number: str | None = None, attes
     emit("intel.agent", call_id, {"engine": engine, "model": MODEL if engine != "fallback" else None,
                                   "plan": plan_text, "n_proposals": len(proposals), "n_baseline_added": n_added,
                                   "error": err})
+
+    # Bank actions (Capital One Nessie mock bank): built by CODE from the Nessie lookup. The LLM never supplies ids.
+    proposals += bank_proposals(bank)
 
     # Instructions the scammer aimed at our AI (captured by the extractor) become attempted actions -> gate denies.
     for a in arts:

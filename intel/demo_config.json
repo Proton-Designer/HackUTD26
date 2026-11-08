@@ -2,13 +2,37 @@
   "_note": "Single source for demo values (seed_demo, acceptance, demo_run fixtures). Swap domain/wallet here or via env BACKFIRE_DEMO_DOMAIN / BACKFIRE_DEMO_WALLET. Synthetic 555 numbers only.",
   "placeholder": true,
   "domain": "backfire-demo.example",
-  "wallet": {"chain": "BTC", "addr": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"},
+  "wallet": {
+    "chain": "BTC",
+    "addr": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"
+  },
   "callback_phone": "1-888-555-0123",
-  "payment_handle": {"rail": "cashapp", "id": "$BackfireDemoPlaceholder"},
+  "payment_handle": {
+    "rail": "zelle",
+    "id": "refunds.dept@backfire-demo.example"
+  },
   "real_bank_callback": "1-800-935-9935",
   "judge_calling_number": "+1 214 555 0199",
   "seed_calling_number": "+1 469 555 0100",
   "rotated_calling_number": "+1 972 555 0142",
-  "script_tags": ["arrest_threat", "gift_card_demand", "secrecy"],
-  "stages": ["opening", "pretext", "pressure", "payment"]
+  "script_tags": [
+    "arrest_threat",
+    "gift_card_demand",
+    "secrecy"
+  ],
+  "stages": [
+    "opening",
+    "pretext",
+    "pressure",
+    "payment"
+  ],
+  "payout_destination": {
+    "_note": "Scammer's payout destination as captured by the decoy (synthetic). Maps to the SIMULATED scammer payee account in the Nessie mock bank; seed_nessie fills the nessie_* / bank_* fields. The captured value itself stays in our intel store.",
+    "rail": "zelle",
+    "id": "refunds.dept@backfire-demo.example",
+    "nessie_payee_account_id": "7292b6d8-9b55-41f2-a9e3-89d6a96d64bd",
+    "bank_last4": "6557",
+    "bank_hash": "5258538c4978a5d672a0f2ac7ea339a0659e94775c3f0519d948c473531b8cdc",
+    "demo_transfer_amount": 1800
+  }
 }

@@ -30,3 +30,10 @@ Owner: Kareem. Pipeline id: P4a. Folder: `intel/` only. Branch: `finalized-idea-
 - Only public lookups; never contact scammer infrastructure. Label simulated actions. Fail open.
 - Only edit `intel/`. Only P1 edits `contracts/`. Only the Discord bot edits `BOARD.md`. Never commit `.env`.
 - Stuck 30 min: Nemotron -> Evan (P3), server/contract -> Ayman (P1).
+
+## Capital One Nessie (added 2026-11-08)
+- Seed once: `python -m intel.seed_nessie` (idempotent; ids in intel/nessie_ids.json, committed). Needs NESSIE_API_KEY in the repo-root .env on the HUB machine too.
+- Each rehearsal: `POST /demo/reset` (P1) also starts Maria's pending $1,800 "Zelle to refunds.dept@backfire-demo.example" (scripted stand-in for her banking app).
+- Demo: Card 2 ends with the Zelle ask -> decoy captures payment_handle {rail:"zelle", id} -> intel.lookup (source nessie) -> hold_transfer auto-applied (transfer cancelled in Nessie, undo restores pending) + flag_payee_bankwide queued for Approve.
+- Simulated: the bank is Capital One's Nessie SANDBOX with mock data. The hold really changes the sandbox transfer, but no real money or bank exists. The bank-wide flag is a simulated payload. Maria's transfer is scripted by the reset.
+- Check: `python -m intel.acceptance --hub http://127.0.0.1:8000 --require-nemotron --nessie` (12/12 locally, 2026-11-08).
