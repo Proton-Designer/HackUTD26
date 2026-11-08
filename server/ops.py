@@ -4,7 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 from . import bus, db
 
 log = logging.getLogger("hub.ops")
-LATENCY_LOG = pathlib.Path(os.environ.get("HUB_LATENCY_LOG") or pathlib.Path(__file__).resolve().parent.parent / "logs" / "latency.jsonl")
+LATENCY_LOG = pathlib.Path(os.environ.get("HUB_LATENCY_LOG") or (pathlib.Path(os.environ.get("LOGDIR") or pathlib.Path(__file__).resolve().parent.parent / "logs") / "latency.jsonl"))
 _t: dict = {}        # call_id -> {"incoming": t, "action": t, "alert": bool}
 stats: dict = {}     # metric -> list[ms] (last 200)
 

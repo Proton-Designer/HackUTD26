@@ -244,3 +244,19 @@ def test_pipeline_token_gates_post_events(monkeypatch):
     assert c.post("/events", json=ev, headers={"x-hub-token": "hub"}).status_code == 401
     assert c.post("/events", json=ev, headers={"x-pipeline-token": "pt"}).json()["ok"]
     assert c.post("/events", json={"type": "user.action", "call_id": "p1", "data": {}}, headers={"x-pipeline-token": "pt"}).status_code == 403
+
+
+def test_legit_call_ended_is_not_blocked_by_intel_or_stub(monkeypatch):
+    import server.main as M
+    n = "+15555550166"
+    bus.publish("call.incoming", "g1", {"from": n, "to": "+15555550100", "attestation": "C", "scam_id_score": 0.5})
+    bus.publish("handoff.started", "g1", {"restore_deadline": 1.0})
+    monkeypatch.setattr(M.intel_api, "GRACE_S", 0.2)
+    bus.publish("call.ended", "g1", {"ended_by": "decoy", "duration_s": 40.0, "legit": True})
+    time.sleep(1.0)
+    assert routing.decide(n)["decision"] == "LIVE_GUARD"          # not blocked
+    monkeypatch.setattr(M, "intel_api", None)                       # fallback stub path honors it too
+    bus.publish("call.incoming", "g2", {"from": n, "to": "+15555550100", "attestation": "C", "scam_id_score": 0.5})
+    bus.publish("handoff.started", "g2", {"restore_deadline": 1.0})
+    bus.publish("call.ended", "g2", {"ended_by": "decoy", "duration_s": 40.0, "legit": True})
+    assert routing.decide(n)["decision"] == "LIVE_GUARD"

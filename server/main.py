@@ -99,6 +99,10 @@ try:
         # so a forged event can't make intel block arbitrary numbers.
         if ev.get("type") == "artifacts.extracted" and ev.get("call_id") not in DECOY_CALLS:
             log.warning("ignoring artifacts.extracted for non-decoy call %s", ev.get("call_id")); return
+        if ev.get("type") == "call.ended" and (ev.get("data") or {}).get("legit") is True:
+            # voip saw sustained low risk after handoff: caller looked legitimate, so enforce nothing (no blocklist add on this call)
+            intel_api._calls.setdefault(ev["call_id"], {})["decoy"] = False
+            DECOY_CALLS.discard(ev["call_id"])
         intel_api.observe(ev)
     bus.add_observer(_intel_observe)
     app.include_router(intel_api.router, dependencies=[Depends(_intel_guard)])
@@ -120,7 +124,7 @@ def _observe(ev):
         DECOY_CALLS.add(cid)
     elif t == "handoff.restored":
         DECOY_CALLS.discard(cid)
-    elif t == "call.ended" and cid in DECOY_CALLS and CALLER_BY_CALL.get(cid) and intel_api is None:  # stub only when intel is not mounted (intel.observe blocks the caller otherwise)
+    elif t == "call.ended" and cid in DECOY_CALLS and CALLER_BY_CALL.get(cid) and intel_api is None and d.get("legit") is not True:  # stub only when intel is not mounted (intel.observe blocks the caller otherwise)
         num = CALLER_BY_CALL[cid]
         if num in db.EMERGENCY or db.has("trusted", num):  # a (possibly spoofed) trusted number must not poison her blocklist
             DECOY_CALLS.discard(cid); return

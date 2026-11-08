@@ -25,7 +25,7 @@ Every event is JSON on the P1 event bus and `WS /events`:
 | `call.incoming` | P1 | `from` str, `to` str, `attestation` enum, `scam_id_score` float 0-1 (simulated) |
 | `call.routed` | P1 | `decision` enum, `reason` str |
 | `call.answered` | P1 | `by` str ("maria" or "decoy") |
-| `call.ended` | P1 | `ended_by` enum, `duration_s` float |
+| `call.ended` | P1 | `ended_by` enum, `duration_s` float. Optional: `legit` bool (true = after a handoff the caller looked legitimate for RESTORE_LOW_S; the hub/intel must NOT blocklist this call) |
 | `transcript.caller` | P2 | `utterance_id` str, `text` str, `is_final` bool |
 | `risk.update` | P2 | `s` float 0-1, `band` enum, `asks` list, `scam_type` str, `stage` enum, `impersonates` str or null, `addresses_ai_system` bool, `why_chips` list[str], `engine` enum |
 | `alert.fired` | P2 | `level` "first" or "realert", `why_chips` list[str] |

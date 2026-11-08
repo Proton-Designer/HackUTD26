@@ -6,7 +6,7 @@ cd "$(dirname "$0")/.."
 if [ -f .env ]; then set -a; . ./.env; set +a; fi   # repo .env overrides stale shell values
 APPLY=0; URL=""
 while [ $# -gt 0 ]; do case "$1" in --apply) APPLY=1;; --url) URL="${2:-}"; shift;; *) echo "usage: $0 [--apply] [--url URL]"; exit 2;; esac; shift; done
-[ -z "$URL" ] && URL=$(cat logs/tunnel_url.txt 2>/dev/null)
+[ -z "$URL" ] && URL=$(cat "${LOGDIR:-logs}/tunnel_url.txt" 2>/dev/null)
 case "$URL" in https://*) ;; *) echo "no https tunnel URL (run scripts/run_hub first, or pass --url)"; exit 1;; esac
 HOOK="${URL%/}/telnyx/webhook"
 APP="${TELNYX_CALL_CONTROL_APP_ID:-}"; CONN="${TELNYX_CRED_CONNECTION_ID:-}"

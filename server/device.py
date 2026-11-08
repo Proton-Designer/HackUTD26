@@ -14,11 +14,15 @@ _fails: dict = {}   # ip -> [timestamps]
 MAX_FAILS, WINDOW_S, GLOBAL_FAILS = 5, 60, 30   # per-IP and across all IPs (defeats header-rotation)
 
 def _announce():
+    """Print the PIN and write $LOGDIR/device_pin.txt. No side effects under pytest or when HUB_NO_PIN_FILE=1 (never clobber a live hub's PIN file)."""
+    import sys
+    if "pytest" in sys.modules or os.environ.get("HUB_NO_PIN_FILE") == "1":
+        return
     try:
-        p = pathlib.Path(__file__).resolve().parent.parent / "logs"; p.mkdir(exist_ok=True)
-        (p / "device_pin.txt").write_text(PIN + "\n")
+        d = pathlib.Path(os.environ.get("LOGDIR") or pathlib.Path(__file__).resolve().parent.parent / "logs"); d.mkdir(parents=True, exist_ok=True)
+        (d / "device_pin.txt").write_text(PIN + "\n")
     except Exception:
-        log.warning("could not write logs/device_pin.txt")
+        log.warning("could not write device_pin.txt")
     print(f"DEVICE PIN (enter on Maria's phone): {PIN}", flush=True)
 
 def _hash(t): return hashlib.sha256(t.encode()).hexdigest()
