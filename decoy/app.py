@@ -71,7 +71,7 @@ async def voice_enroll(body: dict = Body(...)):
                                       str(body.get("consent_version") or ""))
     except ValueError as e:
         raise HTTPException(400, str(e))
-    await emit("voice.enrolled", "onboarding", {"voice_id": vid, "consent_version": str(body.get("consent_version"))})
+    # voice.enrolled is published by the hub's proxy (server/voice.py), the only caller; emitting here too would duplicate it.
     return {"voice_id": vid}
 
 
@@ -79,8 +79,7 @@ async def voice_enroll(body: dict = Body(...)):
 async def voice_delete(voice_id: str):
     if not voice.delete(voice_id):
         raise HTTPException(404, "unknown voice_id")
-    await emit("voice.deleted", "onboarding", {"voice_id": voice_id})
-    return {"ok": True}
+    return {"ok": True}   # voice.deleted: published by the hub's proxy (server/voice.py)
 
 
 class Session:
