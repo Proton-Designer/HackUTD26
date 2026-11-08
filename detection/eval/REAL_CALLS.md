@@ -42,3 +42,9 @@ Replayed in real time on :8104 with P2_ENGINE=local, idle live service, one llam
 - Role-play only. No real victim, no real scammer. The scam-card call is scripted by a teammate.
 - "Truth" labels were assigned by hand from the call purpose, not from a transcript audit.
 - Not a held-out estimate of recall. Use RESULTS.md (synthetic) for that.
+
+## TASK-054: peer-to-peer echo leak (measured 04:45, aggregates only)
+- Data available: `logs/p2.log` holds 11 call ids; the newest real call is 497ef1d4 (03:32, 14 finals, 61 s, 0 alerts, risk 0.00 throughout, a two-way "can you hear me" chat). No real call has been logged since 03:33, so **no call yet exists in the #75 mode (customer in app, decoy as customer)**.
+- Decoy / customer text is not in p2.log (P2 never logs it) and the hub `/events` history was not reachable from this worktree (nothing listening on the local hub ports), so the fuzzy-match count against decoy.turn(speaker=decoy) could not be run: **0 of 0 measurable calls**.
+- Only known leak: 922262b2 (03:28, "Maria" as caller speech, 1 final). It did not move risk: every risk.update for that call is s=0.00 band=low and no alert fired.
+- Verdict: no evidence a guard is needed; the leak is real on PSTN but harmless so far, because a leaked decoy line is not scam content. Re-measure on the first #75-mode call (needs decoy.turn events from the hub). The proposed guard (drop caller finals fuzzy-matching decoy text from the last ~6 s) is NOT built.
