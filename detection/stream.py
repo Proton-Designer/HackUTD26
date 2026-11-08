@@ -117,10 +117,26 @@ async def handle_utterance(call_id, uid, pcm, t_end=None):
     utt = {"utterance_id": uid, "text": text, "is_final": True}
     await hub.emit("transcript.caller", call_id, utt)
     if on_final:
-        try:
-            await on_final(call_id, dict(utt, _t_end=t_end) if t_end else utt)   # _t_end (wall clock of endpoint) is internal, never emitted to the hub
-        except Exception:
-            log.exception("on_final failed (ignored, fail-open)")
+        _spawn(_run_on_final(call_id, dict(utt, _t_end=t_end) if t_end else utt))   # _t_end (wall clock of endpoint) is internal, never emitted to the hub
+
+_bg: set = set()   # strong refs to in-flight on_final tasks (a bare create_task can be garbage collected)
+
+def _spawn(coro):
+    t = asyncio.get_running_loop().create_task(coro); _bg.add(t); t.add_done_callback(_bg.discard); return t
+
+async def _run_on_final(call_id, utt):
+    """Alert/detect work runs OFF the per-call STT worker (TASK-047): the next utterance is transcribed while detect() (2-5 s on local) is still
+    running. Tasks start in creation order and alert.on_final appends to the window before its first await, so FIFO order holds; it coalesces
+    to one detect in flight per call and drops everything for a call the hub has ended."""
+    try:
+        await on_final(call_id, utt)
+    except Exception:
+        log.exception("on_final failed (ignored, fail-open)")
+
+async def drain(timeout=10.0):
+    """Wait for in-flight on_final tasks (tests / orderly shutdown)."""
+    if _bg:
+        await asyncio.wait(list(_bg), timeout=timeout)
 
 SLOW_PARTIAL_EVERY_S = float(os.environ.get("P2_SLOW_PARTIAL_EVERY_S", "1.5"))
 def _stt_slow():

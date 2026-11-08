@@ -52,6 +52,15 @@ class STT:
     async def transcribe(self, pcm: np.ndarray) -> str:  # int16 mono 8 kHz
         raise NotImplementedError
 
+# Riva gets its OWN small pool: a hung gRPC call leaves its thread stuck after wait_for gives up, and must not eat the default executor that Whisper uses
+_RIVA_POOL = None
+def _riva_pool():
+    global _RIVA_POOL
+    if _RIVA_POOL is None:
+        from concurrent.futures import ThreadPoolExecutor
+        _RIVA_POOL = ThreadPoolExecutor(max_workers=int(os.environ.get("P2_RIVA_THREADS", "4")), thread_name_prefix="riva")
+    return _RIVA_POOL
+
 class RivaSTT(STT):
     name = "riva-parakeet-ctc-1.1b"
     FUNC_ID = os.environ.get("RIVA_ASR_FUNCTION_ID", "1598d209-5e27-4d3c-8079-4751568b1081")
@@ -69,7 +78,7 @@ class RivaSTT(STT):
         r = self.svc.offline_recognize(pcm.astype("<i2").tobytes(), self.cfg)
         return " ".join(x.alternatives[0].transcript.strip() for x in r.results if x.alternatives).strip()
     async def transcribe(self, pcm):
-        return await asyncio.wait_for(asyncio.to_thread(self._run, pcm), timeout=float(os.environ.get("P2_STT_TIMEOUT", "6")))
+        return await asyncio.wait_for(asyncio.get_running_loop().run_in_executor(_riva_pool(), self._run, pcm), timeout=float(os.environ.get("P2_STT_TIMEOUT", "6")))
 
 class WhisperSTT(STT):
     name = "faster-whisper"
