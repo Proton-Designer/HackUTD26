@@ -388,7 +388,8 @@
       // A new call Maria answers starts the story over (the rail and the Story view follow the latest call)
       if (S.storyCall && S.storyCall !== c.id) { S.stage = {}; VIEW.pinned = null; }
       S.storyCall = c.id;
-      head('Maria answered. Live Guard hears <em>the caller only</em>.', 'Her voice is never processed', '');
+      const listen = String(d.via || '').toLowerCase() === 'listen';
+      head('Maria answered. Live Guard hears <em>the caller only</em>.', listen ? 'She answered in the Backfire app (listen mode) · her voice is never processed' : 'Her voice is never processed', '');
       dirty('feed');
     },
     'call.ended'(e, d, c) {
