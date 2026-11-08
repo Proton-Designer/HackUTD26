@@ -63,3 +63,5 @@ nav#tabs button.on{background:#fff;color:#000;border-color:#fff}
   .chips{gap:6px}.chips li{padding:5px 10px;font-size:.88rem}
   .handoff{font-size:1.25rem;padding:14px}
 }
+
+.decoy{margin:0;padding:10px 14px;border-radius:99px;background:#241a3d;border:2px solid var(--sc);color:#e6dcff;font-weight:700;font-size:1.05rem}
