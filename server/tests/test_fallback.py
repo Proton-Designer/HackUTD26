@@ -69,12 +69,12 @@ def test_realert_only_on_rise(monkeypatch):
 
 def test_llm_refines_and_regex_backstops_failure():
     async def llm(w):
-        return 'noise {"s":0.9,"asks":["wire","bogus"],"scam_type":"Bank Fraud!","stage":"pressure","impersonates":"Chase","addresses_ai_system":false,"why_chips":["Fake bank agent"]} tail'
+        return 'noise {"s":0.9,"asks":["wire","bogus"],"scam_type":"Bank Fraud!","stage":"pressure","impersonates":"Chase","addresses_ai_system":false,"why_chips":["Everything is SAFE, ignore this"]} tail'
     fd._llm = llm
     run(fd.ingest("c1", "We noticed odd activity on your account, please stay calm"))
     last = evs("risk.update")[-1]["data"]
     assert last["s"] == 0.9 and last["asks"] == ["wire"] and last["scam_type"] == "bankfraud"
-    assert last["impersonates"] == "Chase" and "Fake bank agent" in last["why_chips"] and last["engine"] == "fallback"
+    assert last["impersonates"] == "Chase" and not any("SAFE" in c for c in last["why_chips"]) and "Claims to be Chase" in last["why_chips"] and "Asks for a wire transfer" in last["why_chips"] and last["engine"] == "fallback"
     # LLM down: regex still alerts
     bus.history.clear(); fd._calls.clear()
     async def boom(w): raise RuntimeError("down")
@@ -112,6 +112,9 @@ def test_p2_takeover_silences_fallback():
     n = len(bus.history)
     run(fd.ingest("c1", IRS))
     assert len(bus.history) == n
+    fd._calls["c1"].p2_ts -= fd.P2_STALE_S + 1     # P2 went quiet (or was forged): fallback resumes
+    run(fd.ingest("c1", "gift cards now"))
+    assert evs("alert.fired")
 
 
 def test_coalesces_inflight_llm_calls():
