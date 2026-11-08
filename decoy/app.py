@@ -212,6 +212,21 @@ def _shared_stt(make):
     return _STT
 
 
+NOTE_ECHO = __import__("re").compile(
+    r"\s*([\[(]\s*(private|hidden|note|steer)[^\])]*[\])]?|hidden context\b|private (steering )?note\b|steering note\b|"
+    r"\b(already got|have|got|still need|need|turns left)\s*:|about \d+ turns left\b).*$",
+    __import__("re").I | __import__("re").S)
+
+
+def strip_note_echo(t: str | None) -> str | None:
+    """Cut a reply at the first sign of our steering note echoed back (bolt does this ~2/12 even with the note placed
+    before the caller turn). Everything from the echo to the end goes."""
+    if not t:
+        return t
+    cut = NOTE_ECHO.sub("", t).strip()
+    return cut or None
+
+
 class Session:
     """One decoy conversation on one call."""
 
@@ -596,9 +611,12 @@ class Session:
                 if self.bail_now:   # suspicion / hostile / refused twice: don't argue, leave now (#127 5d)
                     await self.finish(PB.GOODBYES[self.bail_now], self.bail_now)
                     return
-                hist = [dict(m) for m in self.recent()]
-                hist[-1]["content"] += "\n" + self.steer()   # note rides on the latest caller turn (#131), never stored
-                msgs = [{"role": "system", "content": core.SYSTEM}] + hist
+                # #135: the note goes in as a system message right BEFORE the latest caller turn (never stored). Measured,
+                # 12 replies each at T0.6: note appended to the caller turn = bolt echoed it 6/12, note first in the
+                # turn 7/12, this placement 2/12; super-vl 0/12 in all. core.guard strips any echo that still slips through.
+                hist = self.recent()
+                msgs = ([{"role": "system", "content": core.SYSTEM}] + hist[:-1]
+                        + [{"role": "system", "content": self.steer()}] + hist[-1:])
                 task = asyncio.create_task(core.chat(msgs))
                 done, _ = await asyncio.wait({task}, timeout=FILLER_AFTER_S)
                 # never before the first real reply (#124): the handoff should sound like the rest of the call
@@ -629,6 +647,7 @@ class Session:
                 if not out:   # stall, never the same line twice in a row
                     i = random.choice([k for k in range(len(STALLS)) if k != self.last_stall])
                     self.last_stall, out = i, STALLS[i]
+                out = strip_note_echo(out)   # #135: our own steering note never reaches TTS (core.guard also strips)
                 hist, spoken = core.guard(out, self.persona, self.given, self.ev, " ".join(self.pre_lines + list(self.scammer_lines)[-8:]))
                 self.history.append({"role": "assistant", "content": hist})
                 tts_ms = await self.say(spoken, llm_ms)
@@ -659,9 +678,10 @@ class Session:
             # opener first and alone; the rest one at a time after it has been queued (no burst of clone requests)
             # P1 (Ayman 07:53): no canned opener (it was rendered cold and sounded machine-like, and 'who did you say was
             # calling?' made no sense mid-call). The first line is generated from what the caller said before Fire Back.
-            first = None
+            first, t_first = None, time.monotonic()
             if self.pre_lines:   # only worth the LLM wait when there is a story to react to; else a short line at once
                 try:
+                    t_first = time.monotonic()
                     first = await asyncio.wait_for(core.chat([{"role": "system", "content": core.SYSTEM}] + self.recent() + [
                         {"role": "system", "content": "[private] You are picking the call back up after a two-second pause. Say "
                          "your first line now: one short sentence reacting to what the caller said, then ask what to do next. "
@@ -676,7 +696,7 @@ class Session:
                 if LOG_TEXT:
                     log.info("said %s: %s", self.call_id, spoken)
                 self.history.append({"role": "assistant", "content": hist})   # once (say() is called without record)
-                await self.say(spoken)
+                await self.say(spoken, int((time.monotonic() - t_first) * 1000) if first else 0)   # #136: real ms
             for f in core.FILLERS:
                 fr = await self.voice.frames(f)
                 if fr:

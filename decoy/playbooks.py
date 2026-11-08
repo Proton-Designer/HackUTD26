@@ -130,14 +130,14 @@ MONEY_TALK = re.compile(r"\b(pay|paid|send|sent|transfer|move|deposit|wire|zelle
 
 
 def note(scam: str, arts: list[dict], turns_left: int, money_talk: bool) -> str:
-    """Short per-turn steering note, appended to the latest caller turn (not a system message, not stored).
+    """Short per-turn steering note, sent as a system message just before the latest caller turn (not stored).
     #131 (P2 A/B): no scam label and no target before the caller talks about paying (the model asked "Is it Zelle?" on
     turn 1); no verbatim example phrasings (they were parroted in 6 of 12 replies)."""
     pb = PLAYBOOKS.get(scam, PLAYBOOKS["generic"])
     need = [t for t in missing(scam, arts) if t != "impersonated_org"]
     if not money_talk:
-        return ("(Private note, never read aloud: react to what they just said; don't bring up payment, apps or "
-                f"amounts until they do. About {turns_left} turns left.)")
+        return ("Hidden context for your next reply (never say it): react to what they just said; don't bring up "
+                f"payment, apps or amounts until they do. About {turns_left} turns left.")
     got = sorted(have(arts) & set(pb["targets"]))
     parts = [f"Already got: {', '.join(got) or 'nothing yet'}."]
     if need:
@@ -146,7 +146,7 @@ def note(scam: str, arts: list[dict], turns_left: int, money_talk: bool) -> str:
     else:
         parts.append("You have what you need: keep it short and friendly.")
     parts.append(f"About {turns_left} turns left.")
-    return "(Private note, never read aloud: " + " ".join(parts) + ")"
+    return "Hidden context for your next reply (never say it): " + " ".join(parts)
 
 
 # ---------------------------------------------------------------- bail signals (#127 5d)
