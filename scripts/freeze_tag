@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Tag HEAD as p1-known-good-<HHMM> and push the TAG (not the branch). Prints the rollback command.
+# DRY RUN by default: shows what it would do. Pass --yes to create + push. The lead runs this; nothing runs it automatically.
+# Usage: scripts/freeze_tag [--yes] [--name p1-known-good-HHMM]
+set -eu
+cd "$(dirname "$0")/.."
+YES=0; NAME="p1-known-good-$(date +%H%M)"
+while [ $# -gt 0 ]; do case "$1" in --yes) YES=1;; --name) NAME="$2"; shift;; *) echo "unknown arg $1" >&2; exit 64;; esac; shift; done
+SHA=$(git rev-parse --short HEAD); BR=$(git rev-parse --abbrev-ref HEAD)
+echo "HEAD $SHA on $BR -> tag $NAME"
+if [ -n "$(git status --porcelain --untracked-files=no)" ]; then echo "REFUSING: uncommitted changes to tracked files (the tag would not match the running tree):" >&2; git status --short --untracked-files=no >&2; exit 2; fi
+if git rev-parse -q --verify "refs/tags/$NAME" >/dev/null; then echo "REFUSING: tag $NAME already exists (use --name)" >&2; exit 2; fi
+if [ "$(git rev-parse HEAD)" != "$(git rev-parse "origin/$BR" 2>/dev/null || echo none)" ]; then echo "NOTE: HEAD is not on origin/$BR (unpushed commits). The tag push uploads the commits it points to, but the branch itself stays behind until you push it."; fi
+echo
+echo "ROLLBACK (to this build):"
+echo "  git checkout $NAME        # detached, safe look;  or:  git reset --hard $NAME   (moves the branch: lead decides)"
+echo "  then: scripts/restart_hub_safe   # (refuses during a live call)  and  scripts/ready_check"
+if [ "$YES" != 1 ]; then echo; echo "dry run: nothing tagged or pushed. Re-run with --yes."; exit 0; fi
+git tag -a "$NAME" -m "P1 known-good $(date '+%Y-%m-%d %H:%M') ($SHA)"
+git push origin "refs/tags/$NAME"
+echo "tagged and pushed $NAME"
