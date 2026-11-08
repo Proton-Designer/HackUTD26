@@ -150,13 +150,16 @@ def note(scam: str, arts: list[dict], turns_left: int, money_talk: bool) -> str:
 
 
 # ---------------------------------------------------------------- bail signals (#127 5d)
-SUSPICION = re.compile(r"\b(robot|a bot|bot\b|an ai|artificial|a recording|recorded|machine|automated|not a real person|"
-                       r"are you (real|human|a person)|who is this really|who am i (really )?talking to|scam ?bait(er|ing)?|"
-                       r"you're wasting my time|stop wasting|i know what you're doing|nice try)", re.I)
+# P1 08:13 (P2 #134): only questions aimed at US count ('this call is recorded' / 'automated system' from the
+# scammer's own script must not end the call).
+SUSPICION = re.compile(r"\b(are you (a |an )?(robot|bot|machine|computer|ai|recording|real|human|person|automated)|"
+                       r"is this (a |an )?(recording|robot|bot|machine|computer|ai|automated)|"
+                       r"am i (talking|speaking) to (a |an )?(robot|bot|machine|computer|ai|recording|real person)|"
+                       r"not a real person|who is this really|who am i (really )?talking to|scam ?bait(er|ing)?|"
+                       r"you're wasting my time|stop wasting my time|i know what you're doing|nice try)", re.I)
 HOSTILE = re.compile(r"\b(fuck|f\*+|shit|bitch|asshole|idiot|stupid|dumb|moron|shut up|screw you)\b", re.I)
-REFUSAL = re.compile(r"\b(i (can't|cannot|won't|will not) (tell|give|spell|say)|why do you (need|want) (to know|that)|"
-                     r"just do (it|what i (say|tell you))|stop asking|doesn't matter|that's not important|"
-                     r"i already (told|said)|forget (about )?(it|that))\b", re.I)
+REFUSAL = re.compile(r"\b(i (can't|cannot|won't|will not) (tell|give|spell|say)( you)? (that|it|this)|"
+                     r"why do you (need|want) (to know|that)|forget (about )?(it|this|the whole thing))\b", re.I)   # P1: 'just do it' / 'I already told you' are pressure, not refusal
 
 GOODBYES = {
     "got_payment_details": "Okay, I've got all of that written down. I'm going to go take care of it right now. Bye bye.",

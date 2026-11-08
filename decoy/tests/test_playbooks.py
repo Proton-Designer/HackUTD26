@@ -39,6 +39,8 @@ def test_bail_signals():
     assert PB.SUSPICION.search("Is this a recording?")
     assert not PB.SUSPICION.search("Open your banking app and send the money by Zelle.")
     assert PB.HOSTILE.search("Listen you idiot, just do it")
-    assert PB.REFUSAL.search("Why do you need to know that?") and PB.REFUSAL.search("Just do what I tell you.")
+    assert PB.REFUSAL.search("Why do you need to know that?") and PB.REFUSAL.search("I won't tell you that.")
+    assert not PB.REFUSAL.search("Just do what I tell you, I already told you.")   # pressure, not a refusal (P2 #134)
+    assert not PB.SUSPICION.search("This call is recorded. Our automated system flagged your account.")   # scammer's own script
     assert not PB.REFUSAL.search("Our secure line is 1-888-555-0123.")
     assert set(PB.GOODBYES) >= {"got_payment_details", "time_cap", "no_progress", "suspicion", "hostile", "refused", "silence"}
