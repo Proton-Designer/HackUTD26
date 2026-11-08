@@ -11,12 +11,17 @@ from .security import Limiter, verify_signature
 log = logging.getLogger("voip")
 router = APIRouter()
 def _require_device(request: Request):
-    """eng1's pairing-PIN dependency (server.device); fail closed if it cannot be imported."""
+    """Credential-minting auth: a paired x-device-token (server.device) or HUB_TOKEN. NO loopback exemption (CORS/DNS-rebinding risk).
+    Fail closed if server.device cannot be imported."""
     try:
         from server import device
     except Exception:
         raise HTTPException(503, "device auth unavailable")
-    return device.require_device(request)
+    hub = os.environ.get("HUB_TOKEN")
+    if hub and secrets.compare_digest(request.headers.get("x-hub-token", ""), hub): return
+    if device._valid(request.headers.get("x-device-token")): return
+    raise HTTPException(401, "pair this device first (POST /pair)")
+
 ID_RE = re.compile(r"^[A-Za-z0-9_:.=-]{8,200}$")
 CALL_CAP_S = int(os.environ.get("VOIP_CALL_CAP_S", "300"))
 LIMITER = Limiter(per_caller=int(os.environ.get("VOIP_PER_CALLER", "4")), max_concurrent=int(os.environ.get("VOIP_MAX_CONCURRENT", "5")))
@@ -125,20 +130,22 @@ async def on_answered(p):
         st["maria_ccid"] = ((r or {}).get("data") or {}).get("call_control_id")
         if sim: emit("call.answered", sid, {"by": "maria"}); st["maria_answered"] = True  # simulator has no Maria leg
     elif role == "maria":
-        st["maria_answered"] = True
+        st["maria_answered"] = True; st["maria_alive"] = True
         if st.get("conf_id"): await _safe(telnyx.join_conference(st["conf_id"], p["call_control_id"], start_conference_on_enter=True), "join maria", sim)
-        emit("call.answered", sid, {"by": "maria"})
+        if not st.get("restored"): emit("call.answered", sid, {"by": "maria"})
 
 async def on_hangup(p):
     sid, st, role = _who(p)
     if not st or st["ended"]: return
+    if role == "maria" and p.get("call_control_id") != st.get("maria_ccid"): return   # stale leg (e.g. before a restore re-dial)
+    if role == "maria": st["maria_alive"] = False
     if role == "maria" and st.get("handed_off") and not st.get("restored"): return   # Maria put the phone down after handoff: decoy keeps the caller
     if role == "maria" and not st.get("maria_answered"): return  # Maria never picked up: caller stays with line; no call.ended yet
     st["ended"] = True; LIMITER.release(sid)
     other = st.get("maria_ccid") if role == "caller" else st.get("caller_ccid")
     if other: await _safe(telnyx.hangup(other), "hangup other leg", st.get("sim", False))
     await _stop_decoy(sid)
-    emit("call.ended", sid, {"ended_by": "caller" if role == "caller" else "maria", "duration_s": round(time.time() - st["t0"], 1)})
+    emit("call.ended", sid, {"ended_by": "caller" if role == "caller" else "maria", "duration_s": round(time.time() - st["t0"], 1), **_legit(st)})
     r = RELAYS.pop(sid, None)
     if r: await r.close()
 
@@ -223,6 +230,8 @@ async def webrtc_token(req: Request):
 
 # ---------------- TASK-008: handoff (Scammer Get Scammed) ----------------
 RESTORE_WINDOW_S = int(os.environ.get("VOIP_RESTORE_S", "30"))
+RESTORE_LOW_S = float(os.environ.get("RESTORE_LOW_S", "30"))   # demo: 10
+RESTORE_BELOW = 0.50   # risk s below this = "looks legitimate"
 LOOP = None   # event loop, captured from the webhook so sync bus observers can schedule work
 
 async def _stop_decoy(sid):
@@ -245,6 +254,7 @@ async def handoff(sid):
     deadline = time.time() + RESTORE_WINDOW_S; st["restore_deadline"] = deadline
     emit("handoff.started", sid, {"restore_deadline": deadline})
     asyncio.create_task(_restore_expiry(sid, deadline))
+    asyncio.create_task(_low_watch(sid, deadline))
     return True
 
 async def _restore_expiry(sid, deadline):
@@ -253,14 +263,48 @@ async def _restore_expiry(sid, deadline):
     if st and st.get("handed_off") and not st.get("restored") and st.get("maria_ccid"):
         await _safe(telnyx.hangup(st["maria_ccid"]), "hangup maria after restore window", st.get("sim", False))
 
+def _legit(st) -> dict:
+    """Additive call.ended flag: after a handoff, the caller looked legitimate (risk low for RESTORE_LOW_S) -> hub must NOT blocklist."""
+    ls = st.get("low_since")
+    return {"legit": True} if st.get("handed_off") and ls and time.time() - ls >= RESTORE_LOW_S else {}
+
+def _note_risk(sid, score):
+    """Runs on the loop. Tracks continuous low risk AFTER handoff."""
+    st = CALLS.get(sid)
+    if not st or not st.get("handed_off") or st.get("restored"): return
+    if score < RESTORE_BELOW:
+        if st.get("low_since") is None: st["low_since"] = time.time()
+    else:
+        st["low_since"] = None
+
+async def _low_watch(sid, deadline):
+    """Code, not an LLM: while the restore window is open, low risk held for RESTORE_LOW_S -> restore Maria."""
+    try:
+        while time.time() < deadline:
+            await asyncio.sleep(0.5)
+            st = CALLS.get(sid)
+            if not st or st["ended"] or st.get("restored"): return
+            ls = st.get("low_since")
+            if ls and time.time() - ls >= RESTORE_LOW_S:
+                await restore(sid); return
+    except Exception:
+        log.exception("low_watch failed")
+
 async def restore(sid):
-    """Below the cut line: bring Maria back before the deadline. Stops the decoy, rejoins her leg."""
+    """Bring Maria back before the deadline: stop decoy, rejoin her leg (re-dial her SIP if it was hung up), emit handoff.restored."""
     st = CALLS.get(sid)
     if not st or st["ended"] or not st.get("handed_off") or st.get("restored") or time.time() > st.get("restore_deadline", 0): return False
-    await _stop_decoy(sid)
-    if st.get("conf_id") and st.get("maria_ccid"):
-        await _safe(telnyx.join_conference(st["conf_id"], st["maria_ccid"]), "rejoin maria", st.get("sim", False))
+    sim = st.get("sim", False)
     st["restored"] = True
+    await _stop_decoy(sid)
+    if st.get("maria_alive", True) and st.get("maria_ccid"):
+        if st.get("conf_id"): await _safe(telnyx.join_conference(st["conf_id"], st["maria_ccid"]), "rejoin maria", sim)
+    else:   # her leg is gone: ring her again; on_answered(role=maria) joins her to the conference
+        conn, to = os.environ.get("TELNYX_CRED_CONNECTION_ID"), maria_sip_uri()
+        if (conn and to) or sim:
+            frm = os.environ.get("TELNYX_FROM_NUMBER") or st["from"]
+            r = await _safe(telnyx.dial({"connection_id": conn, "to": to, "from": frm, "client_state": _cs(sid=sid, role="maria"), "timeout_secs": 40}), "re-dial maria", sim)
+            st["maria_ccid"] = ((r or {}).get("data") or {}).get("call_control_id") or st.get("maria_ccid")
     emit("handoff.restored", sid, {"restore_deadline": st["restore_deadline"]})
     return True
 
@@ -272,16 +316,18 @@ async def _decoy_lost(sid):
     sim = st.get("sim", False)
     for k in ("caller_ccid", "maria_ccid"):
         if st.get(k): await _safe(telnyx.hangup(st[k]), "hangup after decoy end", sim)
-    emit("call.ended", sid, {"ended_by": "decoy", "duration_s": round(time.time() - st["t0"], 1)})
+    emit("call.ended", sid, {"ended_by": "decoy", "duration_s": round(time.time() - st["t0"], 1), **_legit(st)})
 
 def _on_bus(ev):
-    """Bus observer: user.action drives the Telnyx side. Sync callback -> schedule on the captured loop."""
+    """Bus observer (sync, any thread): user.action and risk.update drive the Telnyx side; work is scheduled on the captured loop."""
     try:
-        if ev["type"] != "user.action" or LOOP is None: return
-        sid, act = ev["call_id"], ev["data"].get("action")
-        if sid not in CALLS: return
-        if act == "scammer_get_scammed": asyncio.run_coroutine_threadsafe(handoff(sid), LOOP)
-        elif act == "hang_up": asyncio.run_coroutine_threadsafe(_maria_hangup(sid), LOOP)
+        if LOOP is None or ev["call_id"] not in CALLS: return
+        t, d, sid = ev["type"], ev["data"], ev["call_id"]
+        if t == "user.action":
+            if d.get("action") == "scammer_get_scammed": asyncio.run_coroutine_threadsafe(handoff(sid), LOOP)
+            elif d.get("action") == "hang_up": asyncio.run_coroutine_threadsafe(_maria_hangup(sid), LOOP)
+        elif t == "risk.update" and isinstance(d.get("s"), (int, float)):
+            LOOP.call_soon_threadsafe(_note_risk, sid, float(d["s"]))
     except Exception:
         log.exception("voip bus observer failed")
 

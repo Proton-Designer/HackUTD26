@@ -157,3 +157,50 @@ def test_maria_hangup_after_handoff_keeps_caller(monkeypatch, client):
     st = _state(); st.update(handed_off=True, maria_answered=True); R.CALLS["sess-1234567890"] = st
     client.post("/telnyx/webhook", content=wh("call.hangup", call_control_id="v3:sim_maria1234567"), headers={"x-sim-call": "1"})
     assert st["ended"] is False
+
+
+def _types(sid): return [e["type"] for e in bus.history if e["call_id"] == sid]
+
+def test_low_risk_restores_maria(monkeypatch):
+    fr = FakeRelay(); monkeypatch.setattr(R, "_hub_relay", lambda: fr); monkeypatch.setattr(R, "RESTORE_LOW_S", 1.0)
+    sid = "sess-r1-1234567"; R.CALLS[sid] = _state(); R.CALLS[sid]["maria_alive"] = True
+    async def go():
+        R.LOOP = asyncio.get_running_loop()
+        await R.handoff(sid)
+        bus.publish("risk.update", sid, {"s": 0.9}); await asyncio.sleep(0.1)    # still scammy: no low clock
+        bus.publish("risk.update", sid, {"s": 0.2}); await asyncio.sleep(0.3)
+        bus.publish("risk.update", sid, {"s": 0.3}); await asyncio.sleep(1.6)    # continuous low >= 1 s
+    asyncio.run(go())
+    assert "handoff.restored" in _types(sid) and ("stop_decoy", sid) in fr.calls and R.CALLS[sid]["restored"]
+
+def test_low_risk_interrupted_by_high_does_not_restore(monkeypatch):
+    fr = FakeRelay(); monkeypatch.setattr(R, "_hub_relay", lambda: fr); monkeypatch.setattr(R, "RESTORE_LOW_S", 1.0)
+    sid = "sess-r2-1234567"; R.CALLS[sid] = _state()
+    async def go():
+        R.LOOP = asyncio.get_running_loop(); await R.handoff(sid)
+        bus.publish("risk.update", sid, {"s": 0.2}); await asyncio.sleep(0.6)
+        bus.publish("risk.update", sid, {"s": 0.8}); await asyncio.sleep(1.5)    # reset
+    asyncio.run(go())
+    assert "handoff.restored" not in _types(sid)
+
+def test_no_restore_after_window_and_legit_flag(monkeypatch):
+    fr = FakeRelay(); monkeypatch.setattr(R, "_hub_relay", lambda: fr); monkeypatch.setattr(R, "RESTORE_LOW_S", 0.5)
+    sid = "sess-r3-1234567"; R.CALLS[sid] = _state(); R.CALLS[sid].update(handed_off=True, restore_deadline=time.time() - 1, low_since=time.time() - 5)
+    assert asyncio.run(R.restore(sid)) is False    # window closed
+    asyncio.run(R._decoy_lost(sid))
+    ev = [e for e in bus.history if e["call_id"] == sid][-1]
+    assert ev["type"] == "call.ended" and ev["data"]["ended_by"] == "decoy" and ev["data"]["legit"] is True
+
+def test_restore_redials_when_leg_gone(monkeypatch):
+    fr = FakeRelay(); monkeypatch.setattr(R, "_hub_relay", lambda: fr)
+    dialed = []
+    async def dial(body): dialed.append(body); return {"data": {"call_control_id": "v3:newmaria123456"}}
+    monkeypatch.setattr(telnyx, "dial", dial); monkeypatch.setenv("TELNYX_CRED_CONNECTION_ID", "c"); monkeypatch.setenv("TELNYX_SIP_USER", "u")
+    sid = "sess-r4-1234567"; R.CALLS[sid] = _state(sim=False); R.CALLS[sid].update(handed_off=True, maria_alive=False, restore_deadline=time.time() + 20)
+    assert asyncio.run(R.restore(sid)) is True
+    assert dialed and dialed[0]["to"] == "sip:u@sip.telnyx.com" and R.CALLS[sid]["maria_ccid"] == "v3:newmaria123456"
+
+
+def test_webrtc_token_no_loopback_exemption(monkeypatch, client):
+    monkeypatch.setenv("TELNYX_TELEPHONY_CREDENTIAL_ID", "x"); monkeypatch.delenv("HUB_TOKEN", raising=False)
+    assert client.get("/voip/webrtc-token").status_code == 401   # TestClient host is local-ish; still needs a credential
