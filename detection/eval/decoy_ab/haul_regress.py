@@ -20,8 +20,13 @@ async def main():
         arts = await core.extract(r["pre_lines"] + r["heard_lines"])
         na = normalize_artifacts(arts); hits = nessie.match_destinations(na)
         handles = [a["value"] for a in na if a["type"] == "payment_handle"]
-        hit = any(h["artifact"]["value"] == r["expect"] for h in hits); ok += hit; n += 1
-        print(f'{r["card"]:14s} hit={"yes" if hit else "NO "} handles={handles}', flush=True)
+        payee = "zelle:refunds.dept@backfire-demo.example"
+        if r["expect"]:   # positive: hit the payee and no stray handles
+            hit = any(h["artifact"]["value"] == r["expect"] for h in hits); strays = [h for h in handles if h != r["expect"]]; good = hit and not strays
+        else:             # negative: must NOT be canonicalised to the payee, no hit
+            hit = bool(hits) or payee in handles; strays = []; good = not hit
+        ok += good; n += 1
+        print(f'{r["card"]:18s} {"PASS" if good else "FAIL"} hit={"yes" if hit else "no "} strays={strays} handles={handles}', flush=True)
         await asyncio.sleep(2)
-    print(f"{ok}/{n} cases hit {r['expect']}")
+    print(f"{ok}/{n} cases pass (positives: hit + no strays; negatives: no payee hit)")
 asyncio.run(main())
