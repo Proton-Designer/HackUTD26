@@ -795,3 +795,15 @@ def test_sim_ringing_drops_media_until_answered_and_hello_waits(monkeypatch):
     with TestClient(app).websocket_connect(f"/media/{sid}?t=tok") as ws:
         ws.send_text(json.dumps({"event": "start"})); ws.send_text(frame); time.sleep(0.2)
     assert ("frame", "media") in fr.calls                                        # positive control: relayed once answered
+
+
+def test_F2_low_score_long_after_the_window_does_not_make_a_scam_call_legit(monkeypatch):
+    monkeypatch.setattr(R, "RESTORE_LOW_S", 0.5); fr = FakeRelay(); monkeypatch.setattr(R, "_hub_relay", lambda: fr)
+    sid = "sess-F2-late-1234567"; st = _state(); st.update(handed_off=True, restore_deadline=time.time() - 60); R.CALLS[sid] = st   # window closed a minute ago
+    R._note_risk(sid, 0.05); assert st.get("low_since") is None                      # a late low score starts no clock
+    st["low_since"] = time.time() - 5                                                   # (even if one slipped in) it was not held inside the window
+    assert R._legit(st) == {}
+    asyncio.run(R._decoy_lost(sid))
+    ev = [e for e in bus.history if e["call_id"] == sid][-1]
+    assert ev["type"] == "call.ended" and "legit" not in ev["data"]
+    st2 = _state(); st2.update(handed_off=True, restored=True); assert R._legit(st2) == {"legit": True}   # a real restore still counts

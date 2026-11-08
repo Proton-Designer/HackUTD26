@@ -579,9 +579,12 @@ async def _restore_expiry(sid, deadline):
         await _safe(telnyx.hangup(st["maria_ccid"]), "hangup maria after restore window", st.get("sim", False))
 
 def _legit(st) -> dict:
-    """Additive call.ended flag: after a handoff, the caller looked legitimate (risk low for RESTORE_LOW_S) -> hub must NOT blocklist."""
+    """Additive call.ended flag: the caller looked legitimate -> hub must NOT blocklist. Only counts if the low-risk hold was completed INSIDE the
+    restore window (or a restore actually happened); a long-after-the-window low score on a scam call must not cancel its block (REVIEW F2)."""
+    if not st.get("handed_off"): return {}
+    if st.get("restored"): return {"legit": True}
     ls = st.get("low_since")
-    return {"legit": True} if st.get("handed_off") and ls and time.time() - ls >= RESTORE_LOW_S else {}
+    return {"legit": True} if ls and ls + RESTORE_LOW_S <= st.get("restore_deadline", 0) and time.time() - ls >= RESTORE_LOW_S else {}
 
 def _note_risk(sid, score):
     """Runs on the loop. Remembers the last real (non-fallback) risk score at all times; after handoff it tracks continuous low risk."""
@@ -590,7 +593,7 @@ def _note_risk(sid, score):
     st["last_risk"] = (score, time.time())
     if not st.get("handed_off") or st.get("restored"): return
     if score < RESTORE_BELOW:
-        if st.get("low_since") is None: st["low_since"] = time.time()
+        if st.get("low_since") is None and time.time() <= st.get("restore_deadline", 0): st["low_since"] = time.time()   # no new low clock after the window closed (F2)
     else:
         st["low_since"] = None
 
