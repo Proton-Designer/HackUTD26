@@ -20,7 +20,7 @@
       try { localStorage.setItem("bf.device", j.device_token); } catch (e) {}
       location.reload();                                              // restart cleanly with the token (voip token fetch too)
     } catch (e) {
-      $("pairMsg").textContent = String(e.message) === "429" ? "Too many tries. Wait a minute." : "That code did not work. Check the demo screen.";
+      $("pairMsg").textContent = String(e.message) === "429" ? "Too many tries. Wait a minute." : "That code did not work. Check it with the Backfire team.";
       $("pairBtn").disabled = false;
     }
   }

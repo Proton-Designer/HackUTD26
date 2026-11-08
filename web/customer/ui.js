@@ -188,7 +188,7 @@
       toDns("Your voice is set up" + (HUB ? "" : " (simulated)") + (quality === "ok" ? " (recording quality: good)" : "") + ". Backfire is on. It keeps only a short voice sample, used only if you press Fire Back. You can delete it any time in Protection.");
     } catch (e) {
       console.log("[backfire] enroll failed", String(e)); done();
-      $("recStatus").textContent = /\b401\b/.test(String(e)) ? "Please pair this phone first, then try again." : "Your voice wasn't saved. Press Save to try again, or skip to use a synthetic voice.";   // handled errors stay out of Maria's face; BF.onUnauthorized shows the pair screen itself
+      $("recStatus").textContent = /\b401\b/.test(String(e)) ? "Please connect this phone to Backfire first, then try again." : "Your voice wasn't saved. Press Save to try again, or skip to use a synthetic voice.";   // handled errors stay out of Maria's face; BF.onUnauthorized shows the pair screen itself
     }
   }
   $("recSave").onclick = () => { if (blob) enroll(blob); };

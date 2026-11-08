@@ -8,7 +8,7 @@ Files: `index.html` markup, `style.css` look, `app.js` call screen + events, `ui
 
 | # | Screen | Triggered by | Edit |
 |---|---|---|---|
-| 01 | Pair this phone | hub answers 401 (no device token) | `index.html #pairView`, `pair.js`, `style.css #pairView` |
+| 01 | Connect this phone to Backfire (pairing) | hub answers 401 (no device token) | `index.html #pairView`, `pair.js`, `style.css #pairView` |
 | 02 | Onboarding 1: Turn on Backfire | first launch after pairing | `index.html #step1`, `ui.js` (setup) |
 | 03 | Onboarding 2: voice consent (I agree / Skip, use a synthetic voice) | Turn on, or Protection > Set up my voice | `index.html #step2`, `ui.js` |
 | 04 | Onboarding 3: read-aloud, idle | I agree | `index.html #stepRec`, `ui.js` (PARAS, newParagraph) |
