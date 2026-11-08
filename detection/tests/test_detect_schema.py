@@ -17,3 +17,8 @@ def test_bands():
 def test_negative_chips_filtered():
     out = schema.normalize({"s": 0.1, "why_chips": ["No pin ask", "Not urgent", "Never asks for codes", "Urgent threat", "No"]})
     assert out["why_chips"] == ["Urgent threat"]
+
+
+def test_prompt_has_explicit_ask_guidance():
+    from detection.prompt import SYSTEM_PROMPT
+    assert "EXPLICIT ASK" in SYSTEM_PROMPT and "social security" in SYSTEM_PROMPT
