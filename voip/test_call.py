@@ -102,8 +102,13 @@ def main():
     ap.add_argument("--port", type=int, default=8799, help="spare local port for the audio server (never 8000)")
     ap.add_argument("--time-limit", type=int, default=0, help="time_limit_secs (default: audio length + 15)")
     ap.add_argument("--keep", action="store_true", help="keep generated audio")
+    ap.add_argument("--wav-out", help="only write the script audio as an 8 kHz mono 16-bit WAV to this path (e.g. logs/sim_scam.wav) and exit; no call")
     a = ap.parse_args()
     if a.port == 8000: sys.exit("refusing port 8000 (the hub)")
+    if a.wav_out:
+        w = tempfile.mkdtemp(prefix="bf_wav_"); mp3 = make_audio(a.script, w)
+        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(mp3), "-ar", "8000", "-ac", "1", "-c:a", "pcm_s16le", a.wav_out], check=True)
+        shutil.rmtree(w, ignore_errors=True); print(f"wrote {a.wav_out} ({duration_s(a.wav_out):.0f} s, script={a.script}, synthetic voice)"); return
     live = a.live and not a.dry_run
     work = tempfile.mkdtemp(prefix=f"bf_testcall_{a.script}_")
     mp3 = make_audio(a.script, work); dur = duration_s(mp3); limit = a.time_limit or int(dur) + 15
