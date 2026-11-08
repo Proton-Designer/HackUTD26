@@ -14,7 +14,7 @@ def _track(ev):
     if not cid: return
     c = CALLS.get(cid)
     if t == "call.incoming":
-        CALLS[cid] = {"from": d.get("from", ""), "t0": ev["ts"], "answered": False, "handoff": "none", "ended": False, "blocked": False}
+        CALLS[cid] = {"from": d.get("from", ""), "t0": ev["ts"], "answered": False, "handoff": "none", "ended": False, "blocked": False, "decision": None}
         for k in list(CALLS)[:-CALLS_MAX]:
             CALLS.pop(k, None)
     elif c is None:
@@ -23,7 +23,9 @@ def _track(ev):
     elif t == "handoff.started": c["handoff"] = "started"
     elif t == "handoff.restored": c["handoff"] = "restored"
     elif t == "call.ended": c["ended"] = True
-    elif t == "call.routed" and d.get("decision") == "BLOCKED_BACKFIRE": c["blocked"] = True
+    elif t == "call.routed":
+        c["decision"] = d.get("decision")
+        if d.get("decision") == "BLOCKED_BACKFIRE": c["blocked"] = True
 
 def make_event(type_, call_id, data=None, ts=None):
     return {"type": type_, "call_id": call_id, "ts": ts if ts is not None else time.time(), "data": data or {}}

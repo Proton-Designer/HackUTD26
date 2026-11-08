@@ -61,7 +61,7 @@ def test_p3_crash_and_p2_down_fail_open(monkeypatch):
         await asyncio.sleep(0.3)
         assert lost == ["c2"] and relay.stats("c2")["decoy_active"] is False
         await relay.close("c2"); s3.close()
-        monkeypatch.setenv("P3_DECOY_URL", "ws://127.0.0.1:1")
+        monkeypatch.setenv("P3_DECOY_URL", "ws://127.0.0.1:1"); monkeypatch.setenv("HUB_PORT", "1")   # P3 AND the stand-in fallback unreachable
         await relay.open("c3", to_caller); assert await relay.start_decoy("c3") is False; await relay.close("c3")
         await relay.caller_frame("nope", fr(1))  # unknown call: no raise
     run(go())
@@ -437,3 +437,49 @@ def test_f9_p2_tunnel_url_file_overrides_env_per_call(monkeypatch, tmp_path):
         f.write_text(bad); assert relay._url("P2_STT_URL", "/stt/x") == "ws://127.0.0.1:1/stt/x", bad                                     # invalid: ignored, env wins
     from server import ops
     f.write_text("https://ghi.trycloudflare.com"); assert ops._remote_base("P2_BASE") == "https://ghi.trycloudflare.com/healthz"
+
+
+def test_f3_start_decoy_falls_back_to_standin_when_p3_unreachable(monkeypatch):
+    async def go():
+        seen = []
+        async def hs(ws):
+            seen.append(ws.request.path if hasattr(ws, "request") else "?")
+            async for m in ws: pass
+        s, port = await _server(hs)
+        monkeypatch.setenv("P3_DECOY_URL", "ws://127.0.0.1:1"); monkeypatch.setenv("HUB_PORT", str(port)); monkeypatch.delenv("DECOY_STANDIN", raising=False)
+        async def back(f): pass
+        await relay.open("F3c", back)
+        assert await relay.start_decoy("F3c") is True                      # P3 dead -> built-in persona stand-in took it
+        assert relay.stats("F3c")["decoy_active"] is True and any("/decoy-standin/F3c" in p for p in seen)
+        await relay.close("F3c"); s.close()
+    run(go())
+
+
+def test_f7_normal_routed_call_skips_p2_but_still_fans_to_listeners(monkeypatch):
+    from server import bus
+    bus.publish("call.incoming", "F7n", {"from": "+15555550188", "to": "+15555550100", "attestation": "A", "scam_id_score": 0.1})
+    bus.publish("call.routed", "F7n", {"decision": "NORMAL", "reason": "trusted"})
+    bus.publish("call.incoming", "F7g", {"from": "+15555550123", "to": "+15555550100", "attestation": "C", "scam_id_score": 0.8})
+    bus.publish("call.routed", "F7g", {"decision": "LIVE_GUARD", "reason": "x"})
+    c = TestClient(app, base_url="http://127.0.0.1:8000", client=("127.0.0.1", 5000))
+    async def go():
+        p2 = []; hooked = []
+        async def h2(ws):
+            async for m in ws: p2.append(json.loads(m))
+        s2, port2 = await _server(h2)
+        monkeypatch.setenv("P2_STT_URL", f"ws://127.0.0.1:{port2}"); monkeypatch.delenv("PIPELINE_TOKEN", raising=False)
+        monkeypatch.setattr(relay, "feed_audio_hook", lambda cid, fr_: hooked.append(cid))
+        async def back(f): pass
+        for cid in ("F7n", "F7g"):
+            await relay.open(cid, back)
+        q = asyncio.Queue(100); relay._LQ.setdefault("F7n", set()).add(q)
+        for i in range(1, 6):
+            await relay.caller_frame("F7n", fr(i)); await relay.caller_frame("F7g", fr(i))
+        await asyncio.sleep(0.3)
+        assert q.qsize() == 5                                              # NORMAL call still reaches /listen
+        assert set(hooked) == {"F7g"}                                      # fallback detector hook only for the guarded call
+        for cid in ("F7n", "F7g"): await relay.close(cid)
+        s2.close()
+        return p2
+    p2 = run(go())
+    assert sum(1 for m in p2 if m.get("event") == "media") == 5          # P2 saw only the LIVE_GUARD call's media

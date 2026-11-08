@@ -12,7 +12,7 @@ app = FastAPI(title="Backfire hub (Simulated carrier network)")
 app.add_middleware(CORSMiddleware, allow_origins=os.environ.get("HUB_CORS_ORIGINS", "*").split(","), allow_methods=["*"], allow_headers=["*"])
 HUB_TOKEN = os.environ.get("HUB_TOKEN")  # when set, service endpoints require header x-hub-token
 # Events only the hub/voip may emit (via bus.publish in-process); rejected on POST /events.
-RESERVED = {"call.incoming", "call.routed", "call.answered", "call.ended", "user.action", "handoff.started", "handoff.restored"}
+RESERVED = {"call.incoming", "call.routed", "call.answered", "call.ended", "user.action", "handoff.started", "handoff.restored", "handoff.failed"}
 
 def _auth(token):
     if HUB_TOKEN and token != HUB_TOKEN:

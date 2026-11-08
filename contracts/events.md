@@ -32,6 +32,7 @@ Every event is JSON on the P1 event bus and `WS /events`:
 | `user.action` | P1 | `action` enum |
 | `handoff.started` | P1 | `restore_deadline` float (unix s, 30 s after start) |
 | `handoff.restored` | P1 | `restore_deadline` float |
+| `handoff.failed` | P1 (voip) | `reason` str (`decoy_unavailable`: the tap could not start any decoy; the customer keeps the call; UI shows "decoy unavailable"). Hub-only: `POST /events` returns 403 |
 | `decoy.turn` | P3 | `speaker` "scammer" or "decoy", `text` str, `latency_ms` int |
 | `decoy.fake_value` | P3 | `kind` str (e.g. gift_card_code, card_number), `value` str (synthetic canary) |
 | `guardrail.tripped` | P3 | `rule` str |

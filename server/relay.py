@@ -125,6 +125,14 @@ async def open(call_id, send_to_caller, on_decoy_lost=None):
     except Exception:
         log.exception("relay.open failed")
 
+def _routed_normal(call_id) -> bool:
+    try:
+        from . import bus
+        c = bus.CALLS.get(call_id)
+        return bool(c and c.get("decision") == "NORMAL")
+    except Exception:
+        return False
+
 async def caller_frame(call_id, frame):
     try:
         s = _S.get(call_id)
@@ -142,10 +150,11 @@ async def caller_frame(call_id, frame):
                 s.stream_id = frame.get("stream_id") or (frame.get("start") or {}).get("stream_id")
         if ev == "media":
             _fan(call_id, "caller", frame)
-        if feed_audio_hook:
+        normal = _routed_normal(call_id)   # F7: trusted (+A) / fail-open NORMAL calls are streamed for /listen but never scored or sent to P2
+        if feed_audio_hook and not normal:
             try: feed_audio_hook(call_id, frame)
             except Exception: log.exception("feed_audio_hook failed")
-        if os.environ.get("P2_STT_URL") or os.environ.get("P2_BASE"):
+        if not normal and (os.environ.get("P2_STT_URL") or os.environ.get("P2_BASE") or p2_tunnel_origin()):
             _put(s.p2_q, frame, s)
         if s.decoy_active and ev in ("media", "stop"):
             if ev == "media":
@@ -214,9 +223,15 @@ async def start_decoy(call_id):
     import websockets
     port = os.environ.get("HUB_PORT", "8000")
     _kind = "echo" if os.environ.get("DECOY_STANDIN", "persona").strip().lower() == "echo" else "standin"
-    url = _url("P3_DECOY_URL", f"/decoy/{call_id}", f"ws://127.0.0.1:{port}/decoy-{_kind}/{call_id}")
+    standin = f"ws://127.0.0.1:{port}/decoy-{_kind}/{call_id}"
+    url = _url("P3_DECOY_URL", f"/decoy/{call_id}", standin)
     try:
-        ws = await asyncio.wait_for(websockets.connect(url), 3)
+        try:
+            ws = await asyncio.wait_for(websockets.connect(url), 3)
+        except Exception as e:
+            if url == standin: raise
+            log.warning("P3 decoy connect failed (%s); falling back to the built-in stand-in persona", type(e).__name__)   # F3: the tap still gives the caller a decoy
+            ws = await asyncio.wait_for(websockets.connect(standin), 3)
         sid = s.stream_id or "relay-" + call_id
         await ws.send(json.dumps({"event": "connected", "protocol": "Call", "version": "1.0.0"}))
         await ws.send(json.dumps({"event": "start", "sequence_number": "1", "stream_id": sid,

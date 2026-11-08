@@ -776,3 +776,9 @@ def test_f17_events_redaction_for_remote_unpaired_viewers(monkeypatch):
     from server.main import redact_event
     r = redact_event({"type": "intel.agent", "call_id": "x", "ts": 1, "data": {"plan": ["call +1 (555) 555-0123 now"], "n": {"k": "+15555550123"}}})
     assert "555-0123" not in str(r) and "5550123" not in str(r)
+
+
+def test_handoff_failed_is_hub_only_type(monkeypatch):
+    monkeypatch.delenv("PIPELINE_TOKEN", raising=False)
+    assert TestClient(app).post("/events", json={"type": "handoff.failed", "call_id": "x", "data": {"reason": "decoy_unavailable"}}).status_code == 403
+    assert bus.publish("handoff.failed", "x", {"reason": "decoy_unavailable"})["type"] == "handoff.failed"
