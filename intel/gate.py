@@ -99,6 +99,10 @@ def camara_payload(kind: str, target: str) -> dict:
     }.get(kind)
 
 
+# contracts/events.md intel.action.status: applied | queued | approved (+ denied, held proposed to P1).
+CONTRACT_STATUS = {"auto": "applied", "queued": "queued", "denied": "denied", "not_actioned": "denied", "held": "held"}
+
+
 def apply(decisions: list[dict], store, call_id: str, ctx: Context, emit=default_emit) -> list[dict]:
     results = []
     for d in decisions:
@@ -131,7 +135,7 @@ def apply(decisions: list[dict], store, call_id: str, ctx: Context, emit=default
         elif outcome in ("denied", "not_actioned"):
             status = "denied" if outcome == "denied" else "not_actioned: attempted_poisoning"
             store.add_denied(call_id, kind, str(tgt), d["reason"])
-            emit("injection.denied", call_id, {"kind": kind, "target": tgt, "reason": d["reason"],
+            emit("injection.denied", call_id, {"attempted_target": str(tgt), "kind": kind, "target": tgt, "reason": d["reason"],
                                                "source": d["proposal"].get("target_source"),
                                                "attempted_poisoning": outcome == "not_actioned"})
         elif outcome == "held":
@@ -140,7 +144,8 @@ def apply(decisions: list[dict], store, call_id: str, ctx: Context, emit=default
             store.add_action({"id": aid, "call_id": call_id, "campaign_id": ctx.campaign_id, "kind": kind,
                               "scope": d["scope"], "target": tgt, "status": status, "approval": "auto rule",
                               "simulated": simulated, "evidence": evidence, "payload": None})
-        ev = {"action_id": aid, "kind": kind, "target": tgt, "scope": d["scope"], "status": status,
+        ev = {"action_id": aid, "kind": kind, "target": tgt, "scope": d["scope"], "status": CONTRACT_STATUS[outcome],
+              "gate_status": status,
               "approval": "auto rule" if outcome == "auto" else ("analyst" if outcome == "queued" else None),
               "simulated": simulated, "reason": d["reason"], "evidence": evidence}
         emit("intel.action", call_id, ev)
@@ -161,6 +166,7 @@ def approve(store, action_id: str, emit=default_emit) -> dict:
                                                  "reason": "Network-wide block (analyst approved, simulated)"})
     a = store.get_action(action_id)
     emit("intel.action", a["call_id"], {"action_id": action_id, "kind": a["kind"], "target": a["target"],
-                                        "scope": a["scope"], "status": "simulated: applied", "approval": "analyst",
+                                        "scope": a["scope"], "status": "approved", "gate_status": "simulated: applied",
+                                        "approval": "analyst",
                                         "simulated": True, "payload": a["payload"]})
     return a

@@ -31,7 +31,7 @@ def normalize_artifacts(artifacts) -> list[dict]:
     else:
         items = list(artifacts or [])
     for a in items:
-        t = a.get("type")
+        t = a.get("type") or a.get("kind")  # contract items are {"kind": K, ...}
         if t == "script_tags":
             vals = a.get("value")
             for tag in (vals if isinstance(vals, list) else [vals]):
@@ -64,6 +64,16 @@ def key(a: dict) -> str:
 def _jaccard(a, b) -> float:
     a, b = set(a), set(b)
     return len(a & b) / len(a | b) if a | b else 0.0
+
+
+def _campaign_lists(store, cid: str) -> dict:
+    rows = store.q("SELECT type, value, strong FROM indicators WHERE campaign_id=?", cid)
+    numbers = sorted({r["value"] for r in rows if r["type"] == "calling_number"})
+    strong = [r for r in rows if r["strong"]]
+    return {"indicators": [f'{r["type"]}:{r["value"]}' for r in strong],  # contract: list[str], strong only
+            "numbers": numbers,                                          # contract: list[str]
+            "n_indicators": len(rows), "calling_numbers": len(numbers),
+            "strong_indicators": sorted({r["type"] for r in strong}), "immunity": store.immunity()}
 
 
 def link_sighting(store, call_id: str, artifacts, calling_number: str | None = None, carrier: str | None = None,
@@ -118,7 +128,7 @@ def link_sighting(store, call_id: str, artifacts, calling_number: str | None = N
             status, now, org, cid)
     info = {"campaign_id": cid, "status": status, "new": new, "linked_via": via, "sightings": len(sights),
             "independent_sightings": independent, "poisoning_attempt_seen": bool(conflict),
-            "indicators": len(store.q("SELECT 1 FROM indicators WHERE campaign_id=?", cid))}
+            **_campaign_lists(store, cid)}
     emit("campaign.updated", call_id, info)
     return info
 

@@ -42,7 +42,8 @@ def ingest(body: Ingest):
 @router.post("/actions/{action_id}/approve")
 def approve(action_id: str):
     try:
-        return gate.approve(_store(), action_id, emit=_cfg["emit"])
+        a = gate.approve(_store(), action_id, emit=_cfg["emit"])
+        return {"ok": True, "status": "approved" if a["status"] == "simulated: applied" else a["status"], "action": a}
     except KeyError:
         raise HTTPException(404, "unknown action")
 
@@ -67,3 +68,75 @@ def blocked(number: str):
 @router.get("/state")
 def state():
     return _store().state()
+
+
+# ---- In-process seam for P1's hub (no HTTP hop): bus.add_observer(intel.api.observe) ----
+import logging
+import os
+import threading
+
+log = logging.getLogger("intel")
+GRACE_S = float(os.getenv("INTEL_EXTRACT_GRACE", "20"))  # wait this long after a decoy call ends for artifacts
+_calls: dict = {}          # call_id -> {"from", "attestation", "decoy", "ingested"}
+_calls_lock = threading.Lock()
+
+
+def _run_bg(call_id: str, artifacts) -> None:
+    with _calls_lock:
+        c = _calls.setdefault(call_id, {})
+        if c.get("ingested"):
+            return
+        c["ingested"] = True
+
+    def work():
+        try:
+            agent.run(call_id, artifacts, _store(), calling_number=c.get("from"), attestation=c.get("attestation"),
+                      carrier=c.get("carrier"), llm=_cfg["llm"], tools=_cfg["tools"], emit=_cfg["emit"],
+                      use_llm=_cfg["use_llm"])
+        except Exception:  # fail open: intel never breaks the call path
+            log.exception("intel run failed for %s", call_id)
+    threading.Thread(target=work, name=f"intel-{call_id}", daemon=True).start()
+
+
+def observe(ev: dict) -> None:
+    """Bus observer. Never raises, never blocks (the agent runs on a background thread, ~5 s with Nemotron).
+    - call.incoming: remember the network calling number + attestation (trusted metadata).
+    - handoff.started / call.answered by decoy: mark it a decoy call.
+    - artifacts.extracted (P3): run the intel chain on the typed artifacts (scammer_transcript is never read).
+    - call.ended on a decoy call: if no artifacts arrive within INTEL_EXTRACT_GRACE s, run with none, which still
+      blocks the caller for her (replaces P1's call.ended blocklist stub)."""
+    try:
+        t, cid, d = ev.get("type"), ev.get("call_id"), ev.get("data") or {}
+        if not cid:
+            return
+        if t == "call.incoming":
+            with _calls_lock:
+                _calls[cid] = {"from": d.get("from"), "attestation": d.get("attestation"), "carrier": d.get("carrier")}
+        elif t == "handoff.started" or (t == "call.answered" and d.get("by") == "decoy"):
+            with _calls_lock:
+                _calls.setdefault(cid, {})["decoy"] = True
+        elif t == "handoff.restored":
+            with _calls_lock:
+                _calls.setdefault(cid, {})["decoy"] = False
+        elif t == "artifacts.extracted":
+            _run_bg(cid, d.get("artifacts") or [])
+        elif t == "call.ended" and _calls.get(cid, {}).get("decoy"):
+            threading.Timer(GRACE_S, _run_bg, args=(cid, [])).start()
+    except Exception:
+        log.exception("intel observe failed")
+
+
+def protection_entries(scope: str = "her") -> list[dict]:
+    """Rows for P1's GET /protection-log 'blocked' list: {number, reason, ts, undo_token}, newest first."""
+    rows = _store().q("SELECT number, reason, created, undo_token FROM blocklist WHERE active=1 AND scope=? "
+                      "ORDER BY created DESC LIMIT 50", scope)
+    return [{"number": r["number"], "reason": r["reason"], "ts": r["created"], "undo_token": r["undo_token"]} for r in rows]
+
+
+def undo_block(undo_token: str) -> bool:
+    """In-process undo for P1's POST /protection-log/undo. Emits blocklist.updated with active=false."""
+    row = _store().undo(undo_token)
+    if row:
+        _cfg["emit"]("blocklist.updated", None, {"number": row["number"], "scope": row["scope"],
+                                                 "undo_token": undo_token, "active": False, "reason": "undone by customer"})
+    return bool(row)

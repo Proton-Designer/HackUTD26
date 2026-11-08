@@ -12,6 +12,7 @@ import os
 import re
 
 import httpx
+from pathlib import Path
 
 from . import gate, lookups as L
 from .campaigns import key, link_sighting, normalize_artifacts
@@ -35,8 +36,23 @@ Reply with JSON only: {"plan": "<one sentence>", "actions": [{"kind": "...", "ta
 "target_source": "network:calling_number|artifact:<type>|campaign", "evidence": ["..."], "rationale": "..."}]}"""
 
 
+def _api_key() -> str | None:
+    """Env first; else the repo-root .env (P1's hub doesn't load it). Value is never logged."""
+    if os.getenv("NVIDIA_API_KEY"):
+        return os.getenv("NVIDIA_API_KEY")
+    try:
+        env = Path(__file__).resolve().parent.parent / ".env"
+        for line in env.read_text().splitlines():
+            k, _, v = line.strip().partition("=")
+            if k.removeprefix("export ").strip() == "NVIDIA_API_KEY" and v.strip():
+                return v.strip().strip('"').strip("'")
+    except OSError:
+        pass
+    return None
+
+
 def call_nemotron(messages: list[dict], client: httpx.Client | None = None) -> str:
-    key_ = os.getenv("NVIDIA_API_KEY")
+    key_ = _api_key()
     if not key_:
         raise RuntimeError("NVIDIA_API_KEY not set")
     c = client or httpx.Client(timeout=float(os.getenv("INTEL_LLM_TIMEOUT", "40")))

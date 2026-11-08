@@ -82,6 +82,13 @@ def parse_rdap(domain: str, j: dict) -> dict:
             "source": "rdap.org (public RDAP)", "simulated": False}
 
 
+def _emit_lookup(call_id, res: dict) -> None:
+    """Contract fields (artifact_kind, value, result, source) + the flat fields the command center already reads."""
+    res.setdefault("artifact_kind", res.get("value_type") or res.get("kind"))
+    res["result"] = {k: v for k, v in res.items() if k not in ("artifact_kind", "result")}
+    emit("intel.lookup", call_id, res)
+
+
 def lookup_domain(raw: str, call_id: str | None = None, client: httpx.Client | None = None) -> dict:
     domain = norm_domain(raw)
     c = client or httpx.Client(timeout=TIMEOUT, headers=UA, follow_redirects=True)
@@ -96,7 +103,7 @@ def lookup_domain(raw: str, call_id: str | None = None, client: httpx.Client | N
             res = parse_rdap(domain, r.json())
     except Exception as e:
         res = _unavailable("domain", domain, type(e).__name__)
-    emit("intel.lookup", call_id, res)
+    _emit_lookup(call_id, res)
     return res
 
 
@@ -140,7 +147,7 @@ def lookup_wallet(raw: str, call_id: str | None = None, client: httpx.Client | N
                    "reason": "not a valid BTC or ETH address", "source": None, "simulated": False}
     except Exception as e:
         res = _unavailable("wallet", addr, type(e).__name__)
-    emit("intel.lookup", call_id, res)
+    _emit_lookup(call_id, res)
     return res
 
 
@@ -166,7 +173,7 @@ def check_allowlist(raw: str, call_id: str | None = None) -> dict:
            "status": "ok", "match": hit is not None, "matched_org": hit,
            "note": "verified business: never actioned; if given by a scammer, flag attempted poisoning" if hit else None,
            "source": "intel/allowlist.json (seed data, published contact info)", "simulated": False}
-    emit("intel.lookup", call_id, res)
+    _emit_lookup(call_id, res)
     return res
 
 

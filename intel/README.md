@@ -13,9 +13,19 @@ End-to-end demo:
     python -m intel.demo_run           # offline: fixture lookups + mock Nemotron
     python -m intel.demo_run --live    # real lookups + real Nemotron 3 Super (needs NVIDIA_API_KEY)
 
-Mount in P1's FastAPI app:
+Mount in P1's hub (server/main.py), 3 lines:
     from intel import api as intel_api
-    app.include_router(intel_api.router)
-    intel_api.configure(emit=publish)   # publish(type, call_id, data) -> event bus
+    app.include_router(intel_api.router)                       # replaces the /intel/ingest stub
+    intel_api.configure(emit=bus.publish); bus.add_observer(intel_api.observe)
+
+`observe` runs the chain on `artifacts.extracted` in a background thread (calling number + attestation come from
+`call.incoming`). If a decoy call ends and no artifacts arrive within INTEL_EXTRACT_GRACE (20 s), it still blocks the
+caller for her. Routing: `intel.store.is_blocked(number) -> (bool, reason)`. Protection log:
+`intel_api.protection_entries()` / `intel_api.undo_block(token)`. Key: NVIDIA_API_KEY from env or repo-root .env.
+Model: INTEL_MODEL (default nvidia/nemotron-3.5-super-vl-120b-a12b).
 
 Endpoints: POST /intel/ingest · POST /intel/actions/{id}/approve · POST /intel/blocklist/{undo_token}/undo · GET /intel/blocked?number= · GET /intel/state
+
+Events: superset of contracts/events.md (required fields present; extras such as gate_status, n_baseline_added are
+ignorable). intel.action.status is applied|queued|approved, plus denied|held (proposed to P1). Extra P4 trace events:
+intel.plan, intel.agent, intel.proposals.
