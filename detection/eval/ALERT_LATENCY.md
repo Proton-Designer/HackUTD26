@@ -1,5 +1,5 @@
 # Alert latency breakdown (TASK-075, 2026-11-08 ~06:00 CT)
-Replay of the real PSTN dumps adad65a0 and 499a20d2 through a private P2 (HEAD ce5d515, engine local, no hub). Times are audio seconds (replay is real-time). Word times from faster-whisper base.en on the dump (±0.2 s). n=2 calls.
+Replay of the real PSTN dumps adad65a0 and 499a20d2 through a private P2 (HEAD ce5d515, engine local, no hub). Times are audio seconds (replay is real-time). Word times from faster-whisper base.en on the dump (±0.2 s). n=2 calls in this first table; n=5 with the extension below.
 
 | stage | adad65a0 | 499a20d2 |
 |---|---|---|

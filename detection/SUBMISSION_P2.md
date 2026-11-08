@@ -14,7 +14,7 @@ How well it works, honestly: on 60 team-written synthetic test scripts the model
 | Held-out set, keyword baseline | 8 of 20, 6 of 20 | 40 | |
 | If both models fail (rules only) | 26 of 33 test, 10 of 20 held-out | 53 | A floor, not a detector |
 | Look-alike legit calls (bank, doctor, grandchild) | rules 0 of 25, model 1 of 25 | 25 | Fixed 2 rows after seeing them |
-| Phone-quality audio | 28 of 28 scams alerted, 9 of 9 benign quiet | 37 | Synthetic voice and channel |
+| Phone-quality audio | 28 of 28 scams alerted, 9 of 9 benign quiet (30/30 on the 06:3x freeze re-run with all 3 variants) | 37 | Synthetic voice and channel |
 | Real phone calls, scam scripts read by teammates | alerted on **5 of 6**; the 1 miss was upstream (our own audio mute: the detector heard digital silence). Alert 12-18 s into the call | 6 | Team actors, known script; not strangers |
 | Time from the scammer's key words to the alert (real calls) | **0.3-3.1 s**, median ~2.7 s (rules 0.3-1 s, local model 2.7-3.1 s) | 5 | Word times from Whisper, +-0.5 s |
 | Real phone calls, benign/chatter | **7 of 7** quiet, 0 false alerts | 7 | Teammates chatting; small n |

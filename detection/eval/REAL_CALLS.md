@@ -2,6 +2,8 @@
 
 Aggregate numbers only. Audio dumps (`logs/audio/`) and transcripts stay local and are gitignored. Source: `logs/p2.log`, summarized with `detection/scripts/call_report.py`. Times are in seconds from the first audio frame. Updated 03:40 CT, 2026-11-08.
 
+**Current tally (read this first; sections below are dated):** 13 real calls, 6 scripted scams by team actors (5 alerted; the 1 miss, 6352e850, was our own audio mute upstream) and 7 benign/chatter calls (all quiet). Key-words-to-alert timing is n=5 (0.3-3.1 s, median ~2.7 s, see `ALERT_LATENCY.md`). Per-section "n=1/n=3" caveats below refer to that section only.
+
 | call | time | length | utterances / finals logged | STT after endpoint p50 / max | engine per window | failovers / rules fallbacks | first risk >= thr | alert | final band | truth |
 |---|---|---|---|---|---|---|---|---|---|---|
 | 7420a294 | 02:15 | 22 s | 0 / 0 | n/a | none (no speech reached STT) | 0 / 0 | n/a | no | n/a | benign test |
