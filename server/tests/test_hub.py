@@ -636,3 +636,20 @@ def test_device_cannot_poison_alert_dedupe(monkeypatch):
     real = anon.post("/events", json={"type": "alert.fired", "call_id": "DV4", "data": {"level": "first", "why_chips": ["x"]}},
                      headers={"x-pipeline-token": "pt-secret"})
     assert real.json() == {"ok": True} and any(e["type"] == "alert.fired" and e["call_id"] == "DV4" for e in bus.history)
+
+
+def test_pwa_static_headers_and_types():
+    c = TestClient(app)
+    m = c.get("/app/manifest.webmanifest")
+    assert m.status_code == 200 and m.headers["content-type"].startswith("application/manifest+json") and m.headers["cache-control"] == "no-cache"
+    icons = [i for i in m.json()["icons"]]
+    assert icons
+    for i in icons:                                                                   # every manifest icon exists, served with its declared type
+        r = c.get("/app/" + i["src"])
+        assert r.status_code == 200 and r.headers["content-type"] == i["type"] == "image/png", i["src"]
+        assert "max-age" in r.headers["cache-control"] and "no-cache" not in r.headers["cache-control"]
+    for path in ("/app/", "/app/index.html", "/app/app.js", "/app/style.css", "/app/ui.js"):
+        r = c.get(path)
+        assert r.status_code == 200 and r.headers["cache-control"] == "no-cache", path
+    assert c.get("/app/assets/apple-touch-icon.png").headers["content-type"] == "image/png"
+    assert c.get("/app/nope.js").status_code == 404

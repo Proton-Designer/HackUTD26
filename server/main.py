@@ -359,7 +359,20 @@ def root(request: Request):
 # Maria's app, same-origin with the hub (phone via tunnel). Mounted last so API routes win.
 _WEB = pathlib.Path(__file__).resolve().parent.parent / "web" / "customer"
 if _WEB.is_dir():
-    app.mount("/app", StaticFiles(directory=str(_WEB), html=True), name="customer-app")
+    class _AppFiles(StaticFiles):
+        """PWA delivery: pages/scripts/styles/manifest must revalidate on every load (a reload picks up a new build); images/icons may be cached."""
+        async def get_response(self, path, scope):
+            r = await super().get_response(path, scope)
+            if r.status_code in (200, 304):
+                ext = pathlib.PurePosixPath(path).suffix.lower()
+                if ext in ("", ".html", ".js", ".css", ".webmanifest", ".json"):
+                    r.headers["Cache-Control"] = "no-cache"
+                elif ext in (".png", ".jpg", ".jpeg", ".svg", ".ico", ".webp", ".woff2", ".wav", ".mp3"):
+                    r.headers["Cache-Control"] = "public, max-age=3600"
+                if ext == ".webmanifest":
+                    r.headers["Content-Type"] = "application/manifest+json"
+            return r
+    app.mount("/app", _AppFiles(directory=str(_WEB), html=True), name="customer-app")
 
 # P4b command center, same pattern (after API routes).
 _CC = pathlib.Path(__file__).resolve().parent.parent / "web" / "command-center"
