@@ -127,6 +127,12 @@ def _intel_engine():
         return "template"
     return "nemotron:" + str(agent.MODEL)
 
+def customer_name() -> str:
+    """Display name of the protected customer (env CUSTOMER_NAME, default "Maria"; set it empty for no name). Cosmetic only: enum values like by:"maria" never change."""
+    n = os.environ.get("CUSTOMER_NAME")
+    n = "Maria" if n is None else n
+    return "".join(ch for ch in n if ch.isprintable() and ch not in "<>&\"'`\\").strip()[:40]
+
 def status(app):
     paths = _paths(app.routes)
     names = {}
@@ -148,7 +154,7 @@ def status(app):
     except Exception:
         _ids, _last = [], None
     return {"hub": "up", "pipelines": names, "active_call_ids": [i[:8] for i in _ids],
-            "flags": {"DEMO_MODE": os.environ.get("DEMO_MODE") == "1", "FALLBACK": os.environ.get("FALLBACK") == "1", "SIM_MODE": os.environ.get("SIM_MODE") == "1", "FALLBACK_DETECT": os.environ.get("FALLBACK_DETECT") == "1", "NVIDIA_API_KEY_set": _nvidia_key_set(), "telnyx_ok": telnyx_state["ok"], "telnyx_last_error": telnyx_state["kind"], "intel_engine": _intel_engine(), "HUB_TOKEN_set": bool(os.environ.get("HUB_TOKEN")), "MARIA_LEG": os.environ.get("MARIA_LEG") or "sip", "active_calls": len(_ids), "last_call_activity_ts": _last},
+            "flags": {"DEMO_MODE": os.environ.get("DEMO_MODE") == "1", "FALLBACK": os.environ.get("FALLBACK") == "1", "SIM_MODE": os.environ.get("SIM_MODE") == "1", "FALLBACK_DETECT": os.environ.get("FALLBACK_DETECT") == "1", "NVIDIA_API_KEY_set": _nvidia_key_set(), "telnyx_ok": telnyx_state["ok"], "telnyx_last_error": telnyx_state["kind"], "intel_engine": _intel_engine(), "HUB_TOKEN_set": bool(os.environ.get("HUB_TOKEN")), "MARIA_LEG": os.environ.get("MARIA_LEG") or "sip", "CUSTOMER_NAME": customer_name(), "active_calls": len(_ids), "last_call_activity_ts": _last},
             "db": counts, "latency": latency_summary()["metrics"]}
 
 def status_html(s):

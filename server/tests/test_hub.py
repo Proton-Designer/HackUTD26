@@ -518,3 +518,16 @@ def test_device_pin_from_env_is_not_printed_or_written(tmp_path):
     r = subprocess.run([sys.executable, "-c", "import server.main"], env=env, capture_output=True, text=True, timeout=60)
     pin = (tmp_path / "device_pin.txt").read_text().strip()
     assert pin and pin in r.stdout                                     # random PIN: still shown once for the operator
+
+
+def test_status_customer_name_flag(monkeypatch):
+    c = TestClient(app, client=("127.0.0.1", 5000))
+    monkeypatch.delenv("CUSTOMER_NAME", raising=False)
+    assert c.get("/demo/status").json()["flags"]["CUSTOMER_NAME"] == "Maria"
+    monkeypatch.setenv("CUSTOMER_NAME", "Dana")
+    assert c.get("/demo/status").json()["flags"]["CUSTOMER_NAME"] == "Dana"
+    monkeypatch.setenv("CUSTOMER_NAME", "")
+    assert c.get("/demo/status").json()["flags"]["CUSTOMER_NAME"] == ""
+    monkeypatch.setenv("CUSTOMER_NAME", '<b>Ev"e</b>' + "x" * 80)
+    n = c.get("/demo/status").json()["flags"]["CUSTOMER_NAME"]
+    assert "<" not in n and '"' not in n and len(n) <= 40

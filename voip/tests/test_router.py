@@ -620,3 +620,25 @@ def test_call_report_reads_logs_journal_and_decoy_turns(tmp_path):
     assert "ended_by=caller" in o and "talk_frames=60 talk_dropped=1" in o and "decoy clears (barge-in): 2" in o
     assert "zero stretches         : t=3..6s(4s, maria_out=60)" in o and "3 of 4 zero seconds had Maria frames out" in o
     assert "1500" in o and "hello sent for abcd1234" in o
+
+
+def test_hello_text_uses_customer_name_and_cache_follows_it(tmp_path, monkeypatch):
+    from voip import persona as P
+    monkeypatch.delenv("CUSTOMER_NAME", raising=False)
+    assert P.hello_text() == "Hello? ... Yes, this is Maria."
+    monkeypatch.setenv("CUSTOMER_NAME", "Dana"); assert P.hello_text() == "Hello? ... Yes, this is Dana."
+    monkeypatch.setenv("CUSTOMER_NAME", ""); assert P.hello_text() == "Hello?"
+    monkeypatch.setenv("CUSTOMER_NAME", "Dana; rm -rf /"); assert ";" not in P.hello_text()
+    monkeypatch.setenv("DECOY_LINES_DIR", str(tmp_path)); monkeypatch.setattr(P.shutil, "which", lambda x: "/bin/" + x)
+    said = []
+    def fake_run(cmd, **k):
+        if cmd[0] == "say": said.append(cmd[-1]); open(cmd[cmd.index("-o") + 1], "wb").write(b"x" * 2000)
+        else: open(cmd[-1], "wb").write(b"\xff" * 1600)
+        class R: returncode = 0; stdout = b""; stderr = b""
+        return R()
+    monkeypatch.setattr(P.subprocess, "run", fake_run); monkeypatch.setattr(P, "_synth_magpie", lambda t, f: False)
+    monkeypatch.setenv("CUSTOMER_NAME", "Dana"); assert P.generate_hello() is not None and said[-1] == "Hello? ... Yes, this is Dana."
+    assert P.cached_hello() is not None                                     # same name: cache reused instantly
+    monkeypatch.setenv("CUSTOMER_NAME", "Priya")
+    assert P.cached_hello() is None                                         # renamed: stale audio must not play the old name
+    assert P.generate_hello() is not None and said[-1].endswith("Priya.") and P.cached_hello() is not None

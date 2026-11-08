@@ -95,17 +95,34 @@ def generate_lines(force=False) -> list[pathlib.Path]:
         if _synth(text, f, force) and f.is_file() and f.stat().st_size >= FRAME_BYTES: out.append(f)
     return out
 
-HELLO_TEXT = "Hello? ... Yes, this is Maria."
+HELLO_TEXT = "Hello? ... Yes, this is Maria."   # default; the live text comes from hello_text() (env CUSTOMER_NAME)
+
+def hello_text() -> str:
+    """Greeting for MARIA_LEG=listen/talk: 'Hello? ... Yes, this is <CUSTOMER_NAME>.' or just 'Hello?' when the name is empty. Cosmetic: ids/enums stay 'maria'."""
+    n = os.environ.get("CUSTOMER_NAME")
+    n = "Maria" if n is None else "".join(ch for ch in n if ch.isalnum() or ch in " .'-").strip()[:40]
+    return f"Hello? ... Yes, this is {n}." if n else "Hello?"
 
 def cached_hello():
     """The cached greeting file if there is one (regardless of cache key), else None. Instant; used at call time."""
     f = lines_dir() / "hello.ulaw"
-    return f if f.is_file() and f.stat().st_size >= FRAME_BYTES else None
+    if not (f.is_file() and f.stat().st_size >= FRAME_BYTES):
+        return None
+    try:   # a rename must not play the old name from the cache: only reuse a file synthesized from the current text
+        if (lines_dir() / "hello.txt").read_text() != hello_text(): return None
+    except Exception:
+        if hello_text() != HELLO_TEXT: return None
+    return f
 
 def generate_hello(force=False):
     """MARIA_LEG=listen greeting: raw PCMU 8 kHz in lines_dir()/hello.ulaw (rebuilt when voice/rate/text change). None when unavailable."""
     f = lines_dir() / "hello.ulaw"
-    return f if _synth(HELLO_TEXT, f, force) and f.is_file() and f.stat().st_size >= FRAME_BYTES else None
+    text = hello_text()
+    ok = _synth(text, f, force) and f.is_file() and f.stat().st_size >= FRAME_BYTES
+    if ok:
+        try: (lines_dir() / "hello.txt").write_text(text)
+        except Exception: pass
+    return f if ok else None
 
 def standin_mode() -> str:
     return "echo" if os.environ.get("DECOY_STANDIN", "persona").strip().lower() == "echo" else "persona"
