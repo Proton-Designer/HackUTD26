@@ -97,16 +97,17 @@
   // ---- buttons ----
   $("answerBtn").onclick = () => {
     unlockAudio();                                   // tap unlocks audio so the alert beeps can play
+    if (BF.voip) BF.voip.answer();                   // real WebRTC call, if one is ringing
     st.answered = true; st.t0 = Date.now(); st.timer = setInterval(tick, 500); tick();
     $("activeName").textContent = $("callerNumber").textContent || "Unknown caller";
     $("phone").dataset.state = "active"; show("active");
     if (!SERVER) scheduleAfterAnswer();
   };
-  $("declineBtn").onclick = () => endCall("You declined the call.");
-  $("endBtn").onclick = () => { emitUserAction("hang_up"); stopReplay(); endCall("You ended the call."); };
+  $("declineBtn").onclick = () => { if (BF.voip) BF.voip.hangup(); endCall("You declined the call."); };
+  $("endBtn").onclick = () => { emitUserAction("hang_up"); if (BF.voip) BF.voip.hangup(); stopReplay(); endCall("You ended the call."); };
   $("btnContinue").onclick = () => { emitUserAction("continue"); setBadge("watching"); $("alertBox").hidden = true; $("idleMsg").hidden = false; };
   $("btnGets").onclick = () => { emitUserAction("scammer_get_scammed"); showHandoff(); };
-  $("btnHang").onclick = () => { emitUserAction("hang_up"); stopReplay(); endCall("You hung up."); };
+  $("btnHang").onclick = () => { emitUserAction("hang_up"); if (BF.voip) BF.voip.hangup(); stopReplay(); endCall("You hung up."); };
   $("replayBtn").onclick = start;
 
   // ---- sources ----
@@ -145,6 +146,6 @@
   }
 
   setInterval(() => { const n = new Date(); $("clock").textContent = (n.getHours() % 12 || 12) + ":" + String(n.getMinutes()).padStart(2, "0"); }, 1000);
-  window.BF.deliver = onEvent;
+  window.BF.deliver = onEvent; BF.endUI = endCall; BF.ui = () => $("phone").dataset.state;
   start();
 })();
