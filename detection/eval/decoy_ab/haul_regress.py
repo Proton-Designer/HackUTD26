@@ -2,7 +2,7 @@
 decoy.core.extract (real model call, bolt extractor, one request at a time) + intel.campaigns.normalize_artifacts +
 intel.nessie.match_destinations and print handles + hit yes/no per case. Run: PYTHONPATH=. .venv/bin/python detection/eval/decoy_ab/haul_regress.py
 (needs NVIDIA_API_KEY in the environment; pauses while the live service has an open call)."""
-import asyncio, json, pathlib, sys, urllib.request
+import asyncio, json, pathlib, re, sys, urllib.request
 sys.path.insert(0, ".")
 from decoy import core
 from intel import nessie
@@ -22,7 +22,7 @@ async def main():
         handles = [a["value"] for a in na if a["type"] == "payment_handle"]
         payee = "zelle:refunds.dept@backfire-demo.example"
         if r["expect"]:   # positive: hit the payee and no stray handles
-            hit = any(h["artifact"]["value"] == r["expect"] for h in hits); strays = [h for h in handles if h != r["expect"]]; good = hit and not strays
+            hit = any(h["artifact"]["value"] == r["expect"] for h in hits); strays = [h for h in handles if h != r["expect"] and not re.fullmatch(r"zelle:\+1\d{10}", h)]; good = hit and not strays   # a valid E.164 US phone handle (P3 ba487bf backstop) is allowed, not a stray
         else:             # negative: must NOT be canonicalised to the payee, no hit
             hit = bool(hits) or payee in handles; strays = []; good = not hit
         ok += good; n += 1
