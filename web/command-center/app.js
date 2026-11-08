@@ -943,7 +943,11 @@
       const longest = Math.max(5, ...left.map(e => first(node(e.src)).length));
       const padL = Math.ceil(longest * f14 * 0.62) + 14;
       const top = f12 + 14, bot = f12 + 10;
-      const step = left.length > 1 ? (H - top - bot) / (left.length - 1) : 0;
+      // the customer sits on top with extra space below, so their line and tag never cross the victims' rows
+      const hasT = !!(left[0] && left[0].kind === 'target');
+      const slots = left.length - 1 + (hasT ? 0.8 : 0);
+      const step = slots > 0 ? (H - top - bot) / slots : 0;
+      const yOf = i => top + (i + (hasT && i > 0 ? 0.8 : 0)) * step;
       const maxL = Math.max(1, ...left.map(e => +e.amount || 0));
       const rMax = Math.max(8, Math.min(17, step * 0.36));
       const rOf = a => 5 + (rMax - 5) * Math.sqrt((+a || 0) / maxL);
@@ -959,21 +963,24 @@
 
       // victims and Maria -> mule (lines first, nodes on top)
       left.forEach((e, i) => {
-        const y = top + i * step, r = rOf(e.amount);
+        const y = yOf(i), r = rOf(e.amount);
         const end = [xM - rM - 2, yM + (y - yM) * 0.18];
         const p = [[xL + r, y], [xL + (end[0] - xL) * 0.55, y], [end[0] - (end[0] - xL) * 0.3, end[1]], end];
         if (e.kind === 'target') {
-          const mid = bez(p, 0.5);
+          // the tag sits early on the customer's own line (still in its row), not mid-way where the victims' lines bunch up
+          const at = bez(p, 0.3);
           if (e.held) {
-            out.push(`<path class="mt-held" d="${path(p)}" pathLength="100" stroke-dasharray="46 100" style="stroke-width:3px"/>`,
-              `<path class="mt-cut" d="${path(p)}" pathLength="100" stroke-dasharray="0 54 46 0" style="stroke-width:2px"/>`,
-              tag(mid[0], mid[1], `✂ STOPPED ${fmtMoney(e.amount)}`, 'held')); // the tag sits on the cut
+            out.push(`<path class="mt-held" d="${path(p)}" pathLength="100" stroke-dasharray="18 100" style="stroke-width:3px"/>`,
+              `<path class="mt-cut" d="${path(p)}" pathLength="100" stroke-dasharray="0 44 56 0" style="stroke-width:2px"/>`,
+              tag(at[0], at[1], `✂ STOPPED ${fmtMoney(e.amount)}`, 'held'));
           } else {
-            out.push(`<path class="mt-pending" d="${path(p)}" style="stroke-width:2.5px"/>`, tag(mid[0], mid[1], `${fmtMoney(e.amount)} · PENDING`, 'pending'));
+            out.push(`<path class="mt-pending" d="${path(p)}" style="stroke-width:2.5px"/>`, tag(at[0], at[1], `${fmtMoney(e.amount)} · PENDING`, 'pending'));
           }
         } else {
+          // label on the outside of the curve: above for rows that bend down, below for rows that bend up
+          const ly = y > yM ? y + f12 + 5 : y - 6;
           out.push(`<path class="mt-edge" d="${path(p)}" style="stroke-width:${(1.2 + 3.3 * (+e.amount || 0) / maxL).toFixed(1)}px"/>`,
-            `<text class="mt-amt" x="${xL + r + 10}" y="${y - 5}">${esc(amt(e))}</text>`);
+            `<text class="mt-amt" x="${xL + r + 10}" y="${ly}">${esc(amt(e))}</text>`);
         }
       });
       // mule -> cash-out, fanned out so each transfer reads on its own
@@ -989,7 +996,7 @@
       });
       // nodes + labels
       left.forEach((e, i) => {
-        const y = top + i * step, r = rOf(e.amount), n = node(e.src);
+        const y = yOf(i), r = rOf(e.amount), n = node(e.src);
         if (e.kind === 'target') {
           out.push(`<circle class="mt-ring" cx="${xL}" cy="${y}" r="${r + 4}"/><circle class="mt-n-maria" cx="${xL}" cy="${y}" r="${r}"/>`,
             `<text class="mt-name mt-maria" x="${xL - r - 9}" y="${y + f14 * 0.36}" text-anchor="end">Customer</text>`);
@@ -998,7 +1005,8 @@
             `<text class="mt-name" x="${xL - r - 9}" y="${y + f14 * 0.36}" text-anchor="end">${first(n)}</text>`);
         }
       });
-      if (ms.flagged) out.push(`<circle class="mt-flag-ring" cx="${xM}" cy="${yM}" r="${rM + 7}"/>`, tag(xM, yM - rM - f12 - 8, '⚑ FLAGGED · every customer warned', 'flag'));
+      // under the mule's own labels, where no line runs
+      if (ms.flagged) out.push(`<circle class="mt-flag-ring" cx="${xM}" cy="${yM}" r="${rM + 7}"/>`, tag(xM, yM + rM + f14 + f12 * 2 + 30, '⚑ FLAGGED for every customer', 'flag'));
       out.push(`<circle class="mt-n-mule" cx="${xM}" cy="${yM}" r="${rM}"/>`,
         `<text class="mt-name" x="${xM}" y="${yM + rM + f14 + 6}" text-anchor="middle">Mule account</text>`,
         `<text class="mt-sub" x="${xM}" y="${yM + rM + f14 + f12 + 11}" text-anchor="middle">Simulated · in ${fmtMoney(inTotal)} · out ${fmtMoney(outTotal)}</text>`,
