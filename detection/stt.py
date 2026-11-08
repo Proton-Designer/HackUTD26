@@ -19,6 +19,30 @@ def _mulaw_table():
     return t
 _TABLE = _mulaw_table()
 
+def _alaw_table():
+    t = np.zeros(256, dtype=np.int16)
+    for i in range(256):
+        a = i ^ 0x55
+        sign, exp, man = a & 0x80, (a >> 4) & 7, a & 0x0F
+        v = (man << 4) + 8 if exp == 0 else ((man << 4) + 0x108) << (exp - 1)
+        t[i] = v if sign else -v
+    return t
+_ATABLE = _alaw_table()
+
+def alaw_decode(b: bytes) -> np.ndarray:
+    """G.711 A-law bytes -> int16 PCM (8 kHz)."""
+    return _ATABLE[np.frombuffer(b, dtype=np.uint8)]
+
+def decode_media(b: bytes, encoding="PCMU", rate=8000) -> np.ndarray:
+    """Telnyx media payload -> int16 mono 8 kHz. PCMU (default), PCMA, L16 (big-endian); 16 kHz input is averaged down to 8 kHz."""
+    e = (encoding or "PCMU").upper()
+    if e == "PCMA": x = alaw_decode(b)
+    elif e in ("L16", "LINEAR16"): x = np.frombuffer(b[:len(b) // 2 * 2], dtype=">i2").astype(np.int16)
+    else: x = mulaw_decode(b)
+    if rate and int(rate) == 16000 and len(x) >= 2:
+        x = x[:len(x) // 2 * 2].reshape(-1, 2).astype(np.int32).mean(axis=1).astype(np.int16)
+    return x
+
 def mulaw_decode(b: bytes) -> np.ndarray:
     """G.711 mu-law bytes -> int16 PCM (8 kHz)."""
     return _TABLE[np.frombuffer(b, dtype=np.uint8)]

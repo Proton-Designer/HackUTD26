@@ -1,4 +1,4 @@
-import base64, json
+import base64, json, os
 import numpy as np
 from fastapi.testclient import TestClient
 from detection import stt, stream, app as appmod
@@ -127,3 +127,56 @@ def test_fallback_preloads_whisper_in_background():
         if f._fb: break
         time.sleep(0.05)
     assert f._fb is not None
+
+
+def _wav(name):
+    import wave, numpy as np
+    w = wave.open(os.path.join(os.path.dirname(__file__), "..", "testdata", "acc", name)); return np.frombuffer(w.readframes(w.getnframes()), dtype="<i2")
+
+
+def _utts(x, noise_rms=30.0, db=0.0, seed=1):
+    import numpy as np
+    rng = np.random.default_rng(seed)
+    y = x.astype(np.float64) * 10 ** (db / 20) + rng.normal(0, noise_rms, len(x))
+    y = np.clip(y, -32768, 32767).astype(np.int16)
+    seg, out = stream.Segmenter(), []
+    for i in range(0, len(y), 160 * 5): out += seg.feed(y[i:i + 800])
+    return out + seg.flush(), seg
+
+
+def test_quiet_line_speech_still_endpointed():
+    x = _wav("askfirst.wav")
+    for db, nz in ((0, 30.0), (-20, 30.0), (-25, 8.0)):     # -25 dB = speech median rms ~120 over a quiet comfort-noise floor
+        u, _ = _utts(x, db=db, noise_rms=nz)
+        assert len(u) >= 1, db
+    # positive control: the OLD detector (floor 300, noise*3.5) misses -25 dB speech, so this test can fail
+    try:
+        stream.VAD_FLOOR, stream.VAD_REL = 300.0, 3.5
+        u_old, _ = _utts(x, db=-25, noise_rms=8.0)
+    finally:
+        stream.VAD_FLOOR, stream.VAD_REL = 60.0, 2.5
+    assert len(u_old) == 0
+
+
+def test_pure_noise_makes_no_utterances():
+    import numpy as np
+    for rms in (10.0, 30.0, 60.0):
+        u, seg = _utts(np.zeros(8000 * 20, dtype=np.int16), noise_rms=rms)
+        assert u == [], rms
+
+
+def test_long_noisy_intro_does_not_raise_threshold_past_cap():
+    import numpy as np
+    seg = stream.Segmenter()
+    seg.feed((np.random.default_rng(2).normal(0, 2000, 8000 * 20)).astype(np.int16))   # 20 s of very loud noise
+    assert seg.thr() <= stream.NOISE_CAP * stream.VAD_REL + 1
+
+
+def test_alaw_l16_and_16k_decode():
+    import numpy as np
+    assert stt.alaw_decode(bytes([0xD5]))[0] == 8 and stt.alaw_decode(bytes([0x55]))[0] == -8
+    assert stt.alaw_decode(bytes([0xAA]))[0] > 20000                                 # max positive
+    x = np.array([1000, -1000, 300], dtype=">i2").tobytes()
+    assert list(stt.decode_media(x, "L16", 8000)) == [1000, -1000, 300]
+    assert len(stt.decode_media(np.zeros(320, dtype=">i2").tobytes(), "L16", 16000)) == 160
+    assert stt.decode_media(bytes([0xFF]), "PCMU", 8000)[0] == 0

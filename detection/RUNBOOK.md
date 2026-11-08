@@ -52,3 +52,8 @@
 - Demo override: `P2_STT=whisper` (Riva never used). While on whisper, partials slow to every 1.5 s (`P2_SLOW_PARTIAL_EVERY_S`) and pause while a final is waiting, so finals are not starved.
 - Test it: `ACC_BREAK_STT=1 ACC_P2_PORT=8102 bash detection/scripts/acceptance.sh` (dead Riva URI via `RIVA_URI` for that P2 only; `blackhole` = hanging connect). Result 9/9 with Riva down.
 - Whisper mishears sometimes (e.g. "6th digit"); rules still match the ask words, accuracy is the cost, availability is the gain.
+
+## VAD on quiet / odd real calls (TASK-032)
+- At every socket close p2.log has `rms(per 20ms frame): {frames,p50,p90,max,voiced,noise,thr}` and at start `media_format=...`. Zero utterances + `max` < `thr` = line too quiet. `P2_DUMP_AUDIO=1` writes logs/audio/<call>.wav (local only, off by default; listen to it).
+- VAD: speech = frame RMS > max(P2_VAD_FLOOR=60, noise*P2_VAD_REL=2.5); noise floor starts at 30, falls fast / rises slowly, capped at P2_NOISE_CAP=300 (thr <= 750). Was floor 300 and noise*3.5.
+- Decoding follows start.media_format.encoding: PCMU (default), PCMA, L16 (big-endian); 16 kHz is averaged to 8 kHz.

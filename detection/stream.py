@@ -15,6 +15,9 @@ MAX_UTT_S = 15.0
 PARTIALS = os.environ.get("P2_PARTIALS", "1") != "0"
 PARTIAL_EVERY_S = float(os.environ.get("P2_PARTIAL_EVERY_S", "0.5"))
 PARTIAL_MIN_MS = 400
+VAD_FLOOR = float(os.environ.get("P2_VAD_FLOOR", "60"))     # min RMS (int16) to count as speech; real PSTN lines can be quiet (TASK-032)
+VAD_REL = float(os.environ.get("P2_VAD_REL", "2.5"))         # threshold = noise floor x this
+NOISE_CAP = float(os.environ.get("P2_NOISE_CAP", "300"))     # thr never exceeds NOISE_CAP*VAD_REL (750)
 PREROLL_FRAMES = 10              # 200 ms kept before speech onset
 
 on_partial = None                # async callable(call_id, utt) for interim text (fast-path rules only)
@@ -45,7 +48,7 @@ class Segmenter:
     """Energy VAD + endpointing. feed(pcm_int16) -> list of finished utterances (int16 arrays)."""
     def __init__(self, endpoint_ms=ENDPOINT_MS):
         self.end_frames = max(1, endpoint_ms // 20)
-        self.noise = 60.0
+        self.noise = 30.0
         self.buf = np.zeros(0, dtype=np.int16)   # leftover < FRAME
         self.pre = []
         self.cur = None
@@ -55,7 +58,9 @@ class Segmenter:
     def diag(self):
         h = np.array(self.rms_hist[-30000:] or [0.0])
         return {"frames": len(self.rms_hist), "p50": round(float(np.percentile(h, 50)), 1), "p90": round(float(np.percentile(h, 90)), 1),
-                "max": round(float(h.max()), 1), "voiced": self.voiced_total, "noise": round(self.noise, 1), "thr": round(max(300.0, self.noise * 3.5), 1)}
+                "max": round(float(h.max()), 1), "voiced": self.voiced_total, "noise": round(self.noise, 1), "thr": round(self.thr(), 1)}
+    def thr(self):
+        return max(VAD_FLOOR, self.noise * VAD_REL)
 
     def feed(self, pcm):
         out = []
@@ -64,7 +69,7 @@ class Segmenter:
         for i in range(n):
             f = self.buf[i * FRAME:(i + 1) * FRAME]
             rms = float(np.sqrt(np.mean(f.astype(np.float64) ** 2)))
-            thr = max(300.0, self.noise * 3.5)
+            thr = self.thr()
             voiced = rms > thr
             if len(self.rms_hist) < 60000: self.rms_hist.append(rms)
             self.voiced_total += voiced
@@ -73,7 +78,8 @@ class Segmenter:
                     self.cur = list(self.pre) + [f]
                     self.sil, self.speech_frames = 0, 1
                 else:
-                    self.noise = 0.95 * self.noise + 0.05 * rms
+                    a = 0.8 if rms < self.noise else 0.98     # falls fast, rises slowly; capped so a long loud/silent intro can't push thr up
+                    self.noise = min(NOISE_CAP, a * self.noise + (1 - a) * rms)
                     self.pre.append(f); self.pre = self.pre[-PREROLL_FRAMES:]
             else:
                 self.cur.append(f)
@@ -130,6 +136,7 @@ async def stt_ws(ws: WebSocket, call_id: str):
     seg, ids, tasks = Segmenter(), [1, 0], set()   # ids: [next utterance number, last submitted]
     pstate = {"busy": False, "t": 0.0, "text": ""}
     counts = {}   # frame diagnostics per event type, logged at close (P1 #31)
+    fmt = {"enc": "PCMU", "rate": 8000}       # from the start frame's media_format when present
     dump = [] if os.environ.get("P2_DUMP_AUDIO") == "1" else None   # decoded inbound PCM, local debugging only (logs/ is gitignored)
     chain = asyncio.Queue()   # preserve utterance order
     async def worker():
@@ -168,7 +175,7 @@ async def stt_ws(ws: WebSocket, call_id: str):
                 log.info("stt ws %s first frame: event=%s", call_id, ev)
             if ev == "media" and audio:
                 try:
-                    pcm = stt.mulaw_decode(audio)
+                    pcm = stt.decode_media(audio, fmt["enc"], fmt["rate"])
                     if dump is not None and len(dump) < 90000: dump.append(pcm.astype("<i2").tobytes())
                     submit(seg.feed(pcm))
                     if PARTIALS and not pstate["busy"] and time.monotonic() - pstate["t"] >= (SLOW_PARTIAL_EVERY_S if _stt_slow() else PARTIAL_EVERY_S) \
@@ -182,6 +189,8 @@ async def stt_ws(ws: WebSocket, call_id: str):
             elif ev == "start":
                 try:
                     m = json.loads(raw); st = m.get("start") or {}
+                    mf = st.get("media_format") or {}
+                    fmt["enc"], fmt["rate"] = mf.get("encoding") or "PCMU", mf.get("sample_rate") or 8000
                     log.info("stt ws %s start: media_format=%s start_keys=%s", call_id, st.get("media_format"), sorted(st.keys()))
                 except Exception:
                     pass
