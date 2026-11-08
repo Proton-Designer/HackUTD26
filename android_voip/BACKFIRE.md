@@ -37,7 +37,7 @@ on the device.
   Measured on a Galaxy S22 (thermally throttled): ~11 tok/s prompt, ~5 tok/s decode, best at 4 threads; a check takes
   ~0.8-1.8 s plus ~1-3 s to read a new utterance; scam call p=0.97, dentist call p=0.09. Weights stay memory-mapped:
   loading them into RAM (which enables q4_K repacking) needed ~3.2 GB and got the app swapped and killed.
-- **Decoy (on the phone):** persona "Margaret"; the model writes placeholders ([CARD], [SSN], [GIFTCODE]...) and code
+- **Decoy (on the phone):** persona "Alex Morgan" (a generic, ordinary person); the model writes placeholders ([CARD], [SSN], [GIFTCODE]...) and code
   fills them with per-call fake values (card fails Luhn, SSN in the never-issued 9xx range) and reports `decoy.fake_value`;
   guardrails in code (no invented numbers, no authority claims, no threats, stays in persona) report `guardrail.tripped`;
   fillers mask cloud latency; the caller talking over it stops the voice (barge-in); 20-minute cap; at the end the

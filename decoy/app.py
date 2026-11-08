@@ -38,7 +38,7 @@ ECHO_MARGIN = 3.0          # inbound must be ~10 dB over the estimated echo of o
 OUT_RATIO = 0.3            # ...and within ~10 dB of our own outbound level (real echo is far quieter)
 STT_TIMEOUT_S, LLM_TIMEOUT_S = 6.0, 7.0
 FILLER_AFTER_S = 0.6       # play a filler only if Nemotron hasn't answered by then
-STALLS = ["Hold on dear, let me find my glasses.", "Oh, sorry, the line went funny. Say that again?"]
+STALLS = ["Hold on, let me find my glasses.", "Oh, sorry, the line went funny. Say that again?"]
 
 
 PROXY_HEADERS = ("cf-connecting-ip", "cf-ray", "x-forwarded-for", "x-forwarded-host", "forwarded", "x-real-ip")

@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit
 
 /**
  * The decoy's voice. Maria's consented clone (VoiceProfile + NVIDIA Magpie zero-shot, called from this phone) when she has
- * enrolled and a key is set; otherwise Android's on-device text-to-speech, slowed and pitched like an older woman (labeled
+ * enrolled and a key is set; otherwise Android's on-device text-to-speech, at a calm default rate and pitch (labeled
  * synthetic). If the clone fails mid-call, the rest of the call uses the on-device voice.
  */
 class Voice(context: Context) {
@@ -31,8 +31,8 @@ class Voice(context: Context) {
             if (!ready.await(5, TimeUnit.SECONDS) || !ok) { Log.e(TAG, "TTS unavailable"); return@Thread }
             tts.language = Locale.US
             pickVoice()?.let { tts.voice = it; Log.i(TAG, "voice: ${it.name}") }
-            tts.setSpeechRate(0.88f)
-            tts.setPitch(0.92f)
+            tts.setSpeechRate(0.95f)
+            tts.setPitch(1.0f)
         }.start()
     }
 
