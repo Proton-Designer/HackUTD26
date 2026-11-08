@@ -310,3 +310,19 @@ Same harness as the end-to-end section (pre-handoff = card lines up to the alert
 Earlier runs on other builds: demo card OK, card 2 OK (8a6167b).
 Result: of 9 cards run so far (demo, 2, 6, 1, 4, 5, 7, 8, 10) the correct Nessie handle is in the haul for 5 (demo, 2, 6 with a stray, 8, 10); it is MISSING or WRONG on cards 1, 4, 5, 7 (4 of 9). The decoy conversation itself held on all 7 (0 stalls, 0 bails, 0 leaks; first audio 1.4-2.2 s; max reply 0.79-1.65 s).
 Cause (from the heard lines, no transcripts of real voices): Riva hears the spoken handle as "refunds department at backfire-demo example" without the dots/"dot", and with the long payment steps (phone number, page, "by Ze") the model returns no usable handle or a truncated one (`refunds`, `refunds.department`), and the "dot example" is heard as "example", ".com" or "demos". 4ef445f/644aa31 canonicalise handles that contain "dot"/"@"; they cannot repair a handle with no domain or no local-part separators. Suggested fix (P3/P1, low risk): a transcript-level pattern `refunds[\s.]*(dept|department)\b ... (backfire[- ]demo)` -> `refunds.dept@backfire-demo.example`, and a payee match on local part `refunds(.dept|.department)?` + a backfire-demo domain seen anywhere in the call. Not done: one run per card, synthetic voice (a human saying "dot" may be heard better or worse), cards demo and 2 not rerun on 4ef445f, cards 3 and 9 not run.
+
+### Haul regression without TTS (580d8b5: rebuild + sell->Zelle), eng3
+Eval tool: `detection/eval/decoy_ab/haul_regress.py` + strings in `detection/eval/decoy_ab/haul_regress.jsonl` (synthetic Mia-voice caller, Riva text exactly as the decoy heard it; pre-handoff lines + heard lines go through `core.extract` (real bolt call, one pass over all lines) -> `normalize_artifacts` -> `match_destinations`). One pass is the worst case: the live decoy also extracts incrementally during the call and merges passes, which is why demo and card 10 hit in the relay run but not here.
+| case | handles from the single final pass | hit `zelle:refunds.dept@backfire-demo.example` |
+|---|---|---|
+| card 1 | none | NO |
+| card 4 | none | NO |
+| card 5 | none | NO |
+| card 6 | `refunds.dept@...` + stray `dept@...` | yes (stray remains) |
+| card 7 | none | NO |
+| card 8 | `refunds.dept@...` | yes |
+| card 10 | none | NO (relay run hit via an earlier pass) |
+| card 6 (8a6167b string) | `dept@...` only | NO |
+| demo | none | NO (relay run hit via an earlier pass) |
+| card 2 | `refunds.dept@...` | yes |
+3 of 10 hit. Where it breaks: `decoy/core.py:382` DEPT_HEARD only rewrites "refunds (dot) department" when the address then continues with " dot|dash ..." (`(?=\s+at\s+\S+\s+(?:dot|dash)\b)`), but Riva writes the domain as "backfire-demo.example", "Backfire-demo example", "backfire-demos" or "backfire-demo." (cards 1, 4, 5, 7, 10, demo, 6), so the rewrite never fires and the model sees "refunds department at backfire-demo.example" and often returns no payment_handle (or `dept@...`). Suggested fix: relax the lookahead to also accept a hyphenated/dotted/"demo" domain (`at\s+\S*backfire\S*`), e.g. `(?=\s+at\s+\S*(?:backfire|demo)\S*)`, and add the transcript-level rule from the coverage run (any "refunds ... department|dept ... backfire" after a Zelle word -> `refunds.dept@backfire-demo.example`). Re-run `haul_regress.py` after the change (target 10/10).
