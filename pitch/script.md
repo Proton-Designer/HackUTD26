@@ -63,7 +63,7 @@ Demo card for Ayman (same "safe account" scam as slide 2, trimmed to three lines
 | 1 | Ayman dials (469) 908-8594 from his phone, caller ID on, on speaker. The customer's phone rings full screen. | Live call view: "Ringing the customer with Live Guard on" |
 | 2 | Kareem taps **Answer** (do not let it ring out: no answer rejects the call) and says, in his normal voice: "Hello?" | |
 | 3 | Ayman reads line 1. Nobody else talks while the call is live. | Caller-only transcript scrolls; risk gauge climbs |
-| 4 | Two beeps, about 12 to 18 seconds in. Kareem shows the judge the three buttons, taps **Fire Back**, puts the phone face down, raises both hands. | "The customer tapped Fire Back" |
+| 4 | Two beeps, about 7 to 10 seconds in on the demo card (P2, 6 runs; real calls with full cards: 12 to 18 s). Kareem shows the judge the three buttons, taps **Fire Back**, puts the phone face down, raises both hands. | "The customer tapped Fire Back" |
 | 5 | The AI, in Kareem's voice: "Oh, hi, sorry about that, I think the line cut out for a second there, who did you say was calling?" Then it plays along and asks how to pay. | Banner: "The scammer is talking to the decoy in the customer's voice" |
 | 6 | Ayman reads the payment line, then the Zelle line. The decoy repeats it back slowly, then says goodbye and hangs up by itself. | |
 | 7 | Rayan, while intel runs (5 to 15 s): "Kareem's been off that call since his hands went up. Backfire only ever listened to the caller. That was a Nemotron decoy in his voice, and it just got the scammer's payout account." | Screen moves to **Money trail** by itself; Capital One lockup appears |
