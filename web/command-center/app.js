@@ -901,7 +901,11 @@
     feed() {
       const body = bodyOf('feed');
       const c = focusCall();
-      if (!c) { $('feed-meta').textContent = ''; body.innerHTML = empty('No call yet. Call the scam line to start.'); return; }
+      if (!c) {
+        $('feed-meta').textContent = '';
+        body.innerHTML = '<div class="idle-brand"><img src="assets/backfire-lockup.png" alt="Backfire. Caller beware."><p>Waiting for a call to the scam line. Only the caller\'s side will appear here.</p></div>';
+        return;
+      }
       const route = ROUTE[c.decision] || humanize(c.decision).toLowerCase();
       $('feed-meta').textContent = [`${fmtPhone(c.from) || 'unknown'} → Maria`, route, c.attestation ? attestWords(c.attestation) : ''].filter(Boolean).join(' · ');
       if (!c.feed.length) { body.innerHTML = empty('Ringing. Only the caller\'s side will appear here.'); return; }

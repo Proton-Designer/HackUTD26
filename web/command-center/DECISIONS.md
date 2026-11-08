@@ -28,6 +28,12 @@ One line each: chose X because Y.
 - **Panels are moved, not duplicated:** one set of panel elements; each view's layout in `app.js` places them in columns. Renderers find them by id, wherever they sit.
 - **CSS and JS load with a timestamp query** so a cached copy on the demo laptop can't hide a fix pushed during the night.
 
+## Brand
+- **The team logo (flame + "Backfire" + "Caller beware.") is cut into transparent PNGs in `assets/`** (flame, wordmark, lockup, 64 px favicon), from the team's logo image, so it sits cleanly on our panels and needs no web font.
+- **Header: flame + wordmark. Idle Story screen: the full lockup**, so the table reads "Backfire" from across the room before a call starts. Favicon = the flame.
+- **Accent text uses the flame pink `#fe2e89`** (4.9:1 on panels). Filled buttons and the current rail step stay T-Mobile magenta `#e20074`, because white text on the lighter flame pink is only 3.5:1.
+- **No animation changes opacity** (view changes slide 6 px instead): an animation paused in a background window must never leave the screen dim.
+
 ## Layout and visual design (judge gets it in 5 seconds)
 Sources: `HackUTD-2026-Kit/domains/11-ux-interaction.md`, `12-visual-design.md`, `15-ai-app-design-eval.md`, `20-demo-delivery.md`, `decisions/pitch-demo.md` (template C), the HackUTD-2026-Research winner analysis, and the judge-critic review of our plan.
 - **Top: one plain-English sentence + a 5-step rail grouped "During the call / After the call / Before the next ring"** (Detect, Hand off, Verify, Block, Immune). The kit caps a demo path at five steps, and the grouping uses T-Mobile's brief word for word ("before, during and after a threat"). Extract is folded into Verify ("5 artifacts · 5 lookups").

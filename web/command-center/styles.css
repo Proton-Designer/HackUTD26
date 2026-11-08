@@ -17,7 +17,8 @@
   --text-3: #8b95a5;
   /* the one accent: T-Mobile magenta = "look here" */
   --accent: #e20074;
-  --accent-text: #ff5fae;
+  --accent-text: #fe2e89;   /* the Backfire flame (assets/backfire-flame.png); 4.9:1 on panels */
+  --flame: #fe2e89;
   --accent-tint: rgba(226, 0, 116, 0.14);
   /* meanings, same as Maria's phone */
   --decoy: #7a3cff;          /* Scammer Get Scammed */
@@ -67,8 +68,13 @@ h1, h2, p { margin: 0; }
 
 /* ---------- header: small, it's furniture ---------- */
 .top { display: flex; align-items: center; justify-content: space-between; gap: var(--s4); min-width: 0; }
-.brand { display: flex; align-items: baseline; gap: var(--s3); min-width: 0; }
-.logo { font-weight: 700; letter-spacing: 0.14em; font-size: var(--f20); color: var(--text); }
+.brand { display: flex; align-items: center; gap: var(--s2); min-width: 0; }
+.logo-flame { height: 26px; width: auto; display: block; }
+.logo-word { height: 19px; width: auto; display: block; margin-right: var(--s2); }
+/* idle Story screen: the full lockup, so the table reads "Backfire" from across the room */
+.idle-brand { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--s4); height: 100%; min-height: 200px; text-align: center; color: var(--text-2); }
+.idle-brand img { width: min(460px, 80%); height: auto; }
+.idle-brand p { font-size: var(--f14); max-width: 44ch; }
 .title { color: var(--text-2); font-size: var(--f14); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .top-right { display: flex; align-items: center; gap: var(--s2); flex-shrink: 0; }
 
@@ -166,7 +172,7 @@ h1, h2, p { margin: 0; }
 .app[data-view="all"] #p-feed { border-radius: 0 0 var(--radius) var(--radius); border-top: 1px solid var(--line); }
 /* switching chapter or view: a short fade, not a jump */
 .grid.enter { animation: viewin 0.25s ease-out; }
-@keyframes viewin { from { opacity: 0.25; } }
+@keyframes viewin { from { transform: translateY(6px); } } /* no opacity: a paused animation must never leave the screen dim */
 
 /* Story view: two panels at a time, so everything can be bigger (readable across the table) */
 .app[data-view="story"] .grid { --f12: 14px; --f14: 17px; --f16: 21px; --f20: 24px; --f24: 30px; --f32: 52px; gap: var(--s4); }
