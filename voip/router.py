@@ -482,7 +482,9 @@ async def handoff(sid):
     if not st or st["ended"] or st.get("handed_off") or not hub: return False
     sim = st.get("sim", False)
     if not await _maybe_await(hub.start_decoy(sid)):
-        log.warning("handoff aborted for %s: decoy not available (Maria stays)", sid); return False
+        log.warning("handoff aborted for %s: decoy not available (Maria stays)", sid)
+        emit("handoff.failed", sid, {"reason": "decoy_unavailable"})   # F3: the tap must not fail silently (additive event; the page can say "decoy unavailable")
+        return False
     st["handed_off"] = True
     lr = st.get("last_risk")   # restore speed-up: the last known score is low (and not stale) -> the low clock starts NOW, no waiting for a fresh update
     if lr and lr[0] < RESTORE_BELOW and time.time() - lr[1] <= LAST_RISK_MAX_AGE_S:

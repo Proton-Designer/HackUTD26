@@ -145,6 +145,8 @@ def test_handoff_fails_open_when_decoy_unavailable(monkeypatch):
     fr = FakeRelay(ok=False); monkeypatch.setattr(R, "_hub_relay", lambda: fr); R.CALLS["sess-h2-1234567"] = _state()
     assert asyncio.run(R.handoff("sess-h2-1234567")) is False
     assert not R.CALLS["sess-h2-1234567"].get("handed_off")   # Maria stays on the call
+    failed = [e for e in bus.history if e["call_id"] == "sess-h2-1234567" and e["type"] == "handoff.failed"]
+    assert len(failed) == 1 and failed[0]["data"] == {"reason": "decoy_unavailable"}   # F3: published, not silent
 
 def test_restore_and_decoy_end(monkeypatch):
     fr = FakeRelay(); monkeypatch.setattr(R, "_hub_relay", lambda: fr); R.CALLS["sess-h3-1234567"] = _state()
