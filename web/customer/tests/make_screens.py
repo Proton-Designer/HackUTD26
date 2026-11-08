@@ -1,6 +1,6 @@
-import time,glob,os,subprocess,sys,json,math,base64,mimetypes
+import time,glob,os,subprocess,sys,json,math,base64,mimetypes,pathlib
 from playwright.sync_api import sync_playwright
-ROOT="/Users/aymanmohammed/Documents/HackUTD26/web/customer"; OUT="/Users/aymanmohammed/Documents/HackUTD26/docs/app-screens/"; PORT=8771; B=f"http://127.0.0.1:{PORT}"
+REPO=pathlib.Path(__file__).resolve().parents[3]; ROOT=str(REPO/"web"/"customer"); OUT=str(REPO/"docs"/"app-screens")+"/"; os.makedirs(OUT,exist_ok=True); PORT=8771; B=f"http://127.0.0.1:{PORT}"
 def ulaw(x):
     s=0x80 if x<0 else 0; x=min(abs(x)+132,32635); e=7; m=0x4000
     while e>0 and not (x&m): e-=1; m>>=1
