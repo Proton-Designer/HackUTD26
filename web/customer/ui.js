@@ -56,7 +56,7 @@
     $("callsCount").textContent = state.calls;
     $("guardState").textContent = state.guardOn ? "On. Backfire is watching the caller's side of calls from numbers it doesn't know." + (state.voiceId ? " Turning it off also deletes your voice." : "") : "Off. Calls are not being checked.";
     $("guardToggle").textContent = state.guardOn ? "Turn Live Guard off" : "Turn Live Guard on";
-    $("voiceState").textContent = state.voiceId ? "Saved. Used only if you press Scammer Get Scammed." + (HUB ? "" : " (Simulated)") : "No voice profile.";
+    $("voiceState").textContent = state.voiceId ? "Set up. Backfire keeps only a short voice sample, used only if you press Scammer Get Scammed." + (HUB ? "" : " (Simulated)") : "No voice profile.";
     $("voiceDelete").hidden = !state.voiceId; $("voiceSetup").hidden = !!state.voiceId;
     applyGuard();
   }
@@ -166,7 +166,7 @@
         return;
       }
       state.voiceId = voice_id; store.set("voice", voice_id); done();
-      toDns("Your voice is saved" + (HUB ? "" : " (simulated)") + ". Backfire is on. You can delete your voice any time in Protection.");
+      toDns("Your voice is set up" + (HUB ? "" : " (simulated)") + ". Backfire is on. It keeps only a short voice sample, used only if you press Scammer Get Scammed. You can delete it any time in Protection.");
     } catch (e) {
       console.log("[backfire] enroll failed", String(e)); done();
       $("recStatus").textContent = /\b401\b/.test(String(e)) ? "Please pair this phone first, then try again." : "Your voice wasn't saved. Press Save to try again, or skip to use a synthetic voice.";   // handled errors stay out of Maria's face; BF.onUnauthorized shows the pair screen itself
