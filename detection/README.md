@@ -45,7 +45,7 @@ Honesty notes:
 - Thresholds were tuned on the dev split only; test was scored once per code version, never used to tune.
 - **Cloud was not scored on test** (the shared NVIDIA key returned 429s), so there is no cloud test number.
 - The fixes cleaned up the model's noisy fields (AI-flag false positives 49% to 2%, asks precision 36% to 65%) but **asks recall dropped 10 points (95% to 85%)**: an honest trade-off, since fewer spurious asks also means a few real ones are no longer listed. Scam recall and false-alarm rates on test did not change; most false-alarm gains were measured on dev (rules-only 5/27 to 0/27, local 9/27 to 1/27), where they are optimistic.
-- The "rules baseline" column is eng3's plain keyword scorer, not the production `rule_scan`; the production-rules column is being added. The latency change also reflects a lighter load on the model server, not only the code.
+- The "rules baseline" column is eng3's plain keyword scorer, not the production `rule_scan`; the production-rules column is being added. Latency is wall-clock on a shared laptop GPU and varies between runs.
 - Scripts are short, team-written and synthetic; real STT text will be noisier.
 
 <!-- EVAL TABLE (eng3) -->
