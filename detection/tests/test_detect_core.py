@@ -86,3 +86,45 @@ def test_quick_rules_only_fast_and_valid():
     o = D.quick("You must pay today with gift cards and tell no one", "local"); dt = time.perf_counter() - t
     valid(o); assert o["engine"] == "local" and o["s"] >= 0.95 and dt < 0.005
     assert D.quick("good morning")["s"] == 0.0 and D.quick(None)["band"] == "low"
+
+
+def test_chips_cap_and_order():
+    o = schema.normalize({"asks": ["gift_card", "otp", "wire", "crypto", "secrecy"], "impersonates": "IRS", "addresses_ai_system": True, "why_chips": ["x"]})
+    assert len(o["why_chips"]) == 4 and o["why_chips"][0] == "Claims to be IRS" and "Talks to the AI" in o["why_chips"]
+    o = schema.normalize({"asks": ["secrecy", "otp"], "addresses_ai_system": True})
+    assert o["why_chips"] == ["Asks for a one-time code", "Talks to the AI", "Secrecy"]
+
+
+class _Eng:
+    def __init__(self): self.n = 0
+    async def score(self, t, m):
+        self.n += 1; return {"s": 0.2}
+
+
+def _patch(monkeypatch, eng):
+    from detection.engines import cloud
+    monkeypatch.setattr(cloud, "score", eng.score)
+    D._CACHE.clear(); D._bucket.update(tokens=None, t=0.0)
+
+
+def test_cache_dedupes(monkeypatch):
+    e = _Eng(); _patch(monkeypatch, e)
+    for t in ("Hello  there", "hello there", "HELLO THERE"):
+        asyncio.run(D._engine_score(t, {}, "cloud"))
+    assert e.n == 1
+
+
+def test_rate_budget_falls_back_to_rules(monkeypatch):
+    e = _Eng(); _patch(monkeypatch, e); monkeypatch.setenv("P2_CLOUD_RPM", "2")
+    outs = [asyncio.run(D.detect("c", f"pay with gift cards {i}", {}, "cloud")) for i in range(4)]
+    assert e.n == 2 and all("gift_card" in o["asks"] and o["s"] >= 0.9 for o in outs)
+
+
+def test_demo_mode_serves_recorded_and_records(monkeypatch, tmp_path):
+    e = _Eng(); _patch(monkeypatch, e)
+    monkeypatch.setattr(D, "DEMO_CACHE_PATH", tmp_path / "dc.json")
+    monkeypatch.setenv("DEMO_RECORD", "1")
+    asyncio.run(D._engine_score("rec me", {}, "cloud")); assert e.n == 1
+    D._CACHE.clear(); monkeypatch.delenv("DEMO_RECORD"); monkeypatch.setenv("DEMO_MODE", "1")
+    assert asyncio.run(D._engine_score("rec me", {}, "cloud")) == {"s": 0.2} and e.n == 1
+    asyncio.run(D._engine_score("other", {}, "cloud")); assert e.n == 2  # miss -> live

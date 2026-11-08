@@ -55,17 +55,22 @@ def _bool(v) -> bool:
 
 
 def build_chips(asks, impersonates, addresses_ai, extra=()):
+    """At most 4 chips, severity order: impersonation, hard asks, AI, secrecy, then model extras."""
     chips = []
-    for a in asks:
-        chips.append(ASK_CHIPS[a])
     if impersonates:
-        chips.insert(0, impersonation_chip(impersonates))
+        chips.append(impersonation_chip(impersonates))
+    chips += [ASK_CHIPS[a] for a in ASKS if a in asks and a in HARD_ASKS]
     if addresses_ai:
         chips.append(CHIP_AI)
+    if "secrecy" in asks:
+        chips.append(ASK_CHIPS["secrecy"])
     for c in extra:
-        if isinstance(c, str) and c.strip() and c.strip() not in chips:
+        if isinstance(c, str) and c.strip() and c.strip()[:40] not in chips:
             chips.append(c.strip()[:40])
-    return chips[:6]
+    # AI chip must survive the cap: drop trailing hard asks first if needed
+    if addresses_ai and CHIP_AI not in chips[:4]:
+        chips.remove(CHIP_AI); chips.insert(min(len(chips), 3), CHIP_AI)
+    return chips[:4]
 
 
 def normalize(raw, engine: str = "cloud") -> dict:

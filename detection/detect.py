@@ -84,7 +84,76 @@ def quick(window_text: str, engine: str = "cloud") -> dict:
         return schema.normalize({}, engine)
 
 
+# ---- rate budget, cache, demo cache (cloud + local engine calls) ----
+import json, os, time
+from collections import OrderedDict
+from pathlib import Path
+
+DEMO_CACHE_PATH = Path(__file__).with_name("demo_cache.json")
+_CACHE: "OrderedDict[tuple, dict]" = OrderedDict()
+CACHE_MAX = 512
+_bucket = {"tokens": None, "t": 0.0}
+MAX_BUCKET_WAIT_S = 0.5
+
+
+def _norm(text: str) -> str:
+    return " ".join((text or "").lower().split())
+
+
+def _model(engine: str) -> str:
+    if engine == "cloud":
+        from detection.engines import cloud
+        return cloud.MODEL
+    return "local"
+
+
+def _key(engine: str, text: str) -> tuple:
+    return (engine, _model(engine), _norm(text))
+
+
+def _demo_load() -> dict:
+    try:
+        return json.loads(DEMO_CACHE_PATH.read_text())
+    except Exception:
+        return {}
+
+
+def _demo_key(k: tuple) -> str:
+    return "|".join(k)
+
+
+async def _acquire(engine: str) -> bool:
+    """Process-wide token bucket (P2_CLOUD_RPM, default 35) for cloud calls; waits at most 0.5 s."""
+    if engine != "cloud":
+        return True
+    rpm = float(os.environ.get("P2_CLOUD_RPM", "35"))
+    deadline = time.monotonic() + MAX_BUCKET_WAIT_S
+    while True:
+        now = time.monotonic()
+        if _bucket["tokens"] is None:
+            _bucket["tokens"], _bucket["t"] = rpm, now
+        _bucket["tokens"] = min(rpm, _bucket["tokens"] + (now - _bucket["t"]) * rpm / 60.0)
+        _bucket["t"] = now
+        if _bucket["tokens"] >= 1:
+            _bucket["tokens"] -= 1
+            return True
+        if now >= deadline:
+            return False
+        await asyncio.sleep(0.05)
+
+
 async def _engine_score(window_text: str, metadata: dict, engine: str) -> dict:
+    k = _key(engine, window_text)
+    if k in _CACHE:
+        _CACHE.move_to_end(k)
+        return _CACHE[k]
+    if os.environ.get("DEMO_MODE") == "1":
+        hit = _demo_load().get(_demo_key(k))
+        if isinstance(hit, dict):
+            return hit
+    if not await _acquire(engine):
+        log.warning("cloud rate budget exhausted: rules-only result")
+        raise RuntimeError("rate budget exhausted")
     if engine == "local":
         try:
             from detection.engines import local  # eng3
@@ -92,7 +161,18 @@ async def _engine_score(window_text: str, metadata: dict, engine: str) -> dict:
             raise RuntimeError("local engine not available") from e
     else:
         from detection.engines import cloud as local
-    return await local.score(window_text, metadata)
+    raw = await local.score(window_text, metadata)
+    if isinstance(raw, dict):
+        _CACHE[k] = raw
+        while len(_CACHE) > CACHE_MAX:
+            _CACHE.popitem(last=False)
+        if os.environ.get("DEMO_RECORD") == "1":
+            try:
+                d = _demo_load(); d[_demo_key(k)] = raw
+                DEMO_CACHE_PATH.write_text(json.dumps(d, indent=1, sort_keys=True))
+            except Exception:
+                log.warning("demo cache write failed")
+    return raw
 
 
 async def detect(call_id: str, window_text: str, metadata: dict | None, engine: str = "cloud") -> dict:
