@@ -40,7 +40,7 @@ SECONDS_PER_LINE = 3.0    # assumed speech time per caller line
 THRESHOLDS = [round(0.30 + 0.05 * i, 2) for i in range(0, 14)]  # 0.30 .. 0.95
 DEFAULT_THRESHOLD = 0.80  # "high" band start
 MAX_RPM = {"cloud": int(os.environ.get("EVAL_CLOUD_RPM", "8"))}  # team NVIDIA key cap (lead, 2026-11-08: eval <=8 rpm)
-ENGINES = ("rules", "cloud", "local")
+ENGINES = ("rules", "prodrules", "cloud", "local")  # rules = plain keyword baseline; prodrules = production detect.quick (rule_scan + merge), what runs live when the LLM fails
 
 
 # ---------------------------------------------------------------- data
@@ -146,6 +146,8 @@ def pipeline_fingerprint(engine: str) -> str:
         parts.append("noprompt")
     parts.append(os.environ.get("LOCAL_MODEL", "") if engine == "local" else os.environ.get("NVIDIA_MODEL", os.environ.get("CLOUD_MODEL", "")))
     for f in ("detect.py", "schema.py", "engines/cloud.py", "engines/local.py"):
+        if engine == "prodrules" and f.startswith("engines/"):
+            continue
         p = ROOT / "detection" / f
         if p.exists() and (engine != "local" or f != "engines/cloud.py") and (engine != "cloud" or f != "engines/local.py"):
             parts.append(_sha(p.read_text()))
@@ -213,9 +215,14 @@ async def score_window(engine: str, call_id: str, window_text: str, *, cache: di
     key = _sha(fp, window_text)
     if key in cache:
         return {**cache[key], "cached": True}
-    if engine == "rules":
+    if engine in ("rules", "prodrules"):
         t0 = time.perf_counter()
-        d = rules_score(window_text)
+        if engine == "prodrules":
+            from detection.detect import quick
+            q = quick(window_text, "cloud")
+            d = {"s": float(q.get("s", 0.0)), "asks": list(q.get("asks", []))}
+        else:
+            d = rules_score(window_text)
         val = {"s": d["s"], "asks": d["asks"], "ms": round((time.perf_counter() - t0) * 1000, 3)}
     else:
         if limiter:
@@ -410,8 +417,8 @@ def freeze(engines) -> dict:
             continue
         thr, sweep = tune_threshold(dev)
         out["thresholds"][e] = {"threshold": thr, "tuned_on": "dev", "n_dev": len(dev),
-                                "dev_youden": round(dict(sweep)[thr], 3)}
-    out["git_sha"] = git_sha()
+                                "dev_youden": round(dict(sweep)[thr], 3), "git_sha": git_sha()}
+    out.setdefault("git_sha", git_sha())
     out["frozen_at"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
     FROZEN.write_text(json.dumps(out, indent=2) + "\n")
     return out
@@ -434,7 +441,7 @@ def before_after_section(fz: dict) -> list[str]:
     rules_before = {r["id"]: r for r in _read_before("rules")}
     L = ["## Before vs after TASK-022/023 (split = test, thresholds unchanged)", "",
          f"BEFORE = results/before/ (scored on code at `{fz.get('git_sha', 'n/a')}`, prior to AI-address gating, clause negation, request-verb gate, few-shots). "
-         f"AFTER = current trunk `{git_sha()}`. No retuning; thresholds tuned on dev only. The rules row is the standalone keyword baseline in run_eval.py, so it is identical by construction.", ""]
+         f"AFTER = trunk `{fz.get('test_run_sha_after', git_sha())}` (local+rules runs). No retuning; thresholds tuned on dev only. The rules row is the standalone keyword baseline in run_eval.py, so it is identical by construction.", ""]
     for e in ("local", "rules"):
         b_all, a_all = _read_before(e), read_results(e, "test")
         if not b_all or not a_all:
@@ -465,7 +472,7 @@ def build_report() -> str:
          "Small n: read every cell with its interval (Wilson 95%). Thresholds were tuned on split=dev only and frozen "
          f"before scoring split=test (`FROZEN.json`, git `{fz.get('git_sha', 'n/a')}`).", "",
          f"Setup: caller lines replayed one at a time, window = last {WINDOW_LINES} lines, alert when s >= threshold. "
-         f"'Rules' = a plain keyword baseline (`rules_score` in run_eval.py), not an LLM. Seconds assume ~{SECONDS_PER_LINE:.0f} s of speech per line.", ""]
+         f"'Rules' = a plain keyword baseline (`rules_score` in run_eval.py), not an LLM; 'prodrules' = the production rule path (`detect.quick`: rule_scan + merge, what runs live when the LLM fails). Seconds assume ~{SECONDS_PER_LINE:.0f} s of speech per line.", ""]
     rules_cache = {sp: {r["id"]: r for r in read_results("rules", sp)} for sp in ("dev", "test")}
     for sp in ("test", "dev"):
         have = [e for e in engines if read_results(e, sp)]
