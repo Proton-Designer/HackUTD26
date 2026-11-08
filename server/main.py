@@ -151,3 +151,8 @@ if os.environ.get("DEMO_MODE") == "1":
 _WEB = pathlib.Path(__file__).resolve().parent.parent / "web" / "customer"
 if _WEB.is_dir():
     app.mount("/app", StaticFiles(directory=str(_WEB), html=True), name="customer-app")
+
+# P4b command center, same pattern (after API routes).
+_CC = pathlib.Path(__file__).resolve().parent.parent / "web" / "command-center"
+if _CC.is_dir():
+    app.mount("/command-center", StaticFiles(directory=str(_CC), html=True), name="command-center")

@@ -117,3 +117,10 @@ def test_latency_and_status(tmp_path, monkeypatch):
     assert s["hub"] == "up" and "P2 /detect" in s["pipelines"] and "HUB_TOKEN_set" in s["flags"]
     assert "HUB_TOKEN" not in str(s.get("flags", {}).values())
     assert "<table>" in c.get("/demo/status?format=html").text
+
+
+def test_static_mounts_load():
+    c = TestClient(app)
+    for path in ("/app/", "/command-center/", "/command-center/app.js"):
+        assert c.get(path).status_code == 200, path
+    assert c.get("/healthz").json() == {"ok": True}  # API routes still win
