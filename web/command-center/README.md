@@ -26,16 +26,18 @@ http://localhost:5180/web/command-center/?server=http://192.168.1.20:8000
 
 ## Views and keys
 
-| View | Key | For |
+Two views. The screen follows the call by itself: it shows **Live call** until the decoy has the scammer's payment details, then moves to **Money trail**.
+
+| View | Key | Shows |
 |---|---|---|
-| **Story** (default) | 1 | The table. One chapter of the call at a time, big: during the call → what the decoy got → what we did. Follows the call; click a rail step to hold a chapter, Esc to follow again |
-| **Agent** | 2 | NVIDIA judges: the agent pipeline (artifacts → lookups → Nemotron → policy gate) and the full trace, with the evidence and denials beside it |
-| **Everything** | 3 | A technical judge who wants every panel at once |
-| **Money trail** | 4 | Capital One / bank judges: where the scam money goes (victims → mule account → cash-out) and Maria's $1,800 pending or held, from P4a's `GET /intel/chain` (Nessie sandbox, synthetic), beside what we did and the Approve queue |
+| **Live call** | 1 | The banner and progress steps, the caller-only transcript and decoy turns, and the risk gauge |
+| **Money trail** | 2 | The ending. Left: where his money goes (victims → mule account → cash-out, from P4a's `GET /intel/chain`, Capital One Nessie sandbox, mock data), with the customer's line cut once the transfer is stopped. Right: the payoff checklist, ticked as it happens: payout account captured → customer's pending Zelle stopped → that account took $X from N people → **Approve · flag this account** (the one click) → his callback rejected. After the click the banner reads "Scammer get scammed. He got $0." |
+
+Pressing a key holds that view; **Esc** (or "back to live") follows the call again.
 
 Live: **Clear for next judge** (footer button, or C) wipes this screen between judges; the live connection stays on. It does not reset the hub.
 Replay: **Space** pause/play · **R** restart · click the bar to jump.
-Open a view directly: `.../command-center/#agent`. After pulling an update, reload once with Ctrl+F5.
+Open a view directly: `.../command-center/?view=money`. After pulling an update, reload once with Ctrl+F5.
 Look: light by default; `?look=dark` brings back the original magenta on dark.
 
 ## Test live mode without P1

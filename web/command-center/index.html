@@ -26,17 +26,14 @@
         <span class="title">T-Mobile command center</span>
       </div>
       <nav class="views" role="tablist" aria-label="View">
-        <button role="tab" data-view="story" title="Only what's happening now, big (key 1)">Story</button>
-        <button role="tab" data-view="agent" title="The intel agent's full trace (key 2)">Agent</button>
-        <button role="tab" data-view="all" title="Every panel at once (key 3)">Everything</button>
-        <button role="tab" data-view="money" title="Where the scam money goes: victims, mule account, cash-out (key 4)">Money trail</button>
+        <button role="tab" data-view="call" title="The live call (key 1)">Live call</button>
+        <button role="tab" data-view="money" title="The ending: the scammer's money, stopped and flagged (key 2)">Money trail</button>
       </nav>
       <div class="top-right">
         <button id="follow" class="follow" hidden>Pinned · back to live</button>
         <span class="pill sim">Simulated carrier network</span>
         <span id="engine" class="engine"></span>
         <span id="source" class="source"></span>
-        <span id="clock" class="clock"></span>
       </div>
     </header>
 
@@ -46,7 +43,6 @@
         <p id="subline" class="subline"></p>
         <div id="rail" class="rail" role="group" aria-label="Progress: click a step to show that part"></div>
       </div>
-      <div id="campaign" class="campaign"></div>
     </section>
 
     <!-- app.js moves the panels for the current view into this grid -->
@@ -76,32 +72,12 @@
       <h2><span>Call · caller side only</span><small id="feed-meta"></small></h2>
       <div class="body"></div>
     </section>
-    <section class="panel" id="p-artifacts">
-      <h2><span>What the decoy extracted</span><small id="artifacts-meta">checked against public records</small></h2>
-      <div class="body"></div>
-    </section>
-    <section class="panel" id="p-pipeline">
-      <h2><span>Agent pipeline</span><small id="pipe-meta"></small></h2>
-      <div class="body"></div>
-    </section>
-    <section class="panel" id="p-trace">
-      <h2><span>Agent trace</span><small id="trace-meta">Nemotron · typed artifacts only, never transcripts</small></h2>
-      <div class="body mono"></div>
-    </section>
-    <section class="panel" id="p-queue">
-      <h2><span>Approve network-wide</span><small id="queue-meta"></small></h2>
-      <div class="body"></div>
-    </section>
-    <section class="panel" id="p-auto">
-      <h2><span>Done automatically</span><small>affects only Maria, or only warns</small></h2>
-      <div class="body"></div>
-    </section>
     <section class="panel" id="p-map">
-      <h2><span>Money trail</span><small id="map-meta">P4a network map · Capital One Nessie sandbox, simulated accounts</small></h2>
+      <h2><span>Where his money goes</span><small id="map-meta">Capital One Nessie sandbox · mock bank data</small></h2>
       <div class="body"></div>
     </section>
-    <section class="panel" id="p-denied">
-      <h2><span>Denied by the gate</span><small>injection, poisoning, no corroboration</small></h2>
+    <section class="panel" id="p-payoff">
+      <h2><span>Scammer get scammed</span><small>Capital One Nessie sandbox · mock bank data</small></h2>
       <div class="body"></div>
     </section>
   </div>

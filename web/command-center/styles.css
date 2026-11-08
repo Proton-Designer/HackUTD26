@@ -117,7 +117,7 @@ h1, h2, p { margin: 0; }
 .source.reconnecting b { color: var(--danger-text); }
 
 /* ---------- hero: the one sentence + where we are ---------- */
-.hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 340px); gap: var(--s3); }
+.hero { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s3); }
 .hero-main {
   background: var(--surface); border-radius: var(--radius);
   padding: var(--s4) var(--s5); min-width: 0;
@@ -471,7 +471,7 @@ h1, h2, p { margin: 0; }
 
 /* ---------- narrower screens (browser zoom at the table, small laptops) ---------- */
 @media (max-width: 1240px) {
-  .hero { grid-template-columns: minmax(0, 1fr) 260px; }
+  .hero { grid-template-columns: minmax(0, 1fr); }
   .grid { grid-template-columns: minmax(250px, 0.95fr) minmax(320px, 1.2fr) minmax(280px, 1fr); }
   .title, .clock { display: none; }
   .brand { flex-shrink: 0; }
@@ -495,3 +495,32 @@ h1, h2, p { margin: 0; }
   .app { padding: var(--s2) var(--s4); }
   .rail { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* ---------- the money ending: payoff checklist (one beat per line, ticked as it happens) ---------- */
+.payoff { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s3); }
+.po { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: var(--s3); align-items: start; transition: opacity 0.3s; }
+.po-dot {
+  width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
+  font-weight: 800; font-size: 15px; border: 2px solid var(--line); color: transparent; background: var(--surface);
+}
+.po-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.po-txt b { font-size: var(--f20); line-height: 1.25; }
+.po-txt span { color: var(--text-3); font-size: var(--f14, 14px); overflow-wrap: anywhere; }
+.po.wait { opacity: 0.45; }
+.po.done .po-dot { background: var(--ok); border-color: var(--ok); color: #fff; }
+.po.now .po-dot { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-tint); animation: po-pulse 1.4s ease-in-out infinite; }
+.po.now .po-txt b { color: var(--accent-text); }
+@keyframes po-pulse { 50% { box-shadow: 0 0 0 9px var(--accent-tint); } }
+.po-btn {
+  margin-top: var(--s2); align-self: flex-start; cursor: pointer; border: 0; border-radius: 999px;
+  padding: 12px 22px; font: inherit; font-weight: 800; font-size: var(--f16, 16px);
+  background: var(--accent); color: #fff; box-shadow: 0 6px 18px rgba(226, 0, 116, 0.28);
+}
+.po-btn:hover { filter: brightness(1.06); }
+.po-btn:disabled { opacity: 0.6; cursor: progress; }
+.po-btn:focus-visible { outline: 3px solid var(--text); outline-offset: 3px; }
+.po-note { margin-top: var(--s3); color: var(--text-3); font-size: var(--f12, 12px); }
+.mt-tag.flag rect { fill: var(--danger); }
+.mt-svg .mt-tag.flag text { fill: #fff; }
+.mt-flag-ring { fill: none; stroke: var(--danger); stroke-width: 2.5px; stroke-dasharray: 5 4; }
+@media (prefers-reduced-motion: reduce) { .po.now .po-dot { animation: none; } }
