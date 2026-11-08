@@ -331,6 +331,10 @@ h1, h2, p { margin: 0; }
 .act .bub.warn { background: var(--warn-tint); }
 .act .bub.net { background: rgba(90, 160, 255, 0.18); }
 .act .bub.reject { background: var(--accent); }
+.act .bub.money { background: rgba(31, 166, 74, 0.28); }
+.act.money { box-shadow: inset 0 0 0 1px rgba(94, 224, 138, 0.45); }
+.act.money .lbl { color: var(--ok-text); }
+.act .lbl .pill { vertical-align: 2px; margin-left: 4px; padding: 0 6px; font-size: 11px; }
 .act .txt { min-width: 0; }
 .act .lbl { font-size: var(--f14); font-weight: 700; line-height: 1.25; }
 .act .tgt { font-size: var(--f12); color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

@@ -23,13 +23,14 @@
   const ART = { callback_phone: 'Callback number', domain: 'Website', url: 'Link', wallet: 'Crypto wallet', payment_handle: 'Payment handle', gift_card_brand: 'Gift card brand', bank: 'Bank account', remote_app: 'Remote-access app', impersonated_org: 'Impersonating', script_tags: 'Script' };
   const SUBJECT = { callback_phone: 'Callback number', domain: 'Website', url: 'Link', wallet: 'Wallet', payment_handle: 'Payment handle', bank: 'Bank account' };
   const LOOKUPABLE = new Set(['callback_phone', 'domain', 'wallet', 'payment_handle']);
-  const TOOL = { rdap: 'RDAP', whois: 'RDAP', blockchain: 'Chain', chain: 'Chain', btc: 'BTC', eth: 'ETH', mempool: 'Chain', etherscan: 'Chain', allowlist: 'Allowlist', safe_browsing: 'Safe Browsing', popularity: 'Site rank' };
+  const TOOL = { bank: 'Bank (simulated)', rdap: 'RDAP', whois: 'RDAP', blockchain: 'Chain', chain: 'Chain', btc: 'BTC', eth: 'ETH', mempool: 'Chain', etherscan: 'Chain', allowlist: 'Allowlist', safe_browsing: 'Safe Browsing', popularity: 'Site rank' };
   // P4a's kind names (intel/gate.py), plus P1's mock name and older aliases
   const KIND = {
     block_caller_for_customer: 'Block caller for Maria', link_campaign: 'Link to campaign, block its numbers before ring',
     callback_protection_warning: 'Add callback number to Scam Callback Protection', network_number_block: 'Block calling number network-wide',
     number_block_network: 'Block calling number network-wide', dns_block_registrar_report: 'DNS block + registrar abuse report',
     exchange_freeze_request: 'Exchange freeze request for the wallet', ftc_ic3_packet: 'FTC + IC3 report packet',
+    hold_transfer: 'Held the transfer to the scammer', flag_payee_bankwide: 'Flag this payee bank-wide',
     mark_number_safe: 'Mark number safe', add_trusted_contact: 'Add trusted contact', unblock_number: 'Unblock number', allowlist_add: 'Add to allowlist',
     block_for_customer: 'Block caller for Maria', campaign_link: 'Link to campaign', callback_protection: 'Add to Callback Protection',
     network_block: 'Block number network-wide', dns_block: 'DNS block + registrar report', freeze_request: 'Freeze request',
@@ -215,7 +216,7 @@
     const t = String(d.tool || d.source_type || '').toLowerCase();
     if (t) return t;
     const k = String(d.kind || d.artifact_kind || '').toLowerCase();
-    return { domain: 'rdap', wallet: 'chain', allowlist: 'allowlist', phone: 'allowlist', callback_phone: 'allowlist' }[k] || k || 'lookup';
+    return { domain: 'rdap', wallet: 'chain', allowlist: 'allowlist', phone: 'allowlist', callback_phone: 'allowlist', bank_transfer: 'bank' }[k] || k || 'lookup';
   }
   const ARTIFACT_KIND = { phone: 'callback_phone', callback_phone: 'callback_phone', domain: 'domain', url: 'url', wallet: 'wallet', payment_handle: 'payment_handle' };
   const IS_CHAIN = /chain|btc|eth|mempool|etherscan|blockstream|blockscout/;
@@ -234,12 +235,28 @@
       error: d.error || d.reason || status, real: d.real !== false && d.simulated !== true,
       result: r, latency: d.latency_ms, source: d.source || '',
     };
+    if (tool === 'bank') {
+      // P4a's simulated bank lookup: value arrives as "zelle:<payee id>"; match the card on the id
+      const v = String(value ?? '');
+      if (/^[a-z0-9_-]+:/i.test(v)) { l.rail = v.split(':')[0]; l.value = v.slice(l.rail.length + 1); }
+      if (!d.artifact_kind || !ARTIFACT_KIND[String(d.artifact_kind).toLowerCase()]) l.type = 'payment_handle';
+    }
     l.summary = d.summary || autoSummary(l);
     l.detail = d.detail || autoDetail(l);
     l.verdict = verdictWord(d.verdict) || autoVerdict(l);
     return l;
   }
   const fmtAmt = x => Number(x).toLocaleString('en-US', { maximumFractionDigits: 4 });
+  const fmtMoney = x => `$${Number(x).toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
+  // Money a bank hold kept from leaving (simulated bank); undone holds don't count
+  function heldTotal() {
+    let t = 0;
+    for (const id of S.actOrder) {
+      const a = S.actions.get(id);
+      if (/hold_transfer/.test(a.kind) && a.status === 'auto' && !a.undone && Number.isFinite(a.amount)) t += a.amount;
+    }
+    return t;
+  }
   function ago(days) {
     if (days <= 0) return 'today';
     if (days === 1) return '1 day ago';
@@ -276,6 +293,7 @@
   function autoDetail(l) {
     const r = l.result;
     const src = shortSource(l.source);
+    if (l.tool === 'bank') return r.source_label || 'Simulated bank (Capital One Nessie sandbox, mock data)';
     if (!l.ok) return src;
     if (/rdap|whois/.test(l.tool)) return [r.registrar ? `Registrar: ${r.registrar}` : '', src].filter(Boolean).join(' · ');
     if (IS_CHAIN.test(l.tool)) return [r.first_seen ? `First seen ${r.first_seen}` : '', src].filter(Boolean).join(' · ');
@@ -294,6 +312,7 @@
     const r = l.result;
     if (!l.ok) return 'unknown';
     if (/allow/.test(l.tool)) return r.match ? 'conflict' : 'unknown';
+    if (l.tool === 'bank') return num(r.pending_count) > 0 || num(r.activity_count) > 0 ? 'bad' : 'unknown';
     if (/rdap|whois/.test(l.tool)) {
       if (r.newly_registered === true) return 'bad';
       const age = num(r.age_days ?? r.registered_days_ago);
@@ -307,6 +326,7 @@
     s = String(s || '').toLowerCase();
     approval = String(approval || '').toLowerCase();
     if (/den|reject|refus|not_actioned/.test(s)) return 'denied';
+    if (/skip/.test(s)) return 'skipped';
     if (/^held/.test(s)) return 'held';
     if (/queue|pending|await/.test(s)) return 'queued';
     if (/approved/.test(s)) return 'applied';
@@ -334,6 +354,7 @@
       status, gate: d.gate_status || '', simulated: d.simulated !== false, evidence: arr(d.evidence),
       expiry: d.expiry || d.expires_in || (d.payload && d.payload.body && d.payload.body.expiresInDays ? `${d.payload.body.expiresInDays} days` : ''),
       undo: d.undo_token || '', reason: d.reason || d.rule || '',
+      amount: num(d.amount), source: d.source || '', undone: d.active === false,
     };
   }
 
@@ -528,7 +549,7 @@
       const l = normLookup(d);
       l.seq = S.seq;
       const a = findArt(l) || addArt(l.type, l.value, {}); // P1/P4a may look up values we never saw extracted
-      const bucket = a.lookups;
+      const bucket = a ? a.lookups : S.loose;
       // P4a sends no lookup id, so a repeat of the same tool on the same value replaces the old result.
       const i = bucket.findIndex(x => (l.id ? x.id === l.id : x.tool === l.tool && normVal(x.value) === normVal(l.value)));
       if (i >= 0) bucket[i] = l; else bucket.push(l);
@@ -567,6 +588,12 @@
         if (d.expiry) prev.expiry = d.expiry;
         if (d.undo_token) prev.undo = d.undo_token;
         if (d.reason || d.rule) prev.reason = d.reason || d.rule;
+        if (Number.isFinite(num(d.amount))) prev.amount = num(d.amount);
+        if (d.active === false && !prev.undone) {
+          // e.g. Maria released a bank hold from her app
+          prev.undone = true; prev.seq = S.seq;
+          trace('gate queued', 'CUSTOMER', `undid ${esc(prev.kind)}(${esc(shortVal(prev.target))}) <span class="res">· ${esc(d.gate_status || 'undone by customer')}</span>`);
+        }
         if (d.gate_status) prev.gate = d.gate_status;
         if (before !== prev.status) {
           prev.seq = S.seq; prev.ui = '';
@@ -668,6 +695,8 @@
       auto: ['gate auto', 'GATE', `${tgt}auto-applied ✓ <span class="res">· affects only Maria or only adds a warning</span>`],
       queued: ['gate queued', 'GATE', `${tgt}queued for one analyst click <span class="res">· network-wide or external</span>`],
       held: ['gate queued', 'GATE', `${tgt}held <span class="res">${why || '· waiting for campaign confirmation'}</span>`],
+      // skipped (e.g. the simulated bank is down): nothing changed, so it is never shown as applied
+      skipped: ['gate queued', 'GATE', `${tgt}not applied <span class="res">· ${esc(a.gate || a.reason || 'skipped')}</span>`],
       applied: ['analyst', 'ANALYST', `approved ${esc(a.kind)}(${esc(shortVal(a.target))}) <span class="res">→ simulated: applied</span>`],
       denied: ['gate denied', 'GATE', `${tgt}denied <span class="res">${why || '· policy gate'}</span>`],
     }[a.status];
@@ -681,7 +710,8 @@
     let auto = 0, queued = 0, applied = 0;
     for (const id of S.actOrder) { const a = S.actions.get(id); if (a.status === 'auto') auto++; else if (a.status === 'queued') queued++; else if (a.status === 'applied') applied++; }
     if (!auto) auto = S.blocks.filter(b => b.active).length; // P1's blocklist stub without intel actions
-    return [auto ? `${auto} auto` : '', queued ? `${queued} to approve` : '', applied ? `${applied} approved` : ''].filter(Boolean).join(' · ');
+    const held = heldTotal();
+    return [held ? `${fmtMoney(held)} held` : '', auto ? `${auto} auto` : '', queued ? `${queued} to approve` : '', applied ? `${applied} approved` : ''].filter(Boolean).join(' · ');
   }
   function addArt(type, value, meta) {
     if (value == null || value === '') return null;
@@ -701,7 +731,12 @@
     const auto = list.filter(a => a.status === 'auto');
     const queued = list.filter(a => a.status === 'queued');
     if (auto.length || queued.length || list.some(a => a.status === 'applied')) stage('burn', burnSub());
-    if (!S.rejects.length && (auto.length || queued.length)) {
+    const held = heldTotal();
+    if (!S.rejects.length && held) {
+      // the money moment leads until the callback is rejected
+      head(`<em>${fmtMoney(held)} held</em> before it reached the scammer`,
+        `Simulated bank (Capital One Nessie sandbox, mock data) · Maria can undo · ${auto.length} protection${auto.length === 1 ? '' : 's'} applied automatically${queued.length ? `, ${queued.length} waiting for one click` : ''}`, 'win');
+    } else if (!S.rejects.length && (auto.length || queued.length)) {
       const qn = `${queued.length} waiting for one click`;
       const text = auto.length
         ? `<em>${auto.length} protection${auto.length === 1 ? '' : 's'}</em> applied automatically${queued.length ? `, <em>${qn}</em>` : ''}`
@@ -1032,7 +1067,7 @@
       const body = bodyOf('auto');
       const rows = [];
       const used = new Set();
-      const ICON = k => (/block_caller|block_for/.test(k) ? ['🛡', 'shield'] : /campaign/.test(k) ? ['🔗', 'link'] : /callback_protection/.test(k) ? ['📞', 'warn'] : ['✓', 'shield']);
+      const ICON = k => (/hold_transfer/.test(k) ? ['💵', 'money'] : /block_caller|block_for/.test(k) ? ['🛡', 'shield'] : /campaign/.test(k) ? ['🔗', 'link'] : /callback_protection/.test(k) ? ['📞', 'warn'] : ['✓', 'shield']);
       for (const id of S.actOrder) {
         const a = S.actions.get(id);
         const blocks = blocksFor(a, used); // claims the blocklist rows this action produced
@@ -1049,11 +1084,19 @@
         if (a.status === 'held' && a.reason) tgt += ` · ${a.reason}`;
         const forHer = scopeKey(a.scope) === 'her';
         const [icon, tone] = a.status === 'held' ? ['⏸', 'warn'] : ICON(a.kind);
+        const isHold = /hold_transfer/.test(a.kind);
+        const off = undone || a.undone;
+        let label = a.status === 'held' ? `Held: ${a.label}` : a.label;
+        if (isHold) {
+          // the bank hold: the money moment, in plain words (simulated bank, mock data)
+          label = Number.isFinite(a.amount) ? `Held ${fmtMoney(a.amount)} before it reached the scammer` : 'Held her transfer to the scammer';
+          tgt = 'Zelle transfer to the payee the scammer gave the decoy';
+        }
         rows.push({
-          key: a.id, seq: a.seq, ms: a.ms, cls: a.status === 'held' ? 'held' : undone ? 'undone' : '', icon, tone,
-          label: a.status === 'held' ? `Held: ${a.label}` : a.label, tgt, scope: scopeLabel(a.scope),
+          key: a.id, seq: a.seq, ms: a.ms, cls: a.status === 'held' ? 'held' : off ? 'undone' : isHold ? 'money' : '', icon, tone,
+          label, tgt, scope: scopeLabel(a.scope), simBank: a.source === 'nessie' || /nessie/i.test(a.reason || ''),
           // Maria's side of it, in her words: it's in her protection log and she can undo it there
-          undo: undone ? 'undone' : forHer && (a.undo || blocks.length) ? 'her-log' : '',
+          undo: off ? 'undone' : forHer && (a.undo || blocks.length) ? 'her-log' : '',
         });
       }
       const BL = { her: ['Blocked for Maria', 'Maria only', '🛡', 'shield'], campaign: ['Blocked before ring for Backfire users', 'Backfire users', '🔗', 'link'], network: ['Blocked network-wide (simulated)', 'All customers', '🌐', 'net'] };
@@ -1070,10 +1113,11 @@
       const before = new Map([...body.querySelectorAll('[data-key]')].map(el => [el.dataset.key, el.getBoundingClientRect().top]));
       body.innerHTML = `<div class="list">${rows.map(r => `<div class="act ${r.cls}${fresh('auto', r.seq)}" data-key="${esc(r.key)}">`
         + `<span class="bub ${r.tone}" aria-hidden="true">${r.icon}</span>`
-        + `<div class="txt"><div class="lbl">${esc(r.label)}</div><div class="tgt" title="${esc(r.tgt)}">${esc(r.tgt)}${r.undo ? ` <span class="undo">· ${UNDO[r.undo]}</span>` : ''}</div></div>`
+        + `<div class="txt"><div class="lbl">${esc(r.label)}${r.simBank ? ' <span class="pill sim" title="Capital One Nessie sandbox, mock bank data">Simulated bank</span>' : ''}</div>`
+        + `<div class="tgt" title="${esc(r.tgt)}">${esc(r.tgt)}${r.undo ? ` <span class="undo">· ${UNDO[r.undo]}</span>` : ''}</div></div>`
         + `<div class="when">${esc(r.scope)}${Number.isFinite(r.ms) && r.ms > 1e12 ? `<span>${esc(fmtTime(r.ms))}</span>` : ''}</div></div>`).join('')}</div>`;
       // FLIP, step 2: start each surviving card where it was, then let it glide to its new place
-      if (before.size && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      if (before.size && !document.hidden && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
         for (const el of body.querySelectorAll('[data-key]')) {
           const was = before.get(el.dataset.key);
           if (was == null) continue;
