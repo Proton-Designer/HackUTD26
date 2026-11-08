@@ -90,10 +90,10 @@ Private P2 :8104, local engine (nemotron-nano-4b), real time, HUB_URL dead, one 
 | 4d8dd2f8 | 72 s | quiet | quiet | 0.05 low | 0.31 s | PASS |
 | 497ef1d4 | 62 s | quiet | quiet | 0.00 low | 0.36 s | PASS |
 | 6352e850 | 146 s | quiet in the live run (upstream digital-zero mute, not a detector miss) | quiet | 0.05 low | 0.32 s | SAME as before (known upstream miss) |
-| 93c95fd6 | 94 s | no earlier row | first +18.04 s | 0.60 critical-labelled in P2 log | 0.36 s | first replay: alerts, 1 alert, no repeat |
+| 93c95fd6 | 94 s | alert +18.3 s live (earlier row in STT_FALLBACK.md) | first +18.04 s | 0.60 critical-labelled in P2 log | 0.36 s | PASS (-0.3 s vs live), 1 alert, no repeat |
 | a9142648 | 40 s | no earlier row | first +13.13 s | 0.95 critical | 0.39 s | first replay: alerts |
 | ba80d152 | 78 s | no earlier row | first +13.49 s | 0.95 critical | 0.34 s | first replay: alerts |
-Result: no alert moved by more than 0.2 s versus the earlier numbers, 0 new false alarms (every benign dump stayed quiet), 1 alert per alerting call. Not verified: whether 93c95fd6, a9142648 and ba80d152 are scripted scam calls (no label in this file; they alert, so a false alarm is possible if they were benign). The 0.60 end-state in the P2 log carries the band label of the raw score; the hub-side band for 0.60 is "watch" (seen in TASK-066).
+Result: no alert moved by more than 0.2 s versus the earlier numbers, 0 new false alarms (every benign dump stayed quiet), 1 alert per alerting call. The three calls added here (93c95fd6, a9142648, ba80d152) are labelled SCAM below (lead, from the p2.log finals); 93c95fd6 also has the live +18.3 s row in STT_FALLBACK.md. The 0.60 end-state in the P2 log carries the band label of the raw score; the hub-side band for 0.60 is "watch" (seen in TASK-066).
 
 ## Labels for the three calls added in TASK-071 (lead's reading of logs/p2.log finals, 06:01)
 | call | start (CT) | label | replay alert | result |
