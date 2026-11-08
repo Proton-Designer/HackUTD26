@@ -89,7 +89,11 @@ async def main():
         await asyncio.sleep(0.5); lt.cancel(); return 0
     print("POST call.answered ->", post(hook, webhook(*steps[1]))[0])
     print("POST streaming.started ->", post(hook, webhook(*steps[2]))[0])
-    url = resp.get("stream_url") or f"{hub_ws}/media/{sid}" + (f"?t={a.media_token}" if a.media_token else "")
+    su = resp.get("stream_url")
+    if su:   # the hub may hand back its PUBLIC ws base (PUBLIC_WS/tunnel); sim media must come straight to the local hub (loopback-only), keep path+token
+        from urllib.parse import urlsplit
+        u = urlsplit(su); su = f"{hub_ws}{u.path}" + (f"?{u.query}" if u.query else "")
+    url = su or f"{hub_ws}/media/{sid}" + (f"?t={a.media_token}" if a.media_token else "")
     if a.script and not a.wav:
         import pathlib, subprocess, tempfile
         sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "voip"))
