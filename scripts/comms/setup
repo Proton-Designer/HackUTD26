@@ -51,13 +51,20 @@ if [ "$GH_OK" = 1 ]; then
   ok "all to:/from: labels present"
 fi
 
-# 5. Hooks file + line endings
+# 5. Git settings for a busy shared branch (local to this repo)
+git config pull.rebase true; git config rebase.autoStash true; git config rerere.enabled true; git config fetch.prune true
+br=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+ok "git: pull.rebase, autoStash, rerere on (branch: $br)"
+[ "$br" = "finalized-idea-backfire" ] || warn "you're on '$br'. The team trunk is finalized-idea-backfire: git switch finalized-idea-backfire"
+[ -f scripts/git/sync ] && ok "scripts/git/sync present (use it to pull + push)"
+
+# 6. Hooks file + line endings
 if [ -f .claude/settings.json ] && grep -q "scripts/comms/inbox" .claude/settings.json; then ok ".claude/settings.json has the comms hooks"; else bad ".claude/settings.json missing or without comms hooks (git pull the branch)"; fi
 if grep -q $'\r' scripts/comms/inbox 2>/dev/null; then
   bad "scripts have Windows (CRLF) line endings. Fix (Git Bash): rm scripts/comms/* .claude/settings.json && git checkout -- scripts/comms .claude/settings.json"
 else ok "scripts have LF line endings"; fi
 
-# 6. Live read test
+# 7. Live read test
 if [ -n "$ME" ] && command -v gh >/dev/null; then
   if T gh api -X GET "repos/$REPO/issues" -f labels="to:ALL" -f state=open --jq 'length' >/dev/null 2>&1; then
     ok "can read the message bus ($(bash scripts/comms/send list 2>/dev/null | grep -c '^#') open thread(s) for $ME/ALL)"

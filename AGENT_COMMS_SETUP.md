@@ -1,5 +1,7 @@
 # Agent comms: complete setup (macOS + Windows)
 
+> **v2 (00:30): already set up? Just do this:** `bash scripts/git/sync --pull` → `bash scripts/comms/setup` (no id needed) → **restart Claude Code** → paste the §6 prompt again. New: replies now reach the thread's sender, `ack` / `done` / `wait` / `blast`, the Stop hook enforces answers + pushes + a background watcher, and `scripts/git/sync` for all pushing/pulling (§12).
+
 Every pipeline's Claude Code agent can message every other pipeline's agent. Messages are **pushed into the receiving agent's session automatically**: the agent doesn't have to remember to check. The same tooling also reports each machine's pipeline, step and agent count to the team dashboard (`dashboard/`).
 
 **Time to set up: about 10 minutes per machine.** Do it once per laptop. If one laptop runs two pipelines (Ayman runs P1 and P2 on two machines), do it on each machine.
@@ -23,7 +25,8 @@ Every pipeline's Claude Code agent can message every other pipeline's agent. Mes
 | Session starts | `SessionStart` | Told its pipeline id + how to send/report; any unread mail is shown |
 | You type a prompt | `UserPromptSubmit` | Unread mail is attached to your prompt |
 | While working (after any tool, max once per 60 s) | `PostToolUse` | New mail interrupts it as a 📨 banner; it reads and replies |
-| It tries to finish/go idle | `Stop` | It is **not allowed to stop** while unread mail exists; it handles it first |
+| It tries to finish/go idle | `Stop` | **Not allowed to stop** while (1) unread mail exists, (2) a thread addressed to it has never been answered, (3) it has unpushed commits, or (4) no background `inbox watch` is armed |
+| It's idle | background `inbox watch` | The watcher exits the moment mail arrives (checks every 15 s), which wakes the agent; it re-arms on its next stop |
 
 - **Identity:** a one-line file `.backfire-pipeline` (gitignored) says which pipeline this machine is.
 - **Presence:** the same hooks edit one comment per machine on the "📡 Agent presence board" issue: pipeline, step, agent count, last tool. That's what the dashboard displays.
@@ -176,9 +179,16 @@ If the ping never arrives, see Troubleshooting below.
 
 ---
 
-## 6. Tell your agent about it (paste once at the start of your session)
+## 6. Tell your agent about it (paste once at the start of every session)
 
-> You are pipeline **P#** of Backfire. Other pipelines' agents can message you; their messages are injected into your session automatically as "📨 NEW MESSAGE(S)". When one arrives: read it, answer anything asked of you before continuing, and tell me if it changes my plan. To message another pipeline use `bash scripts/comms/send <P1|P2|P3|P4|P4a|P4b|ALL> "subject" "body"`; reply with `bash scripts/comms/send reply <#> "text"`; close a resolved thread with `bash scripts/comms/send close <#> "resolution"`. Use it for seams: contract questions, payload formats, "X is ready on branch Y", blockers. Keep messages short and concrete (paths, payload examples). Contract changes are *proposals* to P1; only P1 edits `contracts/`. Each time you start a new outcome from your pipeline guide, run `bash scripts/comms/status <outcome#> "one-line what you're doing"`; if you're blocked, `bash scripts/comms/status blocked "on what"`.
+> You are pipeline **P#** of Backfire. Other pipelines' agents message you through `scripts/comms`; their messages are injected into your session automatically. Rules (the hooks enforce them):
+> 1. **Answer every thread addressed to you immediately**, at least with `bash scripts/comms/send ack <#> "on it, ETA …"`. Never leave another agent waiting; never ask me to relay a message: send it yourself.
+> 2. **Need something from another pipeline?** `bash scripts/comms/send wait <P#> "exactly what you need (endpoint, payload, file)"`, then keep working on whatever isn't blocked, with the watcher armed.
+> 3. **Delivered something someone asked for?** Commit your own files (never `git add -A`, never BOARD.md), then `bash scripts/comms/send done <#> "what landed + how to use it"`. That pushes via `scripts/git/sync` and posts the commit SHA. No thread? `send done <P#> "…"`.
+> 4. **Push as soon as a piece works** with `bash scripts/git/sync` (never `git push --force`). Pull teammates' work with `bash scripts/git/sync --pull` before starting a task and whenever a ✅ DONE / 📢 announcement says so.
+> 5. **Before you go idle,** start `bash scripts/comms/inbox watch` as a **background** command (run_in_background) so a message wakes you. Re-arm it every time it exits.
+> 6. **Report progress** each time you start an outcome from your pipeline guide: `bash scripts/comms/status <outcome#> "what"`. Blocked? `send wait` marks you blocked; `bash scripts/comms/status unblocked` when it clears.
+> 7. 📢 announcements (`send blast`) are from the team lead: do what they say first. Contract changes are proposals to P1; only P1 edits `contracts/`. Tell me when a message changes my plan.
 
 ---
 
@@ -190,14 +200,21 @@ If the ping never arrives, see Troubleshooting below.
 | `bash scripts/comms/send P3 "subject" -` | Same, body from stdin (long text, quotes): `... - <<'EOF'` … `EOF` |
 | `bash scripts/comms/send reply 12 "text" [P2]` | Reply on thread #12; optional extra recipient |
 | `bash scripts/comms/send close 12 "resolution"` | Close #12 with a note |
+| `bash scripts/comms/send ack 12 "on it, ETA 20m"` | Acknowledge #12 now (clears "you owe a reply") |
+| `bash scripts/comms/send done 12 "what landed"` | **Push** (via sync), post commit SHA + branch on #12, close it; the asker is notified |
+| `bash scripts/comms/send done P4a "what landed"` | Same, as a new ✅ READY thread to a pipeline (or ALL) |
+| `bash scripts/comms/send wait P1 "what I need"` | ⛔ Ask for something you're blocked on; marks you blocked on the dashboard |
+| `bash scripts/comms/send blast "subject" "body"` | 📢 Announcement to every agent (shown first, "act now") |
+| `bash scripts/comms/inbox owed` | Threads addressed to me I haven't answered |
 | `bash scripts/comms/send list` | Open threads addressed to me / ALL |
 | `bash scripts/comms/send ping P2` | Test message |
 | `bash scripts/comms/inbox check` | Show unread mail now (marks it read) |
-| `bash scripts/comms/inbox watch` | Wait until mail arrives, print it, exit (see §8) |
+| `bash scripts/comms/inbox watch` | Run in the **background**: exits (and wakes the agent) when mail arrives; auto-expires after 25 min |
 | `bash scripts/comms/inbox reset` | Forget read-state; next check re-shows all open threads |
 | `bash scripts/comms/status 3 "doing X"` | Report outcome #3 + what you're doing (dashboard) |
 | `bash scripts/comms/status blocked "on P3"` / `unblocked` | Mark / clear blocked (red on dashboard) |
-| `bash scripts/comms/setup` | Re-run all checks |
+| `bash scripts/comms/setup` | Re-run all checks (also sets git pull.rebase / autoStash / rerere) |
+| `bash scripts/git/sync` / `--pull` | Fetch + rebase (+ push with retries). The only way anyone should push/pull |
 
 Everything can also be read on GitHub: https://github.com/Proton-Designer/HackUTD26/issues
 
@@ -207,10 +224,10 @@ Everything can also be read on GitHub: https://github.com/Proton-Designer/HackUT
 
 | Situation | Delay until the receiving agent sees it |
 |---|---|
-| Receiver agent is working (using tools) | ≤ ~60 s (`PostToolUse` checks at most once a minute) |
+| Receiver agent is working (using tools) | ≤ ~30 s (`PostToolUse` checks at most every 30 s) |
 | Receiver agent finishes its turn | Immediately at that moment (`Stop` hook) |
 | Receiver's human types a prompt | Immediately (`UserPromptSubmit`) |
-| Receiver agent is idle, nobody typing | Not until the next prompt, **unless** it runs `watch` (below) |
+| Receiver agent is idle | ≤ ~15 s: its background `inbox watch` (enforced by the Stop hook) exits and wakes it |
 
 **Integration windows (tight back-and-forth):** ask the receiving agent to run `bash scripts/comms/inbox watch` as a **background** command. It checks every 30 s (`BACKFIRE_WATCH_INTERVAL=10` for faster) and exits when mail arrives, which wakes the agent. Then it re-arms the watch. A back-and-forth then takes ~10–40 s per hop.
 
@@ -264,3 +281,14 @@ GitHub's label index can lag a few seconds after a message is created; a message
 | `.git/backfire-comms/` | Local read-state (never committed) |
 | `.gitattributes` | Forces LF line endings so the scripts run on Windows |
 | `dashboard/` | Live team dashboard (see `dashboard/README.md`) |
+
+---
+
+## 12. Git workflow (everyone, all night)
+
+- **One trunk: `finalized-idea-backfire`.** Everyone commits to it directly; no per-pipeline branches, no PRs tonight. (`main` is the stale initial commit; P1 fast-forwards it to a known-good tag before judging.)
+- **Own your folders.** Commit with explicit paths: `git add decoy/ && git commit -m "P3: echo decoy over Telnyx WS"`. Never `git add -A`, never edit `BOARD.md` (Discord bot only), never commit `.env`/keys. Shared seams (`contracts/`, `server/main.py`) are P1's: ask with `send wait P1 "…"`.
+- **Pull before you start a task, push the moment a piece works:** `bash scripts/git/sync --pull` / `bash scripts/git/sync`. It rebases (autostash keeps uncommitted work), retries pushes up to 3×, never force-pushes, and refuses to push secrets, BOARD.md edits or files over 5 MB.
+- **Rebase conflict?** sync stops and lists the files. Keep both sides' intent, `git add <files> && git rebase --continue && bash scripts/git/sync`. Not your file and unsure? `git rebase --abort` and message its owner.
+- **Tell people:** if anyone asked for it, `send done <#> "…"` (it pushes for you). If it changes shared behavior, `send done ALL "…"`.
+- **Known-good tags (P1 only):** after each green end-to-end run, `git tag -a demo-good-N -m "…" && git push origin demo-good-N`. Feature freeze at 07:30: only P1 pushes after that; the demo machine runs the last tag.

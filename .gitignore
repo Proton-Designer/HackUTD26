@@ -10,3 +10,15 @@ __pycache__/
 # hub latency log
 logs/
 intel/*.db
+
+# Local runtime junk (added by comms/git hygiene pass)
+node_modules/
+.venv/
+venv/
+.pytest_cache/
+*.pid
+*.db
+*.sqlite
+*.sqlite3
+!.env.example
+tunnel_url.txt

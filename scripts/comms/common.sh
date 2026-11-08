@@ -2,8 +2,10 @@
 # Portable: macOS (bash 3.2, BSD date), Linux, Windows Git Bash (GNU tools). Needs only git + gh.
 REPO="${BACKFIRE_REPO:-Proton-Designer/HackUTD26}"
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-ID_FILE="$ROOT/.backfire-pipeline"
-STATE_DIR="$(git rev-parse --git-path backfire-comms 2>/dev/null || echo "$ROOT/.git/backfire-comms")"
+# Main worktree (so subagents in git worktrees share identity + state with the main checkout)
+MAIN_ROOT="$(git worktree list --porcelain 2>/dev/null | sed -n '1s/^worktree //p')"; [ -z "$MAIN_ROOT" ] && MAIN_ROOT="$ROOT"
+ID_FILE="$ROOT/.backfire-pipeline"; [ -f "$ID_FILE" ] || ID_FILE="$MAIN_ROOT/.backfire-pipeline"
+STATE_DIR="$(git rev-parse --git-common-dir 2>/dev/null || echo .git)/backfire-comms"
 case "$STATE_DIR" in /*|[A-Za-z]:*) ;; *) STATE_DIR="$ROOT/$STATE_DIR";; esac
 mkdir -p "$STATE_DIR" 2>/dev/null
 

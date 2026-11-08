@@ -5,7 +5,9 @@
 #   inbox hook-prompt  SessionStart / UserPromptSubmit hook: prints new mail as context (exit 0)
 #   inbox check        same as hook-prompt, for humans (prints new mail, marks it read)
 #   inbox list         show open threads addressed to me (no state change)
-#   inbox watch        block until new mail arrives, print it, exit (run in background during integration)
+#   inbox watch        stay armed until mail arrives (or ~25 min), print it, exit. Run it as a BACKGROUND command
+#                      whenever you go idle or wait on someone: its exit wakes you. The Stop hook enforces this.
+#   inbox owed         list threads addressed to me that I have never answered (ack/reply/done)
 #   inbox reset        forget read-state (next check re-delivers every open thread)
 # Every hook also refreshes this machine's presence (pipeline, step, agents, last tool) for the dashboard.
 # Never breaks the session: missing identity / gh / network => silent exit 0.
@@ -18,7 +20,9 @@ command -v gh >/dev/null 2>&1 || exit 0
 SEEN_IDS="$STATE_DIR/seen_ids_$ME"       # c<comment id> / i<issue number> already delivered
 HW="$STATE_DIR/highwater_$ME"            # newest GitHub (server) timestamp seen, epoch seconds
 LAST="$STATE_DIR/lastcheck_$ME"          # local epoch of last poll (throttle only)
-THROTTLE="${BACKFIRE_COMMS_THROTTLE:-60}"
+THROTTLE="${BACKFIRE_COMMS_THROTTLE:-30}"
+ACKED="$STATE_DIR/acked_$ME"            # thread numbers I have answered
+WATCH_PID="$STATE_DIR/watch_pid_$ME"
 source "$(dirname "$0")/presence.sh"
 OVERLAP=900                              # re-scan 15 min behind the high-water mark; IDs dedupe
 US=$'\x1f'; RS=$'\x1e'
@@ -29,23 +33,29 @@ mine()  { printf '%s' "$1" | grep -q "_from: $ME "; }
 
 fetch_new() {
   # Prints unseen messages (thread openers + replies) to me or ALL, excluding my own. Returns 3 if GitHub unreachable.
-  local hw since_args=() out="" newhw lbl rec num upd title body cid cbody
+  local hw since_args=() out="" newhw lbl rec num upd title body cid cbody labels tag
   hw=$(cat "$HW" 2>/dev/null | tr -dc '0-9')
   newhw="${hw:-0}"
   [ -n "$hw" ] && since_args=(-f since="$(iso_from_epoch $((hw - OVERLAP)))")
-  for lbl in $(my_labels "$ME"); do
+  local st=open; [ -n "$hw" ] && st=all          # after first run also see threads that were just closed (DONE / Resolved)
+  for lbl in $(my_labels "$ME") "from:$ME"; do
     local issues
-    issues=$(T gh api -X GET "repos/$REPO/issues" -f labels="$lbl" -f state=open -f per_page=50 ${since_args[@]+"${since_args[@]}"} \
-      --jq '.[] | select(.pull_request==null) | "\(.number)\u001f\(.updated_at|fromdateiso8601)\u001f\(.title)\u001f\(.body // "")\u001e"' </dev/null 2>/dev/null) || return 3
+    issues=$(T gh api -X GET "repos/$REPO/issues" -f labels="$lbl" -f state="$st" -f per_page=50 ${since_args[@]+"${since_args[@]}"} \
+      --jq '.[] | select(.pull_request==null) | "\(.number)\u001f\(.updated_at|fromdateiso8601)\u001f\(.title)\u001f\([.labels[].name]|join(","))\u001f\(.body // "")\u001e"' </dev/null 2>/dev/null) || return 3
     while IFS= read -r -d "$RS" rec; do
       rec="${rec#$'\n'}"; [ -z "$rec" ] && continue
       num="${rec%%$US*}"; rec="${rec#*$US}"
       upd="${rec%%$US*}"; rec="${rec#*$US}"
-      title="${rec%%$US*}"; body="${rec#*$US}"
+      title="${rec%%$US*}"; rec="${rec#*$US}"
+      labels="${rec%%$US*}"; body="${rec#*$US}"
+      tag=""
+      case ",$labels," in *,announce,*) tag="📢 ANNOUNCEMENT — act on it now: ";; esac
+      case ",$labels," in *,blocking,*) tag="⛔ SOMEONE IS BLOCKED WAITING ON YOU: ";; esac
+      case ",$labels," in *,ready,*) tag="✅ READY / HANDOFF: ";; esac
       [ "$upd" -gt "$newhw" ] 2>/dev/null && newhw="$upd"
       if ! seen "i$num"; then
         mark "i$num"
-        mine "$body" || out+=$'\n'"### #$num $title (new thread)"$'\n'"$(printf '%s' "$body" | tr -d '\r')"$'\n'
+        mine "$body" || out+=$'\n'"### ${tag}#$num $title (new thread)"$'\n'"$(printf '%s' "$body" | tr -d '\r')"$'\n'
       fi
       while IFS= read -r -d "$RS" rec; do
         rec="${rec#$'\n'}"; [ -z "$rec" ] && continue
@@ -53,7 +63,7 @@ fetch_new() {
         seen "c$cid" && continue
         mark "c$cid"
         mine "$cbody" && continue
-        out+=$'\n'"### #$num $title (reply)"$'\n'"$(printf '%s' "$cbody" | tr -d '\r')"$'\n'
+        out+=$'\n'"### ${tag}#$num $title (reply)"$'\n'"$(printf '%s' "$cbody" | tr -d '\r')"$'\n'
       done < <(T gh api -X GET "repos/$REPO/issues/$num/comments" -f per_page=100 ${since_args[@]+"${since_args[@]}"} \
                  --jq '.[] | "\(.id)\u001f\(.body)\u001e"' </dev/null 2>/dev/null)
     done <<<"$issues"
@@ -65,11 +75,45 @@ fetch_new() {
 banner() {
   cat <<MSG
 📨 NEW MESSAGE(S) FOR $ME FROM ANOTHER PIPELINE (Backfire agent comms, delivered automatically).
-Read them now. If one blocks you or asks you something, answer before continuing:
-  bash scripts/comms/send reply <#> "your answer" [P1|P2|P3|P4|P4a|P4b]      (or: bash scripts/comms/send close <#> "resolution")
+Handle them NOW, before continuing your task:
+  • 📢 announcements: do what they say (e.g. pull), then carry on.
+  • Anything asking you for something: reply right away, even if only to ack:
+      bash scripts/comms/send ack <#> "on it, ETA 20 min"         bash scripts/comms/send reply <#> "answer"
+  • When you deliver what was asked: commit, then  bash scripts/comms/send done <#> "what landed"  (pushes + posts the commit + closes).
+  • If you need something from another pipeline:  bash scripts/comms/send wait <P#> "exactly what you need"
+  • A ✅ DONE/READY that unblocks you: bash scripts/git/sync to get it, then bash scripts/comms/status unblocked
 Contract changes are proposals; only P1 edits contracts/. Tell your human if a message changes their plan.
 $1
 MSG
+}
+
+# Threads addressed directly to me (not ALL) that I have never answered. Prints "#N title (from X)" lines.
+owed_list() {
+  local lbl rec num cnt title body
+  for lbl in $(my_labels "$ME" | grep -v '^to:ALL$'); do
+    while IFS= read -r -d "$RS" rec; do
+      rec="${rec#$'\n'}"; [ -z "$rec" ] && continue
+      num="${rec%%$US*}"; rec="${rec#*$US}"; cnt="${rec%%$US*}"; rec="${rec#*$US}"
+      title="${rec%%$US*}"; body="${rec#*$US}"
+      grep -qxF "$num" "$ACKED" 2>/dev/null && continue
+      mine "$body" && continue
+      if [ "$cnt" != 0 ] && T gh api -X GET "repos/$REPO/issues/$num/comments" -f per_page=100 --jq '.[].body' </dev/null 2>/dev/null | grep -q "_from: $ME "; then
+        echo "$num" >> "$ACKED"; continue
+      fi
+      echo "  #$num $title"
+    done < <(T gh api -X GET "repos/$REPO/issues" -f labels="$lbl" -f state=open -f per_page=50 \
+               --jq '.[] | select(.pull_request==null) | "\(.number)\u001f\(.comments)\u001f\(.title)\u001f\(.body // "")\u001e"' </dev/null 2>/dev/null)
+  done | sort -u
+}
+
+watch_running() {
+  local pid; pid=$(cat "$WATCH_PID" 2>/dev/null | tr -dc '0-9')
+  [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null
+}
+
+unpushed() {  # commits on this branch not on origin (uses last fetched refs; no network)
+  local br; br=$(git rev-parse --abbrev-ref HEAD 2>/dev/null); [ -z "$br" ] || [ "$br" = HEAD ] && { echo 0; return; }
+  git rev-list --count "origin/$br..HEAD" 2>/dev/null || echo 0
 }
 
 deliver() {  # $1 = stderr|stdout ; returns 0 only if something was delivered
@@ -91,17 +135,57 @@ case "$MODE" in
   hook-stop)
     note_hook "$HOOK_IN"
     deliver stderr && exit 2
+    # Enforcement runs once per stop attempt (stop_hook_active=true means we already blocked this turn).
+    if ! printf '%s' "$HOOK_IN" | grep -q '"stop_hook_active" *: *true'; then
+      owed=$(owed_list)
+      if [ -n "$owed" ]; then
+        { echo "⛔ Backfire comms: before stopping, answer these threads addressed to $ME (other agents may be waiting on you):"
+          echo "$owed"
+          echo "Do it now: bash scripts/comms/send reply <#> \"answer\"  |  send ack <#> \"on it, ETA\"  |  send done <#> \"what landed\"  |  send close <#> \"not needed because…\""; } >&2
+        exit 2
+      fi
+      n=$(unpushed); if [ "${n:-0}" -gt 0 ] 2>/dev/null; then
+        echo "⛔ Backfire comms: you have $n unpushed commit(s). Teammates can't use them. Run: bash scripts/git/sync   (then, if someone asked for this work: bash scripts/comms/send done <#> \"what landed\")" >&2
+        exit 2
+      fi
+      if ! watch_running; then
+        echo "⛔ Backfire comms: before going idle, arm the inbox watcher so you are woken the moment another pipeline messages you. Run this as a BACKGROUND command (run_in_background: true), then stop:  bash scripts/comms/inbox watch" >&2
+        exit 2
+      fi
+    fi
     presence_push idle; exit 0;;
   hook-start)
     note_hook "$HOOK_IN"; presence_push working
-    echo "Backfire comms: you are pipeline $ME. Messages from other pipelines arrive automatically. Send: bash scripts/comms/send <P1|P2|P3|P4|P4a|P4b|ALL> \"subject\" \"body\". When you start a new step of your pipeline guide, report it: bash scripts/comms/status <step#> \"what you're doing\"  (shown on the team dashboard)."
+    cat <<RULES
+Backfire comms: you are pipeline $ME. Other pipelines' messages are pushed into this session automatically. Rules (enforced by hooks):
+1. Answer every thread addressed to you right away, even if only: bash scripts/comms/send ack <#> "on it, ETA"
+2. Need something from another pipeline? Don't ask your human to relay it: bash scripts/comms/send wait <P#> "exactly what you need"
+3. Finished something another pipeline needs? Commit, then: bash scripts/comms/send done <#> "what landed" (pushes and posts the commit SHA). No thread? bash scripts/comms/send done <P#> "what landed".
+4. Push as soon as a piece works: bash scripts/git/sync   (fetch + rebase + push with retries; never force-push).
+5. Before going idle, run in the BACKGROUND: bash scripts/comms/inbox watch   (wakes you when mail arrives).
+6. New step of your pipeline guide? bash scripts/comms/status <step#> "what you're doing"   (team dashboard).
+Other: send <P#|ALL> "subj" "body" · send reply <#> "text" · send close <#> "why" · send blast "subj" "body" (everyone, high priority) · inbox owed
+RULES
+
     deliver stdout; exit 0;;
   hook-prompt)
     note_hook "$HOOK_IN"; presence_push working
     deliver stdout; exit 0;;
   check)       deliver stdout; exit 0;;
   list)        bash "$(dirname "$0")/send" list;;
-  watch)       while true; do deliver stdout && exit 0; sleep "${BACKFIRE_WATCH_INTERVAL:-30}"; done;;
+  watch)
+    echo $$ > "$WATCH_PID"; start=$(date +%s); lastp=0
+    trap 'rm -f "$WATCH_PID"' EXIT
+    while true; do
+      deliver stdout && exit 0
+      now=$(date +%s)
+      [ $((now - lastp)) -ge 120 ] && { presence_push idle; lastp=$now; }
+      if [ $((now - start)) -ge "${BACKFIRE_WATCH_MAX:-1500}" ]; then
+        echo "⏰ Backfire comms: inbox watch expired with no new mail. Re-arm it in the background (bash scripts/comms/inbox watch) and continue or stop."; exit 0
+      fi
+      sleep "${BACKFIRE_WATCH_INTERVAL:-15}"
+    done;;
+  owed)        o=$(owed_list); [ -n "$o" ] && { echo "Threads you owe an answer:"; echo "$o"; } || echo "Nothing owed.";;
   reset)       rm -f "$SEEN_IDS" "$HW" "$LAST"; echo "read-state cleared for $ME";;
-  *)           sed -n '2,10p' "$0";;
+  *)           sed -n '2,12p' "$0";;
 esac

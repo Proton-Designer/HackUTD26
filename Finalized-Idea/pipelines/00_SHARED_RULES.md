@@ -84,13 +84,14 @@ The event envelope is `{type, call_id, ts, data}`, published on the P1 server's 
 
 ## 5. Git and coordination
 - Only edit your own folders (listed in your guide). Shared files (`contracts/`, `mock/`) belong to P1.
-- Small commits; push your branch; P1 (Ayman) merges every 60–90 minutes. Never merge a broken build.
+- One trunk (`finalized-idea-backfire`), small commits of your own folders only, pushed with `bash scripts/git/sync` the moment a piece works (pull with `bash scripts/git/sync --pull` before each task). Never force-push. Full workflow: `/AGENT_COMMS_SETUP.md` §12.
 - `BOARD.md` is edited only by the Discord `@Delegation_Bot`: report done/blocked through the bot, not by editing the file.
 - Keep `DECISIONS.md` and a short `README.md` (how to run and test your piece) in your folder.
 
 ### Agent-to-agent comms (set up once per machine: `/AGENT_COMMS_SETUP.md`)
 - Pipelines are `P1 P2 P3 P4a P4b` (`P4` = both P4a and P4b, `ALL` = everyone). Messages from other pipelines are **pushed into your session automatically** (📨 banner). Read them, answer what's asked of you before continuing, and tell your human if one changes the plan.
-- Send: `bash scripts/comms/send <P#|ALL> "subject" "body"` · reply: `bash scripts/comms/send reply <#> "text"` · close when resolved: `bash scripts/comms/send close <#> "resolution"`.
+- Send: `bash scripts/comms/send <P#|ALL> "subject" "body"` · ack immediately: `send ack <#> "ETA"` · reply: `send reply <#> "text"` · delivered: `send done <#> "what landed"` (pushes + posts SHA + closes) · blocked: `send wait <P#> "what you need"` · announcements: `send blast`.
+- The Stop hook won't let you go idle while you owe an answer, have unpushed commits, or have no background `bash scripts/comms/inbox watch` running.
 - Use it for seams: payload formats, contract proposals to P1, "X is ready on branch Y", blockers. Be concrete (paths, examples). No secrets.
 - Report progress for the team dashboard each time you start a new outcome from your guide: `bash scripts/comms/status <outcome#> "what you're doing"`; when stuck: `bash scripts/comms/status blocked "on what"`.
 - Humans coordinate on Discord; agents coordinate here.
