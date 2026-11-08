@@ -6,18 +6,25 @@ from detection import schema
 log = logging.getLogger("p2.detect")
 OVERALL_TIMEOUT_S = 4.0
 
-_NEG = re.compile(r"(never|won'?t|will not|do not|don'?t|not)\W+(?:\w+\W+){0,4}$", re.I)
+_NEG = re.compile(r"\b(never|won'?t|will not|would not|do not|don'?t|doesn'?t|does not|can'?t|cannot|no one|nobody|not)\b", re.I)
+# a new clause starts after a sentence end, or at "but/however/now ..." or ", read me ...": a later real request must still fire
+_CLAUSE = re.compile(r"[.?!;:\n]|,?\s+\b(?:but|however|except|instead|now)\b|,\s*(?:now |please |then |so )?\b(?:read|tell|give|send|text|repeat)\s+(?:me|us)\b", re.I)
+# weak asks (bare nouns) only count with a request verb / question cue within ~6 words
+_REQ = re.compile(r"\b(pay|paid|paying|send|sending|buy|bought|accept|accepts|accepted|take|takes|taking|can take|using|purchase|read|give|tell|install|share|provide|verify|confirm|deposit|wire|withdraw|load|scan|text|enter|need|needs|require|requires|mail|get|go|use|put|move|download|transfer|what'?s|what is|may i|can i|i'?ll need)\b", re.I)
+_WEAK = {"gift_card", "crypto", "p2p", "ssn", "card"}
+# the user's own past action / status ("the Zelle you made", "is ready") is a confirmation, not a request
+_OWN = re.compile(r"^\W*(?:\w+\W+){0,3}?(you|your)\b\W+(?:\w+\W+){0,2}?(made|started|initiated|sent|requested|ordered|authori[sz]ed|did|set up)\b", re.I)
 
 ASK_RULES = {
     "gift_card": r"gift ?cards?|itunes card|google play card|steam card",
-    "otp": r"(read|tell|give|send|share|repeat)\b[^.?!]{0,25}\b(code|otp|passcode|pin)\b|one[- ]time (code|passcode|password)|verification code|six[- ]digit code",
+    "otp": r"(read|tell|give|send|share|repeat)\b[^.?!]{0,25}\b(code|otp|passcode|pin|digits?)\b|(read|tell|give|send|repeat)\s+me\b[^.?!]{0,15}\b(numbers|digits)\b|one[- ]time (code|passcode|password)|verification code|six[- ]digit code",
     "wire": r"wire (the |some )?(money|funds|transfer)|wire transfer|safe account|protected account|move (your |the )?(money|funds)|transfer (your |the )?(money|funds)",
     "crypto": r"bitcoin|crypto|\bbtc\b|ethereum|wallet address|bitcoin atm|(safe|secure|new|cold|digital|different) wallet",
     "p2p": r"\bzelle\b|venmo|cash ?app|paypal me",
     "remote_app": r"any ?desk|team ?viewer|ultra ?viewer|remote (access|control|desktop)|screen ?shar",
     "ssn": r"social security|\bssn\b|last four of your social",
     "card": r"card number|\bcvv\b|\bcvc\b|security code on (the )?back|expiration date",
-    "secrecy": r"tell (no ?one|nobody)|(don'?t|do not|not to) tell (anyone|anybody|your (bank|family|wife|husband|son|daughter))|keep (this|it) (a )?(secret|between us|confidential)|(don'?t|do not) (hang up|talk to)",
+    "secrecy": r"tell (no ?one|nobody)|(don'?t|do not|not to) tell (anyone|anybody|your (bank|family|wife|husband|son|daughter))|keep (this|it) (a )?(secret|private|between us|confidential)|(don'?t|do not) (hang up|talk to)",
 }
 ASK_RE = {k: re.compile(v, re.I) for k, v in ASK_RULES.items()}
 
@@ -33,8 +40,28 @@ INJECTION_RE = [re.compile(p, re.I) for p in (
 )]
 
 
+def _clause_start(text: str, start: int) -> int:
+    pos = 0
+    for m in _CLAUSE.finditer(text, 0, start):
+        pos = m.end()
+    return pos
+
+
 def _negated(text: str, start: int) -> bool:
-    return bool(_NEG.search(text[max(0, start - 40):start]))
+    """Negator earlier in the SAME clause ("we never ask you to pay with gift cards")."""
+    return bool(_NEG.search(text[_clause_start(text, start):start]))
+
+
+def _is_request(text: str, start: int, end: int) -> bool:
+    """Bare-noun asks need a request verb within ~6 words (before/after, same clause) and not be the user's own action."""
+    cs = max((m.end() for m in re.finditer(r"[.?!;\n]", text[:start])), default=0)   # sentence, not clause: ", read me your card number"
+    ce = re.search(r"[.?!;\n]", text[end:])
+    ce = end + ce.start() if ce else len(text)
+    before = text[cs:start].split()[-6:]
+    after = text[end:ce].split()[:6]
+    if not _REQ.search(" ".join(before + after)):
+        return False
+    return not _OWN.match(text[end:ce])
 
 
 def rule_scan(text: str) -> dict:
@@ -43,6 +70,9 @@ def rule_scan(text: str) -> dict:
     for k, rx in ASK_RE.items():
         for m in rx.finditer(text):
             if k != "secrecy" and _negated(text, m.start()):
+                continue
+            weak = k in _WEAK or (k == "wire" and m.group(0).lower().startswith("wire transfer"))
+            if weak and not _is_request(text, m.start(), m.end()):
                 continue
             asks.append(k)
             break
