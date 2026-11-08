@@ -122,3 +122,16 @@ PSTN vs simulated for these three: not stated in any file I have (not guessed; a
 | a9142648 | 05:08 | 0 | after |
 | ba80d152 | 05:37 | 0 | after |
 Verdict: **deploy time of `689c3f6` unknown; 93c95fd6 (03:34, 1 min after the commit) still had 2-4 s gaps; the 5 calls from 04:4x on (adad65a0 ... ba80d152) had none. That is an observation, not a proven fix, and unproven for Maria talk-over.** The 5 later calls are continuously spoken scam scripts and none had Maria talking over the caller; no hub inrms log is kept, so the cause of the old gaps is not shown. Proof needs one talk-mode call with Maria speaking over a silent caller and the hub log kept (P1 rehearsal 09:00). The simulated b58cec24 (one 2 s gap) is not counted.
+
+## Real-call evidence (TASK-096, 07:40; real Telnyx PSTN calls from one team phone, caller +1512...1735 is a team number; synthetic scripts)
+Times are wall clock from my read-only WS /events recorder (started 06:39) and P2's `call_report`. "Tap" = `user.action scammer_get_scammed` (Fire Back). Decoy first reply = latency_ms of the first decoy.turn after a scammer turn. Aggregates only, no audio or transcript text kept.
+
+| call | alert (seconds into call, wall) | scam words to alert | Fire Back tap | decoy first reply | haul (artifacts.extracted) | hold_transfer | blocklist (her) | callback rejected |
+|---|---|---|---|---|---|---|---|---|
+| 8ee2b3da (06:47) | +9.6 s LLM, 06:47:50 | not timed | 06:48:04 (14 s after alert) | 544 ms | none seen | did not happen | applied 06:48:44 | did not happen (only ftc_ic3_packet denied as uncorroborated) |
+| 3d5a7970 (06:52, "car warranty" + gift cards + secret) | +9.8 s rules on a partial, 06:52:52 | ~0.5 s after "gift cards" (word times from Whisper, +-0.5 s) | 06:52:58 (6 s after alert) | 447 ms | none seen | did not happen | applied 06:54:28 | did not happen (ftc_ic3_packet denied, uncorroborated) |
+| e3e343de (07:04, "charge your card / refund" then banking-app ask) | +43.7 s LLM, 07:04:58 | ~2.6 s after the "open your banking app and send your information" ask (4.0 s by Whisper word times; log and dump clocks differ by ~1.4 s) | 07:05:01 (3 s after alert) | 741 ms | payment_handle zelle:refund at 07:06:04 (call end) | did not happen (no matching pending transfer) | applied 07:06:07 | did not happen (ftc_ic3_packet denied, uncorroborated) |
+
+All 3 calls: 1 alert each, 0 failovers, 0 429s, 0 zero-audio runs (caller track continuous), handoff.started the same second as the tap, decoy opener 2 s after the tap, then 4-10 decoy/scammer turns. Intel ran 20-40 s after call end (block her + link campaign applied, network block queued for approval, ftc packet denied).
+
+**Why e3e343de alerted at +43.7 s (lead's question):** the first ~37 s of the script had no ask. "I'm looking to charge your credit card", "a brief on the payment", "I got installed", "did it pick it up yet?" and "can you open your banking app?" scored s 0.00-0.05 (local model, all windows low). The score jumped to 0.95 only on "open your banking app and send your information" (final at +41.8 s, alert +43.7 s, 1.9 s after the final). So the delay was the script, not the pipeline. One real weakness: the remote-install cue ("installed", "did it pick it up yet") did not move the score; remote_app asks are caught only when named (TeamViewer etc.). Not changed.
