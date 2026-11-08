@@ -258,7 +258,7 @@ class Voice:
             for attempt in (1, 2):
                 try:
                     a = self._tts(ZEROSHOT_FN, text=text, language_code="en-US", sample_rate_hz=TTS_RATE,
-                                  zero_shot_audio_prompt_file=self.prompt, zero_shot_quality=20)
+                                  zero_shot_audio_prompt_file=self.prompt, zero_shot_quality=int(os.environ.get("DECOY_ZS_QUALITY","20")))
                     self.locked = True
                     return a
                 except Exception as e:

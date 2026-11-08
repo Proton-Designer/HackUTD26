@@ -198,6 +198,23 @@ def allow_key(handle_id: str) -> str | None:
     return h if sum(c.isdigit() for c in h) >= 7 else None
 
 
+def canon_handle(v) -> str:
+    """Payment handle as STT/LLM might spell it -> one canonical form (P2 #137: 'refunds department at backfire dash demo
+    dot example' and 'zelle:refunds.department@...' must match the payee 'zelle:refunds.dept@backfire-demo.example')."""
+    t = " " + str(v or "").lower().strip() + " "
+    for w, r in ((" dot ", "."), (" at ", "@"), (" dash ", "-"), (" hyphen ", "-"), (" underscore ", "_")):
+        while w in t:
+            t = t.replace(w, r)
+    t = re.sub(r"\s*([.@_:-])\s*", r"\1", t.strip()).rstrip(".,;!? ")
+    rail, hid = (t.split(":", 1) if re.match(r"^[a-z]+:", t) else ("", t))
+    if "@" in hid:
+        local, dom = hid.rsplit("@", 1)
+        local = re.sub(r"\s+", ".", local)
+        local = re.sub(r"(?<![a-z])(?:department|departement|depart|dep't)(?![a-z])", "dept", local)
+        hid = local + "@" + dom.replace(" ", "")
+    return f"{rail}:{hid}" if rail else hid
+
+
 def match_destinations(arts: list[dict]) -> list[dict]:
     """Artifacts (normalized by campaigns.normalize_artifacts) that point at a known mock payee.
     payment_handle: normalized rail:id. bank: account-number hash, else last4."""
@@ -205,7 +222,7 @@ def match_destinations(arts: list[dict]) -> list[dict]:
     for d in destinations():
         for a in arts:
             if a["type"] == "payment_handle":
-                ok = str(a.get("value", "")).strip().lower() == dest_key(d)
+                ok = canon_handle(a.get("value")) == canon_handle(dest_key(d))
             elif a["type"] == "bank":
                 ok = bool(d.get("bank_hash")) and str(a.get("value", "")).lower() == str(d["bank_hash"]).lower() or \
                      bool(d.get("bank_last4")) and str(a.get("last4") or "") == str(d["bank_last4"])

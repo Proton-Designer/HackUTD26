@@ -318,3 +318,14 @@ def test_concurrent_resets_leave_exactly_one_pending(bank):
     bank.add_transfer(maria, "pending", 1800, f"Zelle to {HANDLE}")
     seed_demo._start_pending_transfer()
     assert len(N.pending_transfers(maria, description_contains=HANDLE)["transfers"]) == 1
+
+
+def test_canon_handle_matches_stt_spellings():   # P2 #137: 'dept' heard as 'department' must still hit the payee
+    from intel.nessie import canon_handle
+    want = canon_handle("zelle:refunds.dept@backfire-demo.example")
+    for v in ["zelle:refunds department at backfire dash demo dot example", "zelle:refunds.dept@backfire-demo.example",
+              "Zelle:Refunds.Department@Backfire-Demo.Example", "zelle:refunds.department@backfire-demo.example.",
+              "zelle:  refunds   dot   dept   at   backfire  dash  demo  dot  example  "]:
+        assert canon_handle(v) == want, v
+    for v in ["zelle:refunds.depot@backfire-demo.example", "zelle:payments.department@backfire-demo.example", "zelle:refunds dot dept"]:
+        assert canon_handle(v) != want, v
