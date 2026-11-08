@@ -699,3 +699,23 @@ def test_high_score_after_handoff_resets_clock_and_blocks_restore(monkeypatch):
         await asyncio.sleep(1.2); assert not R.CALLS[sid].get("restored")
         R._note_risk(sid, 0.1); await asyncio.sleep(1.4); assert R.CALLS[sid].get("restored")         # low again, held 0.8 s -> restore
     asyncio.run(go())
+
+
+def test_hang_up_in_listen_and_talk_mode_hangs_up_the_caller_leg(monkeypatch):
+    for mode in ("listen", "talk"):
+        monkeypatch.setenv("MARIA_LEG", mode); hung = []
+        async def hang(ccid, *a, **k): hung.append(ccid); return {"data": {}}
+        monkeypatch.setattr(telnyx, "hangup", hang)
+        sid = f"sess-hangup-{mode}-12"; st = _state(sim=False, conf=False); st.pop("maria_ccid"); st["listen"] = True; R.CALLS[sid] = st
+        asyncio.run(R._maria_hangup(sid))
+        assert hung == [st["caller_ccid"]] and st["customer_hangup"] is True
+        # after the handoff the decoy owns the call: unchanged (no hangup here)
+        hung.clear(); st2 = _state(sim=False, conf=False); st2.pop("maria_ccid"); st2["listen"] = True; st2["handed_off"] = True; R.CALLS[sid + "b"] = st2
+        asyncio.run(R._maria_hangup(sid + "b")); assert hung == []
+
+def test_hang_up_in_sip_mode_still_hangs_up_maria_leg(monkeypatch):
+    monkeypatch.setenv("MARIA_LEG", "sip"); hung = []
+    async def hang(ccid, *a, **k): hung.append(ccid); return {"data": {}}
+    monkeypatch.setattr(telnyx, "hangup", hang)
+    sid = "sess-hangup-sip-12345"; st = _state(sim=False); R.CALLS[sid] = st
+    asyncio.run(R._maria_hangup(sid)); assert hung == [st["maria_ccid"]]

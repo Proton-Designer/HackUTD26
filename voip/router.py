@@ -629,9 +629,18 @@ def _on_bus(ev):
         log.exception("voip bus observer failed")
 
 async def _maria_hangup(sid):
+    """user.action hang_up: the customer ends the call. SIP mode: hang up Maria's leg (her WebRTC client normally does it itself). listen/talk mode
+    has NO Maria leg, so hang up the CALLER leg instead (bug seen on call 0afc3446: tap at +6.6 s, caller stayed connected 100 s)."""
     st = CALLS.get(sid)
-    if st and not st.get("handed_off") and st.get("maria_ccid"):   # her WebRTC client normally hangs up itself; belt and braces
-        await _safe(telnyx.hangup(st["maria_ccid"]), "maria hang_up", st.get("sim", False))
+    if not st or st["ended"] or st.get("handed_off"): return
+    sim = st.get("sim", False)
+    if (st.get("listen") or listen_mode()) and not st.get("maria_ccid"):
+        if st.get("caller_ccid"):
+            st["customer_hangup"] = True
+            log.warning("hang_up in %s mode for %s: hanging up the caller leg (no Maria leg)", _maria_leg(), sid[:8])
+            await _safe(telnyx.hangup(st["caller_ccid"]), "hangup caller (customer hang_up, listen/talk)", sim)
+    elif st.get("maria_ccid"):   # her WebRTC client normally hangs up itself; belt and braces
+        await _safe(telnyx.hangup(st["maria_ccid"]), "maria hang_up", sim)
 
 try:
     from server import bus as _b
