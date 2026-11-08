@@ -1,5 +1,7 @@
 # Backfire: Judge Script Cards v3 (bank fraud, shuffle bucket)
 
+**Judging bucket (decided 07:55, cards already printed, no edits): cards 1, 2, 4, 5, 6, 7, 8, 10.** Cards 3 and 9 are pulled: in P2's timing (DRILLS 'Card 2 judge variants') they alert only at the payment step (42 s and 29 s), so the Zelle line reaches the customer before the hand-off and the decoy never hears it. Spoken tip for the judge: keep reading after the beeps; when the new voice asks how to pay, read the payment step.
+
 **How to use:** Pull a card from the bucket. Call the scam line, wait for "hello," then read the card one line at a time and let the person answer. **You can change any words or ad-lib.** The detector reads meaning, not a script. Read the payment step when they ask how to pay, and say the handle slowly: "refunds dot dept at backfire dash demo dot example." Everything here is made up. No real people, no real bank.
 
 *(Team note, fold under: every card ends in Zelle to refunds.dept@backfire-demo.example for $1,800. That is the one value that makes Nessie act: intel finds the customer's pending $1,800 "Zelle to …" transfer and cancels it (undoable), and queues a bank-wide flag on the mule payee (7 other customers, $18,100 in, $17,300 cashed out). Run /demo/reset between judges, because each reset creates exactly one pending transfer. The judge must say "Zelle" so the extractor tags the rail.)*
