@@ -73,7 +73,7 @@ Shower (drives the screen): Kareem when Ayman answers, and the reverse.
 
 ## Claims audit (README / DECISIONS / RUNBOOK vs RESULTS.md, done 2026-11-08)
 - Fixed: README "63 recorded answers" -> 87 entries (cache size read from the file); README "Ollama-style server" -> llama.cpp OpenAI-compatible; RUNBOOK "NEEDS eng3's OpenAI-style local.py / trunk speaks Ollama" (stale since 20ca58a); DECISIONS "finals only, no partials" (interim partials exist since TASK-008.2).
-- Checked and consistent with RESULTS.md: local 33/33, 2/27, p50 1606 ms; prodrules 24/33, 1/27; AI-flag FP 27/55 to 1/55; asks precision 36% to 65%, recall 95% to 85%.
+- Checked and consistent with RESULTS.md: local 33/33, 2/27, p50 1606 ms; prodrules 24/33, 1/27 (26/33, 1/27 after TASK-057, 3c3dbe2); AI-flag FP 27/55 to 1/55; asks precision 36% to 65%, recall 95% to 85%.
 - "Alert 20+ s before the first ask on the demo recording": now measured, see `detection/eval/DEMO_TIMING.md` (alert +7.5 s; secrecy line ~28.7 s; gift-card ask ended 36.3 s; n=1).
 
 ## Known gaps (disclose, do not patch during judging)
