@@ -49,13 +49,25 @@ class AlertMachine:
         while len(self.ended) > 500:
             self.ended.pop(next(iter(self.ended)))
 
+    def _rearm(self, call_id, c, text):
+        """TASK-062 F22: a switched-off (muted) call re-arms when ONE line hits the rules fast path (any ask or score >= 0.5). Rules only, no I/O."""
+        try:
+            q = quick(str(text or ""), self.engine)
+            if isinstance(q, dict) and (q.get("asks") or q.get("s", 0) >= 0.5):
+                c.muted = False; c.normal_since = None
+                log.info("call %s re-armed: rules hit on a switched-off call (s=%.2f asks=%s)", call_id, q.get("s", 0), ",".join(sorted(q.get("asks") or [])) or "-")
+                return True
+        except Exception:
+            log.exception("rearm check failed (ignored)")
+        return False
+
     async def on_partial(self, call_id, utt):
         """Interim text: rules-only fast path on window + partial. Never calls the LLM, never changes window state."""
         try:
             if call_id in self.ended:
                 return
             c = self._call(call_id)
-            if c.muted:
+            if c.muted and not self._rearm(call_id, c, utt.get("text")):
                 return
             te = utt.get("_t_end")
             if te and c.cont_t and te < c.cont_t:
@@ -77,7 +89,7 @@ class AlertMachine:
             if call_id in self.ended:
                 log.info("drop final: call already ended call=%s", call_id); return
             c = self._call(call_id)
-            if c.muted:
+            if c.muted and not self._rearm(call_id, c, utt.get("text")):
                 return
             te = utt.get("_t_end")
             if te and c.cont_t and te < c.cont_t:

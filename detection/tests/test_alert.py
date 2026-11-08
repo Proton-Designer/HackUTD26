@@ -192,3 +192,20 @@ def test_hang_up_does_not_end_scoring_but_call_ended_does():
     r.ev("call.ended")
     r.say()
     assert r.calls == 3
+
+def test_muted_call_rearms_on_a_rules_hit_but_not_on_benign_talk():
+    """TASK-062 F22: 200 s of normal talk switches detection off; a later SSN ask must still alert, benign lines must not wake the LLM."""
+    r = Rig([R(0.05)] * 3 + [R(0.9, ["ssn"])] * 4)
+    r.say(dt=1); r.say(dt=100); r.say(dt=100)
+    n = r.calls
+    r.say("sounds good, see you thursday", dt=5); r.say("thanks, bye for now", dt=5)
+    assert r.calls == n and r.alerts() == []                 # still muted on benign talk
+    r.say("to verify you, please read me your full social security number", dt=5)
+    assert r.alerts() == ["first"] and r.calls > n           # re-armed, alert fired
+
+def test_muted_call_rearms_on_a_partial_rules_hit():
+    r = Rig([R(0.05)] * 3 + [R(0.9, ["ssn"])] * 3)
+    r.say(dt=1); r.say(dt=100); r.say(dt=100)
+    assert r.m._call("c1").muted
+    r.t += 5; asyncio.run(r.m.on_partial("c1", {"text": "please read me your social security number"}))
+    assert r.alerts() == ["first"] and not r.m._call("c1").muted
