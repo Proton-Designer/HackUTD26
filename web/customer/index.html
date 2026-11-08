@@ -40,6 +40,15 @@ if (!Element.prototype.replaceChildren) Element.prototype.replaceChildren = func
     <h1 id="activeName">Unknown caller</h1>
     <p class="number" id="timer">00:00</p>
 
+    <div id="talkBox" class="talk" hidden>
+      <p class="talk-title">You're on the call</p>
+      <div class="talk-row">
+        <button class="mic" id="micBtn" aria-pressed="false" aria-label="Microphone on. Tap to mute">🎤</button>
+        <div class="meter" aria-hidden="true"><i id="talkLevel"></i></div>
+      </div>
+      <p class="sub talk-hint" id="talkHint">Wear earphones so the caller doesn't hear themselves.</p>
+    </div>
+
     <div id="alertBox" class="alert" hidden role="alert" aria-live="assertive">
       <p class="alert-title">Be careful. This may be a scam.</p>
       <ul id="chips" class="chips"></ul>
@@ -168,5 +177,6 @@ if (!Element.prototype.replaceChildren) Element.prototype.replaceChildren = func
 <script src="ui.js"></script>
 <script src="voip.js"></script>
 <script src="sim.js"></script>
+<script src="talk.js"></script>
 </body>
 </html>

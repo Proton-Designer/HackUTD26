@@ -21,9 +21,9 @@
   const DEBUG = qs.has("debug");
   window.BF = window.BF || {}; BF.hub = HUB; BF.onEventRef = null;
   // Phone-free sim mode (?sim=1 or hub flag SIM_MODE): no Telnyx login, the page rings/answers from hub events and plays the caller audio itself (sim.js). Fails soft to false.
-  BF.modeP = qs.has("sim") ? Promise.resolve({ sim: true }) : qs.has("listen") ? Promise.resolve({ listen: true }) : HUB ? fetch(HUB + "/demo/status?format=json").then(r => r.json()).then(j => { const f = (j && j.flags) || {}; return { sim: !!f.SIM_MODE, listen: f.MARIA_LEG === "listen" }; }).catch(() => ({})) : Promise.resolve({});
+  BF.modeP = qs.has("sim") ? Promise.resolve({ sim: true }) : qs.has("talk") ? Promise.resolve({ listen: true, talk: true }) : qs.has("listen") ? Promise.resolve({ listen: true }) : HUB ? fetch(HUB + "/demo/status?format=json").then(r => r.json()).then(j => { const f = (j && j.flags) || {}; return { sim: !!f.SIM_MODE, listen: f.MARIA_LEG === "listen" || f.MARIA_LEG === "talk", talk: f.MARIA_LEG === "talk" }; }).catch(() => ({})) : Promise.resolve({});
   BF.simP = BF.modeP.then(m => !!(m.sim || m.listen));   // true = no Telnyx login (phone-free sim, or listening mode where Maria's leg is not a SIP client)
-  BF.modeP.then(m => { BF.listen = !!m.listen; BF.sim = !!m.sim && !m.listen; const f = document.getElementById("src"); if (f && BF.listen) f.textContent = "· live call · listening mode"; else if (f && BF.sim) f.textContent = "· simulated call (no phone line)"; });
+  BF.modeP.then(m => { BF.listen = !!m.listen; BF.talk = !!m.talk; BF.sim = !!m.sim && !m.listen; const f = document.getElementById("src"); if (f && BF.talk) f.textContent = "· live call · talk mode"; else if (f && BF.listen) f.textContent = "· live call · listening mode"; else if (f && BF.sim) f.textContent = "· simulated call (no phone line)"; });
   // Device pairing (TASK-014): the hub issues a per-device token after the PIN is entered once. Every hub call goes through hubFetch.
   BF.deviceToken = () => { try { return localStorage.getItem("bf.device"); } catch (e) { return null; } };
   BF.authReady = Promise.resolve();   // pair.js replaces this on a fresh phone: protected routes wait until the device is paired (no 401 noise before pairing)

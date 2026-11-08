@@ -83,3 +83,12 @@ nav#tabs button.on{background:#fff;color:#000;border-color:#fff}
 .flame{height:21px;width:auto;flex:none;margin-right:-4px}
 .wordmark{height:auto;max-width:60%;align-self:flex-start}
 .status{align-items:center}
+
+/* talk mode: Maria's microphone */
+.talk{width:100%;display:flex;flex-direction:column;gap:8px;align-items:center}
+.talk-title{margin:0;font-size:1.2rem;font-weight:800}
+.talk-row{display:flex;align-items:center;gap:14px;width:100%}.talk-row .meter{flex:1}
+.mic{width:76px;height:76px;flex:none;border-radius:50%;border:4px solid #fff;background:var(--ok);font-size:2rem;cursor:pointer;color:#fff}
+.mic[aria-pressed=true]{background:#2b3442;border-color:#aab3c0}.mic:disabled{opacity:.5}
+.mic:focus-visible{outline:4px solid #fff;outline-offset:3px}
+.talk.compact .talk-title,.talk.compact .talk-hint{display:none}.talk.compact .mic{width:56px;height:56px;font-size:1.5rem}
