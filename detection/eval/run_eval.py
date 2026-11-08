@@ -30,6 +30,7 @@ EVAL_DIR = pathlib.Path(__file__).resolve().parent
 RESULTS_DIR = EVAL_DIR / "results"
 CACHE_DIR = EVAL_DIR / ".cache"
 FROZEN = EVAL_DIR / "FROZEN.json"
+HELDOUT_V2 = EVAL_DIR / "heldout_v2.jsonl"
 ROW_FILES = [ROOT / "data" / "eval" / "scripts.jsonl", EVAL_DIR / "extra_rows.jsonl"]
 
 ASKS = {"otp", "card", "ssn", "gift_card", "crypto", "wire", "p2p", "remote_app", "secrecy"}
@@ -463,6 +464,51 @@ def before_after_section(fz: dict) -> list[str]:
     return L
 
 
+def heldout_section(fz: dict) -> list[str]:
+    have = [e for e in ("rules", "prodrules", "local") if read_results(e, "v2")]
+    if not have:
+        return []
+    rb = {r["id"]: r for r in read_results("rules", "v2")}
+    ms = {}
+    for e in have:
+        good, bad = scored_only(read_results(e, "v2"))
+        ms[e] = compute_metrics(good, fz["thresholds"].get(e, {}).get("threshold", DEFAULT_THRESHOLD), rb)
+        ms[e]["not_scored"] = bad
+    kinds = {}
+    for r in load_rows([HELDOUT_V2]):
+        kinds[r["id"]] = r.get("v2_kind")
+    L = ["## Held-out v2 (40 fresh synthetic rows, scored ONCE, thresholds frozen on dev, no tuning)", "",
+         f"File `heldout_v2.jsonl` (written before the engines saw it; not in the default row files). Scored on trunk `{git_sha()}`. "
+         "20 scams (8 no-classic-keywords, 4 Spanish/Spanglish, 4 AI-directed injection, 4 slow-build) + 20 legit (10 keyword-bait, 10 ordinary). "
+         "n is tiny: read every interval.", "",
+         "| metric | " + " | ".join(f"{e} (thr {ms[e]['thr']})" for e in have) + " |", "|---|" + "---|" * len(have)]
+    def row(name, fn):
+        L.append(f"| {name} | " + " | ".join(fn(ms[e]) for e in have) + " |")
+    row("rows scored / not scored", lambda m: f"{m['n']} / {m['not_scored']}")
+    row("scam recall", lambda m: pct(*m["recall"]))
+    row("adversarial recall (injection + Spanish)", lambda m: pct(*m["adv_recall"]))
+    row("false alarm, all legit", lambda m: pct(*m["false_alarm"]))
+    row("false alarm, keyword-bait legit", lambda m: pct(*m["legit_bait"]))
+    row("false alarm, plain legit", lambda m: pct(*m["legit_plain"]))
+    row("asks precision", lambda m: pct(*m["asks_precision"]))
+    row("asks recall", lambda m: pct(*m["asks_recall"]))
+    row("addresses_ai false positives", lambda m: pct(*m["ai_fp"]))
+    row("windows fallen back to rules", lambda m: f"{m['n_fallback']}/{m['n_windows']}")
+    row("/detect latency p50 (ms)", lambda m: f"{m['p50_ms']:.0f}")
+    L.append("")
+    thr = {e: fz["thresholds"].get(e, {}).get("threshold", DEFAULT_THRESHOLD) for e in have}
+    L += ["Scam recall by v2 style (alerted / n):", "", "| style | " + " | ".join(have) + " |", "|---|" + "---|" * len(have)]
+    for kind in ("no_keywords", "spanish", "injection", "slow_build"):
+        cells = []
+        for e in have:
+            good, _ = scored_only(read_results(e, "v2"))
+            rs = [r for r in good if kinds.get(r["id"]) == kind]
+            cells.append(f"{sum(1 for r in rs if alert_line(r, thr[e]) is not None)}/{len(rs)}")
+        L.append(f"| {kind} | " + " | ".join(cells) + " |")
+    L.append("")
+    return L
+
+
 def build_report() -> str:
     fz = json.loads(FROZEN.read_text()) if FROZEN.exists() else {"thresholds": {}}
     engines = [e for e in ENGINES if read_results(e, "dev") or read_results(e, "test")]
@@ -512,6 +558,7 @@ def build_report() -> str:
             L.append(f"| {t} | " + " | ".join("{}/{}".format(*ms[e]["recall_by_type"].get(t, (0, 0))) for e in have) + " |")
         L.append("")
     L += before_after_section(fz)
+    L += heldout_section(fz)
     if missing:
         L += ["**Not scored (no results yet, e.g. NVIDIA key 429):** " + ", ".join(missing), ""]
     L += ["## Honest caveats", "",
@@ -520,6 +567,9 @@ def build_report() -> str:
           "- 'First hard ask' is located by the rules baseline, so delay is relative to that reference, not human labels.",
           "- No audio, no real callers, no real PII anywhere.",
           "- Cloud test is not scored (NVIDIA 429); rows with any model-failure window are excluded and counted as not scored."]
+    lat = EVAL_DIR / "LATENCY.md"
+    if lat.exists():
+        L += ["", lat.read_text().rstrip(), ""]
     return "\n".join(L) + "\n"
 
 
@@ -543,12 +593,17 @@ async def amain(a) -> int:
         print("need --engine, --freeze or --report")
         return 2
     splits = ["dev", "test"] if a.split == "all" else [a.split]
+    if a.heldout:
+        if "cloud" in engines:
+            print("refusing: held-out v2 is scored for local/rules/prodrules only (no NVIDIA calls)")
+            return 2
+        splits = ["v2"]
     fz = json.loads(FROZEN.read_text()) if FROZEN.exists() else {"thresholds": {}}
     for sp in splits:
         if sp == "test" and not FROZEN.exists() and not a.allow_unfrozen:
             print("refusing to score split=test before FROZEN.json exists (tune on dev, then --freeze)")
             return 2
-        rows = load_rows(split=sp)
+        rows = load_rows([HELDOUT_V2], split=None) if sp == "v2" else load_rows(split=sp)
         if a.limit:
             rows = rows[: a.limit]
         for e in engines:
@@ -562,6 +617,7 @@ async def amain(a) -> int:
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--heldout", action="store_true", help="score heldout_v2.jsonl (writes results/<engine>-v2.jsonl); never tune on it")
     ap.add_argument("--engine", choices=[*ENGINES, "all"])
     ap.add_argument("--split", choices=["dev", "test", "all"], default="dev")
     ap.add_argument("--limit", type=int, default=0, help="first N rows only (smoke test; does not write results)")

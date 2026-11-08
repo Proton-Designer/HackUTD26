@@ -110,6 +110,33 @@ BEFORE = results/before/ (scored on code at `20ca58a`, prior to AI-address gatin
 | asks recall | 80% (47/59) [68-88] | 80% (47/59) [68-88] |
 | /detect latency p50 (ms) | 0 | 0 |
 
+## Held-out v2 (40 fresh synthetic rows, scored ONCE, thresholds frozen on dev, no tuning)
+
+File `heldout_v2.jsonl` (written before the engines saw it; not in the default row files). Scored on trunk `ebabe10`. 20 scams (8 no-classic-keywords, 4 Spanish/Spanglish, 4 AI-directed injection, 4 slow-build) + 20 legit (10 keyword-bait, 10 ordinary). n is tiny: read every interval.
+
+| metric | rules (thr 0.85) | prodrules (thr 0.8) | local (thr 0.95) |
+|---|---|---|---|
+| rows scored / not scored | 40 / 0 | 40 / 0 | 40 / 0 |
+| scam recall | 40% (8/20) [22-61] | 45% (9/20) [26-66] | 100% (20/20) [84-100] |
+| adversarial recall (injection + Spanish) | 50% (4/8) [22-78] | 62% (5/8) [31-86] | 100% (8/8) [68-100] |
+| false alarm, all legit | 30% (6/20) [15-52] | 10% (2/20) [3-30] | 10% (2/20) [3-30] |
+| false alarm, keyword-bait legit | 60% (6/10) [31-83] | 20% (2/10) [6-51] | 20% (2/10) [6-51] |
+| false alarm, plain legit | 0% (0/10) [0-28] | 0% (0/10) [0-28] | 0% (0/10) [0-28] |
+| asks precision | 59% (10/17) [36-78] | 71% (10/14) [45-88] | 59% (22/37) [43-74] |
+| asks recall | 36% (10/28) [21-54] | 36% (10/28) [21-54] | 79% (22/28) [60-90] |
+| addresses_ai false positives | 0% (0/36) [0-10] | 0% (0/36) [0-10] | 3% (1/36) [0-14] |
+| windows fallen back to rules | 0/163 | 0/163 | 0/163 |
+| /detect latency p50 (ms) | 0 | 5 | 1620 |
+
+Scam recall by v2 style (alerted / n):
+
+| style | rules | prodrules | local |
+|---|---|---|---|
+| no_keywords | 0/8 | 1/8 | 8/8 |
+| spanish | 0/4 | 1/4 | 4/4 |
+| injection | 4/4 | 4/4 | 4/4 |
+| slow_build | 4/4 | 3/4 | 4/4 |
+
 **Not scored (no results yet, e.g. NVIDIA key 429):** cloud/test
 
 ## Honest caveats
@@ -119,3 +146,26 @@ BEFORE = results/before/ (scored on code at `20ca58a`, prior to AI-address gatin
 - 'First hard ask' is located by the rules baseline, so delay is relative to that reference, not human labels.
 - No audio, no real callers, no real PII anywhere.
 - Cloud test is not scored (NVIDIA 429); rows with any model-failure window are excluded and counted as not scored.
+
+## Latency benchmark (no NVIDIA calls; `bench_latency.py`)
+
+P2 on test port 8104, `LOCAL_LLM_URL` -> Windows llama.cpp b12199 CUDA-12.4, Nemotron-3-Nano-4B Q4_K_M, RTX 3050 Ti 4 GB (`-np 1`, one GPU slot). 40 real test-split windows per level, unique ref prefix so the LRU cache is bypassed. "not real-model" counts replies that fell back to another engine (0 everywhere). Rules is the in-process `detect.quick` (the live fallback), 1000 calls; `rules` is not a `/detect` engine.
+
+| path | concurrency | n | p50 ms | p95 ms | mean ms | req/s | not real-model |
+|---|---|---|---|---|---|---|---|
+| rules (detect.quick, in-process) | 1 | 1000 | 1.92 | 22.49 | 5.94 | n/a | 0 |
+| local /detect (Nemotron 4B Q4_K_M, RTX 3050 Ti) | 1 | 40 | 1660 | 1820 | 1663 | 0.60 | 0 |
+| local /detect (Nemotron 4B Q4_K_M, RTX 3050 Ti) | 2 | 40 | 3218 | 4037 | 3340 | 0.59 | 0 |
+| local /detect (Nemotron 4B Q4_K_M, RTX 3050 Ti) | 4 | 40 | 4022 | 4082 | 3947 | 0.99 | 0 |
+
+Reading: local is serial on one GPU slot, so p50 scales with concurrency (about 1.7 s alone, 3.2 s at 2, 4.0 s at 4; p95 at 4 is right at detect's 4 s timeout). Throughput stays about 0.6 to 1 request/s, so two simultaneous live calls degrade each other when local is the active engine.
+
+End-to-end 'caller endpoint -> risk.update', read from `logs/p2.log` with `call_report.py` (only 3 usable utterances; these were live, unscripted tests, anecdotes not a benchmark):
+
+| path | endpoint -> risk.update |
+|---|---|
+| cloud answered | 1.9 s |
+| cloud 429, failover to local | 3.4 s and 2.2 s |
+
+Also in those logs: STT final transcript arrives 0.25 to 0.71 s after the endpoint. A held-out cloud probe through `/detect` took 0.9 s (one call, 200).
+
