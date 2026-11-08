@@ -23,8 +23,16 @@ async def main():
             core.chat = _fake
             try: arts = await core.extract(r["pre_lines"] + r["heard_lines"])
             finally: core.chat = real_chat
-        else:
-            arts = await core.extract(r["pre_lines"] + r["heard_lines"])
+        else:   # like the live decoy: a pass over the pre-handoff story at session start, then a pass over everything, merged
+            arts = []
+            for lines in ([r["pre_lines"]] if r["pre_lines"] else []) + [r["pre_lines"] + r["heard_lines"]]:
+                for attempt in range(4):   # the shared NVIDIA key is rate-limited: a 'no model response' is retried, not scored
+                    try:
+                        arts += await core.extract(lines); break
+                    except RuntimeError:
+                        if attempt == 3: raise
+                        await asyncio.sleep(8)
+                await asyncio.sleep(1)
         na = normalize_artifacts(arts); hits = nessie.match_destinations(na)
         handles = [a["value"] for a in na if a["type"] == "payment_handle"]
         payee = "zelle:refunds.dept@backfire-demo.example"
