@@ -26,7 +26,7 @@ Whisper base.en alone on this CPU: p50 1.60 s, max 2.88 s per utterance (6 utter
 | endpoint -> final | p50 1.59 s, max 3.62 s | about 3.5 s |
 | scam cards alerting (10) | 10 of 10 | see eng2 |
 | benign cards alerting (3) | 0 of 3 (b1 reached s 0.45) | see eng2 |
-Per-card alert time vs the end of the ask line: 7 of 10 fired before the ask line ended (the fast path acts on earlier lines), the other three at +1.4, +1.4, +1.7 s and one at +3.5 s (s2). Per-card rows are in the JSON the tool writes (`--json`), not committed.
+Per-card alert time vs the end of the ask line: 6 of 10 fired before the ask line ended (earlier lines already carried the signal), the other four at +1.4, +1.4, +1.7 and +3.5 s (s2). Per-card rows are in the JSON the tool writes (`--json`), not committed.
 
 ## Caveats
 - Whisper heard clean Magpie TTS with synthetic band-pass/noise. Real human voices on a real phone line are harder, and Whisper base.en is generally less robust than Riva on accents and noise. I did not measure that: the only real-voice calls (benign "hello" tests) have no reference text.
