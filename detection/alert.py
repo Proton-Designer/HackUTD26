@@ -243,8 +243,12 @@ class AlertMachine:
                 c = self._call(cid); c.decoy = False; c.fired = False; c.continued = False; c.armed = False
                 # restored = judged legit and handed back: like Continue, score only what is said from now on (old scam text must not re-fire 'first'); in-flight results drop (TASK-046 M1)
                 c.utts.clear(); c.epoch += 1; c.dirty = False; c.cont_t = self.clock(); c.llm, c.llm_t, c.fail_n, c.clean_n = None, 0.0, 0, 0; c.prev_band = "low"; c.known_hard = set()
-            elif t in ("call.ended",) or (t == "user.action" and d.get("action") == "hang_up"):
-                self._mark_ended(cid)
+            elif t == "call.ended":
+                self._mark_ended(cid)     # only the Telnyx caller hangup (call.ended) ends P2 state
+            elif t == "user.action" and d.get("action") == "hang_up":
+                # TASK-061: the customer's Decline/Hang up tap is not the caller leaving. In listen/talk mode the caller stayed on for 100 s and every final was
+                # dropped ("call already ended") while P2 should have kept scoring. Keep state; call.ended is the real end (late finals after it are still dropped, TASK-038).
+                log.info("user.action hang_up seen call=%s (ignored: caller leg still counts until call.ended)", cid)
             elif t == "decoy.turn":
                 # TASK-058 instrumentation only (local log, no state): lets echo leaks be measured against caller finals
                 log.info("echo.decoy call=%s speaker=%s text=%r", cid, d.get("speaker"), str(d.get("text") or "")[:120])

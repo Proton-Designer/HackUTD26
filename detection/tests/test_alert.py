@@ -181,3 +181,14 @@ def test_alert_retry_stops_after_continue(monkeypatch):
         return n, len(got)
     a, b = asyncio.run(go())
     assert a == b and a >= 1
+
+def test_hang_up_does_not_end_scoring_but_call_ended_does():
+    """TASK-061: customer hang_up tap while the caller is still on the line must not deafen P2; the real call.ended still drops late finals (TASK-038)."""
+    r = Rig([R(0.3), R(0.9), R(0.95)])
+    r.say()
+    r.ev("user.action", action="hang_up")
+    r.say(); r.say()
+    assert r.calls == 3 and r.alerts() == ["first"]
+    r.ev("call.ended")
+    r.say()
+    assert r.calls == 3
