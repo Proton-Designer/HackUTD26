@@ -207,18 +207,23 @@ async def media(ws: WebSocket, call_id: str, t: str = ""):
             s = await make_p2_sink(call_id)
             if s: local.add(s)
     except Exception as e: log.warning("relay open failed (fail open): %s", e)
-    n = 0
+    n = 0; stats = {}
     try:
         while True:
             raw = await ws.receive_text(); n += 1
             if n > MAX_STREAM_FRAMES: break
+            try:   # evidence for LIVE_TEST_PLAN check 3/4: event + track counts, start frame metadata (never payload audio)
+                _f = json.loads(raw); _k = _f.get("event", "?") + ((":" + str(_f.get("media", {}).get("track"))) if _f.get("event") == "media" else "")
+                stats[_k] = stats.get(_k, 0) + 1
+                if _f.get("event") in ("connected", "start") and stats[_k] == 1: log.warning("media %s: %s", _f["event"], json.dumps({k: v for k, v in _f.items() if k != "media"})[:400])
+            except Exception: pass
             try:   # caller track only (stream_track=inbound_track); Maria's audio never streamed
                 if hub: await _maybe_await(hub.caller_frame(call_id, json.loads(raw)))
                 elif local: local.feed(raw)
             except Exception as e: log.warning("relay frame error (ignored): %s", e)
     except (WebSocketDisconnect, RuntimeError): pass
     finally:
-        st.pop("send_to_caller", None)
+        st.pop("send_to_caller", None); log.warning("media WS closed %s frames=%s", call_id[:8], stats)
         try:
             if hub: await _maybe_await(hub.close(call_id))
             elif local: await local.close()
