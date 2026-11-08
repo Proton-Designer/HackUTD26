@@ -215,7 +215,8 @@ class GitHub:
             m = re.search(r'<([^>]+)>;\s*rel="next"', hdrs.get("Link", "") or "")
             if not m:
                 break
-            status, data, hdrs = self._raw(m.group(1))
+            nxt = re.sub(r"/repositories/\d+/", "/repos/%s/" % self.repo, m.group(1))  # some proxies reject numeric-ID paths
+            status, data, hdrs = self._raw(nxt)
             items.extend(data or [])
             pages += 1
         etag = hdrs.get("ETag") if hdrs else None

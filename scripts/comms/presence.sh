@@ -16,7 +16,7 @@ note_hook() {
   now=$(date +%s); sid=$(jfield "$j" session_id); aid=$(jfield "$j" agent_id); tool=$(jfield "$j" tool_name)
   file=$(jfield "$j" file_path); [ -z "$file" ] && file=$(jfield "$j" notebook_path)
   [ -n "$sid" ] && echo "$now $sid ${aid:-main}" >> "$P_SESS"
-  [ -n "$tool" ] && pset last_tool "$tool"
+  [ -n "$tool" ] && { pset last_tool "$tool"; pset last_active "$now"; }
   if [ -n "$file" ]; then
     file=$(printf '%s' "$file" | tr '\\' '/'); file="${file#"$ROOT"/}"; pset last_file "$file"
   fi
@@ -39,6 +39,11 @@ presence_issue() {
 presence_push() {
   [ "${BACKFIRE_PRESENCE:-1}" = 0 ] && return 0
   local status="$1" host n cid marker now cutoff sessions agents body ov
+  # Status comes from real activity, not from which hook is calling: a tool call in the last 3 min = working.
+  # (The background inbox watcher and the Stop hook used to report "idle" while the agent was still busy.)
+  local la; la=$(pget last_active | tr -dc '0-9')
+  if [ "$status" = idle ] && [ -n "$la" ] && [ $(( $(date +%s) - la )) -lt 180 ]; then status=working; fi
+  if [ "$status" = working ] && [ -n "$la" ] && [ $(( $(date +%s) - la )) -ge 600 ]; then status=idle; fi
   ov=$(pget status_override); [ -n "$ov" ] && status="$ov"
   host=$(host_name); marker="<!-- presence:$ME:$host -->"
   now=$(date +%s); cutoff=$((now - 600))
