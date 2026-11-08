@@ -133,9 +133,9 @@ Same rules as above: n is small, all scam scripts are team-written, real calls a
 - Don't say: "no single point of failure". P2 itself is one process.
 
 **19. "Have you tested it on real phone calls?"** (Owner: Ayman)
-- Answer: Yes, a small number: 7-8 real Telnyx phone calls from teammates, 2 with scripted scams (SSN and IRS+OTP). Both alerted, at +12 s (adad65a0) and +14.9 s (499a20d2), during the ask, and the benign calls had 0 false alerts. n=2 scams with a script the team knows, so this is a smoke test, not recall.
+- Answer: Yes, a small number: 13 real Telnyx phone calls from teammates, 6 with scripted scams and 7 benign. 5 of the 6 scams alerted, 12-18 s into the call (e.g. adad65a0 +12 s, 499a20d2 +14.9 s live), which is 0.3-3.1 s after the scammer's key words (n=5, median ~2.7 s); the 1 miss (6352e850) was our own audio mute upstream. The 7 benign calls stayed quiet (0 false alerts). Team actors with a script they know, so this is a smoke test, not recall.
 - Show: `detection/eval/REAL_CALLS.md`; `detection/PITCH_NUMBERS.md` row 12.
-- Don't say: "validated on real calls", "alerts in 5 seconds". Say "about 8 to 15 seconds on real calls".
+- Don't say: "validated on real calls", "alerts in 5 seconds". Say "about 12 to 18 seconds into real calls, 0.3 to 3 seconds after the key words".
 
 **20. "Why did you miss call 6352e850?"** (Owner: Ayman)
 - Answer: That one was our own plumbing, not the detector. On that test call the caller's audio reached us as digital zero for about 15 seconds while the scam script was read, so the detector never heard the words; it scored the greetings it did hear as safe. We changed the audio path around 03:33 (deploy time not recorded); a call a minute later still had 2-4 s gaps, and the 5 calls from about 04:45 on had none. That is an observation, not proof of a fix, and we are re-checking it with a rehearsal call where our own voice talks over the caller. So the claim is: 5 of 6 real scam calls alerted, and the 1 miss was upstream audio, not a wrong judgement.

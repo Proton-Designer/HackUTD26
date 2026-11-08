@@ -15,9 +15,10 @@ How well it works, honestly: on 60 team-written synthetic test scripts the model
 | If both models fail (rules only) | 26 of 33 test, 10 of 20 held-out | 53 | A floor, not a detector |
 | Look-alike legit calls (bank, doctor, grandchild) | rules 0 of 25, model 1 of 25 | 25 | Fixed 2 rows after seeing them |
 | Phone-quality audio | 28 of 28 scams alerted, 9 of 9 benign quiet | 37 | Synthetic voice and channel |
-| Real phone calls, scripted scams | alerts at +12 s and +14.9 s | 2 | Team actors, known script |
-| Real phone calls, all | 0 false alerts | 7-8 | Only 2 had a scam |
+| Real phone calls, scam scripts read by teammates | alerted on **5 of 6**; the 1 miss was upstream (our own audio mute: the detector heard digital silence). Alert 12-18 s into the call | 6 | Team actors, known script; not strangers |
+| Time from the scammer's key words to the alert (real calls) | **0.3-3.1 s**, median ~2.7 s (rules 0.3-1 s, local model 2.7-3.1 s) | 5 | Word times from Whisper, +-0.5 s |
+| Real phone calls, benign/chatter | **7 of 7** quiet, 0 false alerts | 7 | Teammates chatting; small n |
 | Two overlapping calls | both alerted (+11.7 s, +14.9 s), under 1 s extra delay | 2 runs | Replayed audio only; one call at a time live |
 | Failure drills | alert still fired with the local model down, cloud down, speech-to-text throttled, or the hub down for 8.5 s | 6 drills | One run each; P2 itself is one process |
 
-Not claimed: Spanish phone calls (speech-to-text is English-only), 3 or more simultaneous calls, accuracy on real scam calls beyond the two scripted ones.
+Not claimed: Spanish phone calls (speech-to-text is English-only), 3 or more simultaneous calls, accuracy on real scam calls beyond the six scripted team calls.

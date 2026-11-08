@@ -19,11 +19,11 @@ P2 listens to the **caller's audio only**, transcribes it, scores scam risk with
 - Local model: **33/33** test scams alerted, **2/27** false alarms; fresh held-out **20/20** and **1/20** (#1, #2). Keyword baseline 28/33 and 8/20.
 - If both models fail, rules alone catch 26/33 and 10/20 (#3).
 - Phone-quality script cards: **28/28** scam rows alerted before the first ask line ended, **9/9** benign quiet (#10, `eval/PSTN_CARDS.md`).
-- Real phone calls (team actors, scripted): alert 12-15 s into the call on the scam calls (#12, `eval/REAL_CALLS.md`); zero false alarms on the real calls replayed.
+- Real phone calls (team actors, scripted): alert 12-18 s into the call on the scam calls (5 of 6 alerted; the 1 miss was upstream audio) (#12, `eval/REAL_CALLS.md`); zero false alarms on the real calls replayed.
 - Failure drills: llama down, cloud down, Riva refused, hub restart, P2 restart all still produced the alert or recovered (`eval/DRILLS.md`).
 
 ## Honest caveats
 - Eval sets are synthetic, written by the team; thresholds were tuned on dev splits. Not a detection-rate estimate for real scammers.
-- Real calls: **n=2** scripted scam calls by team actors (plus one chatter call that stayed quiet), not strangers; English-only speech-to-text.
+- Real calls: **6** scripted scam calls by team actors (5 alerted; timing n=5) plus 7 chatter calls that stayed quiet, not strangers; English-only speech-to-text.
 - The laptop GPU stands in for a phone; Nano 4B on 4 GB serves one call at a time well, 4 concurrent calls queue (4.0 s p50).
 - The cloud model has no clean test number (rate limited during scoring, #8).
