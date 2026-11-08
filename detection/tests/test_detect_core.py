@@ -78,3 +78,11 @@ def test_http_route():
     r = TestClient(app).post("/detect", json={"call_id": "c", "window_text": "buy gift cards", "engine": "cloud"})
     assert r.status_code == 200 and "gift_card" in r.json()["asks"]
     assert TestClient(app).post("/detect", json={}).status_code == 200
+
+
+def test_quick_rules_only_fast_and_valid():
+    import time
+    t = time.perf_counter()
+    o = D.quick("You must pay today with gift cards and tell no one", "local"); dt = time.perf_counter() - t
+    valid(o); assert o["engine"] == "local" and o["s"] >= 0.95 and dt < 0.005
+    assert D.quick("good morning")["s"] == 0.0 and D.quick(None)["band"] == "low"

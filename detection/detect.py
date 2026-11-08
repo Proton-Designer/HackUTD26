@@ -74,6 +74,16 @@ def merge(raw, rules: dict, engine: str) -> dict:
     }, engine)
 
 
+def quick(window_text: str, engine: str = "cloud") -> dict:
+    """Rules-only normalized risk.update data. No I/O, no await, never raises (<5 ms).
+    Lets the alert machine fire on a rule floor >= 0.80 before the LLM returns."""
+    engine = engine if engine in schema.ENGINES else "cloud"
+    try:
+        return merge(None, rule_scan(window_text if isinstance(window_text, str) else ""), engine)
+    except Exception:
+        return schema.normalize({}, engine)
+
+
 async def _engine_score(window_text: str, metadata: dict, engine: str) -> dict:
     if engine == "local":
         try:
