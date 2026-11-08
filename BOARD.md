@@ -30,7 +30,6 @@
 ## Blocked
 | What | Who is stuck | Waiting on | Since |
 |---|---|---|---|
-| Repo access for Evan (not a collaborator on Proton-Designer/HackUTD26) | Evan | Ayman sends the GitHub invite | 23:00 |
 | Command center build | Rayan | Ayman's `mock/events.json` + `contracts/events.md` (due 23:15; Rayan sketches the layout until then) | 22:45 |
 | Eval row format must match detector output | Kareem | Uses the enums in master context §5 (`asks[]`: otp, card, ssn, gift_card, crypto, wire, p2p, remote_app, secrecy); Evan confirms at next check-in | 22:45 |
 
@@ -51,6 +50,7 @@
 - **11:30 (H23:30)** Final Devpost submitted (hard deadline 12:00).
 
 ## Decisions log
+- 23:21 (H11:21) | **Evan has repo access** (`evan-olson31` is a collaborator on Proton-Designer/HackUTD26, verified via GitHub). Blocker cleared.
 - 23:15 (H11:15) | **No sleep shifts.** The whole team works through the night (Rayan). Sleep schedule removed from the board and from the delegator's rules.
 - 23:05 (H11:05) | **P4 split in two, one owner each:** Kareem = P4a Intel (`intel/`: real lookups, fixed-chain Nemotron agent, policy gate); Rayan = P4b command center + story. Not both on all of P4 (shared files, merge fights) and not one person alone (13 items incl. the pitch). Command center starts now on mock events instead of 02:00, because it's the screen judges watch. Intel agent uses a fixed chain, not free tool-calling, because it's more reliable in a live demo. Cost: Kareem's eval set stops at 30 rows (Ayman-B grows it with Claude if needed); Kareem is on backend logic, so he escalates fast (Evan for Nemotron, Ayman for the server). Fallback: if lookups aren't on screen by 03:00, Rayan pairs on them and the agent becomes proposals from a template. Ayman (Decider) can override.
 - 23:00 (H11:00) | Team talks to the delegator through the Discord bot (`@Delegation_Bot done/blocked/next/...`). Only the bot edits BOARD.md, to avoid merge conflicts. Bot runs on Rayan's laptop.
