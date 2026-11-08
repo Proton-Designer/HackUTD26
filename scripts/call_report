@@ -40,7 +40,10 @@ def main():
     ap.add_argument("--hub-log", default=str(LOGS / "hub-eng2-live.log")); ap.add_argument("--decoy-log", default=str(LOGS / "decoy.log"))
     ap.add_argument("--calls-dir", default=str(LOGS / "calls"))
     a = ap.parse_args()
-    hub = read(a.hub_log)
+    if a.hub_log == str(LOGS / "hub-eng2-live.log"):   # default: both hub logs (scripts/restart_hub_safe/run_hub writes hub.log, my manual restarts hub-eng2-live.log), older first
+        fs = sorted([f for f in (LOGS / "hub-eng2-live.log", LOGS / "hub.log") if f.is_file()], key=lambda f: f.stat().st_mtime)
+        hub = [l for f in fs for l in (read(f) or [])] if fs else None
+    else: hub = read(a.hub_log)
     if hub is None: sys.exit(f"cannot read {a.hub_log}")
     cid = pick_call(hub, None if a.last else a.call)
     if not cid: sys.exit("no call found in the hub log" + ("" if a.last else f" matching {a.call!r}"))
