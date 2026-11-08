@@ -43,7 +43,7 @@
   const show = id => { for (const s of ["incoming", "active", "ended"]) $(s).hidden = s !== id; };
 
   // ---- audio: unlock on a user tap (mobile autoplay), then beeps are local-only ----
-  BF.soundBadge = on => { const b = $("sound"); if (!b) return; b.classList.toggle("off", !on); b.setAttribute("aria-label", on ? "Sound on" : "Sound off. Tap to turn sound on"); b.title = on ? "Sound on" : "Tap for sound"; };   // icon-only chip (CSS draws the speaker / muted speaker)
+  BF.soundBadge = on => { const sb = $("soundBanner"); if (sb) sb.hidden = !!on; const b = $("sound"); if (!b) return; b.classList.toggle("off", !on); b.setAttribute("aria-label", on ? "Sound on" : "Sound off. Tap to turn sound on"); b.title = on ? "Sound on" : "Tap for sound"; };   // icon-only chip (CSS draws the speaker / muted speaker)
   function unlockAudio() {
     try { st.ctx = st.ctx || new (window.AudioContext || window.webkitAudioContext)(); if (st.ctx.state === "suspended") st.ctx.resume(); } catch (e) { log("audio unavailable", String(e)); }
     const on = !!st.ctx && st.ctx.state !== "closed"; BF.soundBadge(on);
@@ -64,7 +64,7 @@
   BF.ringEl = ringEl;
   document.addEventListener("pointerdown", () => { unlockAudio(); primeRing(); });   // every tap (not once): iOS suspends audio after backgrounding
   document.addEventListener("visibilitychange", () => { if (!document.hidden && st.ctx && st.ctx.state !== "running") st.ctx.resume().catch(() => {}); });
-  $("sound").addEventListener("click", unlockAudio); BF.unlockAudio = () => { unlockAudio(); primeRing(); };   // first tap anywhere unlocks beeps
+  $("sound").addEventListener("click", unlockAudio); $("soundBanner").addEventListener("click", () => { unlockAudio(); primeRing(); });   // full-width "Tap to turn on call sounds" until the first tap (UI review 2) BF.unlockAudio = () => { unlockAudio(); primeRing(); };   // first tap anywhere unlocks beeps
 
   // ---- Live Guard badge: watching / alert / handed off / off ----
   const fmtNum = n => /^\+1\d{10}$/.test(n || "") ? `+1 (${n.slice(2, 5)}) ${n.slice(5, 8)}-${n.slice(8)}` : (n || "");
@@ -209,7 +209,7 @@
 
   // ---- buttons ----
   $("answerBtn").onclick = () => {
-    stopRing(); lockScreen(); emitUserAction("answer"); { const k = $("keepOpen"); if (k) { k.textContent = "Keep Backfire open during calls. If you switch apps, the call audio can pause."; k.hidden = !IOS; } }
+    stopRing(); lockScreen(); emitUserAction("answer");   // the iOS keep-open tip is a one-time line on Home now, not on the call screen
     unlockAudio();                                   // tap unlocks audio so the alert beeps can play
     if (BF.voip) BF.voip.answer();                   // real WebRTC call, if one is ringing
     st.answered = true; st.t0 = Date.now(); st.timer = setInterval(tick, 500); tick();
@@ -284,6 +284,8 @@
     const android = /Android/.test(navigator.userAgent); if (!IOS && !android) return;
     $("a2hsText").textContent = IOS ? "Add Backfire to your Home Screen: tap Share, then Add to Home Screen." : "Add Backfire to your Home Screen: open the browser menu, then Install app.";
     h.hidden = false; $("a2hsClose").onclick = () => { h.hidden = true; try { localStorage.setItem("bf.a2hs", "1"); } catch (e) {} }; } catch (e) {} })();
+  // iOS: one-time "keep Backfire open" tip on Home (UI review 2: not on the call screen)
+  (function () { try { const t = $("iosTip"); if (!t || !IOS || localStorage.getItem("bf.iostip") === "1") return; t.hidden = false; $("iosTipOk").onclick = () => { t.hidden = true; try { localStorage.setItem("bf.iostip", "1"); } catch (e) {} }; } catch (e) {} })();
   setInterval(() => { const n = new Date(); $("clock").textContent = (n.getHours() % 12 || 12) + ":" + String(n.getMinutes()).padStart(2, "0"); }, 1000);
   window.BF.deliver = onEvent; BF.endUI = endCall; BF.ui = () => $("phone").dataset.state;
   start();

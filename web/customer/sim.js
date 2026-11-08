@@ -12,7 +12,8 @@
   function play() {
     if (!BF.sim || !a || held) return;
     try { a.currentTime = off(); } catch (e) {}
-    const r = a.play(); if (r && r.catch) r.catch(() => {    // autoplay blocked: next tap anywhere starts it
+    const r = a.play(); if (r && r.catch) r.catch(err => {    // autoplay blocked: next tap anywhere starts it
+      if (err && err.name && err.name !== "NotAllowedError") return;   // a missing/unsupported WAV is not "sound locked": no banner for it
       BF.soundBadge(false);
       document.addEventListener("pointerdown", () => { play(); BF.soundBadge(true); }, { once: true });
     });
@@ -39,11 +40,13 @@
   const stats = BF.decoyStats = { frames: 0, bytes: 0, late: 0, state: "idle" };
   function decoyLabel(on) { const l = $("decoyMsg"); if (l) { l.textContent = want === "caller" ? "🎧 Listening to the caller" : "🎧 Listening to Backfire's decoy"; l.hidden = !on; } }
   function decoyStop() { queued.forEach(q => { try { q.stop(); } catch (e) {} }); queued = []; clearTimeout(lwsT); lwsExpected = true; try { lws && lws.close(); } catch (e) {} lws = null; lwsCid = null; lwsTry = 0; dnext = 0; decoyLabel(false); stats.state = "idle"; try { dgain && dgain.disconnect(); } catch (e) {} dgain = null; }
+  let dLocked = false;
   function decoyPlay(b64) {
     let bin; try { bin = atob(b64); } catch (e) { return; }
     const n = bin.length; if (!n) return;
     if (!dctx) { try { dctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return; } }
-    if (dctx.state === "suspended") { dctx.resume().catch(() => {}); BF.soundBadge(false); document.addEventListener("pointerdown", () => { try { dctx.resume(); } catch (e) {} const s2 = $("sound"); if (s2) { s2.textContent = "🔊 Sound on"; s2.classList.remove("off"); } }, { once: true }); }
+    if (dctx.state === "suspended" && !dLocked) { dLocked = true; dctx.resume().catch(() => {});   // a page that already had a tap resumes fine; only a context that stays suspended shows the banner
+      setTimeout(() => { if (!dctx || dctx.state !== "suspended") { dLocked = false; return; } BF.soundBadge(false); document.addEventListener("pointerdown", () => { try { dctx && dctx.resume(); } catch (e) {} dLocked = false; BF.soundBadge(true); }, { once: true }); }, 400); }
     if (!dgain) { dgain = dctx.createGain(); dgain.gain.value = decoyMuted ? 0 : 1; dgain.connect(dctx.destination); BF.decoyAnalyser = dctx.createAnalyser(); dgain.connect(BF.decoyAnalyser); }
     const buf = dctx.createBuffer(1, n, 8000), ch = buf.getChannelData(0);
     for (let i = 0; i < n; i++) ch[i] = ULAW[bin.charCodeAt(i)];

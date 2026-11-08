@@ -240,3 +240,11 @@ details.keep[open] summary{margin-bottom:var(--sp1)}
 .home-card .hc-time{color:var(--mut);font-weight:600}
 .home-card .hc-sub{font-size:var(--fs-sm);color:var(--mut)}
 .home-card:focus-visible{outline:3px solid #fff;outline-offset:2px}
+
+/* UI review 2: sound-locked banner, one-time tip */
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.sound-banner{width:100%;min-height:var(--tap);display:flex;align-items:center;justify-content:center;gap:var(--sp2);margin:0 0 var(--sp2);padding:var(--sp3) var(--sp4);border-radius:var(--r-md);border:1px solid #6b4d16;background:var(--amber-bg);color:var(--amber-ink);font:inherit;font-size:var(--fs-md);font-weight:700;cursor:pointer}
+.sound-banner .ic{width:22px;height:22px;flex:none}
+.sound-banner:focus-visible{outline:3px solid #fff;outline-offset:2px}
+.tip-line{width:100%;display:flex;align-items:center;gap:var(--sp3);text-align:left;font-size:var(--fs-sm);line-height:1.35;color:var(--mut);padding:var(--sp2) var(--sp3);border-radius:var(--r-md);background:var(--surface)}
+.tip-line button{flex:none;min-height:44px;min-width:64px;border-radius:var(--r-sm);border:1px solid var(--line);background:transparent;color:var(--fg);font:inherit;font-weight:700;cursor:pointer}

@@ -121,6 +121,7 @@ def main():
                 code, _ = http("POST", "/pair", {"pin": PIN})
                 if code == 404: check("2", "pairing (hub /pair)", False, "POST /pair is 404", gap="eng1 (TASK-014 hub side not landed)")
                 else: check("2", "pairing screen not needed on localhost (dev exemption); /pair answers", code in (200, 401), f"/pair -> {code}")
+            check("2", "sound locked before any tap: full-width 'Tap to turn on call sounds' banner", pg.locator("#soundBanner").is_visible() and "call sounds" in pg.inner_text("#soundBanner"))
             shot("02-idle")
             # 2b. pairing link /app/#pair=XXXXXX (fresh phone): the code is in the fragment (never sent to the hub), pairs by itself, stripped before the reload
             c2 = br.new_context(viewport={"width": 390, "height": 844}, device_scale_factor=2); p2 = c2.new_page(); navs = []
@@ -159,6 +160,8 @@ def main():
             check("3", "ringtone playing while ringing (audio element or Web Audio)", bool(wait_for(lambda: pg.evaluate("!!(BF.ringEl && !BF.ringEl.paused)"), 3)), str(pg.evaluate("BF.ringEl ? BF.ringEl.paused : 'no ringEl'")))
             shot("03-ringing")
             pg.click("#answerBtn"); call.answer()
+            check("3", "the Answer tap unlocks sound: banner gone", bool(wait_for(lambda: pg.locator("#soundBanner").is_hidden(), 3)))
+            check("3", "call screen has no earphones checkbox (it lives in Protection, on by default)", pg.locator("#active #earBox").count() == 0 and pg.locator("#protView #earBox").count() == 1 and pg.locator("#earBox").is_checked())
             check("3", "ringtone stops on answer", bool(wait_for(lambda: pg.evaluate("!BF.ringEl || BF.ringEl.paused"), 3)))
             check("3", "answered: app goes active", bool(wait_for(lambda: pg.evaluate("BF.ui()") == "active")), pg.evaluate("BF.ui()"))
             check("3", "hub emits call.answered (by maria)", bool(wait_for(lambda: has("call.answered"))), json.dumps([e["type"] for e in events if e["call_id"] == call.sid]))

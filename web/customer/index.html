@@ -38,6 +38,7 @@ if (!Element.prototype.replaceChildren) Element.prototype.replaceChildren = func
   </header>
 
   <div id="callView">
+  <button id="soundBanner" class="sound-banner" type="button" aria-describedby="soundWhy"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5v5h3.5l5 4v-13l-5 4zM16 9.5l5 5M21 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Tap to turn on call sounds</span><span id="soundWhy" class="sr-only">Your phone keeps Backfire silent until you tap once, so a call could arrive without ringing.</span></button>
   <!-- INCOMING -->
   <section id="incoming" class="screen" hidden>
     <p class="pill amber" id="scamLabel" hidden>Scam Likely</p>
@@ -83,7 +84,6 @@ if (!Element.prototype.replaceChildren) Element.prototype.replaceChildren = func
         <span id="micDot" class="dot idle" role="img" aria-label="Not sending" title="Not sending"></span>
       </div>
       <p class="talk-hint" id="talkHint">Use earphones so the caller doesn't hear themselves.</p>
-      <label class="ear"><input type="checkbox" id="earBox"><span>I am wearing earphones</span></label>
     </div>
 
     <p id="decoyMsg" class="decoy" hidden>Listening to Backfire's decoy</p>
@@ -103,6 +103,7 @@ if (!Element.prototype.replaceChildren) Element.prototype.replaceChildren = func
       <h1>You're protected</h1>
       <p class="lead">Backfire listens to the caller's side of calls from numbers you don't know.</p>
       <p id="homeNote" class="note" role="status"></p>
+      <p id="iosTip" class="tip-line" role="note" hidden><span>Keep Backfire open during calls. If you switch apps, the call audio can pause.</span><button id="iosTipOk" type="button" aria-label="Got it, hide this tip">Got it</button></p>
       <button id="voiceCard" class="home-card" type="button" hidden><span class="hc-main">Make Backfire sound like you <span class="hc-time">· 20 sec</span></span><span class="hc-sub">Optional. Scammers hear a synthetic voice until then.</span></button>
     </div>
     <div class="ended-only">
@@ -163,6 +164,11 @@ if (!Element.prototype.replaceChildren) Element.prototype.replaceChildren = func
           <input id="dnsLabel" autocomplete="off" aria-label="Name" placeholder="Name (for example: Dr. Lee)">
           <div class="pair"><button class="big outline" id="dnsCancel">Cancel</button><button class="big accept" id="dnsAdd">Add</button></div>
         </div>
+      </div>
+      <div class="group">
+        <h3>Calls</h3>
+        <label class="check"><input type="checkbox" id="earBox"><span>I use earphones on calls</span></label>
+        <p class="sub">With earphones on, the caller never hears themselves through your speaker.</p>
       </div>
       <details class="group keep">
         <summary>What we keep</summary>
