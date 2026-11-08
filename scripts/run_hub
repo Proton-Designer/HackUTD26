@@ -11,6 +11,7 @@ cd "$(dirname "$0")/.."
 # Repo .env OVERRIDES stale inherited shell values (tmux shells hold old TELNYX_* keys), EXCEPT the run-control vars below:
 # anything in this protected list (plus RUN_HUB_KEEP=VAR1,VAR2 for extras) that you set explicitly in the shell wins over .env,
 # so an isolated test copy (own HUB_PORT/HUB_DB/INTEL_DB/LOGDIR/DEVICE_PIN...) never inherits the live hub's values from .env.
+SHELL_PUBLIC_WS="${PUBLIC_WS:-}"   # an explicit shell PUBLIC_WS survives; a stale one from .env must not leak into NO_TUNNEL runs
 KEEP="HUB_PORT HUB_BIND HUB_DB INTEL_DB LOGDIR HUB_NO_PIN_FILE DEVICE_PIN HUB_TOKEN NO_TUNNEL SIM_MODE DEMO_MODE FALLBACK FALLBACK_DETECT ${RUN_HUB_KEEP//,/ }"
 if [ -f .env ]; then
   saved=""; for v in $KEEP; do [ -n "${!v+x}" ] && saved+="export $v=$(printf '%q' "${!v}");"; done
@@ -40,6 +41,8 @@ if [ "${NO_TUNNEL:-}" != "1" ]; then
     echo "cloudflared not installed (brew install cloudflared); hub is local only"
   fi
 fi
+# NO_TUNNEL=1 and no tunnel started: PUBLIC_WS from .env is a dead ephemeral tunnel URL; it would put it in voip's stream_url (sim media then fails). Only an explicit shell value is kept.
+[ "${NO_TUNNEL:-}" = "1" ] && [ -z "$PUBLIC" ] && { if [ -n "$SHELL_PUBLIC_WS" ]; then export PUBLIC_WS="$SHELL_PUBLIC_WS"; else unset PUBLIC_WS; fi; }
 [ -n "$PUBLIC" ] && echo "$PUBLIC" > "$LOGDIR/tunnel_url.txt"   # read by scripts/point_telnyx
 [ -n "$PUBLIC" ] && export PUBLIC_WS="wss://${PUBLIC#https://}"   # voip builds the Telnyx stream_url from this
 [ "${SIM_MODE:-}" = "1" ] && [ -n "$PUBLIC" ] && echo "WARNING: SIM_MODE=1 with a public tunnel lets anyone with the URL post simulated webhooks (x-sim-call). Do not use for the real demo."

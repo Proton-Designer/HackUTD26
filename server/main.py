@@ -266,6 +266,13 @@ try:
 except Exception:
     log.exception("voip router not mounted")
 
+# android_voip bridge (P3 alternative carrier: /android/route|call|report|handoff + WS /android/events|media|decoy). Fail open: absent or broken -> hub still starts.
+try:
+    from android_voip.bridge.router import router as _android_router
+    mount_router(_android_router)
+except Exception:
+    log.exception("android_voip bridge not mounted")
+
 @app.get("/", include_in_schema=False)
 def root(request: Request):
     """Judges type the bare URL: send them to Maria's app (keeps any ?query such as ?sim=1)."""
