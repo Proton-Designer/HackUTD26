@@ -20,7 +20,7 @@ Shower (drives the screen): Kareem when Ayman answers, and the reverse.
 **3. "How fast is it?"** (Owner: Ayman)
 - Answer: Rules fire in about 1 ms (p95 20 ms) on every transcript, so a clear ask alerts without waiting for the model. The local model adds p50 **1.6 s**, p95 1.9 s per window (test run). On average the model alerted 0.54 lines *before* the first hard ask line (n=28), because authority + secrecy language scores high first.
 - Show: RESULTS.md latency row, and `detection/eval/DEMO_TIMING.md` (call_report timeline of the demo WAV, real STT + cloud model, DEMO_MODE off). On that recording the first alert came at **+7.5 s**, 2.0 s after the opening line; the secrecy line was spoken at ~28.7 s and the gift-card ask ended at 36.3 s, so the alert was ~21 s ahead of the secrecy line and ~29 s ahead of the gift-card ask (n=1 call, synthetic caller; it alerts on the opening authority claim, not on a payment ask).
-- Real-call timing (TASK-079): on 5 real phone scam calls the alert came **0.3-3.1 s** (median ~2.7 s; rules ~0.3-1 s, local model ~2.7-3.1 s) after the scammer's key words, i.e. at 12-18 s into the call because the scammer only reaches the key words ~10-15 s in (`eval/ALERT_LATENCY.md`, PITCH_NUMBERS row 13). Caveat: n=5, team actors reading scripts, word times +-0.5 s.
+- Real-call timing (TASK-079): on 7 timed real phone scam calls the alert came **0.3-3.1 s** (median ~2.6 s; rules ~0.3-1 s, local model ~2.7-3.1 s) after the scammer's key words, i.e. at 12-18 s into the call because the scammer only reaches the key words ~10-15 s in (`eval/ALERT_LATENCY.md`, PITCH_NUMBERS row 13). Caveat: n=7, team actors reading scripts, word times +-0.5 s.
 - Follow-up: "What about STT delay?" -> endpoint silence 450 ms plus ~0.4-0.5 s STT measured on synthetic audio (DECISIONS.md), so an ask is flagged about 1-2 s after it is said, not instantly.
 - Don't say: "real-time" without the number; "instant".
 
@@ -133,7 +133,7 @@ Same rules as above: n is small, all scam scripts are team-written, real calls a
 - Don't say: "no single point of failure". P2 itself is one process.
 
 **19. "Have you tested it on real phone calls?"** (Owner: Ayman)
-- Answer: Yes, a small number: 13 real Telnyx phone calls from teammates, 6 with scripted scams and 7 benign. 5 of the 6 scams alerted, 12-18 s into the call (e.g. adad65a0 +12 s, 499a20d2 +14.9 s live), which is 0.3-3.1 s after the scammer's key words (n=5, median ~2.7 s); the 1 miss (6352e850) was our own audio mute upstream. The 7 benign calls stayed quiet (0 false alerts). Team actors with a script they know, so this is a smoke test, not recall.
+- Answer: Yes, a small number: 16 real Telnyx phone calls from teammates, 9 with scripted scams and 7 harmless. 8 of the 9 scams alerted, 12-18 s into the call (one script had no ask for 37 s, alert +43.7 s) (e.g. adad65a0 +12 s, 499a20d2 +14.9 s live), which is 0.3-3.1 s after the scammer's key words (n=7 timed, median ~2.6 s); the 1 miss (6352e850) was our own audio mute upstream. The 7 benign calls stayed quiet (0 false alerts). Team actors with a script they know, so this is a smoke test, not recall.
 - Show: `detection/eval/REAL_CALLS.md`; `detection/PITCH_NUMBERS.md` row 12.
 - Don't say: "validated on real calls", "alerts in 5 seconds". Say "about 12 to 18 seconds into real calls, 0.3 to 3 seconds after the key words".
 
