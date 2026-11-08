@@ -1,11 +1,11 @@
 """Backfire hub: event bus, WS /events, routing store, stubs. Run: uvicorn server.main:app --port 8000"""
 import asyncio, logging, os, time
 from fastapi.responses import HTMLResponse
-from fastapi import HTTPException, Request, FastAPI, WebSocket, WebSocketDisconnect, Body, Query
+from fastapi import Depends, HTTPException, Request, FastAPI, WebSocket, WebSocketDisconnect, Body, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import pathlib
-from . import bus, db, routing, replay, ops, relay
+from . import bus, db, routing, replay, ops, relay, device
 
 log = logging.getLogger("hub")
 app = FastAPI(title="Backfire hub (Simulated carrier network)")
@@ -22,6 +22,8 @@ ACTIONS = {"continue", "scammer_get_scammed", "hang_up"}
 ingested: list = []
 
 app.include_router(relay.router)
+app.include_router(device.router)
+device._announce()
 
 def mount_router(router, prefix=""):
     """Mount point for routers from voip/ and other pipelines."""
@@ -67,7 +69,7 @@ def lookup(request: Request, from_: str = Query("", alias="from"), attestation: 
         attestation = "none"
     return routing.decide(from_, attestation)
 
-@app.post("/user/action")
+@app.post("/user/action", dependencies=[Depends(device.require_device)])
 def user_action(body: dict = Body(...)):
     action, cid = body.get("action"), body.get("call_id")
     if action not in ACTIONS or not cid:
@@ -109,12 +111,12 @@ def _observe(ev):
 
 bus.add_observer(_observe)
 
-@app.get("/protection-log")
+@app.get("/protection-log", dependencies=[Depends(device.require_device)])
 def protection_log():
     blocked = [{"number": r["number"], "reason": r["reason"], "ts": r["ts"], "undo_token": r["undo_token"]} for r in db.list_confirmed()]
     return {"blocked": blocked, "calls": db.list_calls()}
 
-@app.post("/protection-log/undo")
+@app.post("/protection-log/undo", dependencies=[Depends(device.require_device)])
 def protection_undo(body: dict = Body(...)):
     return {"ok": db.undo(body.get("undo_token", ""))}
 

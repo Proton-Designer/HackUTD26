@@ -3,6 +3,12 @@ import pytest
 from fastapi.testclient import TestClient
 from server import db, bus, routing
 from server.main import app
+from server import device
+
+def paired(c=None):
+    c = c or TestClient(app)
+    c.headers["x-device-token"] = c.post("/pair", json={"pin": device.PIN}).json()["device_token"]
+    return c
 
 @pytest.fixture(autouse=True)
 def fresh():
@@ -35,7 +41,7 @@ def test_fail_open(monkeypatch):
     assert routing.decide("+15555550999")["decision"] == "NORMAL"
 
 def test_ws_events_and_post():
-    c = TestClient(app)
+    c = paired()
     with c.websocket_connect("/events") as ws:
         assert c.post("/events", json={"type": "risk.update", "call_id": "x", "data": {"s": 0.1}}).json()["ok"]
         ev = ws.receive_json(); assert ev["type"] == "risk.update" and ev["call_id"] == "x" and "ts" in ev
@@ -44,14 +50,14 @@ def test_ws_events_and_post():
         assert ws.receive_json()["data"]["action"] == "hang_up"
 
 def test_bad_action_and_ingest_stub():
-    c = TestClient(app)
+    c = paired()
     assert not c.post("/user/action", json={"call_id": "x", "action": "nope"}).json()["ok"]
     assert c.post("/user/action", json={"call_id": "zzz", "action": "hang_up"}).status_code == 404
     assert c.post("/events", json={"type": "user.action", "call_id": "x", "data": {}}).status_code == 403
     assert c.post("/intel/ingest", json={"call_id": "x", "artifacts": []}).json()["stub"]
 
 def test_decoy_end_blocks_caller_and_callback_rejected():
-    c = TestClient(app)
+    c = paired()
     with c.websocket_connect("/events") as ws:
         for t, d in [("call.incoming", {"from": "+15555550142", "to": "+15555550100", "attestation": "C", "scam_id_score": 0.7}),
                      ("call.routed", {"decision": "LIVE_GUARD", "reason": "x"}),
@@ -66,7 +72,7 @@ def test_decoy_end_blocks_caller_and_callback_rejected():
     assert c.get("/routing/lookup", params={"from": "+15555550142"}).json()["decision"] == "LIVE_GUARD"
 
 def test_reset_and_replay():
-    c = TestClient(app); db.add_confirmed("+15555550999")
+    c = paired(); db.add_confirmed("+15555550999")
     assert c.post("/demo/reset").json()["seconds"] < 30
     assert c.get("/protection-log").json()["blocked"] == []
     import asyncio
@@ -141,3 +147,30 @@ def test_voip_mounted_in_single_process():
     assert s["voip"]["mounted"] is True and s["P3 /decoy"]["mounted"] is False   # /decoy-echo is not P3
     paths = [getattr(r, "path", "") for r in app.routes]
     assert paths[-2:] == ["/command-center", "/app"] or set(paths[-2:]) == {"/command-center", "/app"}   # static mounts stay last
+
+
+def test_device_pin_protects_endpoints():
+    c = TestClient(app)   # client host "testclient" = remote
+    for m, path, body in [("get", "/protection-log", None), ("post", "/protection-log/undo", {"undo_token": "x"}), ("post", "/user/action", {"call_id": "x", "action": "hang_up"})]:
+        r = c.request(m, path, json=body); assert r.status_code == 401, path
+    assert c.post("/pair", json={"pin": "wrong"}).status_code == 401
+    tok = c.post("/pair", json={"pin": device.PIN}).json()["device_token"]
+    assert c.get("/protection-log", headers={"x-device-token": tok}).status_code == 200
+    assert c.get("/protection-log", headers={"x-device-token": "forged"}).status_code == 401
+    assert c.get("/healthz").status_code == 200
+
+def test_localhost_bypass_not_through_tunnel():
+    local = TestClient(app, client=("127.0.0.1", 5000))
+    assert local.get("/protection-log").status_code == 200                               # direct local dev
+    assert local.get("/protection-log", headers={"cf-connecting-ip": "1.2.3.4"}).status_code == 401   # via cloudflared: remote
+    assert local.get("/protection-log", headers={"x-forwarded-for": "1.2.3.4"}).status_code == 401
+
+def test_pair_rate_limit_and_hub_token(monkeypatch):
+    device._fails.clear()
+    c = TestClient(app)
+    codes = [c.post("/pair", json={"pin": "000000"}).status_code for _ in range(7)]
+    assert codes[:5] == [401] * 5 and codes[5:] == [429, 429]
+    assert c.post("/pair", json={"pin": device.PIN}).status_code == 429   # locked out even with the right pin
+    device._fails.clear()
+    monkeypatch.setenv("HUB_TOKEN", "svc")
+    assert c.get("/protection-log", headers={"x-hub-token": "svc"}).status_code == 200

@@ -39,3 +39,7 @@ All async, none raises, none blocks on P2/P3 (bounded queues, drop on full).
 - `await relay.start_decoy(call_id) -> bool`: connects to `P3_DECOY_URL` -> `WSS /decoy/{call_id}` (unset: built-in echo decoy `/decoy-echo/{call_id}` on the hub), sends `connected` + `start` (stream_id = Telnyx stream id, `custom_parameters.call_id`). P3 `media`/`clear`/`mark` -> `send_to_caller`. False = P3 unreachable (decoy not started; call unaffected).
 - `await relay.stop_decoy(call_id)`, `await relay.close(call_id)`. `on_decoy_lost(call_id)` fires if P3 drops mid-call (voip may restore Maria).
 - Latency: `relay_decoy_rtt_ms` (caller frame -> decoy reply) and `relay_p2_send_ms`, sampled, in `logs/latency.jsonl` / `GET /demo/latency`.
+
+### Device pairing (TASK-014)
+- `POST /pair {"pin":"123456"}` -> `{"device_token":"..."}` (401 wrong pin; 429 after 5 failures/min per IP or 30 total). PIN = env `DEVICE_PIN` or random 6 digits at hub start, printed by `scripts/run_hub` and in `logs/device_pin.txt`.
+- Header `x-device-token: <token>` is required on `GET /protection-log`, `POST /protection-log/undo`, `POST /user/action` and `GET /voip/webrtc-token` (via `Depends(server.device.require_device)`). Direct loopback requests (no proxy headers) and `x-hub-token == HUB_TOKEN` also pass. Requests arriving through the tunnel are always remote. `WS /events`, `/app`, `/command-center` stay open (read-only).
