@@ -458,7 +458,9 @@ def test_f3_start_decoy_falls_back_to_standin_when_p3_unreachable(monkeypatch):
 def test_f7_normal_routed_call_skips_p2_but_still_fans_to_listeners(monkeypatch):
     from server import bus
     bus.publish("call.incoming", "F7n", {"from": "+15555550188", "to": "+15555550100", "attestation": "A", "scam_id_score": 0.1})
-    bus.publish("call.routed", "F7n", {"decision": "NORMAL", "reason": "trusted"})
+    bus.publish("call.incoming", "F7f", {"from": "+15555550199", "to": "+15555550100", "attestation": "none", "scam_id_score": 0.1})
+    bus.publish("call.routed", "F7f", {"decision": "NORMAL", "reason": "Hub error, fail open"})     # fail-open NORMAL is NOT trusted: keeps scoring
+    bus.publish("call.routed", "F7n", {"decision": "NORMAL", "reason": "Trusted contact, caller ID verified"})
     bus.publish("call.incoming", "F7g", {"from": "+15555550123", "to": "+15555550100", "attestation": "C", "scam_id_score": 0.8})
     bus.publish("call.routed", "F7g", {"decision": "LIVE_GUARD", "reason": "x"})
     c = TestClient(app, base_url="http://127.0.0.1:8000", client=("127.0.0.1", 5000))
@@ -470,16 +472,16 @@ def test_f7_normal_routed_call_skips_p2_but_still_fans_to_listeners(monkeypatch)
         monkeypatch.setenv("P2_STT_URL", f"ws://127.0.0.1:{port2}"); monkeypatch.delenv("PIPELINE_TOKEN", raising=False)
         monkeypatch.setattr(relay, "feed_audio_hook", lambda cid, fr_: hooked.append(cid))
         async def back(f): pass
-        for cid in ("F7n", "F7g"):
+        for cid in ("F7n", "F7g", "F7f"):
             await relay.open(cid, back)
         q = asyncio.Queue(100); relay._LQ.setdefault("F7n", set()).add(q)
         for i in range(1, 6):
-            await relay.caller_frame("F7n", fr(i)); await relay.caller_frame("F7g", fr(i))
+            await relay.caller_frame("F7n", fr(i)); await relay.caller_frame("F7g", fr(i)); await relay.caller_frame("F7f", fr(i))
         await asyncio.sleep(0.3)
         assert q.qsize() == 5                                              # NORMAL call still reaches /listen
-        assert set(hooked) == {"F7g"}                                      # fallback detector hook only for the guarded call
-        for cid in ("F7n", "F7g"): await relay.close(cid)
+        assert set(hooked) == {"F7g", "F7f"}                                      # fallback detector hook only for the guarded call
+        for cid in ("F7n", "F7g", "F7f"): await relay.close(cid)
         s2.close()
         return p2
     p2 = run(go())
-    assert sum(1 for m in p2 if m.get("event") == "media") == 5          # P2 saw only the LIVE_GUARD call's media
+    assert sum(1 for m in p2 if m.get("event") == "media") == 10         # P2 saw LIVE_GUARD + fail-open calls, never the trusted one

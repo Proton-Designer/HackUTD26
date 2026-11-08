@@ -129,7 +129,7 @@ def _routed_normal(call_id) -> bool:
     try:
         from . import bus
         c = bus.CALLS.get(call_id)
-        return bool(c and c.get("decision") == "NORMAL")
+        return bool(c and c.get("trusted"))
     except Exception:
         return False
 

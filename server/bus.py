@@ -14,7 +14,7 @@ def _track(ev):
     if not cid: return
     c = CALLS.get(cid)
     if t == "call.incoming":
-        CALLS[cid] = {"from": d.get("from", ""), "t0": ev["ts"], "answered": False, "handoff": "none", "ended": False, "blocked": False, "decision": None}
+        CALLS[cid] = {"from": d.get("from", ""), "t0": ev["ts"], "answered": False, "handoff": "none", "ended": False, "blocked": False, "decision": None, "trusted": False}
         for k in list(CALLS)[:-CALLS_MAX]:
             CALLS.pop(k, None)
     elif c is None:
@@ -25,6 +25,8 @@ def _track(ev):
     elif t == "call.ended": c["ended"] = True
     elif t == "call.routed":
         c["decision"] = d.get("decision")
+        # only a POSITIVELY trusted NORMAL (emergency exemption, or trusted contact with verified caller ID) skips scoring; fail-open NORMALs keep the detectors on
+        c["trusted"] = d.get("decision") == "NORMAL" and str(d.get("reason", "")).startswith(("Exempt (emergency number)", "Trusted contact, caller ID verified"))
         if d.get("decision") == "BLOCKED_BACKFIRE": c["blocked"] = True
 
 def make_event(type_, call_id, data=None, ts=None):
