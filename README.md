@@ -8,13 +8,13 @@ Instead of simply hanging up on scammers or reporting them, we implement a novel
 
 ## Logic Flow
 Users connect through android_voip and backfire app or the web app linked to Twilio and wait for an unlucky scam caller to connect.
-Upon connection and recognition by either a local nano nemotron model on the user's phone or a cloud model, the user is prompted to hang up, continue the call, or fire back.
+Upon connection and recognition by either a local nano Nemotron model on the user's phone or a cloud model, the user is prompted to hang up, continue the call, or fire back.
 
 <img width="502" height="932" alt="Flow Chart drawio" src="https://github.com/user-attachments/assets/ddba9865-d902-469b-92b2-321f61d09eaa" />
 
 
 ## The Backfire mechanism
-Once the user decides to fire back, the system takes over the call. A nemotron model linked to Nvidia's magpie text-to-speech model responds in place of the user. In a good run,
+Once the user decides to fire back, the system takes over the call. A Nemotron model linked to Nvidia's magpie text-to-speech model responds in place of the user. In a good run,
 the unlucky scammer will have their time wasted by a convincing AI. In the best case, the scammer will unintentionally reveal their own information, allowing Backfire to learn about
 scamming trends.
 
