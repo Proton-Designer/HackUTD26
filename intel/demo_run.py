@@ -30,12 +30,12 @@ def fixture_tools():
     def rdap(v, call_id=None):
         r = {"kind": "domain", "value": L.norm_domain(v), "status": "ok", "registered": "2026-11-05T09:12:00Z",
              "age_days": 2, "registrar": "NameCheap, Inc.", "newly_registered": True, "source": "OFFLINE FIXTURE", "simulated": True}
-        L.emit("intel.lookup", call_id, r); return r
+        L._emit_lookup(call_id, r); return r
 
     def explorer(v, call_id=None):
         r = {"kind": "wallet", "chain": "BTC", "value": v, "status": "ok", "total_received": 1.84, "unit": "BTC",
              "tx_count": 37, "source": "OFFLINE FIXTURE", "simulated": True}
-        L.emit("intel.lookup", call_id, r); return r
+        L._emit_lookup(call_id, r); return r
     return {"rdap": rdap, "explorer": explorer, "allowlist": L.check_allowlist}
 
 

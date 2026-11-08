@@ -17,6 +17,8 @@ def configure(store: Store | None = None, emit=None, llm=None, tools=None, use_l
     for k, v in {"store": store, "emit": emit, "llm": llm, "tools": tools, "use_llm": use_llm}.items():
         if v is not None:
             _cfg[k] = v
+    if emit is not None:
+        L.set_sink(emit)  # lookups emit intel.lookup themselves; route them to the same bus
 
 
 def _store() -> Store:

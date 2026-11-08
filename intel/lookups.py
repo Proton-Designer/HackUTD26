@@ -30,10 +30,25 @@ EVENTS_URL = os.getenv("BACKFIRE_EVENTS_URL")  # optional: P1 publish endpoint
 
 
 # ---------- events ----------
+_sink = None  # set by intel.api.configure(emit=bus.publish) so lookup events reach P1's bus too
+
+
+def set_sink(fn) -> None:
+    global _sink
+    _sink = None if fn is emit else fn
+
+
 def emit(event_type: str, call_id: str | None, data: dict) -> dict:
-    """Emit a contract envelope. Prints always; POSTs to P1 if BACKFIRE_EVENTS_URL is set."""
+    """Emit a contract envelope: to the configured sink (P1's bus) if set, else print (CLI/demo);
+    also POSTs to P1 if BACKFIRE_EVENTS_URL is set."""
     ev = {"type": event_type, "call_id": call_id, "ts": time.time(), "data": data}
-    print(json.dumps(ev), flush=True)
+    if _sink is not None:
+        try:
+            _sink(event_type, call_id, data)
+        except Exception:
+            pass  # fail open
+    else:
+        print(json.dumps(ev), flush=True)
     if EVENTS_URL:
         try:
             httpx.post(EVENTS_URL, json=ev, timeout=2)

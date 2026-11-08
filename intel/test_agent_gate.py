@@ -217,3 +217,15 @@ def test_bus_observer_runs_chain_and_grace_fallback(tmp_path, monkeypatch):
     ents = api.protection_entries()
     assert {e["number"] for e in ents} >= {"2145550199", "9725550177"}
     assert api.undo_block(ents[0]["undo_token"]) and not api.undo_block(ents[0]["undo_token"])
+
+
+def test_configure_routes_lookup_events_to_bus(tmp_path):
+    from intel import api, lookups as L
+    ev = []
+    try:
+        api.configure(store=Store(str(tmp_path / "s.db")), emit=cap(ev), llm=mock_llm, tools=fixture_tools())
+        agent.run("x", {"wallet": {"chain": "BTC", "addr": WALLET}}, api._store(), calling_number=JUDGE_NUMBER,
+                  tools=fixture_tools(), emit=cap(ev), use_llm=False)
+        assert any(e["type"] == "intel.lookup" and e["data"]["artifact_kind"] == "wallet" for e in ev)
+    finally:
+        L.set_sink(None)
