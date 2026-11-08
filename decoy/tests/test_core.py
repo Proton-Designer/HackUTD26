@@ -99,3 +99,21 @@ def test_known_payee_survives_stt_dropping_domain_words():   # P1 judge-card pas
         assert not core.canon_known([], "we will issue refunds next week. backfire is a band.")   # no payment rail said -> no match
     finally:
         core._KNOWN = None
+
+
+def test_chat_records_which_model_answered(monkeypatch):   # P2 #151: live log could not tell a bolt fallback from a slow super-vl turn
+    import asyncio
+    from decoy import core
+    monkeypatch.setattr(core, "HEDGE_S", 0.05); monkeypatch.setattr(core, "PRIMARY_TIMEOUT_S", 0.15)
+    monkeypatch.setattr(core, "MODEL", "nvidia/prim"); monkeypatch.setattr(core, "FALLBACK_MODEL", "nvidia/fb")
+    delays = {}
+    async def fake_once(messages, max_tokens, temperature, model):
+        await asyncio.sleep(delays.get(model, 0)); return "reply from " + model
+    monkeypatch.setattr(core, "_chat_once", fake_once)
+    delays.update({"nvidia/prim": 0.0})
+    assert asyncio.run(core.chat([])) == "Reply from nvidia/prim" and core.LAST_CHAT["model"] == "prim" and core.LAST_CHAT["hedged"] is False
+    delays.update({"nvidia/prim": 0.1, "nvidia/fb": 0.0})            # primary lands after the hedge started but before the timeout: still the primary
+    assert asyncio.run(core.chat([])) == "Reply from nvidia/prim" and core.LAST_CHAT["model"] == "prim" and core.LAST_CHAT["hedged"] is True
+    delays.update({"nvidia/prim": 1.0, "nvidia/fb": 0.0})            # primary too slow: fallback answers
+    assert asyncio.run(core.chat([])) == "Reply from nvidia/fb" and core.LAST_CHAT["model"] == "fb" and core.LAST_CHAT["hedged"] is True
+    assert 0 <= core.LAST_CHAT["ms"] < 1000

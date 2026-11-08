@@ -223,27 +223,37 @@ def is_key_error(e: Exception) -> bool:
     return name in ("RESOURCE_EXHAUSTED", "UNAUTHENTICATED", "PERMISSION_DENIED")
 
 
+LAST_CHAT: dict = {"model": None, "ms": 0, "hedged": False}   # P2 #151: which model answered the last chat() and how long it took (logged per turn + in decoy.turn)
+
+
+def _note(model: str | None, t0: float, hedged: bool) -> None:
+    import time
+    LAST_CHAT.update(model=(model or "").rsplit("/", 1)[-1] or None, ms=int((time.monotonic() - t0) * 1000), hedged=hedged)
+
+
 async def chat(messages: list, max_tokens: int = 90, temperature: float = 0.6, model: str | None = None) -> str | None:
     """Primary model with a short timeout, then the fast fallback model (P1). Explicit model= skips the fallback."""
-    import asyncio
+    import asyncio, time
+    t0 = time.monotonic()
     if model:
-        return _cap(await _chat_once(messages, max_tokens, temperature, model))
+        out = _cap(await _chat_once(messages, max_tokens, temperature, model)); _note(model, t0, False); return out
     # P2 #143: a hard 2.5 s cutover handed 2 live calls in a row to the weak fallback. Hedge instead: if the primary
     # hasn't answered by HEDGE_S, start the fallback in parallel; use the primary if it lands by PRIMARY_TIMEOUT_S.
     prim = asyncio.ensure_future(_chat_once(messages, max_tokens, temperature, MODEL))
     done, _ = await asyncio.wait({prim}, timeout=HEDGE_S)
     if prim in done and prim.result():
-        return _cap(prim.result())
+        _note(MODEL, t0, False); return _cap(prim.result())
     fb = asyncio.ensure_future(_chat_once(messages, max_tokens, temperature, FALLBACK_MODEL)) if FALLBACK_MODEL and FALLBACK_MODEL != MODEL else None
     if prim not in done:
         done, _ = await asyncio.wait({prim}, timeout=max(0.1, PRIMARY_TIMEOUT_S - HEDGE_S))
     out = prim.result() if prim in done else None
     if out:
         if fb: fb.cancel()
-        return _cap(out)
+        _note(MODEL, t0, True); return _cap(out)
     if not prim.done():
         prim.cancel(); log.warning("chat: primary model slow (> %.1f s), using fallback", PRIMARY_TIMEOUT_S)
     out = await fb if fb else None
+    _note(FALLBACK_MODEL if fb else None, t0, True)
     return _cap(out)
 
 

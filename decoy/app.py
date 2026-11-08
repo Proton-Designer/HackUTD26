@@ -441,7 +441,8 @@ class Session:
                 break
             self.play(fr)
             first_ms = first_ms or int((time.monotonic() - t0) * 1000)
-        self.ev("decoy.turn", {"speaker": "decoy", "text": text, "latency_ms": latency_ms})
+        self.ev("decoy.turn", {"speaker": "decoy", "text": text, "latency_ms": latency_ms,
+                               "model": core.LAST_CHAT.get("model"), "hedged": bool(core.LAST_CHAT.get("hedged")), "llm_ms": int(core.LAST_CHAT.get("ms") or 0), "tts_first_ms": first_ms})   # P2 #151: tell bolt-fallback turns from slow super-vl turns
         if record:
             self.history.append({"role": "assistant", "content": text})
         return first_ms
@@ -680,8 +681,9 @@ class Session:
                 tts_ms = await self.say(spoken, llm_ms)
                 self.turns += 1
                 # Caller stopped talking -> first decoy audio queued = stt + llm + tts (the segmenter's end-of-speech wait is extra).
-                log.info("turn %s: stt=%dms llm=%dms tts_first=%dms total=%dms voice=%s chars=%d scam=%s", self.call_id, self.stt_ms,
-                         llm_ms, tts_ms, self.stt_ms + llm_ms + tts_ms, "clone" if self.voice.cloned else "synthetic", len(spoken), self.scam)
+                log.info("turn %s: stt=%dms llm=%dms tts_first=%dms total=%dms voice=%s chars=%d scam=%s model=%s%s", self.call_id, self.stt_ms,
+                         llm_ms, tts_ms, self.stt_ms + llm_ms + tts_ms, "clone" if self.voice.cloned else "synthetic", len(spoken), self.scam,
+                         core.LAST_CHAT.get("model"), " hedged" if core.LAST_CHAT.get("hedged") else "")
                 if LOG_TEXT:
                     log.info("said %s: %s", self.call_id, spoken)
                 why = self.bail_check()
