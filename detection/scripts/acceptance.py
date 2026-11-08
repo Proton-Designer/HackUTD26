@@ -159,7 +159,7 @@ async def main():
     # 6 local engine
     url = os.environ.get("LOCAL_LLM_URL", "http://127.0.0.1:11434")
     try:
-        ok = httpx.get(url + "/api/tags", timeout=2).status_code == 200
+        ok = httpx.get(url + "/v1/models", timeout=2).status_code == 200
     except Exception: ok = False
     if not ok:
         add("6 engine=local", None, f"SKIP: no local LLM reachable at {url} (set LOCAL_LLM_URL; eng3's engine)")

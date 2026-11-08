@@ -12,3 +12,11 @@
 **DEMO_MODE fallback** (P2 down or flaky): on the hub run with `DEMO_MODE=1` (loops `mock/events.json`) or `POST /demo/replay`; the web UI then runs off scripted events with no P2. `FALLBACK_DETECT=1` on the hub arms P1's own backup detector. P2 itself never raises into the call path: if it dies, calls still connect and just lose alerts.
 **Acceptance / checks:** `bash detection/scripts/acceptance.sh` (~1 min, hub :8190 + P2 :8191, real NVIDIA calls, prints PASS/FAIL table). Two-call load check: `set -a; . ./.env; set +a; .venv/bin/python detection/scripts/concurrency.py`. Unit tests: `.venv/bin/python -m pytest -q detection`.
 **Env knobs:** `P2_ENGINE` cloud|local, `P2_STT=whisper` force fallback STT, `P2_ENDPOINT_MS`, `P2_PARTIALS=0`, `ALERT_S`, `HARD_ASK_S`, `LOCAL_LLM_URL`.
+
+## engine=local (Nemotron 3 Nano 4B on the GPU, TASK-013)
+- Why it was unreachable: `LOCAL_LLM_URL` was unset (default 127.0.0.1:11434 = Ollama), but on WSL2 the model runs as a Windows llama.cpp `llama-server.exe` listening on the WSL gateway IP :8101 (127.0.0.1 does not reach it). The probe used Ollama's `/api/tags`; it now uses `/v1/models`.
+- Start the model: `bash detection/engines/run_local_llm.sh` (eng3's script; keep it running in its own tmux window). Check: `curl -s http://$(ip route | awk '/default/{print $3}'):8101/health` -> `{"status":"ok"}`.
+- `run.sh` and `acceptance.sh` now default `LOCAL_LLM_URL` to `http://<WSL gateway>:8101` when unset (override in `.env` if the model lives elsewhere). `/healthz` -> `engines.local_reachable` should be true.
+- Switch the live engine: restart P2 with `P2_ENGINE=local scripts/run.sh` (global), or per request `POST /detect {"engine":"local"}`. Back to cloud: unset `P2_ENGINE`.
+- NEEDS eng3's OpenAI-style `detection/engines/local.py` (uses /v1/chat/completions) to be pushed; the trunk copy speaks Ollama `/api/chat` and llama-server will 404.
+- Measured (my box): detect() with engine=local ~1.6-1.7 s per scam window; acceptance case 6 PASS (irs alert s=0.95, bank no alert s=0.40).

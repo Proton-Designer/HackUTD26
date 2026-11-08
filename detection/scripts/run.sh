@@ -3,6 +3,7 @@
 # log the exit code + time to logs/p2.log and restart after 2 s. Ctrl-C twice (within the restart window) stops it; SIGTERM stops it.
 cd "$(git rev-parse --show-toplevel)" || exit 1
 mkdir -p logs; set -a; [ -f .env ] && . ./.env; set +a
+[ -z "${LOCAL_LLM_URL:-}" ] && export LOCAL_LLM_URL="http://$(ip route | awk '/default/{print $3}'):8101"  # WSL gateway: llama-server (engines/run_local_llm.sh) does not listen on 127.0.0.1
 LOG=logs/p2.log; INTS=0; CHILD=""
 trap 'INTS=$((INTS+1)); echo "$(date +%T) got INT #$INTS" >> "$LOG"' INT
 trap '[ -n "$CHILD" ] && kill "$CHILD" 2>/dev/null; echo "$(date "+%F %T") supervisor: SIGTERM, stopping" | tee -a "$LOG"; exit 0' TERM

@@ -18,13 +18,13 @@ except Exception as e:
 _local = {"t": 0.0, "ok": False}
 
 async def _local_reachable():
-    """Cached 10 s probe of the local LLM server (Ollama-style /api/tags). Never raises."""
+    """Cached 10 s probe of the local LLM server (OpenAI-style /v1/models; llama-server and Ollama both answer). Never raises."""
     import time, httpx
     if time.time() - _local["t"] > 10:
         _local["t"] = time.time()
         try:
             async with httpx.AsyncClient(timeout=1.0) as c:
-                _local["ok"] = (await c.get(os.environ.get("LOCAL_LLM_URL", "http://127.0.0.1:11434").rstrip("/") + "/api/tags")).status_code == 200
+                _local["ok"] = (await c.get(os.environ.get("LOCAL_LLM_URL", "http://127.0.0.1:11434").rstrip("/") + "/v1/models")).status_code == 200
         except Exception:
             _local["ok"] = False
     return _local["ok"]
