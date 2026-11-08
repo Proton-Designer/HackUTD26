@@ -9,6 +9,7 @@
   const MOCK_URL = qs.get("mock") || "../../mock/events.json";
   const MOCK_CALL = qs.get("call") || "irs";   // substring of the mock call_id: irs | bank | crypto
   const DEBUG = qs.has("debug");
+  window.BF = window.BF || {}; BF.hub = HUB; BF.onEventRef = null;
   window.__userActions = [];                  // test hook: every user.action emitted
 
   const st = { callId: null, answered: false, alerted: false, ctx: null, timer: null, t0: 0, replay: [], tos: [] };
@@ -51,6 +52,7 @@
 
   function onEvent(ev) {
     if (!ev || !ev.type) return;
+    if (window.BF && BF.onEvent) BF.onEvent(ev);
     if (st.callId && ev.call_id && ev.call_id !== st.callId && ev.type !== "call.incoming") return;
     const d = ev.data || {};
     switch (ev.type) {
@@ -115,13 +117,17 @@
     ws.onerror = () => ws.close();
   }
 
+  function needsSetup() { try { return !localStorage.getItem("bf.done") && !qs.has("skipsetup"); } catch (e) { return false; } }
   function start() {
     $("guard").hidden = false; $("alertBox").hidden = true; $("handoffMsg").hidden = true; $("idleMsg").hidden = false;
     st.callId = null; window.__userActions.length = 0; show("ended"); $("endedMsg").textContent = "Waiting for a call…"; $("replayBtn").hidden = !!SERVER;
     $("src").textContent = SERVER ? "· live" : "· demo replay";
-    if (SERVER) { if (!ws) connectWS(); } else startReplay();
+    if (SERVER) { if (!ws) connectWS(); }
+    else if (needsSetup()) BF.pendingStart = startReplay;      // demo call waits until onboarding is finished
+    else startReplay();
   }
 
   setInterval(() => { const n = new Date(); $("clock").textContent = (n.getHours() % 12 || 12) + ":" + String(n.getMinutes()).padStart(2, "0"); }, 1000);
+  window.BF.deliver = onEvent;
   start();
 })();

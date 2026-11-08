@@ -11,6 +11,7 @@
 <main id="phone" data-state="idle">
   <header class="status"><span id="clock">9:41</span><span class="badge guard" id="guard">🛡 Live Guard on</span></header>
 
+  <div id="callView">
   <!-- INCOMING -->
   <section id="incoming" class="screen" hidden>
     <p class="who-label" id="scamLabel" hidden>⚠ Scam Likely</p>
@@ -49,9 +50,70 @@
     <button class="big accept" id="replayBtn">Replay demo call</button>
   </section>
 
+  </div>
+
+  <!-- PROTECTION LOG -->
+  <section id="protView" class="screen left" hidden>
+    <h1>Protection</h1>
+    <div class="card"><h2>Live Guard</h2>
+      <p id="guardState" class="sub"></p>
+      <button class="big plainbtn" id="guardToggle"></button></div>
+    <div class="card"><h2>Numbers we blocked</h2>
+      <ul id="blockedList" class="rows"></ul><p id="blockedEmpty" class="sub">None yet.</p></div>
+    <div class="card"><h2>Calls handled</h2><p class="stat" id="callsCount">0</p></div>
+    <div class="card"><h2>What we keep</h2>
+      <ul class="plainlist">
+        <li>Your side of a call: <b>never heard, never kept</b>.</li>
+        <li>The caller's words: kept only if an alert fired, deleted after 72 hours.</li>
+        <li>Scammer numbers and websites: kept so they can be stopped.</li>
+        <li>Your voice profile: kept until you delete it.</li></ul></div>
+    <div class="card"><h2>Your voice profile</h2>
+      <p id="voiceState" class="sub"></p>
+      <button class="big hang" id="voiceDelete" hidden>Delete my voice</button>
+      <button class="big continue" id="voiceSetup" hidden>Set up my voice</button></div>
+  </section>
+
+  <!-- ONBOARDING -->
+  <section id="setupView" class="screen left" hidden>
+    <div id="step1" class="step">
+      <h1>Turn on Backfire</h1>
+      <p class="body">Backfire helps protect you from scam calls.</p>
+      <ul class="plainlist">
+        <li>It listens to the <b>caller only</b>. It never listens to you.</li>
+        <li>Nothing from your side of the call is saved.</li>
+        <li>You are always in control. You can turn it off at any time.</li></ul>
+      <button class="big accept" id="s1on">Turn on Backfire</button>
+    </div>
+    <div id="step2" class="step" hidden>
+      <h1>Your voice (optional)</h1>
+      <p class="body">If you press <b>Scammer Get Scammed</b>, Backfire can talk to the scammer in <b>your voice</b>, so they waste their time and not yours.</p>
+      <div class="card"><h2>Voice permission</h2>
+        <p class="body small">I agree that Backfire may make a <b>voice profile</b> from my recording. It will be used <b>only</b> when I press Scammer Get Scammed. It is stored encrypted, every sound it makes is watermarked, it is never sold or used for anything else, and I can delete it at any time. It is deleted if I turn Backfire off.</p>
+        <label class="check"><input type="checkbox" id="consent"><span>Yes, I agree</span></label></div>
+      <div id="recordBox" hidden>
+        <p class="body">Press the red button and read this out loud:</p>
+        <blockquote id="paragraph"></blockquote>
+        <button class="big hang" id="recBtn">● Start recording</button>
+        <p class="sub" id="recStatus"></p>
+      </div>
+      <button class="big continue" id="s2skip">Skip for now</button>
+    </div>
+    <div id="step3" class="step" hidden>
+      <h1>You're protected</h1>
+      <p class="body" id="doneMsg">Backfire is on.</p>
+      <button class="big accept" id="s3done">Done</button>
+    </div>
+  </section>
+
+  <nav id="tabs" hidden>
+    <button data-v="callView" class="on">Phone</button>
+    <button data-v="protView">Protection</button>
+  </nav>
+
   <footer>Simulated carrier network <span id="src"></span></footer>
   <pre id="log" hidden></pre>
 </main>
 <script src="app.js"></script>
+<script src="ui.js"></script>
 </body>
 </html>
