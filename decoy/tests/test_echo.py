@@ -41,3 +41,9 @@ def test_fragmentish():   # #141 live: 'That pause for' / 'I am the IRS...' then
     assert fragmentish("That pause for") and fragmentish("I am the IRS...") and fragmentish("Okay.")
     assert not fragmentish("Open your banking app and send the money by Zelle.")
     assert not fragmentish("Did you send it yet? We need to hurry.")
+
+
+def test_fragmentish_trailing_words():   # #143
+    from decoy.app import fragmentish
+    assert fragmentish("Send the money to.") and fragmentish("Okay so you need to go to the.") and fragmentish("Read me the code and.")
+    assert not fragmentish("Send the money to the safe account.")

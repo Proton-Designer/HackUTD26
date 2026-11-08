@@ -16,6 +16,7 @@ import base64
 import json
 import logging
 import random
+import re
 import os
 import time
 
@@ -224,10 +225,16 @@ NOTE_ECHO = __import__("re").compile(
     __import__("re").I | __import__("re").S)
 
 
+TRAILING_UNFINISHED = {"to", "for", "at", "the", "my", "your", "a", "an", "and", "or", "but", "of", "with", "from",
+                       "by", "in", "on", "is", "are", "so", "because", "that", "this", "our", "his", "her", "their"}
+
+
 def fragmentish(text: str) -> bool:
     """A caller line that probably isn't finished: few words, a trailing ellipsis/comma, or no end punctuation."""
     t = (text or "").strip()
-    return len(t.split()) <= 4 or t.endswith(("...", "…", ",", "-")) or not t.endswith((".", "?", "!"))
+    last = re.sub(r"[^a-z']", "", (t.split() or [""])[-1].lower())
+    return (len(t.split()) <= 4 or t.endswith(("...", "…", ",", "-")) or not t.endswith((".", "?", "!"))
+            or last in TRAILING_UNFINISHED)   # #143: 'Send the money to.' / 'It's for the.' STT still puts a period
 
 
 def strip_note_echo(t: str | None) -> str | None:
