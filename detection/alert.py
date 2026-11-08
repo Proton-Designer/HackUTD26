@@ -118,15 +118,21 @@ class AlertMachine:
 
 machine = None
 
-def install(app):
+def install(app=None):
+    """Create the machine and wire stream.on_final. The hub subscriber runs in lifespan() (app.py passes it to FastAPI)."""
     global machine
     machine = AlertMachine()
     stream.set_on_final(machine.on_final)
-    async def _start():
-        if os.environ.get("P2_NO_HUB_WS") != "1":
-            app.state.sub = asyncio.create_task(hub.subscribe(machine.on_event))
-    async def _stop():
-        t = getattr(app.state, "sub", None)
-        if t:
-            t.cancel()
-    app.add_event_handler("startup", _start); app.add_event_handler("shutdown", _stop)
+
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app):
+    task = None
+    if machine is not None and os.environ.get("P2_NO_HUB_WS") != "1":
+        task = asyncio.create_task(hub.subscribe(machine.on_event))
+    try:
+        yield
+    finally:
+        if task:
+            task.cancel()

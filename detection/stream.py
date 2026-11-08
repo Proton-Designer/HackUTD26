@@ -4,7 +4,7 @@ Fail open: garbage frames are ignored; nothing here ever raises into the socket 
 import asyncio, base64, itertools, json, logging, os, time
 import numpy as np
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from . import hub, stt
+from . import auth, hub, stt
 
 log = logging.getLogger("p2.stream")
 router = APIRouter()
@@ -99,6 +99,8 @@ async def handle_utterance(call_id, uid, pcm, t_end=None):
 
 @router.websocket("/stt/{call_id}")
 async def stt_ws(ws: WebSocket, call_id: str):
+    if not auth.valid_call_id(call_id) or not auth.check_token(ws.headers, ws.query_params):
+        await ws.close(code=1008); return      # before accept: rejected handshake
     await ws.accept()
     seg, counter, tasks = Segmenter(), itertools.count(1), set()
     chain = asyncio.Queue()   # preserve utterance order
