@@ -262,13 +262,15 @@ async def score_window(engine: str, call_id: str, window_text: str, *, cache: di
             ms = (time.perf_counter() - t0) * 1000
             if not d.get("fallback"):
                 break
+            if os.environ.get("EVAL_STOP_ON_FALLBACK") == "1":
+                raise EvalStop("EVAL_STOP_ON_FALLBACK: model failure (429/timeout); stopping, nothing cached for this window")
             await asyncio.sleep(2 * (attempt + 1))
         val = {"s": float(d.get("s", 0.0)), "asks": list(d.get("asks", [])), "ms": round(ms, 1),
                "engine_used": d.get("engine"), "addresses_ai_system": bool(d.get("addresses_ai_system", False)),
                "fallback": bool(d.get("fallback"))}
         if val["fallback"]:
             if os.environ.get("EVAL_STOP_ON_FALLBACK") == "1":
-                raise SystemExit("EVAL_STOP_ON_FALLBACK: model failure (429/timeout); stopping, nothing cached for this window")
+                raise EvalStop("EVAL_STOP_ON_FALLBACK: model failure (429/timeout); stopping, nothing cached for this window")
             return {**val, "cached": False}
     cache[key] = val
     if cache_file is not None:
@@ -291,6 +293,10 @@ async def run_row(engine: str, row: dict, **kw) -> dict:
             "expected_alert": row["expected_alert"], "n_lines": len(lines), "engine": engine, "per_line": per_line}
 
 
+class EvalStop(Exception):
+    """Raised on the first model failure when EVAL_STOP_ON_FALLBACK=1; run_engine cancels every pending row and re-raises."""
+
+
 async def run_engine(engine: str, rows: list[dict], scorer=None, concurrency: int = 4) -> list[dict]:
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     cache = _load_cache(engine)
@@ -302,7 +308,14 @@ async def run_engine(engine: str, rows: list[dict], scorer=None, concurrency: in
     async def one(r):
         async with sem:
             return await run_row(engine, r, cache=cache, fp=fp, limiter=limiter, scorer=scorer, cache_file=cf)
-    return await asyncio.gather(*(one(r) for r in rows))
+    tasks = [asyncio.ensure_future(one(r)) for r in rows]
+    try:
+        return await asyncio.gather(*tasks)
+    except EvalStop:
+        for t in tasks:
+            t.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+        raise
 
 
 # ---------------------------------------------------------------- metrics
@@ -637,7 +650,10 @@ async def amain(a) -> int:
         if a.limit:
             rows = rows[: a.limit]
         for e in engines:
-            recs = await run_engine(e, rows)
+            try:
+                recs = await run_engine(e, rows)
+            except EvalStop as ex:
+                print(str(ex)); return 3
             if not a.limit:
                 write_results(e, sp, recs)
             thr = fz["thresholds"].get(e, {}).get("threshold", DEFAULT_THRESHOLD)

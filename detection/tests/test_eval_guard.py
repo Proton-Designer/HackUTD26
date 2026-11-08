@@ -29,3 +29,20 @@ def test_live_guard_unreachable_means_idle(monkeypatch):
     monkeypatch.setattr(R, "LIVE_HEALTH", "http://127.0.0.1:9/healthz")
     monkeypatch.delenv("EVAL_NO_LIVE_GUARD", raising=False)
     asyncio.run(R.wait_live_idle())
+
+
+def test_stop_on_fallback_cancels_the_run(monkeypatch, tmp_path):
+    import pytest
+    monkeypatch.setenv("EVAL_STOP_ON_FALLBACK", "1")
+    monkeypatch.setenv("EVAL_NO_LIVE_GUARD", "1")
+    monkeypatch.setattr(R, "CACHE_DIR", tmp_path)
+    calls = []
+    async def scorer(engine, cid, text):
+        calls.append(cid)
+        return {"s": 0.0, "asks": [], "fallback": True}
+    row = lambda i: {"id": f"r{i}", "split": "dev", "label": "scam", "scam_type": "t", "expected_asks": [], "expected_alert": True,
+                     "caller_lines": ["a", "b"]}
+    monkeypatch.setattr(R, "MAX_RPM", {"cloud": 6000})   # as in a real cloud run: one row at a time
+    with pytest.raises(R.EvalStop):
+        asyncio.run(R.run_engine("cloud", [row(i) for i in range(5)], scorer=scorer))
+    assert len(calls) == 1          # stopped at the first failure, no further windows were attempted
