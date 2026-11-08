@@ -302,6 +302,24 @@ def spoken_to_text(v: str) -> str:
     return re.sub(r"\s*([.@_-])\s*", r"\1", t) if re.search(r"[.@]", t) else v.strip()
 
 
+EMAIL = re.compile(r"[a-z0-9._%+-]+@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}")
+# Phone STT expands abbreviations it hears in a spoken address: "refunds dot dept" -> "refunds department" (#137). The
+# seeded/real payee is the short form, so the haul must be too, or the Nessie hold never matches.
+STT_EXPANSIONS = {"department": "dept", "departments": "dept", "customer service": "customerservice"}
+
+
+def norm_email(e: str) -> str:
+    e = re.sub(r"\s+", "", e.lower().strip().strip(".,;:!?"))
+    if "@" not in e:
+        return norm_local(e) if "." in e else e
+    local, dom = e.split("@", 1)
+    return norm_local(local) + "@" + dom
+
+
+def norm_local(local: str) -> str:
+    return ".".join(STT_EXPANSIONS.get(p, p) for p in local.lower().split("."))
+
+
 def validate(a: dict) -> dict | None:
     s = lambda k: str(a.get(k) or "").strip()[:200]  # noqa: E731
     k = a.get("kind")
@@ -321,7 +339,10 @@ def validate(a: dict) -> dict | None:
     if k == "payment_handle":
         rail = re.sub(r"[^a-z]", "", s("rail").lower()).replace("cashapp", "cashapp")
         hid = spoken_to_text(s("id"))
-        hid = hid.lower() if "@" in hid else hid   # emails: case-insensitive, matched normalized by intel
+        if "@" in hid.lstrip("@"):   # emails: case-insensitive, matched normalized by intel; a malformed one ('zelle disputes@your bank') is dropped
+            hid = norm_email(hid)
+            if not EMAIL.fullmatch(hid):
+                return None
         return {"kind": k, "rail": rail, "id": hid} if rail and hid else None
     if k in ("gift_card_brand", "remote_app", "impersonated_org"):
         return {"kind": k, "value": s("value")} if 2 <= len(s("value")) <= 60 else None
@@ -346,8 +367,14 @@ ZELLE_HEARD = re.compile(r"\b(by|via|through|with|using|on|in|send it|sent it)\s
                          r"|\b(?:sell|zel|zell|zele|zela|zayle)\b(?=\s+(?:to|at)\s+\S+\s+(?:dot|at)\b)", re.I)
 
 
+DEPT_HEARD = re.compile(r"\b([a-z0-9]+)(?:\s+dot)?\s+department(?=\s+at\s+\S+\s+(?:dot|dash)\b)", re.I)   # only in an address
+
+
 def fix_zelle(t: str) -> str:
-    return ZELLE_HEARD.sub(lambda m: (m.group(1) + " Zelle") if m.group(1) else "Zelle", t)
+    """STT fixes before extraction: 'by sell to' -> 'by Zelle to'; 'refunds (dot) department at' -> 'refunds dot dept at'
+    (#137: STT expands the spoken 'dept' and sometimes drops the 'dot')."""
+    t = ZELLE_HEARD.sub(lambda m: (m.group(1) + " Zelle") if m.group(1) else "Zelle", t)
+    return DEPT_HEARD.sub(lambda m: m.group(1) + " dot dept", t)
 
 
 async def extract(lines: list[str]) -> list[dict]:
@@ -372,10 +399,11 @@ async def extract(lines: list[str]) -> list[dict]:
     t = " " + joined.lower() + " "
     for word, sym in ((r"\s+dot\s+", "."), (r"\s+at\s+", "@"), (r"\s+(?:dash|hyphen)\s+", "-"), (r"\s+underscore\s+", "_")):
         t = re.sub(word, sym, t)   # spoken separators only; real sentence punctuation keeps its space
-    emails = re.findall(r"[a-z0-9._%+-]+@[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}(?![a-z0-9-])", t)
+    emails = [norm_email(e) for e in re.findall(r"[a-z0-9._%+-]+@[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}(?![a-z0-9-])", t)]
     for a in out:
         if a["kind"] == "payment_handle" and "@" not in a["id"]:
-            full = next((e for e in emails if e.split("@")[0].endswith(a["id"].lower())), None)
+            frag = norm_local(re.sub(r"\s+", ".", a["id"].strip()))
+            full = next((e for e in emails if e.split("@")[0].endswith(frag) or frag.endswith(e.split("@")[0])), None)
             if full:
                 a["id"] = full
     # Backstop (#127): remote-access apps are the tech-support playbook's top target; STT splits them ("Any Desk").
@@ -385,11 +413,17 @@ async def extract(lines: list[str]) -> list[dict]:
             out.append({"kind": "remote_app", "value": name}); have_remote.add(name.lower().replace(" ", ""))
     # Backstop: an email said within a few words after "Zelle" is a Zelle handle, even if the model missed or mislabeled it.
     for m in re.finditer(r"zelle\W+(?:\w+\W+){0,4}?([a-z0-9._%+-]+@[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,})(?![a-z0-9-])", t):
-        e = m.group(1)
+        e = norm_email(m.group(1))
         same = [a for a in out if a["kind"] == "payment_handle" and (a["id"] == e or a["id"].endswith(e.split("@")[0]))]
         for a in same:
             a["rail"], a["id"] = "zelle", e
         if not same:
             out.append({"kind": "payment_handle", "rail": "zelle", "id": e})
+    seen, uniq = set(), []
+    for a in out:   # the rebuild/backstop can make two identical handles
+        key = json.dumps(a, sort_keys=True)
+        if key not in seen:
+            seen.add(key); uniq.append(a)
+    out = uniq
     log.info("extractor: %d of %d artifacts valid", len(out), len(arr))
     return out
