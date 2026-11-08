@@ -302,3 +302,32 @@ def test_spanish_negation_gates_weak_asks_but_not_later_requests():     # TASK-0
 def test_prompt_has_spanish_negation_example():
     from detection import prompt
     assert "Nunca le vamos a pedir su PIN" in prompt.SYSTEM_PROMPT
+
+
+def test_reported_hatch_closed_when_same_sentence_orders_it():     # TASK-057 (a)
+    from detection.detect import rule_scan
+    assert "wire" in rule_scan("You asked how to wire transfer it, so now wire 500 dollars to me.")["asks"]
+    assert "wire" in rule_scan("You wondered about the wire transfer, please do it today.")["asks"]
+    assert "wire" not in rule_scan("You asked how to send a wire transfer for your house closing.")["asks"]
+
+
+def test_negation_ends_at_comma_before_real_request():             # TASK-057 (b)(c)
+    from detection.detect import rule_scan
+    assert "card" in rule_scan("We don't need your PIN, we just need you to read the card number.")["asks"]
+    assert "card" in rule_scan("No necesitamos su PIN pero lea el número de la tarjeta ahora.")["asks"]
+    assert "card" in rule_scan("No es una estafa sino que necesito el número de la tarjeta.")["asks"]
+    assert rule_scan("We never ask you to give your card number.")["asks"] == []
+    assert rule_scan("We don't need your card number, your bank has it.")["asks"] == []
+
+
+def test_send_the_wire_now_and_wire_it_are_asks():                 # TASK-057 optional
+    from detection.detect import rule_scan
+    assert "wire" in rule_scan("As you asked, send the wire now.")["asks"]
+    assert "wire" in rule_scan("They asked if I'd wire it, now wire it to me.")["asks"]
+    assert "wire" not in rule_scan("We would never ask you to send the wire yourself.")["asks"]
+
+
+def test_spanish_ssn_ask_after_negated_sentence():                 # TASK-057 line 10
+    from detection.detect import rule_scan
+    assert "ssn" in rule_scan("Jamás le pediremos dinero. Ahora necesito que me dé su número de seguro social completo.")["asks"]
+    assert rule_scan("Mi seguro social es privado.")["asks"] == []
