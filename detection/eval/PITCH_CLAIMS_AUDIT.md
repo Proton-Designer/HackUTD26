@@ -34,3 +34,28 @@ Read-only check of what judges see: `web/command-center/{app.js,index.html}` (P4
 | 7 | `web/customer/index.html:59` | `This call looks like a scam` | OK for a hard-ask alert, but P2 also alerts on score >= 0.80 with no ask (authority/secrecy language, e.g. real call +12 s on an SSN ask, DEMO_TIMING +7.5 s on the opening claim). Overclaims slightly for a soft alert; the hub restores a legit caller. | `This call may be a scam` | P1 |
 
 Checked and fine: contract band names; `Two beeps sent` follows `alert.fired`; the realert line `Risk rose: two more beeps` matches level `realert`; `Live Guard on` / `listens to the caller only` (index.html:34,44,88,148); consent text on the voice card is P1/P3's and makes no detection claim.
+
+## Re-check @54ffb38 (TASK-077, eng1, ~06:20 CT; pitch v3 + deck v5 + `pitch/video-script.md`)
+Read-only. Pitch rows = the 10 rows of the first table; screen rows 3-5 = app.js :871 / :1081 / :1080 (fixed in P4b's 11a8d14, verified by reading the diff). Numbers checked against RESULTS.md (test: local 33/33 and 2/27; keyword baseline 28/33 and 5/27; production rules 26/33 and 1/27; adversarial local 13/13, rules 9/13).
+
+| Row | Fixed? | Remaining exact replacement |
+|---|---|---|
+| 1 (cloud column "runs the demo", blanks) | YES: cloud column gone, table filled, column 2 reads "Local Nemotron Nano 4B (runs the live demo)" | none |
+| 2 ("phone-sized") | YES | none |
+| 3 (`s3v4_foot` + `facts.json:58 proof_models_note`: "standing in for the phone") | **NO**, still there, and it now contradicts `script.md:27` ("detection runs on our server") | "Local Nemotron Nano 4B on a laptop GPU scores the live call; NVIDIA-hosted Nemotron is the fallback (never scored on our test set). On a real phone call the alert fired 12 s in." |
+| 4 (frozen / not blind) | PARTLY: foot now says "tuned on a separate dev set" (true) but not that the test set was re-scored after fixes | append to `s3v4_foot` and `facts.json:60 metric_method`: "Test set re-scored after later fixes; a separate held-out set of 40 gave 20 of 20 and 1 of 20 false alarms." |
+| 5, 6 (placeholders) | YES | none |
+| 7 ("7 of 7 bank-fraud") | YES, removed | none |
+| 8 ("about 8-15 s, not instant") | PARTLY: "about 12 seconds in" is the single real call (+12 s); the second real call was +14.9 s | `script.md` lines 26/48/64, `video-script.md` 0:30 and "Never" list: "about 12 to 15 seconds in" |
+| 9, 10 | YES (no change needed) | none |
+| Screen 3 (:871) | YES: "our server, laptop GPU" | none |
+| Screen 4 (:1081) and 5 (:1080) | YES: "No audio kept" + STT/log caveat | none |
+
+**NEW problems in v3 / deck v5 (most severe first)**
+| # | where | current | problem | exact replacement |
+|---|---|---|---|---|
+| N1 | `facts.json:36-56` proof_table, `deck-state.json` s3v4 table, `script.md:21,48` | Column "Keyword rules (baseline)" = 26 of 33, 1 of 27, 9 of 13; script: "Plain keyword rules caught 26" | Mislabeled. 26/33, 1/27 are our PRODUCTION rules (the rules-only fallback after TASK-057). The plain keyword baseline is 28 of 33, 5 of 27 (adversarial 9 of 13). A judge who checks RESULTS.md finds two different numbers under one name. | Either relabel the column "Our rules-only fallback (no AI)" and keep 26 of 33 / 1 of 27 / 9 of 13, and say aloud "Our rules-only fallback caught 26 and wrongly flagged 1 (it needs no AI, which is why it is a floor, not the detector)"; or keep "Keyword baseline" and use 28 of 33 / 5 of 27 / 9 of 13. Do not mix. |
+| N2 | `video-script.md` 0:30-0:50 and "Never" list | "about twelve seconds in" | Same as row 8: two real calls, +12 s and +14.9 s. | "about twelve to fifteen seconds in" |
+| N3 | `video-script.md` 1:52-2:00 | "On our 60 synthetic test scripts, it caught 33 of 33 scams." | Leaves out the 2 of 27 false alarms and that the set was re-scored; the on-screen label covers "33 scam, 27 legit" but not the false alarms. | "On our 60 synthetic test scripts it caught 33 of 33 scams and wrongly flagged 2 of 27 look-alike legit calls. Small sample." Add on-screen label: "Test set re-scored after fixes; held-out 40: 20 of 20, 1 of 20." |
+| N4 | `video-script.md` 0:30 | "This is a real call on a real phone line." | True only if the clip is the real run; the same file's fallback says to use the replay labelled as such. Fine as written; keep the "Never present the replay as live" rule. | none (note) |
+Everything else in the video script that touches P2 is backed: "hears only the caller's side" (caller audio only), "Nemotron model scores what he says", "two quiet beeps", no "instant/real-time/on device".
