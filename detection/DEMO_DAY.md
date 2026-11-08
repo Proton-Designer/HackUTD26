@@ -58,3 +58,13 @@ Run from the repo root. `$P2W` = the tmux window running p2svc (`tmux list-windo
 - `rm -f logs/audio/*.wav`; make sure `P2_DUMP_AUDIO` is unset/0 (caller audio is not kept on stage).
 - `engines.primary` = local, cloud breaker closed, one rehearsal call done, then leave services alone.
 - **Run `bash detection/scripts/ready_check.sh --tunnel <p2 tunnel URL>`** (checks `:8100`; for another port add `--live http://localhost:<port>`; the two checks tag/clean-tree only pass in the live checkout) (add `--tests` before the freeze). Read-only: healthz fields, tunnel matches live, `P2_DUMP_AUDIO` off in the live process (key only, never values), `logs/audio` empty, llama answers, watchdog alive, live HEAD is a `p2-known-good` tag and the process is newer than the last `detection/*.py` commit, plus one positive (gift card + secrecy -> critical) and one negative (benign -> low) control through `/detect` (skipped while a call is active). Every FAIL prints a one-line fix. Do not start judging on `NOT READY`; WARN is acceptable if you know why (e.g. cloud breaker open while local is primary).
+
+## Judging-day P2 operator card (13:00-16:00)
+- **Watch:** `curl -s localhost:8100/healthz` before each judge and after each call. Want `engines.primary` local, `local_reachable` true, `cloud_breaker.state` closed, `stt.backend` riva with `primary_bypassed` false, `hub_subscriber_connected` true, `last_error` empty. `active_stt_sockets` is 1 during a call, 0 between.
+- **After a call:** `.venv/bin/python detection/scripts/call_report.py --last 1`. Read the `SUMMARY` line: `first alert +Ns` (about 10-15 s on the scripted calls), `final s` (0.95 on a scam), `alerts 1`, `failovers 0`, `429s 0`. A benign call should show no alert and max s well under 0.5.
+- **llama down** (`local_reachable` false): do nothing, cloud answers meanwhile and the watchdog restarts llama in about 2 min. Never touch the Windows side.
+- **Riva down** (`primary_bypassed` true): do nothing, Whisper takes over (finals 1-4 s slower, alert still fires).
+- **Tunnel changed:** new URL is in `logs/p2_tunnel_url.txt`; tell the lead, P1 repoints `P2_STT_URL=wss://<host>` between calls.
+- **False alarm:** press Continue in the UI. Do not restart anything during a judge visit.
+- **Hardware:** keep the laptop plugged in (AC); never close WSL or the llama window; do not let the laptop sleep or lock the lid.
+- **Never:** `pkill`, kill by port, deploy, or run evals while judging. Rollback only via section 4, between calls.
