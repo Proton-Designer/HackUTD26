@@ -1040,5 +1040,132 @@
    "demands gift cards",
    "orders secrecy"
   ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|this is the fraud department at your bank.": {
+  "addresses_ai_system": false,
+  "asks": [],
+  "impersonates": "bank fraud department",
+  "s": 0.6,
+  "scam_type": "bank fraud impersonation",
+  "stage": "pretext",
+  "why_chips": [
+   "claims to be fraud department",
+   "bank impersonation"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|this is the fraud department at your bank. your account has been compromised.": {
+  "addresses_ai_system": false,
+  "asks": [],
+  "impersonates": "bank fraud department",
+  "s": 0.85,
+  "scam_type": "bank fraud dept",
+  "stage": "pretext",
+  "why_chips": [
+   "claims account compromised",
+   "purports to be fraud department",
+   "creates urgency"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|this is the fraud department at your bank. your account has been compromised. to protect your money you must act now.": {
+  "addresses_ai_system": false,
+  "asks": [
+   "remote_app",
+   "secrecy"
+  ],
+  "impersonates": "bank fraud department",
+  "s": 0.9,
+  "scam_type": "bank fraud dept",
+  "stage": "pressure",
+  "why_chips": [
+   "claims account compromised",
+   "demands immediate action",
+   "protect your money narrative",
+   "creates urgency"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|this is the fraud department at your bank. your account has been compromised. to protect your money you must act now. please read me the six digit code we just texted you, and do not tell anyone, including the bank staff.": {
+  "addresses_ai_system": false,
+  "asks": [
+   "otp",
+   "secrecy"
+  ],
+  "impersonates": "bank fraud department",
+  "s": 0.98,
+  "scam_type": "bank fraud dept",
+  "stage": "pressure",
+  "why_chips": [
+   "fraud department impersonation",
+   "account compromised claim",
+   "read six digit code",
+   "don't tell anyone"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|this is the fraud department at your bank. your account has been compromised. to protect your money you must act now. please read me the six digit code we just texted you, and do not tell anyone, including the bank staff. then buy gift cards and read me the numbers on the back.": {
+  "addresses_ai_system": false,
+  "asks": [
+   "otp",
+   "gift_card"
+  ],
+  "impersonates": "bank fraud department",
+  "s": 0.98,
+  "scam_type": "bank fraud dept",
+  "stage": "payment",
+  "why_chips": [
+   "claims account compromised",
+   "asks for 6-digit code",
+   "orders secrecy from bank staff",
+   "demands gift card numbers"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|this is the fraud department at your bank. your account has been compromised. to protect your money, you must act now.": {
+  "addresses_ai_system": false,
+  "asks": [
+   "remote_app",
+   "secrecy"
+  ],
+  "impersonates": "bank fraud department",
+  "s": 0.92,
+  "scam_type": "bank fraud dept",
+  "stage": "pressure",
+  "why_chips": [
+   "claims account compromised",
+   "demands immediate action",
+   "asks for remote access",
+   "enforces secrecy"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|this is the fraud department at your bank. your account has been compromised. to protect your money, you must act now. please read me the 6-digit code we just texted you and do not tell anyone, including the bank staff.": {
+  "addresses_ai_system": false,
+  "asks": [
+   "otp",
+   "secrecy"
+  ],
+  "impersonates": "bank fraud department",
+  "s": 0.98,
+  "scam_type": "bank fraud dept",
+  "stage": "payment",
+  "why_chips": [
+   "claims account compromised",
+   "demands 6-digit code",
+   "orders secrecy from bank staff",
+   "uses authority to pressure"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|this is the fraud department at your bank. your account has been compromised. to protect your money, you must act now. please read me the 6-digit code we just texted you and do not tell anyone, including the bank staff. then, by gift cards and read me the numbers on the back.": {
+  "addresses_ai_system": false,
+  "asks": [
+   "otp",
+   "gift_card"
+  ],
+  "impersonates": "bank fraud department",
+  "s": 0.98,
+  "scam_type": "bank fraud dept",
+  "stage": "payment",
+  "why_chips": [
+   "claims account compromised",
+   "demands 6-digit code",
+   "orders secrecy from bank staff",
+   "requests gift card numbers"
+  ]
  }
 }

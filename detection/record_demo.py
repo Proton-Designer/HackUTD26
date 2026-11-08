@@ -33,9 +33,23 @@ def mock_windows():
                          if e["type"] == "transcript.caller"])   # partials too: the mock crypto line is is_final=false
 
 
+# P1 sim mode caller (scripts/make_scam_wav.sh text): clean text, plus what real STT returned on a Magpie-TTS rendering (TASK-017)
+SIM_CLEAN = ["This is the fraud department at your bank.", "Your account has been compromised.", "To protect your money you must act now.",
+             "Please read me the six digit code we just texted you, and do not tell anyone, including the bank staff.",
+             "Then buy gift cards and read me the numbers on the back."]
+SIM_STT = ["This is the fraud department at your bank.", "Your account has been compromised.", "To protect your money, you must act now.",
+           "Please read me the 6-digit code we just texted you and do not tell anyone, including the bank staff.",
+           "Then, by gift cards and read me the numbers on the back."]
+
+
+def sim_windows():
+    for seq in (SIM_CLEAN, SIM_STT):
+        yield from roll(seq)
+
+
 async def main():
     seen, n = set(), 0
-    for w in list(card_windows()) + list(mock_windows()):
+    for w in list(card_windows()) + list(mock_windows()) + list(sim_windows()):
         if w in seen or D._demo_key(D._key("cloud", w)) in D._demo_load():
             continue
         seen.add(w)
