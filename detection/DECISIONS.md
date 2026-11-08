@@ -1,0 +1,2 @@
+- eng2: STT = NVIDIA hosted Parakeet-CTC-1.1B via Riva gRPC (NVCF, our NVIDIA_API_KEY) on endpointed utterances (offline_recognize), because it is on-brand for the NVIDIA track and measured 0.4-0.5 s after endpoint on synthetic audio; faster-whisper base.en int8 is the automatic fallback (P2_STT=whisper forces it).
+- eng2: endpointing = energy VAD (adaptive noise floor), 450 ms silence (P2_ENDPOINT_MS), because it is simple and keeps alert latency low; finals only, no partials.

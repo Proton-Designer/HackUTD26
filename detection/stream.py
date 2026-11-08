@@ -1,0 +1,139 @@
+"""WS /stt/{call_id}: P1's relay sends Telnyx media frames (verbatim JSON). We keep ONLY the inbound (caller) track,
+decode mu-law, endpoint on energy, run STT, emit transcript.caller finals, and hand finals to on_final(call_id, utt).
+Fail open: garbage frames are ignored; nothing here ever raises into the socket loop."""
+import asyncio, base64, itertools, json, logging, os, time
+import numpy as np
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from . import hub, stt
+
+log = logging.getLogger("p2.stream")
+router = APIRouter()
+FRAME = 160                      # 20 ms @ 8 kHz
+ENDPOINT_MS = int(os.environ.get("P2_ENDPOINT_MS", "450"))
+MIN_SPEECH_MS = 250
+MAX_UTT_S = 15.0
+PREROLL_FRAMES = 10              # 200 ms kept before speech onset
+
+on_final = None                  # async callable(call_id, utt: dict) set by detection.alert (TASK-004)
+def set_on_final(fn):
+    global on_final
+    on_final = fn
+
+def parse_frame(raw):
+    """Telnyx JSON text -> (event, pcm_bytes|None). Only inbound media returns audio. Never raises."""
+    try:
+        m = json.loads(raw)
+        ev = m.get("event")
+        if ev == "media":
+            media = m.get("media") or {}
+            if media.get("track", "inbound") != "inbound":
+                return "media_other_track", None
+            return "media", base64.b64decode(media.get("payload", ""), validate=True)
+        return ev, None
+    except Exception:
+        return None, None
+
+class Segmenter:
+    """Energy VAD + endpointing. feed(pcm_int16) -> list of finished utterances (int16 arrays)."""
+    def __init__(self, endpoint_ms=ENDPOINT_MS):
+        self.end_frames = max(1, endpoint_ms // 20)
+        self.noise = 60.0
+        self.buf = np.zeros(0, dtype=np.int16)   # leftover < FRAME
+        self.pre = []
+        self.cur = None
+        self.sil = 0
+        self.speech_frames = 0
+
+    def feed(self, pcm):
+        out = []
+        self.buf = np.concatenate([self.buf, pcm])
+        n = len(self.buf) // FRAME
+        for i in range(n):
+            f = self.buf[i * FRAME:(i + 1) * FRAME]
+            rms = float(np.sqrt(np.mean(f.astype(np.float64) ** 2)))
+            thr = max(300.0, self.noise * 3.5)
+            voiced = rms > thr
+            if self.cur is None:
+                if voiced:
+                    self.cur = list(self.pre) + [f]
+                    self.sil, self.speech_frames = 0, 1
+                else:
+                    self.noise = 0.95 * self.noise + 0.05 * rms
+                    self.pre.append(f); self.pre = self.pre[-PREROLL_FRAMES:]
+            else:
+                self.cur.append(f)
+                if voiced:
+                    self.sil = 0; self.speech_frames += 1
+                else:
+                    self.sil += 1
+                if self.sil >= self.end_frames or len(self.cur) * FRAME / 8000 >= MAX_UTT_S:
+                    out.extend(self._close())
+        self.buf = self.buf[n * FRAME:]
+        return out
+
+    def flush(self):
+        return self._close() if self.cur is not None else []
+
+    def _close(self):
+        cur, sp = self.cur, self.speech_frames
+        self.cur, self.pre, self.sil, self.speech_frames = None, [], 0, 0
+        return [np.concatenate(cur)] if sp * 20 >= MIN_SPEECH_MS else []
+
+async def handle_utterance(call_id, uid, pcm, t_end=None):
+    try:
+        text = (await stt.get_stt().transcribe(pcm)).strip()
+    except Exception as e:
+        log.warning("stt failed call=%s: %s", call_id, type(e).__name__)
+        return
+    if not text:
+        return
+    if t_end:
+        log.info("stt final %s: %.2fs after endpoint: %r", uid, time.time() - t_end, text[:80])
+    utt = {"utterance_id": uid, "text": text, "is_final": True}
+    await hub.emit("transcript.caller", call_id, utt)
+    if on_final:
+        try:
+            await on_final(call_id, utt)
+        except Exception:
+            log.exception("on_final failed (ignored, fail-open)")
+
+@router.websocket("/stt/{call_id}")
+async def stt_ws(ws: WebSocket, call_id: str):
+    await ws.accept()
+    seg, counter, tasks = Segmenter(), itertools.count(1), set()
+    chain = asyncio.Queue()   # preserve utterance order
+    async def worker():
+        while True:
+            item = await chain.get()
+            if item is None:
+                return
+            await handle_utterance(call_id, *item)
+    w = asyncio.create_task(worker())
+    def submit(arrs):
+        for a in arrs:
+            chain.put_nowait((f"{call_id}-u{next(counter)}", a, time.time()))
+    try:
+        while True:
+            raw = await ws.receive_text()
+            ev, audio = parse_frame(raw)
+            if ev == "media" and audio:
+                try:
+                    submit(seg.feed(stt.mulaw_decode(audio)))
+                except Exception:
+                    log.warning("bad audio frame ignored")
+            elif ev == "stop":
+                submit(seg.flush()); break
+    except (WebSocketDisconnect, RuntimeError):
+        submit(seg.flush())
+    except Exception:
+        log.exception("stt ws error")
+    finally:
+        chain.put_nowait(None)
+        try:
+            await asyncio.wait_for(w, timeout=10)
+        except Exception:
+            w.cancel()
+        try:
+            await ws.close()
+        except Exception:
+            pass
