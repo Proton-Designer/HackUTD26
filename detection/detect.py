@@ -17,7 +17,7 @@ ASK_RULES = {
     "remote_app": r"any ?desk|team ?viewer|ultra ?viewer|remote (access|control|desktop)|screen ?shar",
     "ssn": r"social security|\bssn\b|last four of your social",
     "card": r"card number|\bcvv\b|\bcvc\b|security code on (the )?back|expiration date",
-    "secrecy": r"(don'?t|do not|not to) tell (anyone|anybody|your (bank|family|wife|husband|son|daughter))|keep (this|it) (a )?(secret|between us|confidential)|(don'?t|do not) (hang up|talk to)",
+    "secrecy": r"tell (no ?one|nobody)|(don'?t|do not|not to) tell (anyone|anybody|your (bank|family|wife|husband|son|daughter))|keep (this|it) (a )?(secret|between us|confidential)|(don'?t|do not) (hang up|talk to)",
 }
 ASK_RE = {k: re.compile(v, re.I) for k, v in ASK_RULES.items()}
 
