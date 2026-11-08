@@ -61,3 +61,6 @@ Team actor reading a known script, n=1. Quoted lines are team-actor speech.
 Finals arrived 0.23-0.35 s after endpoint; 1 alert, 0 failovers, 0 429s, 7 utterances (4 finals scored). Caveat: n=1, a team actor, a script the team knows; this shows the path works on a real phone line, not a detection rate.
 
 **adad65a0 full chain (numbers from P1's hub journal, not measured by P2):** alert +12.5 s, takeover ("Scammer Get Scammed") +18.2 s, decoy 4 turns (median 1.09 s, max 1.45 s), caller hung up +46 s, intel block +75 s. This is the first full real-PSTN chain (detect, takeover, decoy, hang-up, block). P2's own log timing above (alert +12.3 s) agrees within 0.2 s. Same caveat: n=1, team actor, known script.
+
+## b58cec24: SIMULATED call into the live service (benign), NOT a real phone call
+P1's phone-free simulated call (a script streamed in Telnyx stream format, 04:54:48-04:55:24, media format `audio/x-mulaw`, start keys include `tracks`). A dentist-office reminder: 4 utterances, finals 0.27-0.33 s after endpoint, every risk update s=0.05 low, 0 alerts, 0 failovers. It confirms the live service accepts that start-message variant and stays quiet on benign talk; it is not a real-PSTN true negative and is not counted in the real-call numbers.
