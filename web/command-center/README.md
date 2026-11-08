@@ -1,0 +1,44 @@
+# T-Mobile command center (P4b)
+
+The judge-facing screen. One page, no build step, no dependencies.
+
+## Run it
+
+**Demo (live):** serve this folder from the P1 server and open it there, e.g. `http://<p1-host>:8000/command-center/`. It connects to `WS /events` on the same host automatically.
+Ask for P1 (Ayman): mount it with FastAPI `app.mount("/command-center", StaticFiles(directory="web/command-center", html=True))`. Same origin means no CORS for the Approve button.
+
+**Anywhere else:** open the page with the server's address:
+
+```
+http://localhost:5180/web/command-center/?server=http://192.168.1.20:8000
+```
+
+**No server yet (rehearsal):** from the repo root run `python -m http.server 5180` and open `http://localhost:5180/web/command-center/`. It looks for a server for ~2 s, then replays `mock/events.json` (or `fixture.js` until P1 pushes `mock/`). Double-clicking `index.html` also works and replays `fixture.js`.
+
+## URL params (no settings screen)
+
+| Param | Meaning |
+|---|---|
+| `server=http://host:port` | P1 base URL (WS `/events` and POST `/intel/actions/{id}/approve`) |
+| `src=live\|mock\|fixture` | Force a source. Default: live if reachable, else replay |
+| `speed=2` | Replay speed |
+| `gap=6` | Replay: squeeze silences longer than this many seconds |
+| `voice=clone\|synthetic` | Decoy-voice wording if `voice.enrolled` happened before the page opened |
+
+Replay keys: **Space** pause/play · **R** restart · click the bar to jump.
+
+## Test live mode without P1
+
+```
+python web/command-center/dev/fake_p1.py              # WS on :8765, plays a short built-in call
+```
+Open `...?server=http://localhost:8765`. Push P4a's real lookups onto the screen:
+```
+BACKFIRE_EVENTS_URL=http://localhost:8765/publish python -m intel.lookups domain example.com
+```
+
+## Files
+- `index.html`, `styles.css`, `app.js`: the page
+- `fixture.js`: the 90-second demo as contract events (synthetic), used until `mock/events.json` exists
+- `dev/fake_p1.py`: test stand-in for P1's server
+- `DECISIONS.md`: why things are the way they are, and the event shapes we read
