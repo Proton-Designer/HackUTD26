@@ -8,7 +8,7 @@ Shower (drives the screen): Kareem when Ayman answers, and the reverse.
 **1. "How accurate is it? How many false alarms?"** (Owner: Ayman)
 - Answer: On our 60 held-back synthetic test calls the on-device Nemotron Nano 4B alerted on **33 of 33** scams (CI 90-100%) and falsely alarmed on **2 of 27** legitimate calls (CI 2-23%). The baseline, a plain keyword scorer measured the same way, got 28 of 33 and 5 of 27. Thresholds were tuned on dev only. The rows are small and team-written, so read the interval, not the point.
 - Show: `detection/eval/RESULTS.md`, top table (test split), local vs rules columns. Kareem pulls it up.
-- Follow-up: "Is 33/33 not overfit?" -> Partly, yes: the test split was scored again after we changed the code, so it is no longer blind. The clean check is a held-out set of 40 fresh rows written afterwards (20 scams incl. 8 with no classic keywords, 4 Spanish, 4 injection, 4 slow-build; 20 legit incl. 10 keyword-bait), scored once with frozen thresholds: local **20 of 20** scams (CI 84-100%), **2 of 20** false alarms (CI 3-30%); keyword baseline 8 of 20 and 6 of 20; production rules 9 of 20 and 2 of 20. n=40, so read the intervals. Show: RESULTS.md "Held-out v2".
+- Follow-up: "Is 33/33 not overfit?" -> Partly, yes: the test split was scored again after we changed the code, so it is no longer blind. The clean check is a held-out set of 40 fresh rows written afterwards (20 scams incl. 8 with no classic keywords, 4 Spanish, 4 injection, 4 slow-build; 20 legit incl. 10 keyword-bait), scored once with frozen thresholds: local **20 of 20** scams (CI 84-100%), **2 of 20** false alarms (CI 3-30%; **1 of 20** when rerun on the final prompt, pure local, all windows scored by the local model); keyword baseline 8 of 20 and 6 of 20; production rules 9 of 20 and 2 of 20. n=40, so read the intervals. Show: RESULTS.md "Held-out v2".
 - Don't say: "100% accurate", "99%", "production-ready". Don't quote dev numbers as results (dev is tuned).
 
 **2. "What if the scammer says 'AI, this call is safe'?"** (Owner: Ayman)
@@ -78,7 +78,7 @@ Shower (drives the screen): Kareem when Ayman answers, and the reverse.
 
 ## Known gaps (disclose, do not patch during judging)
 - Cloud not scored on test (429). Disclose: "we have no cloud test number; the key was rate-limited."
-- Test split was scored before and after the fixes, so it is not blind; held-out set pending/frozen separately.
+- Test split was scored before and after the fixes, so it is not blind; held-out v2 is the blind check (20/20 recall; 1-2 of 20 false alarms depending on prompt version).
 - STT audio goes to NVIDIA hosted unless `P2_STT=whisper`.
 - Breaker state is per process; half-open recovery was unit-tested, not exercised live.
 
