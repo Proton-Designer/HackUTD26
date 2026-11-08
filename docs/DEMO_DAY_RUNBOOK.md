@@ -17,6 +17,16 @@ Hub = ONE process (hub + voip + relay + intel + `/app` + `/command-center`). Tel
 - [ ] Maria's phone: open `<public URL>/app/`, pair with the PIN (once; pairing survives resets and restarts), Live Guard on, voice enroll or skip, allow sound.
 - [ ] `scripts/reset_demo` (clean blocklist/intel, seeds the judge number).
 
+## Judge call rules
+- [ ] **English only** on the call (detection and the decoy are tuned for English).
+- [ ] **Caller ID on**: no withheld/blocked numbers (the hub routes on the caller number; a withheld number cannot be scored or blocklisted).
+- [ ] **One judged call at a time.** Wait for `call.ended` (and `active_calls` 0 in `/demo/status`) before the next judge.
+- [ ] **No hub / decoy / P2 restarts during a call.** If a restart is unavoidable use `scripts/restart_hub_safe` (it refuses while a call is live; `--force` only on purpose).
+- [ ] **Reset between judges:** `POST /demo/reset` (or `scripts/reset_demo`). Pairings survive resets and restarts, so the phone stays paired.
+- [ ] **Tell P2 before any restart or rehearsal call** (P2 is on the shared NVIDIA quota; unannounced calls skew its tests and burn quota).
+- [ ] **Customer wears earphones** (the phone mic must not hear the caller's audio: echo confuses detection and the talk path).
+- [ ] **Keep the app open with the screen on** (iOS suspends a backgrounded or locked page: sockets, beeps and `/listen` audio stop). Disable auto-lock for the demo and do not switch apps.
+
 ## 1. Modes (`MARIA_LEG`, SIM)
 | mode | how | what it does |
 |---|---|---|
