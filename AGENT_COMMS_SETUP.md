@@ -1,6 +1,6 @@
 # Agent comms: complete setup (macOS + Windows)
 
-> **v2 (00:30): already set up? Just do this:** `bash scripts/git/sync --pull` → `bash scripts/comms/setup` (no id needed) → **restart Claude Code** → paste the §6 prompt again. New: replies now reach the thread's sender, `ack` / `done` / `wait` / `blast`, the Stop hook enforces answers + pushes + a background watcher, and `scripts/git/sync` for all pushing/pulling (§12).
+> **v2 (00:30): already set up? Don't restart anything.** Run `git pull --rebase --autostash`, then `bash scripts/comms/setup` (no id needed) and paste the §6 prompt into your running session. The hooks run the scripts from disk, so the new behavior starts on your agent's next tool call. New: replies now reach the thread's sender, `ack` / `done` / `wait` / `blast`, the Stop hook enforces answers, pushes and a background watcher, and `scripts/git/sync` handles all pushing and pulling (§12). A restart is needed only if `.claude/settings.json` itself changes.
 
 Every pipeline's Claude Code agent can message every other pipeline's agent. Messages are **pushed into the receiving agent's session automatically**: the agent doesn't have to remember to check. The same tooling also reports each machine's pipeline, step and agent count to the team dashboard (`dashboard/`).
 
