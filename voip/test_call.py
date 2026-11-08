@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Automated SIMULATED scam-caller test call (synthetic voice, synthetic script cards). Account-agnostic.
 
-  voip/.venv/bin/python voip/test_call.py --script irs|bank|crypto            # DRY RUN (default): builds audio, prints the curl (key redacted)
+  voip/.venv/bin/python voip/test_call.py --script irs|bank|crypto|benign            # DRY RUN (default): builds audio, prints the curl (key redacted)
   voip/.venv/bin/python voip/test_call.py --script irs --live                 # serves audio via local http.server + cloudflared quick tunnel, then POST /v2/calls
 
 How it works: macOS `say` voices the script card (data/script-cards.md: numbered lines + payment step) -> ffmpeg -> 8 kHz mono mp3,
@@ -15,11 +15,19 @@ import http.server, functools
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 CARDS = ROOT / "data" / "script-cards.md"
 CARD_NO = {"irs": 1, "bank": 2, "crypto": 3}
-VOICE = {"irs": "Daniel", "bank": "Samantha", "crypto": "Alex"}   # macOS built-in voices; falls back to the default voice
+# benign: synthetic legitimate call (no urgency, no money, no secrecy) so P2 risk stays low -> restore test (LIVE_TEST_PLAN restore check)
+BENIGN = [
+    "Hi, this is the front desk at Lakeside Family Dental calling to confirm your cleaning appointment this Thursday at two thirty.",
+    "There is nothing you need to do. If the time does not work, just call the office during business hours and we will find another slot.",
+    "We also have a reminder that your next visit is covered by your usual plan, so there is no change to your costs.",
+    "Thanks so much, and we will see you Thursday. Have a lovely evening.",
+]
+VOICE = {"irs": "Daniel", "bank": "Samantha", "crypto": "Alex", "benign": "Samantha"}   # macOS built-in voices; falls back to the default voice
 PAUSE_S = 2.5   # silence between lines so the live guard / "Maria" has room to respond
 
 
 def card_text(script):
+    if script == "benign": return list(BENIGN)
     """Spoken lines of one card: the numbered lines, then the payment step (says the callback/site/wallet as written)."""
     md = CARDS.read_text()
     m = re.search(rf"^# Card {CARD_NO[script]}:.*?(?=^# Card |\Z)", md, re.S | re.M)
@@ -88,7 +96,7 @@ def start_tunnel(port, timeout=25):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("--script", choices=list(CARD_NO), required=True)
+    ap.add_argument("--script", choices=list(CARD_NO) + ["benign"], required=True)
     ap.add_argument("--live", action="store_true", help="really place the call (default is a dry run)")
     ap.add_argument("--dry-run", action="store_true", help="explicit dry run (the default)")
     ap.add_argument("--port", type=int, default=8799, help="spare local port for the audio server (never 8000)")
