@@ -94,3 +94,11 @@ Private P2 :8104, local engine (nemotron-nano-4b), real time, HUB_URL dead, one 
 | a9142648 | 40 s | no earlier row | first +13.13 s | 0.95 critical | 0.39 s | first replay: alerts |
 | ba80d152 | 78 s | no earlier row | first +13.49 s | 0.95 critical | 0.34 s | first replay: alerts |
 Result: no alert moved by more than 0.2 s versus the earlier numbers, 0 new false alarms (every benign dump stayed quiet), 1 alert per alerting call. Not verified: whether 93c95fd6, a9142648 and ba80d152 are scripted scam calls (no label in this file; they alert, so a false alarm is possible if they were benign). The 0.60 end-state in the P2 log carries the band label of the raw score; the hub-side band for 0.60 is "watch" (seen in TASK-066).
+
+## Labels for the three calls added in TASK-071 (lead's reading of logs/p2.log finals, 06:01)
+| call | start (CT) | label | replay alert | result |
+|---|---|---|---|---|
+| 93c95fd6 | 03:34 | SCAM (IRS "Officer Daniel Brooks", warrant, settle $4,800 now) | +18.04 s | true positive |
+| a9142648 | 05:08 | SCAM (IRS unpaid taxes + SSN ask) | +13.13 s | true positive |
+| ba80d152 | 05:37 | SCAM (IRS + gift cards + tell nobody) | +13.49 s | true positive |
+PSTN vs simulated for these three: not stated in any file I have (not guessed; asked the lead).
