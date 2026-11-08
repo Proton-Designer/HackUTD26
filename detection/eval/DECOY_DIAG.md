@@ -28,3 +28,18 @@ Same prompt per request (core.SYSTEM + 2-message history + caller line + PB.note
 | super-vl-120b-a12b | 19 | 0.69 s | 1.30 s | 1.46 s | 21.1 |
 One super request hit a ReadTimeout (8 s client timeout in core.chat): 1 of 20. In app.py that is a fast-failure retry only if under 3 s, so it becomes a STALL ("Sorry, can you repeat that?") plus a 7 s dead gap. LLM_TIMEOUT 7 s is ~5x the super p90 so ordinary margin is fine; the risk is the rare hang, not the median. FILLER_AFTER_S = 0.6: bolt p50 0.48 rarely triggers the filler; super p50 0.69 would trigger it on roughly half the turns (not on the first real reply). n=20, one afternoon, one key, no concurrent load. Swap costs about +0.2 s p50, +0.6 s p90.
 Not done: decoy.log timings (not available), any quality scoring (eng2's A/B), live call under load.
+
+### Turn merging / dropping in the decoy's view (per call, timestamps = seconds from the call's first P2 event; no transcripts)
+Method: each P2 final after the opener is matched to the decoy-heard line (speaker=scammer in `echo.decoy`) that contains >=60% of its words within the next 20 s. "ASK" = the final contains a payment/code/app/account keyword (crude regex, not a label). Commit f901178 data; P3's 78b2c08 (partial-echo cut) is later and not covered here.
+| call | P2 finals after handoff | heard by decoy as own line | MERGED into one decoy line | DROPPED (no decoy line) |
+|---|---|---|---|---|
+| 3d5a7970 | 11 | 9 | +61.3 and +64.3 -> one line at +64.7 (one ASK, the other a 2-word fragment) | 0 |
+| e3e343de | 10 | 4 | +74.2 and +76.0 -> +77.3 (no ask); +98.5 (ASK, "send $1800 by Zelle to refund") and +101.2 ("dot ...") -> +103.6 | 3: +90.1 (3 w), +102.5 (1 w), +105.3 (4 w) |
+| ba80d152 | 13 | 4 | FIVE finals +59.9, +63.9, +65.9, +67.3, +68.4 (9 s, 1 ASK at +68.4) -> one line at +69.0 | 6: +25.7 (5 w), +47.4 (1 w), +55.0 (3 w), +57.5 (2 w), +76.0 (5 w), plus one fragment; first ASK at +46.3 did reach the decoy |
+| 5921f090 | 8 | 4 | none | 3: +16.0 (5 w; the decoy heard only a 1-word tail of it), +23.1 and +93.4 (1-9 w) |
+| 8ee2b3da | 2 | 2 | none | 0 |
+Facts:
+- Two scammer ASKS in one decoy line: 0 cases found. Merges join an ask with its continuation (e3e343de +98.5 and +101.2 are the Zelle sentence split by STT at "refund" / "dot", the decoy gets it whole at +103.6, which is an improvement).
+- ASK finals lost: 0 by keyword. All 12 dropped finals are 1-9 words (acknowledgements, "hold on", tails). One drop is a worry: ba80d152 +76.0 and e3e343de +105.3 ("hold on, just stop") are the caller reacting to the decoy.
+- Why: the decoy answers `self.pending` as one batch (app.py reply(): `heard = " ".join(self.pending)`, redo up to REDO_MAX when more arrives while the LLM thinks), and finals that arrive while it is speaking or in `hold_floor` are folded in or ignored. ba80d152 shows the worst case: 5 finals over 9 s -> 1 decoy reply 0.6 s later, so the decoy answers the last thing only.
+- Merged lines did not make the decoy answer the wrong ask in these logs; the cost is slower reaction (e3e343de decoy line at +103.6 for an ask begun at +98.5) and no reply to interjections.
