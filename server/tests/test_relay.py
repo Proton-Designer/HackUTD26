@@ -384,3 +384,44 @@ def test_p2_down_at_call_start_retries_during_call_then_connects(monkeypatch, ca
     assert any(m.startswith("P2 connected call=cdownret") and "failed attempt" in m for m in msgs)
     assert [m["event"] for m in got[:2]] == ["connected", "start"]                  # header replayed on the late connect
     assert sum(1 for m in got if m["event"] == "media") >= 10                         # media flows again after P2 returns
+
+
+def test_f19_reconnect_replaces_session_and_stale_close_cannot_kill_new(monkeypatch):
+    monkeypatch.delenv("P2_STT_URL", raising=False); monkeypatch.delenv("P2_BASE", raising=False)
+    c = TestClient(app, base_url="http://127.0.0.1:8000", client=("127.0.0.1", 5000))
+    from server import bus
+    bus.publish("call.incoming", "F19", {"from": "+15555550123", "to": "+15555550100", "attestation": "C", "scam_id_score": 0.8})
+    async def go():
+        got = []
+        async def back(f): pass
+        old = await relay.open("F19", back)
+        new = await relay.open("F19", back)                    # media WS reconnect
+        assert old is not new and relay._S["F19"] is new
+        await relay.close("F19", old)                          # the OLD socket's late cleanup
+        assert relay._S.get("F19") is new                      # the new session survives
+        await relay.caller_frame("F19", fr(1)); assert relay._S["F19"].dropped == 0
+        await relay.close("F19", new)                          # the owner closes: gone
+        assert "F19" not in relay._S
+        await relay.close("F19", new)                          # idempotent
+        # legacy close(call_id) with no session still closes whatever is current
+        s3 = await relay.open("F19", back); await relay.close("F19"); assert "F19" not in relay._S
+    run(go())
+
+
+def test_f19_listener_survives_media_reconnect():
+    import time
+    from server import bus
+    bus.publish("call.incoming", "F19L", {"from": "+15555550123", "to": "+15555550100", "attestation": "C", "scam_id_score": 0.8})
+    c = TestClient(app, base_url="http://127.0.0.1:8000", client=("127.0.0.1", 5000))
+    async def go():
+        async def back(f): pass
+        await relay.open("F19L", back)
+        with lw(c, "/listen/F19L"):
+            assert relay.listener_count() == 1
+            await relay.open("F19L", back)                     # reconnect: listener must stay attached
+            await asyncio.sleep(0.8)
+            assert relay.listener_count() == 1
+            await relay.close("F19L")                          # real end of call releases it
+            await asyncio.sleep(0.8)
+            assert relay.listener_count() == 0
+    run(go())

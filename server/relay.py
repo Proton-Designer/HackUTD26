@@ -94,10 +94,16 @@ async def _connect_p2(url):
     return await websockets.connect(url, **{kw: {"x-pipeline-token": tok}})
 
 async def open(call_id, send_to_caller, on_decoy_lost=None):
+    """Open the relay session for a call and RETURN it. A media-WS reconnect replaces the old session (F19): the old one is shut down but
+    the /listen sockets stay attached. Pass the returned session to close(call_id, session) so a stale socket's cleanup cannot close the new one."""
     try:
-        if call_id in _S:
-            await close(call_id)
-        _S[call_id] = _Session(call_id, send_to_caller, on_decoy_lost)
+        old = _S.get(call_id)
+        s = _Session(call_id, send_to_caller, on_decoy_lost)
+        _S[call_id] = s                       # new session owns the call from here on, before any await
+        if old is not None:
+            await _shutdown(old, release_listeners=False)
+            log.warning("relay session for %s replaced by a reconnect", call_id[:8])
+        return s
     except Exception:
         log.exception("relay.open failed")
 
@@ -273,17 +279,44 @@ async def stop_decoy(call_id):
     except Exception:
         log.exception("relay.stop_decoy failed")
 
-async def close(call_id):
+async def _shutdown(s, release_listeners=True):
+    """Stop a session's decoy and P2 pump; optionally release its /listen sockets."""
     try:
-        await stop_decoy(call_id)
+        if s.d_ws is not None:
+            s.decoy_active = False
+            for t in s.d_tasks:
+                if t is not asyncio.current_task(): t.cancel()
+            try:
+                await asyncio.wait_for(s.d_ws.send(json.dumps({"event": "stop", "stream_id": s.stream_id or "relay-" + s.call_id})), 1)
+                await s.d_ws.close()
+            except Exception:
+                pass
+            s.d_ws = None; s.d_tasks = []
+        if release_listeners:
+            for lq in list(_LQ.get(s.call_id, ())):      # end of call: release the listeners' slots
+                try: lq.put_nowait(None)
+                except asyncio.QueueFull: pass
+        _put(s.p2_q, None, s)
+        try: await asyncio.wait_for(s.p2_task, 2)
+        except Exception: s.p2_task.cancel()
+    except Exception:
+        log.exception("relay.close failed")
+
+async def close(call_id, session=None):
+    """End the call's relay session. With `session` (the object open() returned) this is a no-op unless it is still the CURRENT session,
+    so a replaced media WS cleaning up late cannot kill its successor (F19). Without it: legacy behaviour, closes whatever is current."""
+    try:
+        cur = _S.get(call_id)
+        if session is not None and cur is not session:
+            log.warning("relay.close for %s ignored: session was replaced by a newer connection", call_id[:8])
+            return
         s = _S.pop(call_id, None)
-        for lq in list(_LQ.get(call_id, ())):      # end of call: release the listeners' slots
-            try: lq.put_nowait(None)
-            except asyncio.QueueFull: pass
-        if s:
-            _put(s.p2_q, None, s)
-            try: await asyncio.wait_for(s.p2_task, 2)
-            except Exception: s.p2_task.cancel()
+        if s is None:
+            for lq in list(_LQ.get(call_id, ())):
+                try: lq.put_nowait(None)
+                except asyncio.QueueFull: pass
+            return
+        await _shutdown(s)
     except Exception:
         log.exception("relay.close failed")
 
