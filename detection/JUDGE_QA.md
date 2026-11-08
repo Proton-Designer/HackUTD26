@@ -19,7 +19,7 @@ Shower (drives the screen): Kareem when Ayman answers, and the reverse.
 
 **3. "How fast is it?"** (Owner: Ayman)
 - Answer: Rules fire in about 1 ms (p95 20 ms) on every transcript, so a clear ask alerts without waiting for the model. The local model adds p50 **1.6 s**, p95 1.9 s per window (test run). On average the model alerted 0.54 lines *before* the first hard ask line (n=28), because authority + secrecy language scores high first.
-- Show: RESULTS.md latency row and "lines from first hard ask to alert". Demo recording: `.venv/bin/python detection/scripts/call_report.py` timeline (first alert vs ask). [LEAD: the "alert 20+ s before the first ask on the demo recording" figure is not in anything I read; confirm it from call_report on that recording before saying it.]
+- Show: RESULTS.md latency row, and `detection/eval/DEMO_TIMING.md` (call_report timeline of the demo WAV, real STT + cloud model, DEMO_MODE off). On that recording the first alert came at **+7.5 s**, 2.0 s after the opening line; the secrecy line was spoken at ~28.7 s and the gift-card ask ended at 36.3 s, so the alert was ~21 s ahead of the secrecy line and ~29 s ahead of the gift-card ask (n=1 call, synthetic caller; it alerts on the opening authority claim, not on a payment ask).
 - Follow-up: "What about STT delay?" -> endpoint silence 450 ms plus ~0.4-0.5 s STT measured on synthetic audio (DECISIONS.md), so an ask is flagged about 1-2 s after it is said, not instantly.
 - Don't say: "real-time" without the number; "instant".
 
@@ -74,7 +74,7 @@ Shower (drives the screen): Kareem when Ayman answers, and the reverse.
 ## Claims audit (README / DECISIONS / RUNBOOK vs RESULTS.md, done 2026-11-08)
 - Fixed: README "63 recorded answers" -> 87 entries (cache size read from the file); README "Ollama-style server" -> llama.cpp OpenAI-compatible; RUNBOOK "NEEDS eng3's OpenAI-style local.py / trunk speaks Ollama" (stale since 20ca58a); DECISIONS "finals only, no partials" (interim partials exist since TASK-008.2).
 - Checked and consistent with RESULTS.md: local 33/33, 2/27, p50 1606 ms; prodrules 24/33, 1/27; AI-flag FP 27/55 to 1/55; asks precision 36% to 65%, recall 95% to 85%.
-- Not verifiable from files: "alert 20+ s before the first ask on the demo recording" (see card 3).
+- "Alert 20+ s before the first ask on the demo recording": now measured, see `detection/eval/DEMO_TIMING.md` (alert +7.5 s; secrecy line ~28.7 s; gift-card ask ended 36.3 s; n=1).
 
 ## Known gaps (disclose, do not patch during judging)
 - Cloud not scored on test (429). Disclose: "we have no cloud test number; the key was rate-limited."
