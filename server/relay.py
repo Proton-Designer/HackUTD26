@@ -100,7 +100,7 @@ async def caller_frame(call_id, frame):
 
 async def _p2_pump(s):
     import websockets
-    ws = None; skip = set()
+    ws = None; skip = set(); sent = 0; ever = False   # sent/ever feed the per-call connect/close log (warning level so uvicorn shows it)
     try:
         while True:
             frame = await s.p2_q.get()
@@ -115,7 +115,9 @@ async def _p2_pump(s):
                 try:
                     ws = await asyncio.wait_for(_connect_p2(url), 2)
                     for h in s.header:  # late connect: replay connected/start so P2 sees the stream header
-                        await ws.send(json.dumps(h)); skip.add(h["event"])
+                        await ws.send(json.dumps(h)); skip.add(h["event"]); sent += 1
+                    ever = True
+                    log.warning("P2 connected call=%s", s.call_id[:8])
                     if frame.get("event") in skip:
                         skip.discard(frame["event"]); continue
                 except Exception as e:
@@ -124,6 +126,7 @@ async def _p2_pump(s):
             try:
                 t0 = time.time()
                 await asyncio.wait_for(ws.send(json.dumps(frame)), 1)
+                sent += 1
                 if frame.get("event") == "media":
                     if int(frame["media"].get("chunk", 0) or 0) % SAMPLE == 1:
                         _lat("relay_p2_send_ms", s.call_id, (time.time() - t0) * 1000)
@@ -137,6 +140,7 @@ async def _p2_pump(s):
     except Exception:
         log.exception("p2 pump crashed")
     finally:
+        log.warning("P2 closed call=%s frames_sent=%d connected=%s", s.call_id[:8], sent, ever)   # also when it never connected: frames_sent=0 connected=False
         if ws is not None:
             try: await ws.close()
             except Exception: pass

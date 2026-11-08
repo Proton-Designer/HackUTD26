@@ -106,3 +106,29 @@ def test_p2_token_never_in_url_or_plaintext_remote(monkeypatch):
         except ConnectionError as e: assert "URL" in str(e) and "tok" not in str(e)
         return "refused"
     assert run(go()) == "refused"
+
+
+def test_p2_connect_and_close_logged_with_frames_sent(monkeypatch, caplog):
+    import logging
+    async def go(url):
+        async def h2(ws):
+            async for m in ws: pass
+        s2, port2 = await _server(h2)
+        monkeypatch.setenv("P2_STT_URL", url.format(port=port2))
+        monkeypatch.delenv("PIPELINE_TOKEN", raising=False)
+        async def to_caller(f): pass
+        await relay.open("c9abcdefgh", to_caller)
+        await relay.caller_frame("c9abcdefgh", {"event": "connected"})
+        await relay.caller_frame("c9abcdefgh", {"event": "start", "stream_id": "S", "start": {}})
+        for i in range(1, 4): await relay.caller_frame("c9abcdefgh", fr(i))
+        await asyncio.sleep(0.2)
+        await relay.close("c9abcdefgh"); s2.close()
+    with caplog.at_level(logging.WARNING, logger="hub.relay"):
+        run(go("ws://127.0.0.1:{port}"))
+    msgs = [r.getMessage() for r in caplog.records]
+    assert "P2 connected call=c9abcdef" in msgs
+    assert any(m.startswith("P2 closed call=c9abcdef frames_sent=5 connected=True") for m in msgs)
+    caplog.clear()
+    with caplog.at_level(logging.WARNING, logger="hub.relay"):
+        run(go("ws://127.0.0.1:1"))      # never connects
+    assert any("frames_sent=0 connected=False" in r.getMessage() for r in caplog.records)
