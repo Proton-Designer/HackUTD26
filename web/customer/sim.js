@@ -4,6 +4,7 @@
 (() => {
   "use strict";
   const HUB = BF.hub; if (!HUB) return;
+  const LOCAL_HUB = (() => { try { return ["localhost", "127.0.0.1", "[::1]"].includes(new URL(HUB).hostname); } catch (e) { return false; } })();   // loopback pages are authorized without a token
   const qs = new URLSearchParams(location.search), $ = id => document.getElementById(id);
   const p = qs.get("simwav"), WAV = HUB + (p && /^\/[^/]/.test(p) ? p : "/demo/caller.wav");   // same hub only
   let a = null, t0 = null, tapped = false, held = false, tapT = null;
@@ -70,16 +71,18 @@
     clearTimeout(lwsT); lwsExpected = true; try { lws && lws.close(); } catch (e) {} lws = null;   // a socket for another call is replaced
     dcid = cid; lwsCid = cid; lwsExpected = false;
     let tok = null; try { tok = BF.deviceToken && BF.deviceToken(); } catch (e) {}
+    if (!tok && !LOCAL_HUB) { stats.state = "unpaired"; lwsCid = null; return; }   // a remote page with no device token is never authorized for /listen: don't knock (live 09:46/09:54: a spectator /app/ tab 403-looped 7x per handoff)
     try {
       const url = HUB.replace(/^http/, "ws") + "/listen/" + encodeURIComponent(cid);   // token travels as a subprotocol, never in the URL
       const w = lws = tok ? new WebSocket(url, ["bf-device", tok]) : new WebSocket(url);
       stats.state = "connecting";
-      w.onopen = () => { stats.state = "open"; lwsTry = 0; };
+      w.onopen = () => { stats.state = "open"; lwsTry = 0; w.__opened = true; };
       w.onmessage = m => { let j; try { j = JSON.parse(m.data); } catch (e) { return; } if (j && j.track === want && j.payload) { if (!stats.frames) decoyLabel(true); decoyPlay(j.payload); } };
       w.onclose = ev => {
         if (lws === w) lws = null;
         const final = ev && [1000, 1008, 1013].includes(ev.code);   // 1000 = the hub REPLACED this socket (another tab/device took over) or ended it: reconnecting would ping-pong forever
-        if (lwsExpected || final || active !== cid || lwsTry >= 6) { if (!lwsExpected) stats.state = "closed"; return; }
+        const maxTry = w.__opened ? 6 : 1;   // a handshake the hub refused (403: not paired / unknown call) reaches the page as 1006 with no onopen: that is a verdict, not a blip -> one retry, not six
+        if (lwsExpected || final || active !== cid || lwsTry >= maxTry) { if (!lwsExpected) stats.state = w.__opened ? "closed" : "refused"; return; }
         stats.state = "reconnecting"; lwsT = setTimeout(() => { if (active === cid && !lws) decoyStart(cid); }, Math.min(4000, 500 * 2 ** lwsTry++));   // unexpected close during the call: back off, retry
       };
       w.onerror = () => { stats.state = "error"; };   // fail soft: the handoff screen still works
