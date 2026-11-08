@@ -146,7 +146,7 @@ def seed(force: bool = False, quiet: bool = False) -> dict:
     today = date.today()
     d = lambda n: (today - timedelta(days=n)).isoformat()
 
-    maria_c = _customer("Demo", "Customer")
+    maria_c = _customer("Customer", "(sandbox)")
     maria_a, _ = _checking(maria_c, "Customer checking (synthetic)", 4200)
     merchants = []
     for name, cat in MERCHANTS:
@@ -186,7 +186,7 @@ def seed(force: bool = False, quiet: bool = False) -> dict:
 
     ids = {"_note": "Synthetic Nessie sandbox objects for the Backfire demo (python -m intel.seed_nessie). No real people.",
            "created": time.strftime("%Y-%m-%dT%H:%M:%S"), "base": N.BASE,
-           "maria": {"name": "Demo Customer", "customer_id": maria_c, "account_id": maria_a},
+           "maria": {"name": "Customer (sandbox)", "customer_id": maria_c, "account_id": maria_a},
            "others": others,
            "payee": {"label": "SIMULATED scammer destination", "customer_id": payee_c, "account_id": payee_a},
            "merchants": merchants, "evidence_transfer_ids": evidence}
