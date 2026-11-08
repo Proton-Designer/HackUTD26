@@ -1,4 +1,4 @@
-"""Stand-in decoy persona (SIMULATED): when no real P3 decoy is configured, play a few pre-generated "confused elderly Maria" lines to the caller
+"""Stand-in decoy persona (SIMULATED): when no real P3 decoy is configured, play a few pre-generated neutral, name-free lines to the caller
 instead of echoing the scammer. Synthetic voice (macOS say + ffmpeg -> raw PCMU 8 kHz), generated once into logs/decoy_lines/ (gitignored).
 Served as WS /decoy-standin/{call_id} speaking the same frames as P3 (media events with base64 PCMU payload). Env DECOY_STANDIN=persona|echo
 (default persona); server/relay.py picks the URL (see wip/eng2-relay-persona.patch.txt). Fail open: if audio can't be generated, it stays silent."""
@@ -8,13 +8,13 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 log = logging.getLogger("voip.persona")
 router = APIRouter()
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-LINES = [  # synthetic; no real people
-    "Oh dear... which card did you say?",
-    "Hold on, dear... let me find my glasses.",
-    "Can you spell that again for me, dear?",
-    "I'm sorry, I don't hear so well. Could you say that a little slower?",
-    "My grandson usually helps me with this... is that alright?",
-    "Oh my... where do I find the numbers on the back?",
+LINES = [  # synthetic; neutral adult, name-free and persona-free (no age, family or backstory)
+    "Sorry, which card did you say?",
+    "Hold on a second, let me grab that.",
+    "Can you spell that again for me?",
+    "I'm sorry, the line is bad. Could you say that a little slower?",
+    "Okay, give me a moment to write that down.",
+    "Right... where do I find the numbers on the back?",
 ]
 GAP_S = float(os.environ.get("DECOY_LINE_GAP_S", "2.5"))
 FRAME_BYTES = 160   # 20 ms of PCMU 8 kHz
