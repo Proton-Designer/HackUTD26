@@ -112,3 +112,33 @@ nav#tabs button.on{background:#fff;color:#000;border-color:#fff}
   html,body{background:#05060a}
   #phone{min-height:0;height:min(880px,calc(100dvh - 32px));margin:16px auto;border-radius:36px;border:10px solid #1b1f2a;box-shadow:0 20px 60px #000a;overflow:auto;box-sizing:border-box}
 }
+
+/* Alert on screen (P4a polish): the warning + chips + all three choices fit one 390x844 screen without scrolling.
+   Secondary lines step aside while the alert is up; "Hang up" in the alert replaces the duplicate End call button. */
+#active:has(#alertBox:not([hidden])){padding-top:1vh;gap:8px}
+#active:has(#alertBox:not([hidden])) h1{font-size:1.35rem;margin:0}
+#active:has(#alertBox:not([hidden])) .number{font-size:.95rem}
+#active:has(#alertBox:not([hidden])) .talk-title,
+#active:has(#alertBox:not([hidden])) .talk-hint,
+#active:has(#alertBox:not([hidden])) .ear,
+#active:has(#alertBox:not([hidden])) #keepOpen,
+#active:has(#alertBox:not([hidden])) #endBtn,
+#active:has(#alertBox:not([hidden])) .decoy{display:none}
+#active:has(#alertBox:not([hidden])) .mic{width:52px;height:52px;font-size:1.4rem;border-width:3px}
+#active:has(#alertBox:not([hidden])) .alert{padding:12px;gap:10px}
+#active:has(#alertBox:not([hidden])) .alert-title{font-size:1rem;line-height:1.25}
+#active:has(#alertBox:not([hidden])) .chips{gap:6px}
+#active:has(#alertBox:not([hidden])) .chips li{padding:4px 10px;font-size:.75rem}
+#active:has(#alertBox:not([hidden])) .alert .big{min-height:52px;font-size:1.1rem;border-radius:14px}
+/* Handed off to the decoy (P4a polish): same fit-one-screen rule; the earphone checkbox doesn't matter while
+   Backfire talks, and End call must stay on screen. */
+#active:has(#handoffMsg:not([hidden])){padding-top:1vh;gap:8px}
+#active:has(#handoffMsg:not([hidden])) h1{font-size:1.35rem;margin:0}
+#active:has(#handoffMsg:not([hidden])) .number{font-size:.95rem}
+#active:has(#handoffMsg:not([hidden])) .talk-title,
+#active:has(#handoffMsg:not([hidden])) .ear{display:none}
+#active:has(#handoffMsg:not([hidden])) .mic{width:52px;height:52px;font-size:1.4rem;border-width:3px}
+#active:has(#handoffMsg:not([hidden])) .talk-hint{font-size:.9rem}
+#active:has(#handoffMsg:not([hidden])) .handoff{font-size:1.15rem;padding:12px}
+#active:has(#handoffMsg:not([hidden])) .decoy{font-size:.85rem;padding:8px 12px}
+#active:has(#handoffMsg:not([hidden])) .keep-open{font-size:.72rem}
