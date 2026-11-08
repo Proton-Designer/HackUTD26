@@ -98,9 +98,9 @@ Result: no alert moved by more than 0.2 s versus the earlier numbers, 0 new fals
 ## Labels for the three calls added in TASK-071 (lead's reading of logs/p2.log finals, 06:01)
 | call | start (CT) | label | replay alert | result |
 |---|---|---|---|---|
-| 93c95fd6 | 03:34 | SCAM (IRS "Officer Daniel Brooks", warrant, settle $4,800 now) | +18.04 s | true positive |
-| a9142648 | 05:08 | SCAM (IRS unpaid taxes + SSN ask) | +13.13 s | true positive |
-| ba80d152 | 05:37 | SCAM (IRS + gift cards + tell nobody) | +13.49 s | true positive |
+| 93c95fd6 | 03:34 | real PSTN, SCAM (IRS "Officer Daniel Brooks", warrant, settle $4,800 now) | +18.04 s | true positive |
+| a9142648 | 05:08 | real PSTN, SCAM (IRS unpaid taxes + SSN ask) | +13.13 s | true positive |
+| ba80d152 | 05:37 | real PSTN, SCAM (IRS + gift cards + tell nobody) | +13.49 s | true positive |
 PSTN vs simulated for these three: not stated in any file I have (not guessed; asked the lead).
 
 ## Caller-track mute (TASK-083, read only, 06:05; per-second RMS of the caller track in logs/audio, aggregates only)
