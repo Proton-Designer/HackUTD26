@@ -241,3 +241,25 @@ def test_demo_config_env_override(monkeypatch):
     assert c["placeholder"] is False
     kinds = [i["kind"] for i in demo_config.judge_haul(c)]
     assert kinds.count("instruction_to_ai") == 2 and "domain" in kinds
+
+
+def test_seed_demo_idempotent_and_judge_confirms_live(store, events):
+    from intel import seed_demo
+    from intel.demo_config import SEED_NUMBER, judge_haul
+    agent.run("junk", HAUL, store, calling_number="+1 555 555 0000", tools=fixture_tools(), emit=cap(events),
+              use_llm=False)  # leftover rehearsal state
+    seed_demo.seed(store, quiet=True)
+    first = store.state()
+    info = seed_demo.seed(store, quiet=True)
+    again = store.state()
+    assert info["status"] == "observed" and info["sightings"] == 1
+    assert len(first["campaigns"]) == len(again["campaigns"]) == 1 and again["immunity"] == 0
+    assert not store.is_blocked(SEED_NUMBER)[0]        # seed is a sighting, not a block on Maria's list
+    events.clear()
+    r = agent.run("judge", judge_haul(), store, calling_number=JUDGE_NUMBER, carrier="y", tools=fixture_tools(),
+                  llm=mock_llm, emit=cap(events))
+    assert r["campaign"]["status"] == "confirmed" and r["campaign"]["campaign_id"] == info["campaign_id"]
+    camp_blocks = [e["data"]["number"] for e in events if e["type"] == "blocklist.updated" and e["data"]["scope"] == "campaign"]
+    assert "4695550100" in camp_blocks and r["immunity"] > 0
+    assert any(e["type"] == "intel.action" and e["data"]["kind"] == "callback_protection_warning"
+               and e["data"]["status"] == "applied" for e in events)

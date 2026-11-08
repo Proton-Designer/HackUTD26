@@ -24,6 +24,10 @@ caller for her. Routing: `intel.store.is_blocked(number) -> (bool, reason)`. Pro
 `intel_api.protection_entries()` / `intel_api.undo_block(token)`. Key: NVIDIA_API_KEY from env or repo-root .env.
 Model: INTEL_MODEL (default nvidia/nemotron-3.5-super-vl-120b-a12b).
 
+Rehearsal reset (idempotent, ~5 ms, no network): `python -m intel.seed_demo` clears the intel DB and seeds one
+synthetic sighting from "yesterday" sharing the demo wallet + callback, so the judge's call confirms the campaign live.
+`--check` prints counts only.
+
 Demo values (domain, wallet, callback, numbers) live in intel/demo_config.json; swap with
 BACKFIRE_DEMO_DOMAIN=... BACKFIRE_DEMO_WALLET=... (env) or edit the JSON. Placeholders until the team picks real ones.
 
