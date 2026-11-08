@@ -49,7 +49,11 @@ STRONG_KINDS = {"payment_handle", "domain", "url", "wallet"}
 WRAP_TURNS = int(__import__("os").environ.get("DECOY_WRAP_TURNS", "3"))
 WRAP_LINE = "Okay, I've got all of that written down. I'm going to go take care of it right now. Bye bye."
 FILLER_AFTER_S = 0.6       # play a filler only if Nemotron hasn't answered by then
-STALLS = ["Hold on, let me find my glasses.", "Oh, sorry, the line went funny. Say that again?"]
+STALLS = ["Hold on, let me find my glasses.", "Oh, sorry, the line went funny. Say that again?",
+          "Sorry, can you repeat that? I was writing.", "Wait, wait, slow down a little for me.",
+          "Hmm, hang on, I dropped my pen.", "Sorry, it's a bit noisy here. What was that last part?",
+          "One second, let me get a piece of paper.", "Okay, okay. And then what do I do?"]
+LLM_RETRY_WITHIN_S = 3.0   # a fast failure (e.g. 429) gets one retry after a short backoff before we stall (#92)
 
 
 PROXY_HEADERS = ("cf-connecting-ip", "cf-ray", "x-forwarded-for", "x-forwarded-host", "forwarded", "x-real-ip")
@@ -106,7 +110,9 @@ async def voice_enroll(body: dict = Body(...)):
     except ValueError as e:
         raise HTTPException(400, str(e))
     # voice.enrolled is published by the hub's proxy (server/voice.py), the only caller; emitting here too would duplicate it.
-    return {"voice_id": vid}
+    q = (voice._meta().get(vid) or {}).get("quality") or {}
+    # additive: 'quality' = "ok" or a RE-RECORD reason the page can show (phone-quality audio clones at ~60%)
+    return {"voice_id": vid, "quality": q.get("verdict", "ok"), "above_4k_pct": q.get("above_4k_pct")}
 
 
 @app.delete("/voice/{voice_id}", dependencies=[Depends(require)])
@@ -156,6 +162,7 @@ class Session:
         self.last_barge = 0.0
         self.spoke: list[tuple[float, float]] = []   # recent (start, end) of our speech, for echo-utterance filtering
         self.stalls: list[list[bytes]] = []
+        self.last_stall = -1
         self.arts: dict[str, dict] = {}      # haul so far, deduped (incremental extraction during the call)
         self.extracted_upto = 0
         self.extracting = False
@@ -357,6 +364,13 @@ class Session:
                 except Exception as e:
                     log.warning("LLM failed: %s", type(e).__name__)
                     out = None
+                if not out and time.monotonic() - t0 < LLM_RETRY_WITHIN_S:   # fast failure (429 etc): one retry
+                    await asyncio.sleep(0.4)
+                    try:
+                        out = await asyncio.wait_for(core.chat([{"role": "system", "content": core.SYSTEM}] + self.history[-16:]),
+                                                     max(1.0, LLM_TIMEOUT_S - (time.monotonic() - t0)))
+                    except Exception as e:
+                        log.warning("LLM retry failed: %s", type(e).__name__)
                 llm_ms = int((time.monotonic() - t0) * 1000)
                 await self.hold_floor()
                 if self.pending and redo < REDO_MAX:
@@ -367,7 +381,9 @@ class Session:
                     log.info("turn %s: caller kept talking, re-thinking (%d)", self.call_id, redo)
                     continue
                 redo = 0
-                out = out or random.choice(STALLS)
+                if not out:   # stall, never the same line twice in a row
+                    i = random.choice([k for k in range(len(STALLS)) if k != self.last_stall])
+                    self.last_stall, out = i, STALLS[i]
                 hist, spoken = core.guard(out, self.persona, self.given, self.ev)
                 self.history.append({"role": "assistant", "content": hist})
                 tts_ms = await self.say(spoken, llm_ms)
