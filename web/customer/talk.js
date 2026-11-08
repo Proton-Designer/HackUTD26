@@ -9,9 +9,9 @@
   let acc = new Uint8Array(160), n = 0, sum = 0, cnt = 0, t = 0, level = 0;
   // Echo control. (1) voice gate: send only while the mic is above an adaptive floor (3x median of the last 2 s, with a 300 ms hangover).
   // (2) half-duplex duck: while the caller is audible on the speaker, send only if the mic is clearly louder (+10 dB) than the playback, unless she says she wears earphones.
-  const GATE_MIN = 0.006, FLOOR_X = 3, HANG_MS = 300, PLAY_T = 0.01, DUCK_X = 3.16;
+  const GATE_MIN = 0.006, FLOOR_X = 3, HANG_MS = 300, PLAY_T = 0.01, DUCK_X = 1.6;
   let nf = 0.002, gateUntil = 0, playHist = [], earphones = false, fbuf = null;
-  try { earphones = localStorage.getItem("bf.earphones") === "1"; } catch (e) {}
+  try { earphones = localStorage.getItem("bf.earphones") !== "0"; } catch (e) {}   // demo default: earphones ticked (only an explicit untick stores "0")
   const stats0 = { gate: "closed", duck: false };
   const stats = BF.talkStats = { frames: 0, state: "idle", mic: "off" };
   const ulaw = s => { s = Math.max(-1, Math.min(1, s)) * 32767 | 0; let sign = 0; if (s < 0) { s = -s; sign = 0x80; } s = Math.min(s, 32635) + 132; let e = 7; for (let m = 0x4000; (s & m) === 0 && e > 0; e--, m >>= 1); return ~(sign | (e << 4) | ((s >> (e + 3)) & 15)) & 255; };
