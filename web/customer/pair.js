@@ -27,7 +27,7 @@
     $("pairBtn").disabled = true; $("pairMsg").classList.remove("err"); $("pairMsg").textContent = "Connecting…";
     try { await post(pin); location.reload(); }                     // restart cleanly with the token (voip token fetch too)
     catch (e) {
-      $("pairMsg").classList.add("err"); $("pairMsg").textContent = String(e.message) === "429" ? "Too many tries. Wait a minute." : "That code did not work. Check it and try again.";
+      $("pairPin").value = ""; $("pairMsg").classList.add("err"); $("pairMsg").textContent = String(e.message) === "429" ? "Too many tries. Wait a minute." : "That code did not work. Check it and try again.";
       $("pairBtn").disabled = false;
     }
   }
@@ -60,4 +60,6 @@
         });
     });
   } else if (!BF.deviceToken()) BF.authReady = probe();
+  // UI review 3 (H): a #pair= link opened in a tab that already shows the app only changes the hash: reload so the normal path pairs
+  window.addEventListener("hashchange", () => { if (/[#&]pair=\d{6}/.test(location.hash)) location.reload(); });
 })();

@@ -52,7 +52,7 @@
       stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
       src = ctx.createMediaStreamSource(stream); proc = ctx.createScriptProcessor(2048, 1, 1);
       proc.onaudioprocess = onAudio; src.connect(proc); proc.connect(ctx.destination);   // output stays silent (we never write to outputBuffer)
-      stats.mic = "on"; hint("Use earphones so the caller doesn't hear themselves.");
+      stats.mic = "on"; hint(earphones ? "You're on the call. Speak normally." : "Use earphones so the caller doesn't hear themselves.");
     } catch (e) { stats.mic = "blocked"; stream = null; hint("The microphone is blocked. Allow it in your browser, then tap the mic button."); }
     starting = false;
   }
@@ -65,7 +65,7 @@
     b.disabled = handed; b.setAttribute("aria-pressed", String(muted));
     b.innerHTML = handed ? ICON.shield : muted ? ICON.off : ICON.mic;
     b.setAttribute("aria-label", handed ? "Backfire is talking for you" : muted ? "Muted. Tap to unmute" : "Microphone on. Tap to mute");
-    if (handed) hint("Backfire is talking to the caller for you."); else if (muted) hint("You are muted. The caller can't hear you."); else if (stats.mic === "on" || /Backfire is talking/.test(($("talkHint") || {}).textContent || "")) hint("Use earphones so the caller doesn't hear themselves.");
+    if (handed) hint("Backfire is talking to the caller for you."); else if (muted) hint("You are muted. The caller can't hear you."); else if (stats.mic === "on" || /Backfire is talking/.test(($("talkHint") || {}).textContent || "")) hint(earphones ? "You're on the call. Speak normally." : "Use earphones so the caller doesn't hear themselves.");
   }
   const TAB = Math.random().toString(36).slice(2), lock = k => { try { const j = JSON.parse(localStorage.getItem(k) || "null"); return j && j.tab !== TAB && Date.now() - j.ts < 4000; } catch (e) { return false; } };
   const hold = k => { try { localStorage.setItem(k, JSON.stringify({ tab: TAB, ts: Date.now() })); } catch (e) {} };

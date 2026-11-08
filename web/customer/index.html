@@ -32,7 +32,7 @@ if (!Element.prototype.replaceChildren) Element.prototype.replaceChildren = func
 <main id="phone" data-state="idle">
   <p id="a2hs" class="hint-bar" hidden role="note"><span id="a2hsText">Add Backfire to your Home Screen: tap Share, then Add to Home Screen.</span> <button id="a2hsClose" aria-label="Close">OK</button></p>
   <header class="status">
-    <img class="flame" src="assets/backfire-flame.png" alt="" width="14" height="21"><span id="clock">9:41</span>
+    <img class="flame" src="assets/backfire-flame.png" alt="Backfire" width="14" height="21">
     <button class="chip-icon sound off" id="sound" type="button" aria-label="Sound off. Tap to turn sound on" title="Sound"></button>
     <span class="badge guard watching" id="guard">Live Guard on</span>
   </header>
@@ -83,7 +83,7 @@ if (!Element.prototype.replaceChildren) Element.prototype.replaceChildren = func
         <div class="meter" aria-hidden="true"><i id="talkLevel"></i></div>
         <span id="micDot" class="dot idle" role="img" aria-label="Not sending" title="Not sending"></span>
       </div>
-      <p class="talk-hint" id="talkHint">Use earphones so the caller doesn't hear themselves.</p>
+      <p class="talk-hint" id="talkHint">You're on the call. Speak normally.</p>
     </div>
 
     <p id="decoyMsg" class="decoy" hidden>Listening to Backfire's decoy</p>
@@ -100,18 +100,18 @@ if (!Element.prototype.replaceChildren) Element.prototype.replaceChildren = func
   <section id="ended" class="screen" hidden>
     <div class="idle-only">
       <div class="glow"><img src="assets/backfire-flame.png" alt="" width="64" height="96"></div>
-      <h1>You're protected</h1>
-      <p class="lead">Backfire listens to the caller's side of calls from numbers you don't know.</p>
+      <h1 id="homeTitle">You're protected</h1>
+      <p class="lead" id="homeLead">Backfire listens to the caller's side of calls from numbers you don't know.</p>
       <p id="homeNote" class="note" role="status"></p>
       <p id="iosTip" class="tip-line" role="note" hidden><span>Keep Backfire open during calls. If you switch apps, the call audio can pause.</span><button id="iosTipOk" type="button" aria-label="Got it, hide this tip">Got it</button></p>
-      <button id="voiceCard" class="home-card" type="button" hidden><span class="hc-main">Make Backfire sound like you <span class="hc-time">· 20 sec</span></span><span class="hc-sub">Optional. Scammers hear a synthetic voice until then.</span></button>
+      <button id="voiceCard" class="home-card" type="button" hidden><span class="hc-main">Make Backfire sound like you <span class="hc-time">· 20 sec</span></span><span class="hc-sub">Optional. Takes about 20 seconds.</span></button>
     </div>
     <div class="ended-only">
       <h1 id="endedTitle">Call ended</h1>
       <p class="lead" id="endedMsg"></p>
       <ul id="summary" class="summary" hidden aria-label="Call summary"></ul>
     </div>
-    <div class="stats" aria-label="Your protection so far">
+    <div class="stats" id="statsBox" aria-label="Your protection so far">
       <div><b id="statCalls">0</b><span>Calls handled</span></div>
       <div><b id="statBlocked">0</b><span>Numbers blocked</span></div>
     </div>

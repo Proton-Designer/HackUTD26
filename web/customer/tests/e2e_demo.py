@@ -196,7 +196,7 @@ def main():
             check("6", "ended screen shows a call summary (duration + Backfire row)", pg.locator("#summary").is_visible() and "Backfire" in pg.inner_text("#summary"), pg.inner_text("#summary") if pg.locator("#summary").count() else "no #summary")
             check("6", "summary says synthetic voice when no voice is enrolled", "synthetic voice" in pg.inner_text("#summary") and "your voice" not in pg.inner_text("#summary"), pg.inner_text("#summary"))
             num = wait_for(lambda: (lambda t: t if t and "Checking" not in t else None)(pg.evaluate("(document.getElementById('sumBlocked')||{}).textContent || ''")), 8)
-            check("6", "summary 'Number: Checking...' resolves (Blocked for you / Reported) within ~5 s", num in ("Blocked for you", "Reported"), str(num))
+            check("6", "summary 'Number: Checking...' resolves (Blocked for you / Reported) within ~5 s", num in ("Blocked for you", "Sent to Backfire"), str(num))
             check("6", "badge reset to Live Guard on after the call", "Live Guard on" in pg.inner_text("#guard"), pg.inner_text("#guard"))
             time.sleep(0.5); pg.evaluate("BF.view('protView')"); time.sleep(0.6); shot("06-protection")
             # 6b. fixed bottom navigation: same place/size on Home and Protection, at the top and scrolled to the bottom, never hidden by a tab switch, never covers content
@@ -231,8 +231,25 @@ def main():
             pg.evaluate("""id => { const t = new Date().toISOString(); for (const [type, data] of [["call.incoming", {from: "+15555550123"}], ["call.routed", {decision: "LIVE_GUARD"}], ["alert.fired", {level: "first", why_chips: ["Asks for gift cards"]}], ["handoff.started", {}], ["call.ended", {ended_by: "caller"}]]) BF.deliver({type, call_id: id, ts: t, data}); }""", fake)
             check("8", "summary shows 'Checking...' right after a call with no block yet", "Checking" in pg.evaluate("(document.getElementById('sumBlocked')||{}).textContent || ''"))
             num2 = wait_for(lambda: (lambda t: t if "Checking" not in t else None)(pg.evaluate("(document.getElementById('sumBlocked')||{}).textContent || ''")), 8)
-            check("8", "no blocklist.updated: 'Checking...' falls back to 'Reported' after ~5 s", num2 == "Reported", str(num2))
+            check("8", "no blocklist.updated: 'Checking...' falls back to 'Sent to Backfire' after ~5 s", num2 == "Sent to Backfire", str(num2))
             shot("08-summary-reported")
+            # 9. UI review 3: red flags accumulate across alerts; a double tap on Fire Back sends ONE action; Live Guard off never says "protected"
+            fk = "e2e-r3-" + os.urandom(3).hex()
+            pg.evaluate("""id => { const t = new Date().toISOString(); for (const [type, data] of [["call.incoming", {from: "+15555550124"}], ["call.routed", {decision: "LIVE_GUARD"}]]) BF.deliver({type, call_id: id, ts: t, data}); }""", fk)
+            wait_for(lambda: pg.evaluate("BF.ui()") == "ringing"); pg.click("#answerBtn")
+            pg.evaluate("""id => { const t = new Date().toISOString(); BF.deliver({type: "alert.fired", call_id: id, ts: t, data: {level: "first", why_chips: ["Claims to be IRS", "Asks for gift cards"]}}); BF.deliver({type: "alert.fired", call_id: id, ts: t, data: {level: "realert", why_chips: ["Asks for your SSN"]}}); }""", fk)
+            n0 = len(pg.evaluate("window.__userActions")); pg.evaluate("() => { const b = document.getElementById('btnGets'); b.click(); b.click(); }")
+            fb = [a for a in pg.evaluate("window.__userActions")[n0:] if a["data"]["action"] == "scammer_get_scammed"]
+            check("9", "double tap on Fire Back sends exactly one action", len(fb) == 1, str(len(fb)))
+            pg.evaluate("""id => BF.deliver({type: "call.ended", call_id: id, ts: new Date().toISOString(), data: {ended_by: "caller"}})""", fk)
+            time.sleep(0.5); summ = pg.inner_text("#summary")
+            check("9", "summary keeps red flags from every alert (IRS, gift cards, SSN)", all(x in summ for x in ("IRS", "gift cards", "SSN")), summ.replace("\n", " | ")[:160])
+            pg.evaluate("BF.view('protView')"); time.sleep(0.4)
+            if pg.locator("#guardToggle").is_visible():
+                pg.click("#guardToggle"); time.sleep(0.3)
+                if pg.locator("#guardOffYes").is_visible(): pg.click("#guardOffYes")
+            pg.evaluate("BF.view('callView')"); time.sleep(0.4)
+            check("9", "Live Guard off: Home no longer says 'You're protected'", "Live Guard is off" in pg.inner_text("#homeTitle"), pg.inner_text("#homeTitle"))
             br.close()
     finally:
         try: os.killpg(hub.pid, 15)

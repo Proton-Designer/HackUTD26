@@ -21,7 +21,7 @@ h1,h2,h3,p,ul{margin:0}
 /* status row */
 .status{display:flex;align-items:center;gap:var(--sp2);padding:var(--sp3) 0 var(--sp2);min-height:56px}
 .status .flame{height:20px;width:auto;flex:none}
-#clock{margin-right:auto;font-size:var(--fs-lg);font-weight:600;font-variant-numeric:tabular-nums}
+
 .chip-icon{width:44px;height:44px;flex:none;border-radius:50%;border:0;background:var(--surface);color:var(--mut);font-size:0;cursor:pointer;display:grid;place-items:center}
 .chip-icon::before{content:"";width:20px;height:20px;background:currentColor;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 9.5v5h3.5l5 4v-13l-5 4zM16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 9.5v5h3.5l5 4v-13l-5 4zM16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat}
 .chip-icon.off{color:var(--amber-ink)}
@@ -262,3 +262,15 @@ details.keep[open] summary{margin-bottom:var(--sp1)}
   #tabs{position:sticky;bottom:0;left:auto;right:auto;margin:0 calc(-1 * var(--sp5));max-width:none;padding-bottom:var(--sp1)}
   #phone.tabs-on{padding-bottom:0}
 }
+
+/* UI review 3: trust bullets as one sentence; header without a fake clock; End call hidden while handing off; press feedback; disclosure chevron; checkbox tint */
+.trust li{display:block;position:relative;padding-left:32px}
+.trust li::before{position:absolute;left:0;top:2px}
+.status .flame{margin-right:auto}
+#active[data-handoff=pending] #endBtn{display:none}
+.big,.home-card,#tabs button,.undo{transition:transform .12s ease,opacity .12s ease}
+.big:active,.home-card:active,#tabs button:active,.undo:active{transform:scale(.98);opacity:.88}
+details.keep>summary{cursor:pointer}
+details.keep>summary::after{content:"";width:10px;height:10px;margin-left:auto;border-right:2px solid var(--mut);border-bottom:2px solid var(--mut);transform:rotate(45deg);transition:transform .15s ease}
+details.keep[open]>summary::after{transform:rotate(-135deg)}
+input[type=checkbox]{accent-color:var(--ok)}

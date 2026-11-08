@@ -38,7 +38,14 @@
   }
 
   // ---- guard badge ----
-  function applyGuard() { BF.guardOn = state.guardOn; if (BF.renderBadge) BF.renderBadge(); }
+  function applyGuard() { BF.guardOn = state.guardOn; if (BF.renderBadge) BF.renderBadge();
+    // UI review 3 (A): never say "protected" while Live Guard is off
+    const on = state.guardOn, t = $("homeTitle"), l = $("homeLead"), h = $("incomingHint");
+    if (t) t.textContent = on ? "You're protected" : "Live Guard is off";
+    if (l) l.textContent = on ? "Backfire listens to the caller's side of calls from numbers you don't know." : "Calls on this phone aren't being checked. Turn Live Guard on in Protection.";
+    if (h) h.textContent = on ? "If you answer, Backfire listens to the caller only." : "Live Guard is off for this phone.";
+    const sb = $("statsBox"); if (sb) sb.hidden = !(state.calls > 0 || state.blocked.length > 0);   // no 0 / 0 on a fresh install
+  }
 
   // ---- protection log ----
   const fmt = n => /^\+1\d{10}$/.test(n || "") ? `+1 (${n.slice(2, 5)}) ${n.slice(5, 8)}-${n.slice(8)}` : (n || "");
@@ -209,7 +216,7 @@
       state.voiceId = voice_id; store.set("voice", voice_id); done();
       if (quality && quality !== "ok") {                       // the hub graded the recording as poor: offer a re-record (the saved sample still works)
         lowQ = true; const why = String(quality).replace(/^RE-RECORD:?\s*/i, "").trim();
-        $("recStatus").textContent = "Saved, but the recording sounds like phone quality" + (why ? " (" + why + ")" : "") + (above4k != null ? ", " + above4k + "% of the sound above 4 kHz" : "") + ". For a closer match, record again in a quiet room.";
+        $("recStatus").textContent = "Saved, but the recording sounds like phone quality" + (why ? " (" + why + ")" : "") + "" + ". For a closer match, record again in a quiet room.";
         $("recSkip").hidden = false; $("recSkip").textContent = "Keep this voice and continue"; return;
       }
       toDns("Your voice is set up" + (HUB ? "" : " (simulated)") + (quality === "ok" ? " (recording quality: good)" : "") + ". Backfire is on. It keeps only a short voice sample, used only if you press Fire Back. You can delete it any time in Protection.");

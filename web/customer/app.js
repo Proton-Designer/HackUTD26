@@ -23,7 +23,7 @@
   // footer tells the truth about the mode: demo replay / recorded replay / simulated call / live call (Telnyx)
   BF.footer = () => { const f = document.getElementById("src"); if (f) f.parentNode.hidden = !qs.has("debug"); if (f) f.textContent = !HUB ? "Demo replay" : BF.replay ? "Replay · recorded demo" : BF.sim ? "Simulated call" : "Live call · Telnyx"; };
   // Phone-free sim mode (?sim=1 or hub flag SIM_MODE): no Telnyx login, the page rings/answers from hub events and plays the caller audio itself (sim.js). Fails soft to false.
-  BF.modeP = qs.has("sim") ? Promise.resolve({ sim: true }) : qs.has("talk") ? Promise.resolve({ listen: true, talk: true }) : qs.has("listen") ? Promise.resolve({ listen: true }) : HUB ? fetch(HUB + "/demo/status?format=json").then(r => r.json()).then(j => { const f = (j && j.flags) || {}; if (typeof f.CUSTOMER_NAME === "string") { try { document.title = "Backfire \u00b7 " + (f.CUSTOMER_NAME ? f.CUSTOMER_NAME + "\u2019s phone" : "phone"); } catch (e) {} } return { sim: !!f.SIM_MODE, listen: f.MARIA_LEG === "listen" || f.MARIA_LEG === "talk", talk: f.MARIA_LEG === "talk" }; }).catch(() => ({})) : Promise.resolve({});
+  BF.modeP = qs.has("sim") ? Promise.resolve({ sim: true }) : qs.has("talk") ? Promise.resolve({ listen: true, talk: true }) : qs.has("listen") ? Promise.resolve({ listen: true }) : HUB ? fetch(HUB + "/demo/status?format=json").then(r => r.json()).then(j => { const f = (j && j.flags) || {}; if (typeof f.CUSTOMER_NAME === "string") { try { document.title = f.CUSTOMER_NAME ? "Backfire \u00b7 " + f.CUSTOMER_NAME : "Backfire"; } catch (e) {} } return { sim: !!f.SIM_MODE, listen: f.MARIA_LEG === "listen" || f.MARIA_LEG === "talk", talk: f.MARIA_LEG === "talk" }; }).catch(() => ({})) : Promise.resolve({});
   BF.simP = BF.modeP.then(m => !!(m.sim || m.listen));   // true = no Telnyx login (phone-free sim, or listening mode where Maria's leg is not a SIP client)
   BF.modeP.then(m => { BF.listen = !!m.listen; BF.talk = !!m.talk; BF.sim = !!m.sim && !m.listen; BF.footer(); });
   // Device pairing (TASK-014): the hub issues a per-device token after the PIN is entered once. Every hub call goes through hubFetch.
@@ -146,7 +146,7 @@
         if (d.level === "first" && st.alerted) break;      // re-alert only on level: realert
         st.alerted = true; setBadge("alert"); renderChips(d.why_chips);
         { const tg = $("alertTag"), n = (d.why_chips || []).length, s = Math.max(+d.s || 0, st.risk || 0), tier = s >= 0.85 ? "High risk" : s >= 0.6 ? "Elevated risk" : n >= 2 ? "High risk" : "Possible risk";
-          if (tg) { tg.textContent = tier + (n ? " \u00b7 " + n + " signal" + (n > 1 ? "s" : "") : ""); tg.hidden = false; } st.chips = (d.why_chips || []).map(ACR); }
+          if (tg) { tg.textContent = tier + (n ? " \u00b7 " + n + " signal" + (n > 1 ? "s" : "") : ""); tg.hidden = false; } st.chips = [...new Set([...(st.chips || []), ...(d.why_chips || []).map(ACR)])]; }   // red flags accumulate across alerts (UI review 3, B)
         { const sub = document.querySelector("#btnGets .b-sub"); if (sub) sub.textContent = "Backfire talks to them in " + BF.voiceWord(); }
         $("alertBox").hidden = false; $("idleMsg").hidden = true; $("handoffMsg").hidden = true; $("active").dataset.handoff = "";
         twoBeeps(); break;
@@ -185,7 +185,7 @@
     box.hidden = !rows.length;
     const handed = st.handed;
     if (!st.blockedNow && $("sumBlocked")) st.sumT = setTimeout(() => { const b = $("sumBlocked"); if (!b || b.className === "ok") return;
-      if (handed) b.textContent = "Reported"; else b.parentNode.hidden = true; }, SUM_WAIT_MS);   // no block for this number (Continue, not a scam, or the event never came)
+      if (handed) b.textContent = "Sent to Backfire"; else b.parentNode.hidden = true; }, SUM_WAIT_MS);   // no block for this number (Continue, not a scam, or the event never came)
   }
   function ring() { if (st.callId && !st.answered && $("phone").dataset.state !== "ringing") { $("phone").dataset.state = "ringing"; show("incoming"); startRing(); } }
   // Handoff screen states (F3): pending -> done ("Backfire has the call") | failed (still on the call). data-view picks the layout.
@@ -208,7 +208,9 @@
   function showHandoff() { setBadge("handed"); $("alertBox").hidden = true; $("idleMsg").hidden = true; setHandoffUI("done"); }
 
   // ---- buttons ----
-  $("answerBtn").onclick = () => {
+  // UI review 3 (D): a double tap must not send two actions. Short lock, not a permanent disable (a failed handoff re-shows Fire Back).
+  const tapLock = {}; function once(id) { const now = Date.now(); if (tapLock[id] && now - tapLock[id] < 1500) return false; tapLock[id] = now; return true; }
+  $("answerBtn").onclick = () => { if (!once("answerBtn")) return;
     stopRing(); lockScreen(); emitUserAction("answer");   // the iOS keep-open tip is a one-time line on Home now, not on the call screen
     unlockAudio();                                   // tap unlocks audio so the alert beeps can play
     if (BF.voip) BF.voip.answer();                   // real WebRTC call, if one is ringing
@@ -217,11 +219,11 @@
     $("phone").dataset.state = "active"; show("active");
     if (!SERVER) scheduleAfterAnswer();
   };
-  $("declineBtn").onclick = () => { stopRing(); emitUserAction("decline"); if (BF.voip) BF.voip.hangup(); endCall("You declined the call."); };
-  $("endBtn").onclick = () => { emitUserAction("hang_up"); if (BF.voip) BF.voip.hangup(); stopReplay(); endCall("You ended the call."); };
-  $("btnContinue").onclick = () => { emitUserAction("continue"); setBadge("watching"); $("alertBox").hidden = true; $("idleMsg").hidden = false; };
-  $("btnGets").onclick = () => { emitUserAction("scammer_get_scammed"); if (SERVER) pendingHandoff(); else showHandoff(); };
-  $("btnHang").onclick = () => { emitUserAction("hang_up"); if (BF.voip) BF.voip.hangup(); stopReplay(); endCall("You hung up."); };
+  $("declineBtn").onclick = () => { if (!once("declineBtn")) return; stopRing(); emitUserAction("decline"); if (BF.voip) BF.voip.hangup(); endCall("You declined the call."); };
+  $("endBtn").onclick = () => { if (!once("endBtn")) return; emitUserAction("hang_up"); if (BF.voip) BF.voip.hangup(); stopReplay(); endCall("You ended the call."); };
+  $("btnContinue").onclick = () => { if (!once("btnContinue")) return; emitUserAction("continue"); setBadge("watching"); $("alertBox").hidden = true; $("idleMsg").hidden = false; };
+  $("btnGets").onclick = () => { if (!once("btnGets")) return; emitUserAction("scammer_get_scammed"); if (SERVER) pendingHandoff(); else showHandoff(); };
+  $("btnHang").onclick = () => { if (!once("btnHang")) return; emitUserAction("hang_up"); if (BF.voip) BF.voip.hangup(); stopReplay(); endCall("You hung up."); };
   $("replayBtn").onclick = start;
 
   // ---- sources ----
@@ -286,7 +288,6 @@
     h.hidden = false; $("a2hsClose").onclick = () => { h.hidden = true; try { localStorage.setItem("bf.a2hs", "1"); } catch (e) {} }; } catch (e) {} })();
   // iOS: one-time "keep Backfire open" tip on Home (UI review 2: not on the call screen)
   (function () { try { const t = $("iosTip"); if (!t || !IOS || localStorage.getItem("bf.iostip") === "1") return; t.hidden = false; $("iosTipOk").onclick = () => { t.hidden = true; try { localStorage.setItem("bf.iostip", "1"); } catch (e) {} }; } catch (e) {} })();
-  setInterval(() => { const n = new Date(); $("clock").textContent = (n.getHours() % 12 || 12) + ":" + String(n.getMinutes()).padStart(2, "0"); }, 1000);
   window.BF.deliver = onEvent; BF.endUI = endCall; BF.ui = () => $("phone").dataset.state;
   start();
 })();
