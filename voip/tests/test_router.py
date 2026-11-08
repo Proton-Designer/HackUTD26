@@ -439,3 +439,19 @@ def test_listen_hello_plays_once_then_silence(tmp_path, monkeypatch):
     asyncio.run(R._listen_hello(sid, send)); assert got == []     # decoy owns the line once handed off
     monkeypatch.setattr(R._persona, "generate_hello", lambda force=False: None)
     R.CALLS[sid]["handed_off"] = False; asyncio.run(R._listen_hello(sid, send)); assert got == []   # no audio -> silent, no error
+
+
+def test_persona_cache_rebuilds_when_voice_changes(tmp_path, monkeypatch):
+    from voip import persona as P
+    monkeypatch.setenv("DECOY_LINES_DIR", str(tmp_path)); monkeypatch.setattr(P.shutil, "which", lambda x: "/bin/" + x)
+    seen = []
+    def fake_run(cmd, **k):
+        if cmd[0] == "say": seen.append(cmd[cmd.index("-v") + 1]); pathlib_aiff = cmd[cmd.index("-o") + 1]; open(pathlib_aiff, "wb").write(b"x" * 2000)
+        else: open(cmd[-1], "wb").write(b"\xff" * 1600)
+        class R: returncode = 0
+        return R()
+    monkeypatch.setattr(P.subprocess, "run", fake_run)
+    monkeypatch.setenv("DECOY_VOICE", "VoiceA"); assert P.generate_hello() is not None; n = len(seen)
+    P.generate_hello(); assert len(seen) == n                                   # cached: same voice/rate/text
+    monkeypatch.setenv("DECOY_VOICE", "VoiceB"); P.generate_hello(); assert seen[-1] == "VoiceB" and len(seen) == n + 1   # voice changed -> rebuilt
+    assert "Yes, this is Maria" in P.HELLO_TEXT
