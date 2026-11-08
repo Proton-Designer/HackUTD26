@@ -6,7 +6,7 @@ say "the customer". Same claims as the deck and `pitch/script.md`; nothing here 
 
 **What to capture (raw clips):**
 - A. Customer's phone screen recording (iPhone or Android, web app): ringing, Answer, Live Guard, two beeps, the three buttons, tap Fire Back.
-- B. Scammer's side: Ayman on speaker reading Card 2 (line 1, payment line, Zelle line). Audio matters more than video.
+- B. Scammer's side: Ayman on speaker reading the demo card (line 1, payment line, Zelle line). Audio matters more than video.
 - C. Command center screen recording (1920x1080, browser full screen, no bookmarks bar): the whole call from ring to "Scammer get scammed. He got $0.", including the Approve click.
 - D. The callback: Ayman calls again and it never rings (phone screen stays idle; command center shows "rejected before it rang").
 - E. Deck slides 6, 7 and 8 as stills.

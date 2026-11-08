@@ -53,7 +53,7 @@ minutes" (longest call, not typical); "no carrier turns scam calls into intellig
 
 ## Demo block (1:30 to 3:00)
 
-Card for Ayman (same scam as slide 2; Card 2, "Bank Fraud Department", trimmed):
+Demo card for Ayman (same "safe account" scam as slide 2, trimmed to three lines; P1 lists it first in data/script-cards.md as the Judge card). Judges who call on their own pull from the bucket in data/script-cards-v3-bank.md (10 bank-fraud cards, all ending in the same Zelle payout):
 - Line 1: "Hi, this is the fraud team at your bank. Someone's draining your account right now. To protect your savings, you need to move them to a safe account. And don't tell anyone at the branch."
 - Payment line: "Our secure line is 1-888-555-0123, and the transfer portal is backfire-demo dot example."
 - **Zelle line (say it last, it triggers the bank ending):** "Open your banking app and send the $1,800 by Zelle to refunds dot dept at backfire dash demo dot example. That's the safe account."
@@ -97,6 +97,6 @@ is mock, and the bank-wide flag is a simulated payload."
 
 ## Open before judging
 - Ayman re-enrolls his voice with the fixed web recorder (quality check must say "ok"), so the clone sounds like him.
-- Judges must use Card 2 (or every card gets the Zelle line: Kareem's call), or the bank ending never fires.
+- Settled: every card in data/script-cards-v3-bank.md ends in Zelle to refunds.dept@backfire-demo.example for $1,800, so the bank ending fires on any card. Run /demo/reset between judges (one pending transfer per reset). Judges should read the whole card, at least through the code or payment ask.
 - Hub has the latest command center (reload `/command-center/` with Ctrl+F5) and `NESSIE_API_KEY` set (acceptance 12/12).
 - Confirm with an organizer that 4 minutes is pitch time, not the whole visit.
