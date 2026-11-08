@@ -242,25 +242,46 @@ async def _engine_score(window_text: str, metadata: dict, engine: str) -> dict:
     return raw
 
 
-FAILOVER_CLOUD_S = 2.5     # cloud attempt cap when local is reachable, so local still has budget inside OVERALL_TIMEOUT_S
+FAILOVER_CLOUD_S = 2.0     # cloud+probe cap when local is reachable; local then gets >= OVERALL_TIMEOUT_S - 2.0 = 2.0 s
+PROBE_TIMEOUT_S = 0.5
+_probe_lock = None
 _local = {"ok": False, "t": -1e9}
 FAILOVERS = {"n": 0}
 ENGINE_FAILED: dict = {}   # call_id -> True when the last detect() had no LLM result (rules-only because an engine failed); read by alert.py       # count of cloud->local failovers (log/diagnostics)
 
 
-async def _local_reachable() -> bool:
-    """Cached (10 s) probe of the local LLM server. Never raises; no per-call HTTP check."""
-    now = time.monotonic()
-    if now - _local["t"] < 10:
-        return _local["ok"]
-    _local["t"] = now
+def _set_failed(call_id, failed: bool):
+    """Flag read once by alert._hold. Bounded: evict the oldest entry, never clear (a live flag must survive)."""
     try:
-        import httpx
-        base = os.environ.get("LOCAL_LLM_URL", "http://127.0.0.1:11434").rstrip("/")
-        async with httpx.AsyncClient(timeout=1.0) as c:
-            _local["ok"] = (await c.get(base + "/v1/models")).status_code == 200
+        ENGINE_FAILED.pop(call_id, None)
+        ENGINE_FAILED[call_id] = failed
+        while len(ENGINE_FAILED) > 2000:
+            ENGINE_FAILED.pop(next(iter(ENGINE_FAILED)))
     except Exception:
-        _local["ok"] = False
+        pass
+
+
+async def _local_reachable() -> bool:
+    """Cached (10 s) probe of the local LLM server, one probe at a time (concurrent callers wait on the lock), capped at 0.5 s. Never raises."""
+    global _probe_lock
+    if time.monotonic() - _local["t"] < 10:
+        return _local["ok"]
+    try:
+        if _probe_lock is None:
+            _probe_lock = asyncio.Lock()
+        async with _probe_lock:
+            if time.monotonic() - _local["t"] < 10:
+                return _local["ok"]
+            try:
+                import httpx
+                base = os.environ.get("LOCAL_LLM_URL", "http://127.0.0.1:11434").rstrip("/")
+                async with httpx.AsyncClient(timeout=PROBE_TIMEOUT_S) as c:
+                    _local["ok"] = (await asyncio.wait_for(c.get(base + "/v1/models"), PROBE_TIMEOUT_S)).status_code == 200
+            except Exception:
+                _local["ok"] = False
+            _local["t"] = time.monotonic()
+    except Exception:
+        return False
     return _local["ok"]
 
 
@@ -273,27 +294,29 @@ async def detect(call_id: str, window_text: str, metadata: dict | None, engine: 
         raw, note = None, None
         t0 = time.monotonic()
         failover_ok = engine == "cloud" and os.environ.get("P2_FAILOVER", "1") != "0" and await _local_reachable()
+        cap = max(0.5, FAILOVER_CLOUD_S - (time.monotonic() - t0)) if failover_ok else OVERALL_TIMEOUT_S  # probe time comes out of the cloud share
         try:
-            raw = await asyncio.wait_for(_engine_score(text, metadata, engine), FAILOVER_CLOUD_S if failover_ok else OVERALL_TIMEOUT_S)
+            raw = await asyncio.wait_for(_engine_score(text, metadata, engine), cap)
         except Exception as e:  # fail open to rules only
             note = type(e).__name__
             log.warning("detect %s engine=%s fell back to rules: %s", call_id, engine, note)
         if raw is None and failover_ok:
             left = OVERALL_TIMEOUT_S - (time.monotonic() - t0)
             try:
-                if left > 0.3:
+                if left <= 0.3:
+                    log.warning("detect %s failover skipped: no budget left (%.2fs)", call_id, left)
+                else:
                     raw = await asyncio.wait_for(_engine_score(text, metadata, "local"), left)
                     engine = "local"; FAILOVERS["n"] += 1
                     log.warning("detect %s failover: cloud %s -> local", call_id, note)
             except Exception as e:
                 log.warning("detect %s failover to local failed: %s", call_id, type(e).__name__)
         out = merge(raw, rules, engine, text)
-        ENGINE_FAILED[call_id] = raw is None
-        if len(ENGINE_FAILED) > 2000:
-            ENGINE_FAILED.clear()
+        _set_failed(call_id, raw is None)
         if raw is None:
             out["scam_type"] = out["scam_type"] if out["asks"] else "unknown"
         return out
     except Exception:  # absolute last resort: valid low-risk shape
         log.exception("detect %s failed", call_id)
+        _set_failed(call_id, True)
         return schema.normalize({}, engine)

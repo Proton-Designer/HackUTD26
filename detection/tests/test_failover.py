@@ -78,3 +78,41 @@ def test_slow_cloud_leaves_budget_for_local(monkeypatch):
     monkeypatch.setattr(D, "FAILOVER_CLOUD_S", 0.2)
     patch(monkeypatch, slow, ok_local)
     assert run(D.detect("c", "hello there", {}, "cloud"))["engine"] == "local"
+
+
+def test_concurrent_calls_share_one_probe(monkeypatch):
+    calls = {"n": 0}
+    import httpx
+    class FakeResp: status_code = 200
+    class FakeClient:
+        def __init__(self, *a, **k): pass
+        async def __aenter__(self): return self
+        async def __aexit__(self, *a): return False
+        async def get(self, url):
+            calls["n"] += 1; await asyncio.sleep(0.1); return FakeResp()
+    monkeypatch.setattr(httpx, "AsyncClient", FakeClient)
+    D._local.update(ok=False, t=-1e9)
+    async def many(): return await asyncio.gather(*[D._local_reachable() for _ in range(6)])
+    assert all(run(many())) and calls["n"] == 1
+
+
+def test_probe_capped(monkeypatch):
+    import httpx, time
+    class FakeClient:
+        def __init__(self, *a, **k): pass
+        async def __aenter__(self): return self
+        async def __aexit__(self, *a): return False
+        async def get(self, url): await asyncio.sleep(5)
+    monkeypatch.setattr(httpx, "AsyncClient", FakeClient)
+    D._local.update(ok=False, t=-1e9)
+    t = time.monotonic()
+    assert run(D._local_reachable()) is False and time.monotonic() - t < 1.0
+
+
+def test_timeout_cloud_still_alerts_via_local(monkeypatch):
+    async def hang(): await asyncio.sleep(30)
+    monkeypatch.setattr(D, "FAILOVER_CLOUD_S", 0.3)
+    patch(monkeypatch, hang, ok_local)
+    import time; t = time.monotonic()
+    assert run(D.detect("c", "hello there", {}, "cloud"))["engine"] == "local"
+    assert time.monotonic() - t < D.OVERALL_TIMEOUT_S

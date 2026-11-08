@@ -30,3 +30,8 @@
 - `detect()` sets `detect.ENGINE_FAILED[call_id]` (no schema/contract change) when a window had no LLM result (rules-only because every engine failed). `alert.py _hold`: for such a window it keeps max(last anchor s, rules s) for 10 s / 3 windows (anchor = last LLM-backed result or rule fast-path score >= 0.5), then decays. A real low LLM score passes through unchanged (restore still works). Log: `hold last score` (INFO).
 - Trade-off: while engines are failing, restore after normal talk can lag up to ~10 s.
 - Real check: `ACC_BREAK_CLOUD=1 ACC_P2_PORT=8102 bash detection/scripts/acceptance.sh` with 5 parallel calls on the single-slot llama: 4a PASS (was FAIL); case 5 restore passed in 2 of 3 runs (one run held 0.95 at the last normal line).
+
+## Restore after Continue (TASK-021)
+- Root cause of acceptance case 5 (s stayed 0.95 after normal talk): the scoring window is the last 6 finals, so scam lines kept s high until ~6 benign lines had passed. Fix: user.action=continue clears the window (and drops any in-flight result scored on the old window via an epoch); a new hard ask still fires on its own.
+- Rules-clean failed windows (both engines failing, rules s<0.2, no asks) are held only once (TASK-019 hold otherwise unchanged).
+- Failover budget: cloud+probe capped at 2.0 s, local gets >= 2.0 s inside OVERALL_TIMEOUT_S=4.0; probe is lock-guarded, 0.5 s cap, shared with /healthz. `ACC_BREAK_CLOUD=blackhole` tests the timeout path.

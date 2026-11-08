@@ -70,7 +70,9 @@ class Loop:
     async def start(self):
         self.tmp = tempfile.mkdtemp()
         env = {k: v for k, v in os.environ.items() if k not in ("PIPELINE_TOKEN", "HUB_TOKEN")}
-        if os.environ.get("ACC_BREAK_CLOUD") == "1": env["NVIDIA_BASE_URL"] = "http://127.0.0.1:9/v1"  # cloud LLM unreachable for this P2 only (failover check)
+        bc = os.environ.get("ACC_BREAK_CLOUD")
+        if bc == "1": env["NVIDIA_BASE_URL"] = "http://127.0.0.1:9/v1"  # cloud LLM refuses connections for this P2 only (failover check)
+        elif bc == "blackhole": env["NVIDIA_BASE_URL"] = "http://10.255.255.1/v1"  # cloud LLM connect hangs (timeout path, not fast-fail)
         env.update(HUB_DB=f"{self.tmp}/hub.db", HUB_URL=f"http://localhost:{HUB}", P2_ENGINE=self.engine)
         self.env = env
         self.log = open(f"{self.tmp}/p2.log", "w")
@@ -151,7 +153,7 @@ async def main():
         between = [a for a in after if a["_t"] < normal_end + 0.5]
         re_ = [a for a in after if a["data"]["level"] == "realert" and a["_t"] >= normal_end]
         add("4a continue: no re-alert on medium talk", bool(first) and L.cont_status == 200 and not between,
-            f"first={len(first)} continue POST={L.cont_status} alerts between continue and the hard ask={len(between)} curve: " + " ".join(f"{e['data']['s']:.2f}@{e['_t'] - L.cont_t:+.0f}" for e in ru) + " | " + " ".join(f"@{e['_t'] - L.cont_t:+.0f}:{str(e['data'].get('text'))[:28]!r}" for e in L.ev(cid, "transcript.caller") if e["data"].get("is_final", True))[:600])
+            f"first={len(first)} continue POST={L.cont_status} alerts between continue and the hard ask={len(between)} {[(a['data']['level'], round(a['_t'] - L.cont_t, 1), a['data'].get('s')) for a in after]} curve: " + " ".join(f"{e['data']['s']:.2f}@{e['_t'] - L.cont_t:+.0f}" for e in ru) + " | " + " ".join(f"@{e['_t'] - L.cont_t:+.0f}:{str(e['data'].get('text'))[:28]!r}" for e in L.ev(cid, "transcript.caller") if e["data"].get("is_final", True))[:600])
         add("4b new hard ask (otp) re-alerts", bool(re_), f"realert={len(re_)} {'+%.1fs after last normal line' % (re_[0]['_t'] - normal_end) if re_ else ''}")
         last_normal = [e["data"]["s"] for e in ru if normal_end - 8 < e["_t"] <= normal_end + 1.0]
         add("5 restore: s<0.50 after normal talk", bool(last_normal) and last_normal[-1] < 0.50, f"s after the normal lines: {' '.join(f'{x:.2f}' for x in last_normal)}")

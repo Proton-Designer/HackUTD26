@@ -24,10 +24,10 @@ def test_lifespan_starts_hub_subscriber(monkeypatch):
 
 def test_healthz_reports_wiring_without_secrets(monkeypatch):
     from fastapi.testclient import TestClient
-    from detection import app as appmod, health
+    from detection import app as appmod, health, detect as appmod_D
     monkeypatch.setenv("NVIDIA_API_KEY", "nvapi-SECRETVALUE")
     monkeypatch.setenv("LOCAL_LLM_URL", "http://127.0.0.1:9")      # nothing there
-    appmod._local["t"] = 0
+    appmod_D._local["t"] = -1e9
     health.err("hub.emit", RuntimeError("boom with http://x?key=SECRET"))
     j = TestClient(appmod.app).get("/healthz").json()
     assert j["ok"] and j["stt"]["backend"] in ("riva", "whisper") and j["engines"] == {"cloud_key_present": True, "local_reachable": False}

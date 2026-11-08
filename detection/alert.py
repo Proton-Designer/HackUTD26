@@ -23,7 +23,7 @@ class Call:
         self.prev_band = "low"; self.known_hard = set()
         self.decoy = False; self.muted = False; self.normal_since = None
         self.last = None
-        self.llm = None; self.llm_t = 0.0; self.fail_n = 0     # last LLM-backed result, its time, consecutive failed windows
+        self.llm = None; self.llm_t = 0.0; self.fail_n = 0; self.clean_n = 0; self.epoch = 0     # last LLM-backed result, its time, consecutive failed windows
 
 class AlertMachine:
     def __init__(self, emit=None, detect=None, clock=time.time, engine=None):
@@ -79,12 +79,14 @@ class AlertMachine:
             try:
                 while c.dirty and not c.muted:
                     c.dirty = False
-                    text = "\n".join(t for _, t in c.utts)
+                    text = "\n".join(t for _, t in c.utts); ep = c.epoch
                     try:
                         r = await self.detect(call_id, text, {"utterances": len(c.utts)})
                     except Exception:
                         log.exception("detect failed (ignored)"); health.err("detect", __import__("sys").exc_info()[1])
                         continue
+                    if ep != c.epoch:
+                        continue             # Continue arrived mid-flight: this result scored the pre-Continue window, drop it
                     r = self._floor(r, quick(text, self.engine))
                     await self._process(call_id, c, self._hold(call_id, c, r))
             finally:
@@ -99,9 +101,13 @@ class AlertMachine:
             if not isinstance(r, dict) or not isinstance(r.get("s"), (int, float)):
                 return r
             if not ENGINE_FAILED.pop(cid, False):
-                c.llm, c.llm_t, c.fail_n = r, self.clock(), 0
+                c.llm, c.llm_t, c.fail_n, c.clean_n = r, self.clock(), 0, 0
                 return r
             c.fail_n += 1
+            if r["s"] < 0.2 and not r.get("asks"):   # rules-clean failed window (e.g. normal talk after the scam): hold only the first, so restore is not delayed
+                c.clean_n += 1
+                if c.clean_n > 1:
+                    return r
             if c.llm is None or c.fail_n > HOLD_N or self.clock() - c.llm_t > HOLD_S or c.llm["s"] <= r["s"]:
                 return r
             out = dict(r); out["s"] = c.llm["s"]; out["band"] = schema.band(out["s"])
@@ -174,6 +180,7 @@ class AlertMachine:
                 c = self._call(cid)
                 c.continued, c.armed = True, True   # prev_band stays: critical must be a NEW transition after Continue
                 c.known_hard = set(c.last.get("asks", [])) & schema.HARD_ASKS if c.last else set()
+                c.utts.clear(); c.epoch += 1; c.dirty = False   # the user saw the alert and chose Continue: score only what is said from now on, so benign talk restores s within a line or two (a new hard ask still fires on its own)
             elif t == "handoff.started":
                 self._call(cid).decoy = True
             elif t == "handoff.restored":

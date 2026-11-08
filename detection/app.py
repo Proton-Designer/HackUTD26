@@ -15,19 +15,7 @@ try:  # eng1's /detect router; guarded so the app runs before it exists
 except Exception as e:
     log.warning("detection.router not available (%s)", type(e).__name__)
 
-_local = {"t": 0.0, "ok": False}
-
-async def _local_reachable():
-    """Cached 10 s probe of the local LLM server (OpenAI-style /v1/models; llama-server and Ollama both answer). Never raises."""
-    import time, httpx
-    if time.time() - _local["t"] > 10:
-        _local["t"] = time.time()
-        try:
-            async with httpx.AsyncClient(timeout=1.0) as c:
-                _local["ok"] = (await c.get(os.environ.get("LOCAL_LLM_URL", "http://127.0.0.1:11434").rstrip("/") + "/v1/models")).status_code == 200
-        except Exception:
-            _local["ok"] = False
-    return _local["ok"]
+from detection.detect import _local_reachable  # one shared cached probe
 
 @app.get("/healthz")
 async def healthz():
