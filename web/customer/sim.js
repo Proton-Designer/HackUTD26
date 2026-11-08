@@ -42,8 +42,13 @@
     const now = dctx.currentTime; if (dnext < now + 0.02) { if (dnext) stats.late++; dnext = now + 0.12; }   // small jitter buffer (120 ms); re-prime after an underrun
     src.start(dnext); dnext += n / 8000; stats.frames++; stats.bytes += n;
   }
+  const TAB = Math.random().toString(36).slice(2), lock = k => { try { const j = JSON.parse(localStorage.getItem(k) || "null"); return j && j.tab !== TAB && Date.now() - j.ts < 4000; } catch (e) { return false; } };
+  const hold = k => { try { localStorage.setItem(k, JSON.stringify({ tab: TAB, ts: Date.now() })); } catch (e) {} };
+  setInterval(() => { if (lws && lws.readyState <= 1 && lwsCid) hold("bf.lock.listen." + lwsCid); }, 1500);
   function decoyStart(cid) {
     if (!(BF.sim || BF.listen) || !cid) return;
+    if (lock("bf.lock.listen." + cid)) { stats.state = "other-tab"; return; }   // another tab of this phone already listens to this call: never fight it
+    hold("bf.lock.listen." + cid);
     if (lws && lwsCid === cid && lws.readyState <= 1) return;     // exactly ONE /listen per call: never open a second while one is open/connecting
     clearTimeout(lwsT); lwsExpected = true; try { lws && lws.close(); } catch (e) {} lws = null;   // a socket for another call is replaced
     dcid = cid; lwsCid = cid; lwsExpected = false;
@@ -54,9 +59,10 @@
       stats.state = "connecting";
       w.onopen = () => { stats.state = "open"; lwsTry = 0; };
       w.onmessage = m => { let j; try { j = JSON.parse(m.data); } catch (e) { return; } if (j && j.track === want && j.payload) { if (!stats.frames) decoyLabel(true); decoyPlay(j.payload); } };
-      w.onclose = () => {
+      w.onclose = ev => {
         if (lws === w) lws = null;
-        if (lwsExpected || active !== cid || lwsTry >= 6) { if (!lwsExpected) stats.state = "closed"; return; }
+        const final = ev && [1000, 1008, 1013].includes(ev.code);   // 1000 = the hub REPLACED this socket (another tab/device took over) or ended it: reconnecting would ping-pong forever
+        if (lwsExpected || final || active !== cid || lwsTry >= 6) { if (!lwsExpected) stats.state = "closed"; return; }
         stats.state = "reconnecting"; lwsT = setTimeout(() => { if (active === cid && !lws) decoyStart(cid); }, Math.min(4000, 500 * 2 ** lwsTry++));   // unexpected close during the call: back off, retry
       };
       w.onerror = () => { stats.state = "error"; };   // fail soft: the handoff screen still works

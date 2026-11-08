@@ -64,8 +64,13 @@
     b.setAttribute("aria-label", handed ? "Backfire is talking for you" : muted ? "Muted. Tap to unmute" : "Microphone on. Tap to mute");
     if (handed) hint("Backfire is talking to the caller for you."); else if (muted) hint("You are muted. The caller can't hear you."); else if (stats.mic === "on") hint("Use earphones so the caller doesn't hear himself.");
   }
+  const TAB = Math.random().toString(36).slice(2), lock = k => { try { const j = JSON.parse(localStorage.getItem(k) || "null"); return j && j.tab !== TAB && Date.now() - j.ts < 4000; } catch (e) { return false; } };
+  const hold = k => { try { localStorage.setItem(k, JSON.stringify({ tab: TAB, ts: Date.now() })); } catch (e) {} };
+  setInterval(() => { if (ws && ws.readyState <= 1 && wsCid) hold("bf.lock.talk." + wsCid); }, 1500);
   function open(id) {
     if (!BF.talk || !id) return;
+    if (lock("bf.lock.talk." + id)) { stats.state = "other-tab"; return; }   // another tab of this phone already talks on this call
+    hold("bf.lock.talk." + id);
     if (ws && wsCid === id && ws.readyState <= 1) return;           // exactly ONE /talk per call: never open a second while one is open/connecting
     clearTimeout(wsT); wsExpected = true; try { ws && ws.close(); } catch (e) {} ws = null;
     cid = id; wsCid = id; wsExpected = false;
@@ -75,9 +80,10 @@
       const w = ws = tok ? new WebSocket(url, ["bf-device", tok]) : new WebSocket(url);
       stats.state = "connecting";
       w.onopen = () => { stats.state = "open"; wsTry = 0; };
-      w.onclose = () => {
+      w.onclose = ev => {
         if (ws === w) ws = null;
-        if (wsExpected || active !== id || wsTry >= 6) { if (!wsExpected) stats.state = "closed"; return; }
+        const final = ev && [1000, 1008, 1013].includes(ev.code);   // replaced by another tab/device or ended by the hub: do not reconnect (ping-pong)
+        if (wsExpected || final || active !== id || wsTry >= 6) { if (!wsExpected) stats.state = "closed"; return; }
         stats.state = "reconnecting"; wsT = setTimeout(() => { if (active === id && !ws) open(id); }, Math.min(4000, 500 * 2 ** wsTry++));   // died unexpectedly mid-call: back off and retry
       };
       w.onerror = () => { stats.state = "error"; };
