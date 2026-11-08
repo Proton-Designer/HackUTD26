@@ -138,3 +138,19 @@ Same setup as above (frozen detector, local engine via WSL gateway, scratch hub/
 | Jason | 1.15x | 22.4 | 0.87 |
 
 Spread at normal speed: Mia margin 0.35-0.84 s (4 runs, mean 0.60), Jason 0.84-1.50 s (4 runs, mean 1.27); alert time spread 22.9-23.3 s (Mia), 24.3-25.0 s (Jason), so the alert time is stable (±0.4 s) and the margin only varies with how long the voice's line 5 + gap runs. **Smallest margin 0.35 s: it is always before the payment line but never by more than 1.5 s; one slower STT final on line 5 (finals land 0.7-2.2 s after endpoint) would push it past.** In every run the risk is 0.85 high after line 4 and crosses to the alert on line 5. Mia r2 was run before I added a paused flag to the driver (no live call was open then; its numbers match its neighbours). Not done: not a different TTS voice beyond Mia/Jason, no slower read (0.85x), no real phone line, n=4 per voice.
+
+## Judge bucket verification (#147), cards 1, 2, 4, 5 (eng3)
+Frozen detector (detection/ runtime identical to tag p2-known-good-0750; verified by diff), scratch P2 on :8104 with `P2_ENGINE=local`, `HUB_URL=http://127.0.0.1:1`, phone-quality TTS (`pstn_cards.py`, -28 dBFS, 1.0x), Mia + Jason, 1 run per card and voice. Alert time is seconds from the first word (file time minus the 1 s lead-in). Mia rows are the earlier v3 run on the same runtime code. The greeting-only check (d) is eng2's.
+
+| Card | Voice | Alert | Alert s | Fires in | Before payment line | Margin to payment start (s) |
+|---|---|---|---|---|---|---|
+| 1 Safe account | Mia | yes | 15.1 | line 3, "I'm sending a six-digit code ... Read it back" | yes | 14.3 |
+| 1 | Jason | yes | 17.4 | line 3 | yes | 15.6 |
+| 2 Zelle reversal | Mia | yes | 14.5 | line 3, "It's not a real payment. It goes to our refunds account ..." | yes | 14.3 |
+| 2 | Jason | yes | 16.1 | line 3 (engine failed over to cloud on u3, score 0.85) | yes | 16.2 |
+| 4 New device login | Mia | yes | 14.1 | line 3, "I'm sending you a verification code. Read it to me" | yes | 12.1 |
+| 4 | Jason | yes | 14.3 | line 3 | yes | 12.9 |
+| 5 Inside job | Mia | yes | 21.5 | line 5, "We need you to move $1,800 ..." | yes | 4.4 |
+| 5 | Jason | yes | 23.2 | line 5 | yes | 4.3 |
+
+Risk / tip (e): cards 1 and 4 depend on the code ask ("six-digit code / verification code, read it back"); card 2 on "not a real payment, goes to our refunds account"; all three fire at the end of line 3, 12-16 s before the payment step. Card 5 is the thin one: line 4 ("Don't talk to anyone at the branch") scores 0.05 to 0.85 and the alert needs line 5 (the $1,800 move), 4 s before the payment step; a loose read that drops "move $1,800" would alert only at the payment step. Tip: have the reader say the code ask ("read me the six-digit code") in line 3 of card 5 (untested suggestion from the earlier v3 run). 1 run per cell, so a few seconds of spread between runs is normal (card 2 Jason: one local-to-cloud failover on u3).
