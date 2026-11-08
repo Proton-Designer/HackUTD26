@@ -277,8 +277,8 @@
     const amt = Number.isFinite(m.amount) ? fmtMoney(m.amount) : 'the money';
     if (m.flagged) {
       head('Scammer get scammed. <em>He got $0.</em>',
-        [m.stopped ? `The customer kept ${amt}` : '', 'his payout account is flagged for every customer',
-          m.rejected ? 'his callback was rejected before it rang' : ''].filter(Boolean).join(' · '), 'win');
+        [m.stopped ? `The customer kept ${amt}` : '', 'his account is flagged for every customer',
+          m.rejected ? 'his callback never rang' : ''].filter(Boolean).join(' · '), 'win');
       S.flashSeq = S.seq;
       return true;
     }
@@ -909,7 +909,7 @@
       if (!body || !$('grid').contains(body)) return; // parked: no size to draw at
       const d = CHAIN.data;
       const src = CHAIN.live ? 'live' : CHAIN.at ? `last update ${fmtTime(CHAIN.at)} · hub not answering` : 'saved snapshot';
-      $('map-meta').textContent = `Capital One Nessie sandbox · mock bank data · ${src}`;
+      $('map-meta').textContent = CHAIN.live ? 'Capital One Nessie sandbox · mock data' : `Capital One Nessie sandbox · mock data · ${src}`;
       if (!d) { body.innerHTML = empty('Loading the money trail from the hub…'); return; }
       const ms = moneyState(); // the screen's own events can be ahead of the 3 s poll
 
@@ -926,9 +926,9 @@
       const outTotal = Number(d.mule_total_out) || outs.reduce((s, e) => s + (+e.amount || 0), 0);
 
       const tile = (k, v, chip, cls) => `<div class="mt-tile ${cls || ''}"><span class="k">${k}</span><b>${v}</b>${chip ? `<span class="mt-chip">${chip}</span>` : ''}</div>`;
-      const tiles = tile(`Paid in by ${victims.length} victims`, fmtMoney(inTotal), 'to one mule account')
+      const tiles = tile(`Paid in by ${victims.length} victims`, fmtMoney(inTotal), ms.flagged ? '⚑ account flagged' : 'into one account', ms.flagged ? 'flagged' : '')
         + tile('Moved to cash-out', fmtMoney(outTotal), `${outs.length} transfers`)
-        + (!maria ? '' : maria.held ? tile('Stopped by Backfire', fmtMoney(maria.amount), "✓ the customer's transfer", 'held')
+        + (!maria ? '' : maria.held ? tile('Stopped by Backfire', fmtMoney(maria.amount), '✓ customer kept it', 'held')
           : tile("The customer's transfer", fmtMoney(maria.amount), 'pending · Backfire is listening', 'pending'));
       const summary = `${victims.length} victims paid ${fmtMoney(inTotal)} into a simulated mule account, which moved ${fmtMoney(outTotal)} to a cash-out account.`
         + (maria ? ` The customer's ${fmtMoney(maria.amount)} transfer is ${maria.held ? 'stopped by Backfire' : 'pending'}.` : '')
@@ -960,27 +960,30 @@
       const path = p => `M${p[0]} C${p[1]} ${p[2]} ${p[3]}`.replace(/(\d+\.\d)\d+/g, '$1');
       const tag = (x, y, text, cls) => { const w = text.length * f12 * 0.62 + 18, h = f12 + 10; return `<g class="mt-tag ${cls}"><rect x="${x - w / 2}" y="${y - h / 2}" width="${w}" height="${h}" rx="${h / 2}"/><text x="${x}" y="${y + f12 * 0.36}" text-anchor="middle">${esc(text)}</text></g>`; };
       const out = [];
+      const roomy = step >= f12 * 2.4; // enough height for an amount on every victim row
+      const wide = W >= 720;           // enough width for dates next to amounts
+      const amtW = e => (wide ? amt(e) : fmtMoney(+e.amount || 0));
 
-      // victims and Maria -> mule (lines first, nodes on top)
+      // victims and the customer -> mule (lines first, nodes on top)
       left.forEach((e, i) => {
         const y = yOf(i), r = rOf(e.amount);
         const end = [xM - rM - 2, yM + (y - yM) * 0.18];
         const p = [[xL + r, y], [xL + (end[0] - xL) * 0.55, y], [end[0] - (end[0] - xL) * 0.3, end[1]], end];
         if (e.kind === 'target') {
-          // the tag sits early on the customer's own line (still in its row), not mid-way where the victims' lines bunch up
-          const at = bez(p, 0.3);
+          const label = e.held ? `✂ STOPPED ${fmtMoney(e.amount)}` : `${fmtMoney(e.amount)} · PENDING`;
+          const at = [xL + r + 12 + (label.length * f12 * 0.62 + 18) / 2, y]; // just right of the customer, on their own row
           if (e.held) {
             out.push(`<path class="mt-held" d="${path(p)}" pathLength="100" stroke-dasharray="18 100" style="stroke-width:3px"/>`,
               `<path class="mt-cut" d="${path(p)}" pathLength="100" stroke-dasharray="0 44 56 0" style="stroke-width:2px"/>`,
-              tag(at[0], at[1], `✂ STOPPED ${fmtMoney(e.amount)}`, 'held'));
+              tag(at[0], at[1], label, 'held'));
           } else {
-            out.push(`<path class="mt-pending" d="${path(p)}" style="stroke-width:2.5px"/>`, tag(at[0], at[1], `${fmtMoney(e.amount)} · PENDING`, 'pending'));
+            out.push(`<path class="mt-pending" d="${path(p)}" style="stroke-width:2.5px"/>`, tag(at[0], at[1], label, 'pending'));
           }
         } else {
           // label on the outside of the curve: above for rows that bend down, below for rows that bend up
           const ly = y > yM ? y + f12 + 5 : y - 6;
-          out.push(`<path class="mt-edge" d="${path(p)}" style="stroke-width:${(1.2 + 3.3 * (+e.amount || 0) / maxL).toFixed(1)}px"/>`,
-            `<text class="mt-amt" x="${xL + r + 10}" y="${ly}">${esc(amt(e))}</text>`);
+          out.push(`<path class="mt-edge" d="${path(p)}" style="stroke-width:${(1.2 + 3.3 * (+e.amount || 0) / maxL).toFixed(1)}px"/>`);
+          if (roomy) out.push(`<text class="mt-amt" x="${xL + r + 10}" y="${ly}">${esc(amtW(e))}</text>`);
         }
       });
       // mule -> cash-out, fanned out so each transfer reads on its own
@@ -992,7 +995,7 @@
         const p = [a, [a[0] + (b[0] - a[0]) * 0.3, yM + bend], [b[0] - (b[0] - a[0]) * 0.3, yM + bend], b];
         const m = bez(p, 0.5);
         out.push(`<path class="mt-cash" d="${path(p)}" marker-end="url(#mt-arrow)" style="stroke-width:${(1.5 + 3 * (+e.amount || 0) / maxO).toFixed(1)}px"/>`,
-          `<text class="mt-amt" x="${m[0]}" y="${m[1] + (bend < 0 ? -7 : bend > 0 ? f12 + 4 : -7)}" text-anchor="middle">${esc(amt(e))}</text>`);
+          `<text class="mt-amt" x="${m[0]}" y="${m[1] + (bend > 0 ? f12 + 4 : -7)}" text-anchor="middle">${esc(amtW(e))}</text>`);
       });
       // nodes + labels
       left.forEach((e, i) => {
@@ -1006,13 +1009,12 @@
         }
       });
       // under the mule's own labels, where no line runs
-      if (ms.flagged) out.push(`<circle class="mt-flag-ring" cx="${xM}" cy="${yM}" r="${rM + 7}"/>`, tag(xM, yM + rM + f14 + f12 * 2 + 30, '⚑ FLAGGED for every customer', 'flag'));
+      if (ms.flagged) out.push(`<circle class="mt-flag-ring" cx="${xM}" cy="${yM}" r="${rM + 7}"/>`);
       out.push(`<circle class="mt-n-mule" cx="${xM}" cy="${yM}" r="${rM}"/>`,
-        `<text class="mt-name" x="${xM}" y="${yM + rM + f14 + 6}" text-anchor="middle">Mule account</text>`,
-        `<text class="mt-sub" x="${xM}" y="${yM + rM + f14 + f12 + 11}" text-anchor="middle">Simulated · in ${fmtMoney(inTotal)} · out ${fmtMoney(outTotal)}</text>`,
+        `<text class="mt-name" x="${xM}" y="${yM + rM + f14 + 10}" text-anchor="middle">Mule account</text>`,
+        ms.flagged ? `<text class="mt-name mt-flagged" x="${xM}" y="${yM + rM + f14 * 2 + 14}" text-anchor="middle">⚑ Flagged</text>` : '',
         `<circle class="mt-n-cash" cx="${xC}" cy="${yM}" r="${rC}"/>`,
-        `<text class="mt-name" x="${xC}" y="${yM + rC + f14 + 6}" text-anchor="middle">Cash-out</text>`,
-        `<text class="mt-sub" x="${xC}" y="${yM + rC + f14 + f12 + 11}" text-anchor="middle">Simulated · ${fmtMoney(Number((d.nodes.find(n => n.role === 'cashout') || {}).total_in) || outTotal)}</text>`);
+        `<text class="mt-name" x="${xC}" y="${yM + rC + f14 + 6}" text-anchor="middle">Cash-out</text>`); // totals live in the tiles above
       svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
       svg.innerHTML = '<defs><marker id="mt-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mt-arrowhead"/></marker></defs>' + out.join('');
     },

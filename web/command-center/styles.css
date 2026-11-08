@@ -532,3 +532,8 @@ h1, h2, p { margin: 0; }
 .cobrand b { font-size: 19px; font-weight: 800; letter-spacing: -0.01em; color: #004977; padding-bottom: 1px; border-bottom: 3px solid #d03027; border-radius: 0 0 40% 40% / 0 0 6px 6px; }
 @keyframes flash-c1 { 50% { background-color: rgba(0, 73, 119, 0.25); } }
 .brand-c1 .hero.flash .hero-main { animation-name: flash-c1; }
+/* the Money trail is the Capital One part of the demo: show the co-brand lockup whenever it is on screen */
+.app[data-chapter="money"] .cobrand { display: inline-flex; }
+.mt-svg .mt-name.mt-flagged { fill: var(--danger-text); }
+.mt-tile.flagged { box-shadow: inset 0 0 0 1px rgba(224, 49, 63, 0.35); }
+.mt-tile.flagged .mt-chip { background: var(--danger); color: #fff; }

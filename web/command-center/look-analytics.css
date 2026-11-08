@@ -235,3 +235,6 @@
 .brand-c1.look-analytics .app[data-view="story"] .rail .step.now.showing { box-shadow: inset 0 0 0 2px #fff, 0 10px 22px rgba(0, 73, 119, 0.32); }
 .brand-c1.look-analytics .mt-tile.pending { background: linear-gradient(180deg, #eaf2f9, #fff 70%); box-shadow: inset 0 0 0 1px rgba(0, 73, 119, 0.3); }
 .brand-c1 .po-btn { background: linear-gradient(180deg, #0a5f93, #004977); box-shadow: 0 6px 18px rgba(0, 73, 119, 0.3); }
+.look-analytics .mt-tile.flagged { background: linear-gradient(180deg, #fdecee, #fff 70%); box-shadow: inset 0 0 0 1px rgba(224, 49, 63, 0.35); }
+.look-analytics .mt-tile.flagged .mt-chip { background: var(--danger); color: #fff; }
+.look-analytics .mt-svg .mt-name.mt-flagged { fill: var(--danger-text); }

@@ -136,7 +136,7 @@
       { kind: 'add_trusted_contact', target: '214-555-0147', target_source: 'artifact:instruction_to_ai', evidence: [], proposer: 'baseline rule' }
     ]
   });
-  ev(43.2, 'blocklist.updated', CALL, { number: '2145550123', scope: 'her', undo_token: 'undo-f53f58686b', reason: 'Confirmed scammer (blocked for her)' });
+  ev(43.2, 'blocklist.updated', CALL, { number: '2145550123', scope: 'her', undo_token: 'undo-f53f58686b', reason: 'Confirmed scammer (blocked for this customer)' });
   ev(43.3, 'intel.action', CALL, action('act-47696880', 'block_caller_for_customer', SCAMMER, 'her', 'applied', 'auto: applied', 'auto rule',
     'customer-scoped: blocks only the number that called her; undo in her log', ['decoy call confirmed scam']));
   ev(43.5, 'intel.action', CALL, Object.assign(action('act-9b1d0c2e', 'hold_transfer', '6f2a9c41-3b7e-4d10-9a55-1c8e2f7b0d93', 'her', 'applied', 'auto: applied', 'auto rule',
@@ -178,7 +178,7 @@
 
   // 5. The judge calls back from the same number: rejected before it rings
   ev(55.0, 'call.incoming', BACK, { from: SCAMMER, to: MARIA, attestation: 'C', scam_id_score: 0.71 });
-  ev(55.1, 'call.routed', BACK, { decision: 'BLOCKED_BACKFIRE', reason: 'Confirmed scammer (blocked for her)' });
+  ev(55.1, 'call.routed', BACK, { decision: 'BLOCKED_BACKFIRE', reason: 'Confirmed scammer (blocked for this customer)' });
   ev(55.2, 'call.ended', BACK, { ended_by: 'system', duration_s: 0 });
 
   window.BACKFIRE_FIXTURE = { source: 'local fixture', events: E };
