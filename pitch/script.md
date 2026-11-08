@@ -23,7 +23,7 @@ look-alike legit calls wrongly flagged (our rules-only fallback, no AI: 26 of 33
 **On screen only:** scammers spotted the AI as a bot in about 1 in 20 calls (slide 5); "Tricks aimed at
 the AI: 13 of 13 vs 9 of 13" (slide 8 table).
 
-**Never say:** "Maria", "her voice" (say "their voice"); "instant" or "real-time" (say "about 12 to 15 seconds
+**Never say:** "Scammer get scammed" before the Approve click (it's the payoff line; the phone's button label says it, so don't show or read the button); "Maria", "her voice" (say "their voice"); "instant" or "real-time" (say "about 12 to 15 seconds
 in"); "100%"; "on device" or "nothing leaves the phone" (on this path detection runs on our server, and
 speech-to-text uses NVIDIA-hosted Riva); "we held the money" (Nessie cancels the pending transfer: say
 "stopped"); "real bank" (it is Capital One's Nessie sandbox with mock data); "scammers stay on for 54
@@ -61,12 +61,12 @@ Card for Ayman (same scam as slide 2; Card 2, "Bank Fraud Department", trimmed):
 | 1 | Ayman dials (469) 908-8594 from his phone, caller ID on, on speaker. The customer's phone rings full screen. | Live call view: "Ringing the customer with Live Guard on" |
 | 2 | Kareem taps **Answer** (do not let it ring out: no answer rejects the call) and says, in his normal voice: "Hello?" | |
 | 3 | Ayman reads line 1. Nobody else talks while the call is live. | Caller-only transcript scrolls; risk gauge climbs |
-| 4 | Two beeps, about 12 to 15 seconds in. Kareem shows the judge the three buttons, taps **Scammer Get Scammed**, puts the phone face down, raises both hands. | "The customer tapped Scammer Get Scammed" |
+| 4 | Two beeps, about 12 to 15 seconds in. Kareem taps the big middle button (the hand-off; don't show the judge its label or say it), puts the phone face down, raises both hands. | "The customer handed the call to Backfire" |
 | 5 | The AI, in Kareem's voice: "Sorry, I lost you there for a second," then asks how to pay. | Banner: "The scammer is talking to the decoy in the customer's voice" |
 | 6 | Ayman reads the payment line, then the Zelle line. The decoy repeats it back slowly, then says goodbye and hangs up by itself. | |
 | 7 | Rayan, while intel runs (5 to 15 s): "Kareem's been off that call since his hands went up. Backfire only ever listened to the caller. That was a Nemotron decoy in his voice, and it just got the scammer's payout account." | Screen moves to **Money trail** by itself; Capital One lockup appears |
 | 8 | Rayan points: "$1,800 stopped before it reached the scammer. That 'safe account' already took $18,100 from seven other people." | Banner: "$1,800 stopped before it reached the scammer"; map: customer's line cut, 7 victims into the mule account |
-| 9 | Rayan: "One click and every customer who tries to pay it gets warned first." **Evan clicks "Approve · flag this account"** (right column). | Banner: **"Scammer get scammed. He got $0."**; mule account tagged Flagged |
+| 9 | Rayan: "One click and every customer who tries to pay it gets warned first." **Evan clicks "Approve · flag this account"** (right column). As the banner changes, Rayan + Kareem: "Scammer get scammed." (First time anyone says it.) | Banner: **"Scammer get scammed. He got $0."**; mule account tagged Flagged |
 | 10 | T-Mobile beat, if time: Ayman calls back from the same phone. It never rings. | Checklist: "He called back: rejected before it rang" |
 
 Staging rules:
@@ -84,7 +84,7 @@ is mock, and the bank-wide flag is a simulated payload."
 
 ## 60-second version (tired or late judges)
 1. "Backfire: T-Mobile customers hand a scam call to an AI decoy that stops the payout and blocks the scammer."
-2. Live: answer, two beeps, tap Scammer Get Scammed, hands up.
+2. Live: answer, two beeps, tap the hand-off button, hands up.
 3. Decoy in the customer's voice gets the Zelle address. Pause two seconds on the Money trail.
 4. "$1,800 stopped, the mule account flagged with one click. Scammer get scammed. What would you like to see?"
 

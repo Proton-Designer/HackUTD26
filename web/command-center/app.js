@@ -469,17 +469,17 @@
     },
     'alert.fired'(e, d, c) {
       c.alert = { level: d.level || 'first', why: arr(d.why_chips) };
-      c.feed.push({ kind: 'sys', tone: 'hot', seq: S.seq, text: d.level === 'realert' ? 'Risk rose: two more beeps to the customer' : 'Two beeps to the customer: Continue · Scammer Get Scammed · Hang up' });
+      c.feed.push({ kind: 'sys', tone: 'hot', seq: S.seq, text: d.level === 'realert' ? 'Risk rose: two more beeps to the customer' : 'Two beeps to the customer: Continue · Hand off · Hang up' });
       stage('detect');
       dirty('risk', 'feed');
     },
     'user.action'(e, d, c) {
       const a = String(d.action || '');
-      const text = { scammer_get_scammed: 'The customer tapped Scammer Get Scammed', hang_up: 'The customer hung up', continue: 'The customer tapped Continue' }[a] || `Customer: ${humanize(a)}`;
+      const text = { scammer_get_scammed: 'The customer handed the call to Backfire', hang_up: 'The customer hung up', continue: 'The customer tapped Continue' }[a] || `Customer: ${humanize(a)}`;
       c.feed.push({ kind: 'sys', tone: a === 'scammer_get_scammed' ? 'hot' : '', text, seq: S.seq });
       if (a === 'scammer_get_scammed') {
         stage('handoff', 'customer tapped it');
-        head('The customer tapped <em>Scammer Get Scammed</em>', 'The network swaps them out. The decoy keeps the scammer talking.', 'alert');
+        head('The customer handed the call to <em>Backfire</em>', 'The network swaps them out. The decoy keeps the scammer talking.', 'alert');
       }
       dirty('feed');
     },

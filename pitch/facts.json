@@ -16,7 +16,7 @@
    "kind": "nemotron"
   },
   {
-   "label": "Customer taps Scammer Get Scammed",
+   "label": "Customer hands the call to Backfire",
    "kind": "input"
   },
   {
@@ -93,10 +93,10 @@
   ],
   "gap_source": "Callback Protection warns only on outbound calls. Source: T-Mobile, Advancing Cybersecurity at T-Mobile, Nov 2026",
   "flip_title": "Caller Beware",
-  "flip_line": "With Backfire, the caller is the one who should worry.",
+  "flip_line": "Not the caller picking up. The caller who dialed.",
   "flip_buttons": [
    "Continue",
-   "Scammer Get Scammed",
+   "Hand it to Backfire",
    "Hang up"
   ],
   "flip_caption": "One tap hands the scammer to an AI that talks in their voice.",
