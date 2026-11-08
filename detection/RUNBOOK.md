@@ -57,3 +57,9 @@
 - At every socket close p2.log has `rms(per 20ms frame): {frames,p50,p90,max,voiced,noise,thr}` and at start `media_format=...`. Zero utterances + `max` < `thr` = line too quiet. `P2_DUMP_AUDIO=1` writes logs/audio/<call>.wav (local only, off by default; listen to it).
 - VAD: speech = frame RMS > max(P2_VAD_FLOOR=60, noise*P2_VAD_REL=2.5); noise floor starts at 30, falls fast / rises slowly, capped at P2_NOISE_CAP=300 (thr <= 750). Was floor 300 and noise*3.5.
 - Decoding follows start.media_format.encoding: PCMU (default), PCMA, L16 (big-endian); 16 kHz is averaged to 8 kHz.
+
+## Offline demo / demo in a box (TASK-035)
+`bash detection/scripts/demo_local.sh` boots, all on this machine with temp DBs and no tunnel/Telnyx: hub (`server.main`, SIM_MODE=1, :8200), P2 (:8102, pointed at the hub), P3 decoy (:8310), an auto-tap helper (`demo_tap.py`: presses "Scammer Get Scammed" 2 s after alert.fired, like Maria's button), then P1's `scripts/demo_call --reset` with `detection/testdata/scam_call_synth.wav` (SIMULATED caller, synthetic voice). It prints Maria's page `http://127.0.0.1:8200/app/` (PIN 1234) and the command center `.../command-center/`, the hub TIMELINE and the P2 call_report, then shuts everything down (process groups; logs kept in the printed temp dir).
+- `KEEP_UP=1` leaves it running to show the pages; `AUTO_TAP=0` = you press the button; `DEMO_WAV=<8 kHz mono wav>`; `DEMO_NO_DECOY=1` = hub echo stand-in instead of P3.
+- `OFFLINE=1` = P2_STT=whisper + P2_ENGINE=local (needs llama-server on :8101). P2 then needs no internet; P3 decoy and P4 intel still call NVIDIA.
+- Measured (cloud, 2026-11-08 02:3x): incoming 0.0 s -> answered 1.5 -> first alert 6.2-7.8 -> handoff.started ~9.8 -> blocklist.updated ~41 s; P2 finals 0.2-0.4 s after endpoint, all 4 events present. OFFLINE (whisper+local, no decoy): first alert +9.0-10.6 s, finals 1-4.7 s after endpoint (whisper CPU and llama share the box), 2 engine timeouts fell back to rules.
