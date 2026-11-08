@@ -38,3 +38,10 @@
 
 ## Per-call report (TASK-025)
 `.venv/bin/python detection/scripts/call_report.py [logs/p2.log] [--call ID-prefix] [--last N]` prints a timeline per call (ws open/close frames, each final with its latency after endpoint and the first 60 chars, each risk.update with s/band/engine/src/asks, alerts marked fast-path vs LLM, Continue/restore, dropped late finals, failovers, 429s, demo-cache hits) and a SUMMARY line (first alert, final s, alerts, failovers, 429s). Read-only. Needs the timestamped log format (restart P2 after TASK-025; older untimestamped lines still parse but show `--` times and cannot tell a 429 from another HTTP error). Demo-cache lines carry no call id, so they are attributed to the most recent call.
+
+## Watchdog (TASK-030, zero tokens)
+`bash detection/scripts/watchdog.sh` (run it in its own tmux window, e.g. `backfire-p2:watchdog`). Log: `logs/watchdog.log`.
+- Every 20 s GET :8100/healthz. Refused 3x in a row AND window `p2svc` missing or a bare shell -> recreates it / types `LOCAL_MODEL=nemotron-nano-4b [HUB_URL=...] bash detection/scripts/run.sh` (run.sh sources .env itself; nothing secret is printed). If the window runs a process (the supervisor) it is left alone.
+- Every 60 s GET `<tunnel>/healthz` (URL from `logs/p2_tunnel_url.txt`, else the current one hard-coded). 3 fails while local is OK -> restarts `p2tunnel` (tunnel.sh), parses the new trycloudflare URL into `logs/p2_tunnel_url.txt` and logs `!!!! TUNNEL URL CHANGED ... !!!!`. **The lead must then tell P1** (`P2_STT_URL=wss://<new host>`); the script never posts anywhere.
+- Never restarts the tunnel while `active_stt_sockets>0`. The service is only restarted when refused (nothing to lose).
+- Env overrides: WD_SESSION WD_SVC_WIN WD_TUN_WIN WD_PORT WD_TUNNEL_URL WD_TICK_S WD_TUN_EVERY WD_FAILS WD_MAX_TICKS WD_SVC_CMD WD_TUN_CMD. Test: `pytest detection/tests/test_watchdog.py` (throwaway tmux session, fake service+tunnel).
