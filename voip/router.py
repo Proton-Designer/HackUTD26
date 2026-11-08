@@ -48,12 +48,21 @@ def _routing(frm, att):
     except Exception:
         log.exception("routing failed; fail open"); return {"decision": "NORMAL", "reason": "Routing error, fail open"}
 
+def _find_att(o, depth=0):
+    """Recursive: any key containing shaken/stir/attest holding an A/B/C value (live field name unverified; CDR proved Telnyx sees 'A')."""
+    if depth > 4: return None
+    if isinstance(o, dict):
+        for k, v in o.items():
+            if any(w in str(k).lower() for w in ("shaken", "stir", "attest")) and isinstance(v, str) and v.strip().upper()[:1] in ("A", "B", "C"):
+                return v.strip().upper()[:1]
+        for v in o.values():
+            r = _find_att(v, depth + 1)
+            if r: return r
+    return None
+
 def attestation_of(p: dict) -> str:
-    """Best-effort SHAKEN/STIR read. UNVERIFIED field names (see API_EVIDENCE.md) -> 'none' when absent."""
-    for src in (p, p.get("shaken_stir") or {}, p.get("sip_headers") or {}):
-        v = src.get("shaken_stir_attestation") or src.get("attestation") if isinstance(src, dict) else None
-        if isinstance(v, str) and v.strip().upper()[:1] in ("A", "B", "C"): return v.strip().upper()[:1]
-    return "none"
+    """Best-effort SHAKEN/STIR read from the webhook payload (field location unverified -> 'none' when absent)."""
+    return _find_att(p) or "none"
 
 def _cs(**kw): return base64.b64encode(json.dumps(kw).encode()).decode()
 def _cs_load(s):
@@ -79,6 +88,7 @@ async def on_initiated(p, base_ws=None, sim=False):
     if not (ccid and sid and ID_RE.match(ccid) and ID_RE.match(sid)): return {}
     if sid in CALLS: return {}   # duplicate/replayed initiated for a known session: never overwrite state (sim or real)
     att = attestation_of(p)
+    log.info("call.initiated payload keys (no values): %s attestation=%s", sorted(p.keys()), att)
     emit("call.incoming", sid, {"from": frm, "to": p.get("to", ""), "attestation": att, "scam_id_score": 0.8 if att in ("C", "none") else 0.1})
     d = _routing(frm, att)
     reason = LIMITER.check(frm, sid) if d["decision"] != "BLOCKED_BACKFIRE" else None

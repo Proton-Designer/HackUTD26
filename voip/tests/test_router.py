@@ -228,3 +228,9 @@ def test_unsigned_initiated_requires_live_call(monkeypatch, client):
     monkeypatch.setattr(telnyx, "get_call", nope)
     body = {"data": {"event_type": "call.initiated", "payload": {"direction": "incoming", "call_control_id": "v2:forged12345", "call_session_id": "sess-forged-1", "from": "+15555550111"}}}
     assert client.post("/telnyx/webhook", json=body).status_code == 403
+
+
+def test_attestation_found_in_nested_field():
+    assert R.attestation_of({"x": {"shaken_stir_attestation": "a"}}) == "A"
+    assert R.attestation_of({"sip_headers": {"X-Attest": "B"}}) == "B"
+    assert R.attestation_of({"from": "+1"}) == "none"
