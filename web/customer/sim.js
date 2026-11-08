@@ -13,8 +13,8 @@
     if (!BF.sim || !a || held) return;
     try { a.currentTime = off(); } catch (e) {}
     const r = a.play(); if (r && r.catch) r.catch(() => {    // autoplay blocked: next tap anywhere starts it
-      const b = $("sound"); if (b) { b.textContent = "🔇 Tap for sound"; b.classList.add("off"); }
-      document.addEventListener("pointerdown", () => { play(); const s = $("sound"); if (s) { s.textContent = "🔊 Sound on"; s.classList.remove("off"); } }, { once: true });
+      BF.soundBadge(false);
+      document.addEventListener("pointerdown", () => { play(); BF.soundBadge(true); }, { once: true });
     });
   }
   function start() {
@@ -24,11 +24,16 @@
   }
   let hubAnswered = false;   // the hub's call.answered has arrived for this call (nothing is opened before it, and never before the customer taps Answer)
   function afterAnswer() { start(); if (BF.listen && !lws && lastCid) { want = "caller"; stats.frames = 0; stats.late = 0; decoyStart(lastCid); } }
+  function decoyBtnSync() { const b = $("decoyBtn"); if (!b) return; b.setAttribute("aria-pressed", String(!decoyMuted)); $("decoyBtnText").textContent = decoyMuted ? "Listen to the decoy" : "Listening to the decoy"; }
+  if ($("decoyBtn")) $("decoyBtn").addEventListener("click", () => { decoyMuted = !decoyMuted; if (dgain) dgain.gain.value = decoyMuted ? 0 : 1; decoyBtnSync(); });
+  const showDecoyBtn = on => { const b = $("decoyBtn"); if (b) b.hidden = !(on && (BF.sim || BF.listen)); };
+  $("sound").addEventListener("click", () => { try { if (dctx) dctx.resume(); } catch (e) {} });
   function ensureCtx() { try { if (!dctx) dctx = new (window.AudioContext || window.webkitAudioContext)(); if (dctx.state === "suspended") dctx.resume().catch(() => {}); } catch (e) {} }
   $("answerBtn").addEventListener("click", () => { ensureCtx(); tapped = true; setTimeout(() => { if (hubAnswered) afterAnswer(); }, 0); });   // if the hub already answered the caller while it was ringing, start now; otherwise wait for call.answered
   ["declineBtn", "endBtn", "btnHang"].forEach(id => $(id).addEventListener("click", stop));
   // ---- decoy listen-in: after handoff the page plays Backfire's decoy live (WS /listen/{call_id}, {track:'caller'|'decoy', payload: base64 PCMU 8 kHz 20 ms}) ----
   const ULAW = (() => { const t = new Float32Array(256); for (let i = 0; i < 256; i++) { const u = ~i & 255, s = u & 128 ? -1 : 1, e = (u >> 4) & 7, m = u & 15; t[i] = s * (((m << 3) + 132) * (1 << e) - 132) / 32768; } return t; })();
+  let decoyMuted = false;   // 'Listen to the decoy' toggles the live decoy playback (default on)
   let queued = [];   // scheduled-but-unfinished AudioBufferSources (F8)
   let lws = null, lwsCid = null, lwsExpected = false, lwsTry = 0, lwsT = null, active = null, dctx = null, dgain = null, dnext = 0, dcid = null, want = "decoy", lastCid = null;   // want: which /listen track to play ('caller' in listening mode until handoff, then 'decoy')
   const stats = BF.decoyStats = { frames: 0, bytes: 0, late: 0, state: "idle" };
@@ -38,8 +43,8 @@
     let bin; try { bin = atob(b64); } catch (e) { return; }
     const n = bin.length; if (!n) return;
     if (!dctx) { try { dctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return; } }
-    if (dctx.state === "suspended") { dctx.resume().catch(() => {}); const b = $("sound"); if (b) { b.textContent = "🔇 Tap for sound"; b.classList.add("off"); } document.addEventListener("pointerdown", () => { try { dctx.resume(); } catch (e) {} const s2 = $("sound"); if (s2) { s2.textContent = "🔊 Sound on"; s2.classList.remove("off"); } }, { once: true }); }
-    if (!dgain) { dgain = dctx.createGain(); dgain.connect(dctx.destination); BF.decoyAnalyser = dctx.createAnalyser(); dgain.connect(BF.decoyAnalyser); }
+    if (dctx.state === "suspended") { dctx.resume().catch(() => {}); BF.soundBadge(false); document.addEventListener("pointerdown", () => { try { dctx.resume(); } catch (e) {} const s2 = $("sound"); if (s2) { s2.textContent = "🔊 Sound on"; s2.classList.remove("off"); } }, { once: true }); }
+    if (!dgain) { dgain = dctx.createGain(); dgain.gain.value = decoyMuted ? 0 : 1; dgain.connect(dctx.destination); BF.decoyAnalyser = dctx.createAnalyser(); dgain.connect(BF.decoyAnalyser); }
     const buf = dctx.createBuffer(1, n, 8000), ch = buf.getChannelData(0);
     for (let i = 0; i < n; i++) ch[i] = ULAW[bin.charCodeAt(i)];
     const src = dctx.createBufferSource(); src.buffer = buf; src.connect(dgain);
@@ -81,7 +86,7 @@
   BF.onEvent = ev => {
     if (prev) prev(ev);
     switch (ev && ev.type) {
-      case "call.incoming": if (active === ev.call_id) break; hubAnswered = false; lastCid = ev.call_id; active = ev.call_id; decoyStop(); stop(); break;   // a repeated incoming for the same call must not tear the sockets down
+      case "call.incoming": if (active === ev.call_id) break; hubAnswered = false; decoyMuted = false; decoyBtnSync(); showDecoyBtn(false); lastCid = ev.call_id; active = ev.call_id; decoyStop(); stop(); break;   // a repeated incoming for the same call must not tear the sockets down
       case "call.answered":
         if (!BF.sim && !BF.listen) break;
         lastCid = ev.call_id || lastCid; active = lastCid; hubAnswered = true; if (!t0) t0 = Date.parse(ev.ts) || Date.now();
@@ -89,14 +94,14 @@
         else afterAnswer();                                                                                    // the customer already tapped Answer: audio starts now
         break;
       case "handoff.started":
-        held = true; if (a) a.pause(); want = "decoy"; stats.frames = 0; stats.late = 0; dnext = 0; decoyLabel(false);
+        showDecoyBtn(true); held = true; if (a) a.pause(); want = "decoy"; stats.frames = 0; stats.late = 0; dnext = 0; decoyLabel(false);
         if (BF.listen && lws) {} else decoyStart(ev.call_id);   // listening mode keeps its socket, only the wanted track changes
         break;
       case "handoff.restored":
-        held = false;
+        showDecoyBtn(false); held = false;
         if (BF.listen) { want = "caller"; stats.frames = 0; dnext = 0; decoyLabel(false); } else { decoyStop(); play(); }
         break;
-      case "call.ended": active = null; hubAnswered = false; decoyStop(); stop(); break;
+      case "call.ended": showDecoyBtn(false); active = null; hubAnswered = false; decoyStop(); stop(); break;
     }
   };
 })();

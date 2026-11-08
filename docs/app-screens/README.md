@@ -1,6 +1,9 @@
-# Backfire customer app: every screen (iPhone 13, 390x844, Chromium emulation, current build)
+# Backfire customer app: every screen, four viewports (Chromium emulation, current build)
 
-Regenerate: `E2E_VENV=<venv with playwright> $E2E_VENV/bin/python web/customer/tests/make_screens.py` (static server + a mock hub inside Playwright: no hub, no Telnyx, no real calls, no secrets; fake WebSockets and a fake microphone drive the states).
+Folders: `390x664/` (iPhone Safari with toolbars: the layout target, nothing action-related below the fold), `390x844/`, `pixel7/`, `desktop/` (phone frame). `AUDIT.txt` lists automatic checks per shot (tap size >= 44 px, contrast AA, clipping, horizontal overflow, buttons below the fold): currently 0 issues.
+New states added in the redesign: `17b` handing off, `17c` handoff failed, `20b` missed call.
+
+Regenerate: `E2E_VENV=<venv with playwright> $E2E_VENV/bin/python web/customer/tests/make_screens.py` (SHOT_VIEWS=390x664,390x844,pixel7,desktop; APP_DIR=<dir> to shoot a work-in-progress copy) (static server + a mock hub inside Playwright: no hub, no Telnyx, no real calls, no secrets; fake WebSockets and a fake microphone drive the states).
 Files: `index.html` markup, `style.css` look, `app.js` call screen + events, `ui.js` onboarding/Protection, `pair.js` pairing, `sim.js` caller/decoy audio (/listen), `talk.js` the customer's mic (/talk), `judge.html` scammer card.
 
 | # | Screen | Triggered by | Edit |

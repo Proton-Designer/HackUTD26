@@ -12,7 +12,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Backfire">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<style>html,body{background:#0d1117;color:#fff}</style>
+<style>html,body{background:#0e1116;color:#fff}</style>
 <script>
 // Safety net for phones without dev tools (older iOS Safari): never a blank white page. Shows the first script error on screen and polyfills replaceChildren (Safari < 14).
 if (!Element.prototype.replaceChildren) Element.prototype.replaceChildren = function () { while (this.firstChild) this.removeChild(this.firstChild); for (var i = 0; i < arguments.length; i++) this.append(arguments[i]); };
@@ -28,25 +28,49 @@ if (!Element.prototype.replaceChildren) Element.prototype.replaceChildren = func
 <body>
 <main id="phone" data-state="idle">
   <p id="a2hs" class="hint-bar" hidden role="note"><span id="a2hsText">Add Backfire to your Home Screen: tap Share, then Add to Home Screen.</span> <button id="a2hsClose" aria-label="Close">OK</button></p>
-  <header class="status"><img class="flame" src="assets/backfire-flame.png" alt="" width="14" height="21"><span id="clock">9:41</span><span class="badge sound" id="sound">🔇 Tap for sound</span><span class="badge guard" id="guard">🛡 Live Guard on</span></header>
+  <header class="status">
+    <img class="flame" src="assets/backfire-flame.png" alt="" width="14" height="21"><span id="clock">9:41</span>
+    <button class="chip-icon sound off" id="sound" type="button" aria-label="Sound off. Tap to turn sound on" title="Sound"></button>
+    <span class="badge guard watching" id="guard">Live Guard on</span>
+  </header>
 
   <div id="callView">
   <!-- INCOMING -->
   <section id="incoming" class="screen" hidden>
-    <p class="who-label" id="scamLabel" hidden>⚠ Scam Likely</p>
+    <p class="pill amber" id="scamLabel" hidden>Scam Likely</p>
     <h1 id="callerName">Unknown caller</h1>
     <p class="number" id="callerNumber"></p>
     <p class="sub" id="attest"></p>
+    <p class="note-line push" id="incomingHint">If you answer, Backfire listens to the caller only.</p>
     <div class="row two">
       <button class="big decline" id="declineBtn">Decline</button>
-      <button class="big accept" id="answerBtn">Answer</button>
+      <button class="big accept" id="answerBtn"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.6 10.8a15 15 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11 11 0 0 0 3.5.56 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.2.2 2.4.56 3.5a1 1 0 0 1-.25 1z" fill="currentColor"/></svg>Answer</button>
     </div>
   </section>
 
-  <!-- ACTIVE -->
-  <section id="active" class="screen" hidden>
-    <h1 id="activeName">Unknown caller</h1>
-    <p class="number" id="timer">00:00</p>
+  <!-- ACTIVE (data-view: call | alert | handoff, set by app.js) -->
+  <section id="active" class="screen" data-view="call" hidden>
+    <div class="handoff-hero" aria-hidden="true"><span class="ring-icon"><img src="assets/backfire-flame.png" alt="" width="40" height="60"></span></div>
+    <h2 id="handoffTitle" class="handoff-title">Backfire has the call</h2>
+    <p id="handoffLead" class="handoff-lead">It's talking to the caller in your voice and saving what they reveal.</p>
+    <div class="who"><h1 id="activeName">Unknown caller</h1><p class="number" id="timer">00:00</p></div>
+
+    <div id="alertBox" class="alert" hidden role="alert" aria-live="assertive">
+      <h2 class="alert-title">This call looks like a scam</h2>
+      <p id="alertTag" class="alert-tag" hidden></p>
+      <ul id="chips" class="chips"></ul>
+      <div class="alert-actions">
+        <button class="big gets" id="btnGets"><span class="b-main">Scammer Get Scammed</span><span class="b-sub">Backfire takes the call in your voice</span></button>
+        <div class="pair">
+          <button class="big outline" id="btnContinue">Continue</button>
+          <button class="big outline danger" id="btnHang">Hang up</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="handoffMsg" class="handoff" hidden><span id="handoffMain">You can put the phone down.</span><span id="handoffSub" class="handoff-sub">We'll tell you when it's over.</span></div>
+    <p id="observerMsg" class="observer" hidden role="status">Customer is answering on another phone. You can still watch and press the buttons.</p>
+    <p id="actedMsg" class="observer" hidden role="status"></p>
 
     <div id="talkBox" class="talk" hidden>
       <p class="talk-title">You're on the call</p>
@@ -59,30 +83,31 @@ if (!Element.prototype.replaceChildren) Element.prototype.replaceChildren = func
       <label class="ear"><input type="checkbox" id="earBox"><span>I am wearing earphones</span></label>
     </div>
 
-    <p id="observerMsg" class="observer" hidden role="status">Customer is answering on another phone. You can still watch and press the buttons.</p>
-    <p id="actedMsg" class="observer" hidden role="status"></p>
-
-    <div id="alertBox" class="alert" hidden role="alert" aria-live="assertive">
-      <p class="alert-title">Be careful. This may be a scam.</p>
-      <p id="alertTag" class="alert-tag" hidden></p>
-      <ul id="chips" class="chips"></ul>
-      <button class="big continue" id="btnContinue">Continue</button>
-      <button class="big gets" id="btnGets">Scammer Get Scammed</button>
-      <button class="big hang" id="btnHang">Hang up</button>
-    </div>
-
-    <p id="handoffMsg" class="handoff" hidden>We've got it. You can put the phone down.</p>
-    <p id="decoyMsg" class="decoy" hidden>🎧 Listening to Backfire's decoy</p>
+    <p id="decoyMsg" class="decoy" hidden>Listening to Backfire's decoy</p>
     <p id="keepOpen" class="keep-open" hidden role="note">Keep Backfire open during calls. If you switch apps, the call audio can pause.</p>
     <p id="idleMsg" class="sub">Backfire is listening to the caller only, never to you.</p>
 
-    <button class="big hang plain" id="endBtn">End call</button>
+    <div class="call-actions">
+      <button class="big outline" id="decoyBtn" type="button" aria-pressed="true" hidden><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a8 8 0 0 0-8 8v6a3 3 0 0 0 3 3h1v-7H6v-2a6 6 0 0 1 12 0v2h-2v7h1a3 3 0 0 0 3-3v-6a8 8 0 0 0-8-8z" fill="currentColor"/></svg><span id="decoyBtnText">Listening to the decoy</span></button>
+      <button class="big outline danger" id="endBtn">End call</button>
+    </div>
   </section>
 
-  <!-- ENDED -->
+  <!-- IDLE / ENDED -->
   <section id="ended" class="screen" hidden>
-    <h1>Call ended</h1>
-    <p class="sub" id="endedMsg"></p>
+    <div class="idle-only">
+      <div class="glow"><img src="assets/backfire-flame.png" alt="" width="64" height="96"></div>
+      <h1>You're protected</h1>
+      <p class="lead">Backfire listens to the caller's side of calls from numbers you don't know.</p>
+    </div>
+    <div class="ended-only">
+      <h1 id="endedTitle">Call ended</h1>
+      <p class="lead" id="endedMsg"></p>
+    </div>
+    <div class="stats" aria-label="Your protection so far">
+      <div><b id="statCalls">0</b><span>Calls handled</span></div>
+      <div><b id="statBlocked">0</b><span>Numbers blocked</span></div>
+    </div>
     <button class="big accept" id="replayBtn">Replay demo call</button>
   </section>
 
@@ -90,11 +115,10 @@ if (!Element.prototype.replaceChildren) Element.prototype.replaceChildren = func
 
   <!-- PROTECTION LOG -->
   <section id="protView" class="screen left" hidden>
-    <img class="wordmark" src="assets/backfire-wordmark.png" alt="Backfire" width="150" height="25">
     <h1>Protection</h1>
     <div class="card"><h2>Live Guard</h2>
       <p id="guardState" class="sub"></p>
-      <button class="big plainbtn" id="guardToggle"></button></div>
+      <button class="big outline" id="guardToggle"></button></div>
     <div class="card"><h2>Numbers we blocked</h2>
       <ul id="blockedList" class="rows"></ul><p id="blockedEmpty" class="sub">None yet.</p></div>
     <div class="card"><h2>Calls handled</h2><p class="stat" id="callsCount">0</p></div>
@@ -106,68 +130,85 @@ if (!Element.prototype.replaceChildren) Element.prototype.replaceChildren = func
         <li>Your voice: an 8-second sample, kept until you delete it.</li></ul></div>
     <div class="card"><h2>Numbers to never screen</h2>
       <p class="sub">Family, your doctor, your bank.</p>
-      <button class="big continue" id="dnsOpen">Manage this list</button></div>
+      <button class="big outline" id="dnsOpen">Manage this list</button></div>
     <div class="card"><h2>Your voice profile</h2>
       <p id="voiceState" class="sub"></p>
-      <button class="big hang" id="voiceDelete" hidden>Delete my voice</button>
-      <button class="big continue" id="voiceSetup" hidden>Set up my voice</button></div>
+      <button class="big outline danger" id="voiceDelete" hidden>Delete my voice</button>
+      <button class="big outline" id="voiceSetup" hidden>Set up my voice</button></div>
   </section>
 
-  <!-- ONBOARDING -->
+  <!-- ONBOARDING (each step: content, then a pinned .actions bar) -->
   <section id="setupView" class="screen left" hidden>
     <div id="step1" class="step">
-      <img class="wordmark" src="assets/backfire-wordmark.png" alt="Backfire" width="180" height="30">
-      <h1>Turn on Backfire</h1>
-      <p class="body">Backfire helps protect you from scam calls.</p>
-      <ul class="plainlist">
-        <li>It listens to the <b>caller only</b>. It never listens to you.</li>
-        <li>Nothing from your side of the call is saved.</li>
-        <li>You are always in control. You can turn it off at any time.</li></ul>
-      <button class="big accept" id="s1on">Turn on Backfire</button>
+      <div class="step-body">
+        <img class="wordmark" src="assets/backfire-wordmark.png" alt="Backfire" width="150" height="25">
+        <h1>Turn on Backfire</h1>
+        <p class="body">Backfire helps protect you from scam calls.</p>
+        <ul class="plainlist">
+          <li>It listens to the <b>caller only</b>. It never listens to you.</li>
+          <li>Nothing from your side of the call is saved.</li>
+          <li>You are always in control. You can turn it off at any time.</li></ul>
+      </div>
+      <div class="actions"><button class="big accept" id="s1on">Turn on Backfire</button></div>
     </div>
     <div id="step2" class="step" hidden>
-      <h1>Your voice (optional)</h1>
-      <p class="body">If you press <b>Scammer Get Scammed</b>, Backfire can talk to the scammer in <b>your voice</b>, so they waste their time and not yours.</p>
-      <div class="card"><h2>Voice permission</h2>
-        <p class="body small">A voice profile is <b>biometric data</b>. If you agree, Backfire makes one from a short recording of you reading a paragraph.</p>
-        <ul class="plainlist small">
-          <li>Used <b>only</b> when you press Scammer Get Scammed.</li>
-          <li>Backfire keeps only an <b>8-second voice sample</b>, not the whole recording.</li>
-          <li>Stored on Backfire's server and used for nothing else.</li>
-          <li>You can <b>delete it any time</b>. It is also deleted if you turn Live Guard off.</li></ul>
-        <p class="body small">This is separate from turning on Backfire. You can say no and still be protected.</p></div>
-      <button class="big accept" id="s2agree">I agree</button>
-      <button class="big continue" id="s2skip">Skip, use a synthetic voice</button>
+      <div class="step-body">
+        <h1>Your voice (optional)</h1>
+        <p class="body">If you press <b>Scammer Get Scammed</b>, Backfire can talk to the scammer in <b>your voice</b>, so they waste their time and not yours.</p>
+        <div class="card"><h2>Voice permission</h2>
+          <p class="body small">A voice profile is <b>biometric data</b>. If you agree, Backfire makes one from a short recording of you reading a paragraph.</p>
+          <ul class="plainlist small">
+            <li>Used <b>only</b> when you press Scammer Get Scammed.</li>
+            <li>Backfire keeps only an <b>8-second voice sample</b>, not the whole recording.</li>
+            <li>Stored on Backfire's server and used for nothing else.</li>
+            <li>You can <b>delete it any time</b>. It is also deleted if you turn Live Guard off.</li></ul>
+          <p class="body small">This is separate from turning on Backfire. You can say no and still be protected.</p></div>
+      </div>
+      <div class="actions">
+        <button class="big accept" id="s2agree">I agree</button>
+        <button class="big outline" id="s2skip">Skip, use a synthetic voice</button>
+      </div>
     </div>
     <div id="stepRec" class="step" hidden>
-      <h1>Read this out loud</h1>
-      <p class="body">Press the red button, then read the paragraph below at a normal pace. Press <b>Stop</b> when you have finished.</p>
-      <ul class="tips"><li>Find a quiet room.</li><li>Hold the phone about 20 cm from your mouth.</li><li>Never record while on a call.</li></ul>
-      <blockquote id="paragraph"></blockquote>
-      <div class="meter" aria-hidden="true"><i id="recLevel"></i></div>
-      <p class="timer-line"><span id="recTime">0:00</span> / 1:00</p>
-      <button class="big hang" id="recBtn">● Start recording</button>
-      <div id="recReview" hidden>
-        <button class="big accept" id="recSave">Save my voice</button>
-        <button class="big continue" id="recAgain">Record again</button>
+      <div class="step-body">
+        <h1>Read this out loud</h1>
+        <p class="body">Press the red button, read the paragraph at a normal pace, then press <b>Stop</b>.</p>
+        <ul class="tips"><li>Find a quiet room.</li><li>Hold the phone about 20 cm from your mouth.</li><li>Never record while on a call.</li></ul>
+        <blockquote id="paragraph"></blockquote>
+        <div class="meter" aria-hidden="true"><i id="recLevel"></i></div>
+        <p class="timer-line"><span id="recTime">0:00</span> / 1:00</p>
+        <p class="sub" id="recStatus" role="status"></p>
       </div>
-      <p class="sub" id="recStatus" role="status"></p>
-      <button class="big continue" id="recSkip">Skip, use a synthetic voice</button>
+      <div class="actions">
+        <button class="big record" id="recBtn">● Start recording</button>
+        <div id="recReview" hidden>
+          <button class="big accept" id="recSave">Save my voice</button>
+          <button class="big outline" id="recAgain">Record again</button>
+        </div>
+        <button class="big outline" id="recSkip">Skip, use a synthetic voice</button>
+      </div>
     </div>
     <div id="stepDns" class="step" hidden>
-      <p id="dnsNote" class="note" role="status"></p>
-      <h1>Numbers to never screen (optional)</h1>
-      <p class="body">Add family, your doctor or your bank. Backfire will never screen or block these numbers.</p>
-      <ul id="dnsList" class="rows"></ul>
-      <input id="dnsNumber" inputmode="tel" autocomplete="off" aria-label="Phone number" placeholder="Phone number">
-      <input id="dnsLabel" autocomplete="off" aria-label="Name" placeholder="Name (for example: Dr. Lee)">
-      <button class="big continue" id="dnsAdd">Add number</button>
-      <button class="big accept" id="dnsDone">Continue</button>
+      <div class="step-body">
+        <p id="dnsNote" class="note" role="status"></p>
+        <h1>Numbers to never screen (optional)</h1>
+        <p class="body">Add family, your doctor or your bank. Backfire will never screen or block these numbers.</p>
+        <ul id="dnsList" class="rows"></ul>
+        <input id="dnsNumber" inputmode="tel" autocomplete="off" aria-label="Phone number" placeholder="Phone number">
+        <input id="dnsLabel" autocomplete="off" aria-label="Name" placeholder="Name (for example: Dr. Lee)">
+      </div>
+      <div class="actions">
+        <button class="big outline" id="dnsAdd">Add number</button>
+        <button class="big accept" id="dnsDone">Continue</button>
+      </div>
     </div>
     <div id="step3" class="step" hidden>
-      <h1>You're protected</h1>
-      <p class="body" id="doneMsg">Backfire is on.</p>
-      <button class="big accept" id="s3done">Done</button>
+      <div class="step-body">
+        <img class="wordmark" src="assets/backfire-wordmark.png" alt="Backfire" width="150" height="25">
+        <h1>You're protected</h1>
+        <p class="body" id="doneMsg">Backfire is on.</p>
+      </div>
+      <div class="actions"><button class="big accept" id="s3done">Done</button></div>
     </div>
   </section>
 
@@ -178,14 +219,17 @@ if (!Element.prototype.replaceChildren) Element.prototype.replaceChildren = func
 
   <!-- PAIRING (TASK-014): shown only when the hub answers 401 -->
   <section id="pairView" class="screen left" hidden>
-    <h1>Pair this phone</h1>
-    <p class="body">Enter the code shown on the demo screen.</p>
-    <input id="pairPin" inputmode="numeric" autocomplete="one-time-code" maxlength="12" aria-label="Pairing code" placeholder="000000">
-    <button class="big accept" id="pairBtn">Pair</button>
-    <p class="sub" id="pairMsg" role="status"></p>
+    <div class="step-body">
+      <img class="wordmark" src="assets/backfire-wordmark.png" alt="Backfire" width="150" height="25">
+      <h1>Pair this phone</h1>
+      <p class="body">Enter the code shown on the demo screen.</p>
+      <input id="pairPin" inputmode="numeric" autocomplete="one-time-code" maxlength="12" aria-label="Pairing code" placeholder="000000">
+      <p class="sub" id="pairMsg" role="status"></p>
+    </div>
+    <div class="actions"><button class="big accept" id="pairBtn">Pair</button></div>
   </section>
 
-  <footer>Simulated carrier network <span id="src"></span></footer>
+  <footer><span id="src">Simulated call</span></footer>
   <pre id="log" hidden></pre>
 </main>
 <script src="app.js"></script>

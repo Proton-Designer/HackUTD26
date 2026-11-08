@@ -53,7 +53,7 @@
       li.append(d, u); ul.append(li);
     });
     $("blockedEmpty").hidden = state.blocked.length > 0;
-    $("callsCount").textContent = state.calls;
+    $("callsCount").textContent = state.calls; $("statCalls").textContent = state.calls; $("statBlocked").textContent = state.blocked.length;
     $("guardState").textContent = state.guardOn ? "On. Backfire is watching the caller's side of calls from numbers it doesn't know." + (state.voiceId ? " Turning it off also deletes your voice." : "") : "Off. Calls are not being checked.";
     $("guardToggle").textContent = state.guardOn ? "Turn Live Guard off" : "Turn Live Guard on";
     $("voiceState").textContent = state.voiceId ? "Set up. Backfire keeps only a short voice sample, used only if you press Scammer Get Scammed." + (HUB ? "" : " (Simulated)") : "No voice profile.";
@@ -77,7 +77,7 @@
     if (ev.type === "blocklist.updated" && d.scope === "her" && !state.blocked.some(b => b.undo_token === d.undo_token))
       state.blocked.push({ number: d.number, reason: "Caught after Scammer Get Scammed", undo_token: d.undo_token });
     if (ev.type === "call.ended") state.calls++;
-    if ((ev.type === "blocklist.updated" || ev.type === "call.ended") && !$("protView").hidden) setTimeout(renderProtection, 0);   // live update while she is looking at the log
+    if (ev.type === "blocklist.updated" || ev.type === "call.ended") setTimeout(renderProtection, 0);   // live update while she is looking at the log
     if (ev.type === "voice.enrolled" && d.voice_id) { state.voiceId = d.voice_id; store.set("voice", d.voice_id); }
     if (ev.type === "voice.deleted") { state.voiceId = null; store.set("voice", null); }
   };
@@ -207,6 +207,7 @@
   };
 
   // ---- boot ----
+  renderProtection();   // fills the idle stats (calls handled / numbers blocked); waits for pairing, fails soft
   applyGuard();
   if (!store.get("done") && !qs.has("skipsetup")) setup(1); else view("callView");
   BF.setup = setup; BF.view = view; BF._enroll = enroll;

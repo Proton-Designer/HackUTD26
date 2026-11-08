@@ -20,10 +20,12 @@
   const MOCK_CALL = qs.get("call") || "irs";   // substring of the mock call_id: irs | bank | crypto
   const DEBUG = qs.has("debug");
   window.BF = window.BF || {}; BF.hub = HUB; BF.onEventRef = null;
+  // footer tells the truth about the mode: demo replay / recorded replay / simulated call / live call (Telnyx)
+  BF.footer = () => { const f = document.getElementById("src"); if (f) f.textContent = !HUB ? "Demo replay" : BF.replay ? "Replay · recorded demo" : BF.sim ? "Simulated call" : "Live call · Telnyx"; };
   // Phone-free sim mode (?sim=1 or hub flag SIM_MODE): no Telnyx login, the page rings/answers from hub events and plays the caller audio itself (sim.js). Fails soft to false.
   BF.modeP = qs.has("sim") ? Promise.resolve({ sim: true }) : qs.has("talk") ? Promise.resolve({ listen: true, talk: true }) : qs.has("listen") ? Promise.resolve({ listen: true }) : HUB ? fetch(HUB + "/demo/status?format=json").then(r => r.json()).then(j => { const f = (j && j.flags) || {}; if (typeof f.CUSTOMER_NAME === "string") { try { document.title = "Backfire \u00b7 " + (f.CUSTOMER_NAME ? f.CUSTOMER_NAME + "\u2019s phone" : "phone"); } catch (e) {} } return { sim: !!f.SIM_MODE, listen: f.MARIA_LEG === "listen" || f.MARIA_LEG === "talk", talk: f.MARIA_LEG === "talk" }; }).catch(() => ({})) : Promise.resolve({});
   BF.simP = BF.modeP.then(m => !!(m.sim || m.listen));   // true = no Telnyx login (phone-free sim, or listening mode where Maria's leg is not a SIP client)
-  BF.modeP.then(m => { BF.listen = !!m.listen; BF.talk = !!m.talk; BF.sim = !!m.sim && !m.listen; const f = document.getElementById("src"); if (f && BF.talk) f.textContent = "· live call · talk mode"; else if (f && BF.listen) f.textContent = "· live call · listening mode"; else if (f && BF.sim) f.textContent = "· simulated call (no phone line)"; });
+  BF.modeP.then(m => { BF.listen = !!m.listen; BF.talk = !!m.talk; BF.sim = !!m.sim && !m.listen; BF.footer(); });
   // Device pairing (TASK-014): the hub issues a per-device token after the PIN is entered once. Every hub call goes through hubFetch.
   BF.deviceToken = () => { try { return localStorage.getItem("bf.device"); } catch (e) { return null; } };
   BF.authReady = Promise.resolve();   // pair.js replaces this on a fresh phone: protected routes wait until the device is paired (no 401 noise before pairing)
@@ -41,14 +43,17 @@
   const show = id => { for (const s of ["incoming", "active", "ended"]) $(s).hidden = s !== id; };
 
   // ---- audio: unlock on a user tap (mobile autoplay), then beeps are local-only ----
+  BF.soundBadge = on => { const b = $("sound"); if (!b) return; b.classList.toggle("off", !on); b.setAttribute("aria-label", on ? "Sound on" : "Sound off. Tap to turn sound on"); b.title = on ? "Sound on" : "Tap for sound"; };   // icon-only chip (CSS draws the speaker / muted speaker)
   function unlockAudio() {
     try { st.ctx = st.ctx || new (window.AudioContext || window.webkitAudioContext)(); if (st.ctx.state === "suspended") st.ctx.resume(); } catch (e) { log("audio unavailable", String(e)); }
-    const on = !!st.ctx && st.ctx.state !== "closed"; $("sound").textContent = on ? "🔊 Sound on" : "🔇 Sound off"; $("sound").classList.toggle("off", !on);
+    const on = !!st.ctx && st.ctx.state !== "closed"; BF.soundBadge(on);
   }
-  document.addEventListener("pointerdown", unlockAudio, { once: true });   // first tap anywhere unlocks beeps
+  document.addEventListener("pointerdown", unlockAudio, { once: true });
+  $("sound").addEventListener("click", unlockAudio);   // first tap anywhere unlocks beeps
 
   // ---- Live Guard badge: watching / alert / handed off / off ----
-  const BADGES = { watching: "🛡 Live Guard on", alert: "⚠ Possible scam", handed: "✓ Handled for you", off: "Live Guard off" };
+  const fmtNum = n => /^\+1\d{10}$/.test(n || "") ? `+1 (${n.slice(2, 5)}) ${n.slice(5, 8)}-${n.slice(8)}` : (n || "");
+  const BADGES = { watching: "Live Guard on", alert: "Scam Likely", handed: "Handled for you", off: "Live Guard off" };
   function setBadge(k) { if (k) st.badge = k; const key = BF.guardOn === false ? "off" : st.badge; const b = $("guard"); b.textContent = BADGES[key]; b.className = "badge guard " + key; }
   BF.renderBadge = () => setBadge();
   function beep(at, dur) {
@@ -92,9 +97,9 @@
   const ACR = s => String(s).replace(/\b(Irs|Ssa|Fbi|Dea|Ftc|Usps|Cdc|Dhs)\b/g, m => m.toUpperCase());   // server title-cases impersonated agencies
   function renderChips(chips) { const ul = $("chips"); ul.replaceChildren(...(chips || []).map(c => { const li = document.createElement("li"); li.textContent = ACR(c); return li; })); }
   function endCall(msg) {
-    BF.resumed = false; clearTimeout(st.handT); stopRing(); unlockScreen(); { const k = $("keepOpen"); if (k) k.hidden = true; }
+    $("active").dataset.handoff = ""; BF.resumed = false; clearTimeout(st.handT); stopRing(); unlockScreen(); { const k = $("keepOpen"); if (k) k.hidden = true; }
     { const n = $("actedMsg"); if (n) n.hidden = true; }
-    clearInterval(st.timer); st.answered = false; show("ended"); $("endedMsg").textContent = msg || "";
+    clearInterval(st.timer); st.answered = false; show("ended"); { const missed = /^Missed/.test(msg || ""); $("endedTitle").textContent = missed ? "Missed call" : "Call ended"; $("endedMsg").textContent = missed ? "You did not answer. Backfire is still watching your calls." : (msg || ""); }
     $("phone").dataset.state = "ended";
   }
 
@@ -108,7 +113,7 @@
     switch (ev.type) {
       case "call.incoming":
         st.callId = ev.call_id; st.alerted = false;
-        $("callerNumber").textContent = d.from || "";
+        $("callerNumber").textContent = fmtNum(d.from);
         $("scamLabel").hidden = !(d.scam_id_score >= 0.5);
         $("attest").textContent = d.attestation === "A" ? "Caller ID verified" : "Caller ID not verified";
         // Hold the ring until call.routed: a blocked call must never ring Maria's phone. Live source only; 1s fallback if routed never comes.
@@ -122,7 +127,7 @@
         if (d.level === "first" && st.alerted) break;      // re-alert only on level: realert
         st.alerted = true; setBadge("alert"); renderChips(d.why_chips);
         { const tg = $("alertTag"); const e = String(d.engine || d.source || "").toLowerCase(); if (tg) { tg.textContent = !e ? "" : /device|local|on-?device/.test(e) ? "Checked on this phone" : "Checked by Backfire's server"; tg.hidden = !tg.textContent; } }
-        $("alertBox").hidden = false; $("idleMsg").hidden = true; $("handoffMsg").hidden = true;
+        $("alertBox").hidden = false; $("idleMsg").hidden = true; $("handoffMsg").hidden = true; $("active").dataset.handoff = "";
         twoBeeps(); break;
       case "user.action": {                               // first tap wins on the hub; show an action taken on ANOTHER phone
         const mine = (window.__userActions || []).some(m => m.call_id === ev.call_id && m.data && m.data.action === d.action && Date.now() - Date.parse(m.ts) < 4000);
@@ -132,15 +137,29 @@
       case "handoff.started": clearTimeout(st.handT); showHandoff(); break;
       case "handoff.failed": failHandoff(d.reason); break;   // F3: the hub could not hand the call to Backfire: she is still on the call
       case "handoff.restored": st.alerted = false; clearTimeout(st.handT); twoBeeps(); setBadge("watching");   // F5: a later alert must fire again; F20: she hears/feels that she is back on the call
-        $("handoffMsg").textContent = "You're back on the call. Backfire stepped aside."; $("handoffMsg").hidden = false; $("alertBox").hidden = true; $("idleMsg").hidden = true; break;
+        $("alertBox").hidden = true; $("idleMsg").hidden = true; setHandoffUI("restored"); break;
       default: break;
     }
   }
   function ring() { if (st.callId && !st.answered && $("phone").dataset.state !== "ringing") { $("phone").dataset.state = "ringing"; show("incoming"); startRing(); } }
-  // F3: "We've got it" only after the hub confirms handoff.started. Until then: "Handing off…"; on handoff.failed (or no answer in 8 s) she is told she is still on the call and the buttons come back.
-  function pendingHandoff() { clearTimeout(st.handT); $("alertBox").hidden = true; $("idleMsg").hidden = true; const m = $("handoffMsg"); m.textContent = "Handing off… please stay on the line."; m.hidden = false; st.handT = setTimeout(() => failHandoff(), 8000); }
-  function failHandoff() { clearTimeout(st.handT); if ($("phone").dataset.state !== "active") return; setBadge("alert"); const m = $("handoffMsg"); m.textContent = "Couldn't hand off. You're still on the call."; m.hidden = false; $("alertBox").hidden = false; $("idleMsg").hidden = true; }
-  function showHandoff() { setBadge("handed"); $("handoffMsg").textContent = "We've got it. You can put the phone down."; $("alertBox").hidden = true; $("idleMsg").hidden = true; $("handoffMsg").hidden = false; }
+  // Handoff screen states (F3): pending -> done ("Backfire has the call") | failed (still on the call). data-view picks the layout.
+  const HANDOFF = {
+    pending: ["Handing off…", "Backfire is taking the call. Stay on the line for a moment.", "Don't hang up yet.", ""],
+    done: ["Backfire has the call", "It's talking to the caller in your voice and saving what they reveal.", "You can put the phone down.", "We'll tell you when it's over."],
+    failed: ["", "", "Couldn't hand off. You're still on the call.", ""],
+    restored: ["", "", "You're back on the call.", "Backfire stepped aside."]
+  };
+  function setHandoffUI(kind) {
+    const h = HANDOFF[kind]; $("active").dataset.handoff = kind;
+    $("handoffTitle").textContent = h[0]; $("handoffLead").textContent = h[1]; $("handoffMain").textContent = h[2]; $("handoffSub").textContent = h[3]; $("handoffSub").hidden = !h[3];
+    $("handoffMsg").hidden = false; syncView();
+  }
+  function syncView() { const act = $("active"), k = act.dataset.handoff; act.dataset.view = !$("alertBox").hidden ? "alert" : (!$("handoffMsg").hidden && (k === "pending" || k === "done")) ? "handoff" : "call"; }
+  new MutationObserver(syncView).observe($("alertBox"), { attributes: true, attributeFilter: ["hidden"] });
+  new MutationObserver(syncView).observe($("handoffMsg"), { attributes: true, attributeFilter: ["hidden"] });
+  function pendingHandoff() { clearTimeout(st.handT); $("alertBox").hidden = true; $("idleMsg").hidden = true; setHandoffUI("pending"); st.handT = setTimeout(() => failHandoff(), 8000); }
+  function failHandoff() { clearTimeout(st.handT); if ($("phone").dataset.state !== "active") return; setBadge("alert"); $("alertBox").hidden = false; $("idleMsg").hidden = true; setHandoffUI("failed"); }
+  function showHandoff() { setBadge("handed"); $("alertBox").hidden = true; $("idleMsg").hidden = true; setHandoffUI("done"); }
 
   // ---- buttons ----
   $("answerBtn").onclick = () => {
@@ -172,7 +191,7 @@
       const answerAt = ((call.events.find(e => e.type === "call.answered") || {}).ts) || 3;
       evs.filter(e => e.ts <= answerAt).forEach(e => st.tos.push(setTimeout(() => onEvent(e), e.ts * 1000)));
       st.replay = evs.filter(e => e.ts > answerAt).map(e => ({ ...e, delay: Math.max(0, (e.ts - answerAt) * 1000) }));
-      $("src").textContent = "· demo replay: " + call.call_id;
+      BF.footer();
     } catch (e) { log("could not load mock", String(e)); $("endedMsg").textContent = "Could not load mock/events.json"; }
   }
   function scheduleAfterAnswer() { st.replay.forEach(e => st.tos.push(setTimeout(() => onEvent(e), e.delay))); }
@@ -190,7 +209,7 @@
     const id = typeof x === "string" ? x : x && x.call_id; if (!id || st.callId || ["ringing", "active"].includes($("phone").dataset.state)) return;
     const info = typeof x === "object" && x ? x : {}; st.callId = id; st.alerted = false; st.answered = true;
     st.t0 = Date.now() - 1000 * (+info.age_s || 0); clearInterval(st.timer); st.timer = setInterval(tick, 500); tick();
-    $("callerNumber").textContent = info.from || ""; $("activeName").textContent = info.from || "Call in progress";
+    $("callerNumber").textContent = fmtNum(info.from); $("activeName").textContent = fmtNum(info.from) || "Call in progress";
     $("phone").dataset.state = "active"; show("active"); setBadge("watching"); lockScreen();
     BF.resumed = true; const ts = new Date().toISOString(); BF.onEvent && BF.onEvent({ type: "call.answered", call_id: id, ts, data: { by: "resume" } });
     if (info.handoff) { BF.onEvent && BF.onEvent({ type: "handoff.started", call_id: id, ts, data: {} }); showHandoff(); }
@@ -200,7 +219,7 @@
   function start() {
     setBadge("watching"); $("guard").hidden = false; $("alertBox").hidden = true; $("handoffMsg").hidden = true; $("idleMsg").hidden = false;
     st.callId = null; window.__userActions.length = 0; show("ended"); $("endedMsg").textContent = "Waiting for a call…"; $("replayBtn").hidden = !!SERVER;
-    $("src").textContent = SERVER ? "· live" : "· demo replay";
+    BF.footer();
     if (SERVER) {
       if (!ws) connectWS();
       // F10: a reload / iOS resume in the middle of a call must not lose it: ask the hub for the active call (paired /demo/status: active_call_ids = ["id"] or [{call_id, from, age_s, handoff}], top level or in flags) and re-subscribe /listen + /talk.
@@ -208,7 +227,7 @@
         if (Array.isArray(det) && det.length) { const c = det.filter(x => x && x.call_id && x.answered !== false).pop(); if (c) resumeCall(c); }   // active_calls_detail: [{call_id, from, age_s, handoff, answered}] (paired only); a call that is still ringing is not resumed
         else if (Array.isArray(ids) && ids.length) resumeCall(ids[ids.length - 1]); }).catch(() => {});
       // Honest footer: a hub in fallback/demo mode is replaying a recorded story, not a live phone line (fail soft: keep "live" if unknown).
-      fetch(HUB + "/demo/status?format=json").then(r => r.json()).then(j => { const f = (j && j.flags) || {}; if (f.FALLBACK || f.DEMO_MODE) { $("src").textContent = "· replay (recorded demo)"; BF.replay = true; } }).catch(() => {});
+      fetch(HUB + "/demo/status?format=json").then(r => r.json()).then(j => { const f = (j && j.flags) || {}; if (f.FALLBACK || f.DEMO_MODE) { BF.replay = true; BF.footer(); } }).catch(() => {});
     }
     else if (needsSetup()) BF.pendingStart = startReplay;      // demo call waits until onboarding is finished
     else startReplay();
