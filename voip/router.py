@@ -241,6 +241,28 @@ def _hub_relay():
     except Exception:
         return None
 
+# ---- evidence for the "caller track goes digital zero while Maria talks" question: per-second inbound RMS + injected-frame count (numbers only, no audio kept)
+def _mu(b):
+    b = ~b & 0xFF; t = ((b & 0x0F) << 3) + 0x84; t <<= (b & 0x70) >> 4
+    return (0x84 - t) if (b & 0x80) else (t - 0x84)
+_MU = [_mu(i) for i in range(256)]
+
+class InStats:
+    """Accumulates the caller's inbound frames; emits one compact line per second: rms (16-bit units), % frames that are digital zero, frames in, Maria frames out."""
+    def __init__(s, sid): s.sid, s.t0, s.sec, s.last_out = sid, time.time(), 0, 0; s.reset()
+    def reset(s): s.n = s.zero = 0; s.ss = 0.0; s.samples = 0
+    def add(s, payload_b64, st):
+        try: raw = base64.b64decode(payload_b64)
+        except Exception: return
+        if not raw: return
+        v = [_MU[x] for x in raw]; e = sum(x * x for x in v)
+        s.n += 1; s.ss += e; s.samples += len(v); s.zero += 1 if not any(v) else 0
+        sec = int(time.time() - s.t0)
+        if sec > s.sec:
+            out = st.get("talk_frames", 0)
+            log.warning("inrms %s t=%ds rms=%d zero=%d%% in=%d maria_out=%d", s.sid[:8], s.sec, int((s.ss / max(1, s.samples)) ** 0.5), 100 * s.zero // max(1, s.n), s.n, out - s.last_out)
+            s.last_out = out; s.sec = sec; s.reset()
+
 @router.websocket("/media/{call_id}")
 async def media(ws: WebSocket, call_id: str, t: str = ""):
     st = CALLS.get(call_id)
@@ -264,7 +286,7 @@ async def media(ws: WebSocket, call_id: str, t: str = ""):
             s = await make_p2_sink(call_id)
             if s: local.add(s)
     except Exception as e: log.warning("relay open failed (fail open): %s", e)
-    n = 0; stats = {}
+    n = 0; stats = {}; ins = InStats(call_id) if (st.get("listen") and os.environ.get("VOIP_RMS_LOG", "1") != "0") else None
     try:
         while True:
             raw = await ws.receive_text(); n += 1
@@ -272,6 +294,7 @@ async def media(ws: WebSocket, call_id: str, t: str = ""):
             try:   # evidence for LIVE_TEST_PLAN check 3/4: event + track counts, start frame metadata (never payload audio)
                 _f = json.loads(raw); _k = _f.get("event", "?") + ((":" + str(_f.get("media", {}).get("track"))) if _f.get("event") == "media" else "")
                 stats[_k] = stats.get(_k, 0) + 1
+                if ins and _f.get("event") == "media" and _f.get("media", {}).get("track") in (None, "inbound"): ins.add(_f["media"].get("payload", ""), st)
                 if _f.get("event") in ("connected", "start") and stats[_k] == 1: log.warning("media %s: %s", _f["event"], json.dumps({"event": _f.get("event"), "media_format": (_f.get("start") or {}).get("media_format"), "tracks": (_f.get("start") or {}).get("tracks")})[:200])
             except Exception: pass
             try:   # caller track only (stream_track=inbound_track); Maria's audio never streamed
@@ -281,7 +304,8 @@ async def media(ws: WebSocket, call_id: str, t: str = ""):
     except (WebSocketDisconnect, RuntimeError): pass
     finally:
         if hello: hello.cancel()
-        st.pop("send_to_caller", None); log.warning("media WS closed %s frames_in=%s frames_to_caller=%s talk_frames=%s talk_dropped=%s", call_id[:8], stats, sent, st.get("talk_frames", 0), st.get("talk_dropped", 0))
+        if st.get("talk_task"): st["talk_task"].cancel(); st.pop("talk_task", None)
+        st.pop("talk_q", None); st.pop("send_to_caller", None); log.warning("media WS closed %s frames_in=%s frames_to_caller=%s talk_frames=%s talk_dropped=%s", call_id[:8], stats, sent, st.get("talk_frames", 0), st.get("talk_dropped", 0))
         try:
             if hub: await _maybe_await(hub.close(call_id))
             elif local: await local.close()
@@ -295,23 +319,48 @@ def talk_enabled(sid) -> bool:
     st = CALLS.get(sid)
     return bool(st and st.get("listen") and talk_mode() and not st["ended"])
 
+TALK_FRAME_S = 0.02
+TALK_MAX_BACKLOG = 10   # frames (200 ms): older audio is stale, drop the overflow instead of delaying Maria
+
+async def _talk_pacer(sid):
+    """One 20 ms-cadence sender per call: the page delivers frames in bursts, Telnyx gets them evenly spaced. Sleeps when idle (sends nothing)."""
+    st = CALLS.get(sid); nxt = 0.0
+    try:
+        while st and not st["ended"]:
+            q = st.get("talk_q"); send = st.get("send_to_caller")
+            if not q or not send: await asyncio.sleep(0.005); nxt = 0.0; continue
+            now = time.monotonic()
+            if nxt < now - 0.1: nxt = now   # after idle: restart the clock, do not burst to catch up
+            if now < nxt: await asyncio.sleep(nxt - now); continue
+            if st.get("handed_off") and not st.get("restored"): q.clear(); continue   # decoy has the line: discard anything still queued
+            frame = q.popleft(); nxt += TALK_FRAME_S
+            await send({"event": "media", "media": {"payload": frame}})
+            n = st["talk_frames"] = st.get("talk_frames", 0) + 1
+            if n == 1: log.warning("talk: first Maria->caller frame on %s", sid[:8])
+    except asyncio.CancelledError: raise
+    except Exception as e: log.warning("talk pacer stopped (%s)", type(e).__name__)
+
 async def inject_maria(sid, payload_b64: str) -> bool:
-    """MARIA_LEG=talk: write one PCMU 8 kHz frame of MARIA's page microphone to the caller's bidirectional stream (the same path decoy/hello
-    audio uses; stream target_legs=self). Returns False = dropped (never queued): not a talk call, a decoy is active (handed_off and not
-    restored: muted), stream not ready, or bad payload. Maria's audio goes ONLY to the caller leg: never to the relay/P2/recordings."""
+    """MARIA_LEG=talk: queue PCMU 8 kHz frame(s) of MARIA's page microphone for the caller's bidirectional stream (same path as decoy/hello audio;
+    target_legs=self); a per-call pacer sends one 160-byte frame every 20 ms, never more than 200 ms behind (overflow dropped, counted in talk_dropped).
+    Returns False = dropped: not a talk call, a decoy is active (handed_off and not restored: muted), stream not ready, bad payload, or backlog full.
+    Maria's audio goes ONLY to the caller leg: never to the relay/P2/recordings. Silence from Maria = nothing is sent."""
     try:
         st = CALLS.get(sid)
         if not talk_enabled(sid): return False
         if st.get("handed_off") and not st.get("restored"):
             st["talk_dropped"] = st.get("talk_dropped", 0) + 1; return False   # decoy owns the caller's ears
-        send = st.get("send_to_caller")
-        if not send: st["talk_dropped"] = st.get("talk_dropped", 0) + 1; return False   # stream not up yet: drop, don't buffer
+        if not st.get("send_to_caller"): st["talk_dropped"] = st.get("talk_dropped", 0) + 1; return False   # stream not up yet: drop, don't buffer
         if not isinstance(payload_b64, str) or len(payload_b64) > 4 * TALK_MAX_BYTES // 3 + 8: return False
-        base64.b64decode(payload_b64, validate=True)   # reject garbage
-        await send({"event": "media", "media": {"payload": payload_b64}})
-        n = st["talk_frames"] = st.get("talk_frames", 0) + 1
-        if n == 1: log.warning("talk: first Maria->caller frame on %s", sid[:8])
-        return True
+        raw = base64.b64decode(payload_b64, validate=True)   # reject garbage
+        if not raw or len(raw) % 160: return False
+        q = st.setdefault("talk_q", __import__("collections").deque())
+        ok = True
+        for i in range(0, len(raw), 160):
+            if len(q) >= TALK_MAX_BACKLOG: st["talk_dropped"] = st.get("talk_dropped", 0) + 1; ok = False; continue
+            q.append(base64.b64encode(raw[i:i + 160]).decode())
+        if not st.get("talk_task") or st["talk_task"].done(): st["talk_task"] = asyncio.create_task(_talk_pacer(sid))
+        return ok
     except Exception as e:
         log.warning("inject_maria dropped (%s)", type(e).__name__); return False
 

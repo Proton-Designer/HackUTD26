@@ -468,7 +468,9 @@ PAY = base64.b64encode(b"\xff" * 160).decode()
 def test_talk_injects_maria_into_caller_stream_and_never_the_relay(monkeypatch):
     fr = FakeRelay(); monkeypatch.setattr(R, "_hub_relay", lambda: fr)
     st, got = _talk_call(monkeypatch, "sess-talk-1234567")
-    assert asyncio.run(R.inject_maria("sess-talk-1234567", PAY)) is True
+    async def go():
+        ok = await R.inject_maria("sess-talk-1234567", PAY); await asyncio.sleep(0.1); return ok
+    assert asyncio.run(go()) is True
     assert got == [{"event": "media", "media": {"payload": PAY}}] and st["talk_frames"] == 1
     assert fr.calls == []                                           # nothing went to the relay (P2/recordings)
 
@@ -477,7 +479,9 @@ def test_talk_muted_during_decoy_and_unmuted_on_restore(monkeypatch):
     st["handed_off"] = True
     assert asyncio.run(R.inject_maria("sess-talk-2234567", PAY)) is False and got == [] and st["talk_dropped"] == 1
     st["restored"] = True
-    assert asyncio.run(R.inject_maria("sess-talk-2234567", PAY)) is True and len(got) == 1
+    async def go():
+        ok = await R.inject_maria("sess-talk-2234567", PAY); await asyncio.sleep(0.1); return ok
+    assert asyncio.run(go()) is True and len(got) == 1
 
 def test_talk_refused_when_not_talk_mode_or_not_ready_or_bad(monkeypatch):
     st, got = _talk_call(monkeypatch, "sess-talk-3234567", mode="listen")
@@ -520,3 +524,40 @@ def test_persona_prefers_magpie_and_falls_back_to_say(tmp_path, monkeypatch):
     assert P.generate_hello() is not None and "say" in ran                 # Magpie failed -> say fallback
     assert (tmp_path / "hello.key").read_text().endswith("|fb")
     ran.clear(); P.generate_hello(); assert ran == []                      # fallback reused for FALLBACK_RETRY_S, Magpie not hammered
+
+
+def test_talk_output_is_paced_at_20ms_and_backlog_capped(monkeypatch):
+    st, got = _talk_call(monkeypatch, "sess-talk-6234567"); times = []
+    async def send(fr): times.append(time.monotonic()); got.append(fr)
+    st["send_to_caller"] = send
+    burst = base64.b64encode(b"\xff" * 160 * 6).decode()          # 6 frames arrive at once (a page burst)
+    async def go():
+        assert await R.inject_maria("sess-talk-6234567", burst) is True
+        await asyncio.sleep(0.4)
+        assert await R.inject_maria("sess-talk-6234567", base64.b64encode(b"\xff" * 160 * 4).decode()) is True   # 4 more
+        big = base64.b64encode(b"\xff" * 160 * 6).decode()
+        ok = await R.inject_maria("sess-talk-6234567", big); await R.inject_maria("sess-talk-6234567", big)   # overflow 200 ms backlog
+        await asyncio.sleep(0.5); return ok
+    asyncio.run(go())
+    assert st["talk_dropped"] >= 1
+    gaps = [b - a for a, b in zip(times[:6], times[1:6])]
+    assert all(0.012 < g < 0.06 for g in gaps), gaps                       # evenly spaced ~20 ms, not a burst
+    assert len(got) <= 6 + 4 + 10 + 1
+
+def test_talk_silence_sends_nothing_and_decoy_clears_queue(monkeypatch):
+    st, got = _talk_call(monkeypatch, "sess-talk-7234567")
+    async def go():
+        await R.inject_maria("sess-talk-7234567", PAY); await asyncio.sleep(0.15); n = len(got)
+        await asyncio.sleep(0.2); assert len(got) == n                      # nothing sent while Maria is silent (no zero fill)
+        st["handed_off"] = True; assert await R.inject_maria("sess-talk-7234567", PAY) is False
+    asyncio.run(go())
+
+def test_inrms_line_per_second(monkeypatch, caplog):
+    import logging; caplog.set_level(logging.WARNING, logger="voip.router")
+    ins = R.InStats("abcdef123456"); ins.t0 = time.time() - 1.5
+    zero = base64.b64encode(b"\xff" * 160).decode(); loud = base64.b64encode(bytes([0x10, 0x90] * 80)).decode()
+    ins.add(zero, {"talk_frames": 3}); ins.t0 -= 1                           # next add crosses a second boundary
+    ins.add(loud, {"talk_frames": 7})
+    msgs = [r.getMessage() for r in caplog.records if "inrms" in r.getMessage()]
+    assert msgs and "zero=100%" in msgs[0] and "maria_out=" in msgs[0] and "rms=0" in msgs[0]
+    assert R._MU[0xFF] == 0 and R._MU[0x7F] == 0 and abs(R._MU[0x10]) > 1000
