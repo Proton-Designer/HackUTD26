@@ -19,7 +19,7 @@ def decide(from_number, attestation="none"):
         try:  # P4a intel store (campaign/network blocks), fail open
             from intel.store import is_blocked
             blocked, why = is_blocked(n)
-            if blocked:
+            if blocked and not db.has("trusted", n):  # a (possibly spoofed or poisoned) intel block never overrides her trusted list
                 return {"decision": "BLOCKED_BACKFIRE", "reason": why or "Blocked by Backfire intel", "attestation": attestation}
         except Exception:
             log.warning("intel is_blocked unavailable; skipping", exc_info=True)

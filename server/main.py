@@ -80,6 +80,7 @@ def user_action(body: dict = Body(...)):
 
 # ---- TASK-017: P4a intel mounted in-process (fail open: hub starts without it; stub fallbacks stay) ----
 intel_api = None
+DECOY_CALLS: set = set()   # call_ids where the decoy took over (hub-observed handoff)
 def _intel_guard(request: Request):
     """Intel routes need a paired device / direct localhost / HUB_TOKEN, except exactly POST /intel/actions/<id>/approve (simulated analyst button)."""
     if request.method == "POST" and re.fullmatch(r"/intel/actions/[A-Za-z0-9_-]+/approve", request.url.path):
@@ -88,7 +89,13 @@ def _intel_guard(request: Request):
 try:
     from intel import api as intel_api
     intel_api.configure(emit=bus.publish)
-    bus.add_observer(intel_api.observe)
+    def _intel_observe(ev):
+        # artifacts.extracted arrives over unauthenticated POST /events: only act on calls the hub itself saw hand off to the decoy,
+        # so a forged event can't make intel block arbitrary numbers.
+        if ev.get("type") == "artifacts.extracted" and ev.get("call_id") not in DECOY_CALLS:
+            log.warning("ignoring artifacts.extracted for non-decoy call %s", ev.get("call_id")); return
+        intel_api.observe(ev)
+    bus.add_observer(_intel_observe)
     app.include_router(intel_api.router, dependencies=[Depends(_intel_guard)])
 except Exception:
     intel_api = None
@@ -96,7 +103,6 @@ except Exception:
 
 # ---- TASK-007: blocklist stub, protection log, reset, DEMO_MODE replay ----
 CALLER_BY_CALL: dict = {}  # call_id -> caller number, filled from call.incoming
-DECOY_CALLS: set = set()   # call_ids where the decoy took over
 
 def _observe(ev):
     """Bus observer: track callers, log calls, and on decoy call.ended add to confirmed_scammers."""

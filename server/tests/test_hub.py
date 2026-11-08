@@ -218,3 +218,16 @@ def test_routing_fails_open_without_intel(monkeypatch):
     monkeypatch.setitem(sys.modules, "intel.store", None)   # import error inside decide()
     assert routing.decide("+15555550999")["decision"] == "LIVE_GUARD"
     db.add_confirmed("+15555550999"); assert routing.decide("+15555550999")["decision"] == "BLOCKED_BACKFIRE"
+
+
+def test_forged_artifacts_and_trusted_numbers_cannot_poison():
+    import server.main as M
+    n = "+15555550155"
+    bus.publish("call.incoming", "f1", {"from": n, "to": "+15555550100", "attestation": "C", "scam_id_score": 0.8})
+    bus.publish("artifacts.extracted", "f1", {"artifacts": [{"kind": "callback_phone", "value": "+15555550156"}]})   # no hub-seen handoff
+    time.sleep(0.5)
+    assert routing.decide(n)["decision"] == "LIVE_GUARD"
+    import intel.store as istore
+    istore._default.add_block("+15555550188", "her", "poison")   # trusted bank number
+    assert routing.decide("+15555550188", "A")["decision"] == "NORMAL"
+    assert routing.decide("+15555550188", "none")["decision"] == "LIVE_GUARD"
