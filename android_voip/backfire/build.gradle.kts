@@ -53,4 +53,7 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
+
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.json:json:20240303")   // real org.json on the JVM (android.jar's is a stub)
 }

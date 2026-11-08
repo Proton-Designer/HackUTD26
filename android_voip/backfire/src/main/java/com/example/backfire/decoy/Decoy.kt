@@ -225,21 +225,35 @@ Only what they actually said. JSON only."""
 
     private val DOMAIN = Regex("^(?=.{4,253}$)([a-z0-9](-?[a-z0-9])*\\.)+[a-z]{2,24}$")
 
-    private fun validate(a: JSONObject): JSONObject? {
+    /** "refunds dot dept at backfire dash demo dot example" -> "refunds.dept@backfire-demo.example" (handles, domains).
+     *  Same rule as the server decoy (decoy/core.py spoken_to_text), so both paths give intel identical values. */
+    fun spokenToText(v: String): String {
+        var t = " " + v.lowercase().trim() + " "
+        for ((word, sym) in listOf(" dot " to ".", " at " to "@", " dash " to "-", " hyphen " to "-", " underscore " to "_"))
+            while (word in t) t = t.replace(word, sym)
+        t = t.trim()
+        return if (Regex("[.@]").containsMatchIn(t)) t.replace(Regex("\\s*([.@_-])\\s*"), "$1") else v.trim()
+    }
+
+    fun validate(a: JSONObject): JSONObject? {
         fun s(k: String) = a.optString(k).trim().take(200)
         return when (a.optString("kind")) {
             "callback_phone" -> s("value").filter(Char::isDigit).let { d ->
                 val n = if (d.length == 11 && d.startsWith("1")) d.drop(1) else d
                 if (n.length == 10 && n[0] in '2'..'9' && n[3] in '2'..'9') JSONObject().put("kind", "callback_phone").put("value", "+1$n") else null
             }
-            "domain" -> s("value").lowercase().removePrefix("www.").let { if (DOMAIN.matches(it)) JSONObject().put("kind", "domain").put("value", it) else null }
+            "domain" -> spokenToText(s("value")).lowercase().removePrefix("www.").let { if (DOMAIN.matches(it)) JSONObject().put("kind", "domain").put("value", it) else null }
             "url" -> s("value").let { if (Regex("^https?://[^\\s]{4,}$").matches(it)) JSONObject().put("kind", "url").put("value", it) else null }
             "wallet" -> s("addr").let { addr ->
                 val chain = s("chain").uppercase()
                 val ok = when (chain) { "BTC" -> btcValid(addr); "ETH" -> Regex("^0x[0-9a-fA-F]{40}$").matches(addr); else -> false }
                 if (ok) JSONObject().put("kind", "wallet").put("chain", chain).put("addr", addr) else null
             }
-            "payment_handle" -> if (s("id").isNotEmpty() && s("rail").isNotEmpty()) JSONObject().put("kind", "payment_handle").put("rail", s("rail").lowercase()).put("id", s("id")) else null
+            "payment_handle" -> {
+                val rail = s("rail").lowercase().filter { it in 'a'..'z' }
+                val id = spokenToText(s("id")).let { if ('@' in it) it.lowercase() else it }  // emails: matched normalized by intel
+                if (rail.isNotEmpty() && id.isNotEmpty()) JSONObject().put("kind", "payment_handle").put("rail", rail).put("id", id) else null
+            }
             "gift_card_brand", "remote_app", "impersonated_org" -> if (s("value").length in 2..60) JSONObject().put("kind", a.optString("kind")).put("value", s("value")) else null
             "script_tags" -> a.optJSONArray("value")?.let { v -> JSONObject().put("kind", "script_tags").put("value", JSONArray((0 until minOf(v.length(), 8)).map { v.optString(it).take(40) })) }
             "instruction_to_ai" -> if (s("text").isNotEmpty()) JSONObject().put("kind", "instruction_to_ai").put("text", s("text").take(160)).apply {
