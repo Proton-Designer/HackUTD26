@@ -93,6 +93,8 @@ async def on_initiated(p, base_ws=None, sim=False):
     ccid, sid, frm = p.get("call_control_id"), p.get("call_session_id"), p.get("from", "")
     if not (ccid and sid and ID_RE.match(ccid) and ID_RE.match(sid)): return {}
     if sid in CALLS: return {}   # duplicate/replayed initiated for a known session: never overwrite state (sim or real)
+    if _cs_load(p.get("client_state")).get("role") == "maria" or (maria_sip_uri() and p.get("to") and p["to"] == maria_sip_uri().split(":", 1)[1].split("@")[0]):
+        return {}   # our own dialed Maria SIP leg also arrives as call.initiated (direction incoming, own session): never treat it as a new scam call
     att = attestation_of(p)
     log.warning("call.initiated payload key paths (no values): %s attestation=%s", sorted(_key_paths(p)), att)
     emit("call.incoming", sid, {"from": frm, "to": p.get("to", ""), "attestation": att, "scam_id_score": 0.8 if att in ("C", "none") else 0.1})

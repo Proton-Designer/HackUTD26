@@ -236,3 +236,14 @@ def test_attestation_only_from_carrier_fields():
     assert R.attestation_of({"sip_headers": {"X-Attest": "A", "attestation": "A"}}) == "none"   # caller-controlled: ignored
     assert R.attestation_of({"custom_headers": [{"name": "attestation", "value": "A"}], "x": {"shaken_stir_attestation": "A"}}) == "none"
     assert "sip_headers.X-Attest" not in R._key_paths({"sip_headers": {"X-Attest": "A"}})
+
+
+def test_own_maria_leg_initiated_is_ignored(monkeypatch):
+    monkeypatch.setenv("SIM_MODE", "0"); monkeypatch.setenv("TELNYX_SIP_USER", "mariauser")
+    before = len(bus.history)
+    p = {"call_control_id": "v3:mariaLeg1234567", "call_session_id": "sess-marialeg-12345", "from": "+14690000000", "to": "mariauser",
+         "direction": "incoming", "client_state": R._cs(sid="sess-parent-12345", role="maria")}
+    assert asyncio.run(R.on_initiated(p)) == {}
+    assert len(bus.history) == before and "sess-marialeg-12345" not in R.CALLS
+    p2 = dict(p, client_state=None, call_session_id="sess-marialeg-67890")   # even without client_state, `to` = her SIP user
+    assert asyncio.run(R.on_initiated(p2)) == {}
