@@ -11,6 +11,8 @@ from .security import Limiter, verify_signature
 
 log = logging.getLogger("voip")
 router = APIRouter()
+from . import persona as _persona
+router.include_router(_persona.router)   # built-in stand-in decoy persona: WS /decoy-standin/{call_id}
 def _require_device(request: Request):
     """Credential-minting auth: a paired x-device-token (server.device) or HUB_TOKEN. NO loopback exemption (CORS/DNS-rebinding risk).
     Fail closed if server.device cannot be imported."""

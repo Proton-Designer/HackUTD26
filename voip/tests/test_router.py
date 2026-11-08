@@ -317,3 +317,19 @@ def test_dial_guard_refuses_pstn_without_flag(monkeypatch):
     with pytest.raises(telnyx.TelnyxError): asyncio.run(telnyx.dial({"to": "sip:mariauser@sip.telnyx.com"}))   # no configured user: refuse
     monkeypatch.setenv("BACKFIRE_ALLOW_PSTN_OUTBOUND", "1")
     asyncio.run(telnyx.dial({"to": "+14695550100"})); assert len(sent) == 2   # explicit override only
+
+
+def test_persona_decoy_streams_pcmu_lines_with_gaps(tmp_path, monkeypatch):
+    from voip import persona
+    monkeypatch.setenv("DECOY_LINES_DIR", str(tmp_path)); monkeypatch.setattr(persona, "GAP_S", 0.3)
+    for i in range(len(persona.LINES)): (tmp_path / f"line{i}.ulaw").write_bytes(b"\x7f" * 480)   # 3 frames each; no say/ffmpeg needed
+    app = FastAPI(); app.include_router(R.router); c = TestClient(app, client=("127.0.0.1", 50000))
+    with c.websocket_connect("/decoy-standin/sess-persona-123") as ws:
+        got = [json.loads(ws.receive_text()) for _ in range(7)]       # 3 + 3 frames of line0/line1, then line1 started: loops across lines
+    assert all(g["event"] == "media" and len(base64.b64decode(g["media"]["payload"])) == 160 for g in got)
+    assert persona.standin_mode() == "persona"; monkeypatch.setenv("DECOY_STANDIN", "echo"); assert persona.standin_mode() == "echo"
+
+def test_persona_silent_when_no_audio(tmp_path, monkeypatch):
+    from voip import persona
+    monkeypatch.setenv("DECOY_LINES_DIR", str(tmp_path)); monkeypatch.setattr(persona.shutil, "which", lambda x: None)
+    assert persona.generate_lines() == []
