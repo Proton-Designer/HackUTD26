@@ -901,3 +901,19 @@ def test_F19_old_socket_cleanup_does_not_remove_the_new_sockets_sender(monkeypat
         assert fr.closed == ["session-1"]                             # close() got the OLD session object, so the relay can ignore it
         ws2.close(); time.sleep(0.3)
     assert "send_to_caller" not in st and fr.closed == ["session-1", "session-2"]
+
+
+def test_F12_demo_reset_clears_limiter_and_exempt_numbers_are_never_limited(monkeypatch):
+    lim = Limiter(per_caller=2, window_s=600, max_concurrent=5); monkeypatch.setattr(R, "LIMITER", lim)
+    for i in range(2): assert lim.check("+1555", f"c{i}") is None
+    assert lim.check("+1555", "c3")                                   # locked out after the rehearsal burst
+    live = _state(); R.CALLS["sess-F12-live-123456"] = live; R.CALLS["sess-F12-old-1234567"] = dict(_state(), ended=True)
+    bus.reset()                                                       # what POST /demo/reset calls (hooked by voip)
+    assert lim.check("+1555", "c4") is None and "sess-F12-live-123456" in R.CALLS and "sess-F12-old-1234567" not in R.CALLS
+    monkeypatch.setenv("MARIA_AUTO_ANSWER", "1"); monkeypatch.setenv("VOIP_LIMIT_EXEMPT", "+1999,+1888"); monkeypatch.setenv("MARIA_LEG", "sip")
+    lim2 = Limiter(per_caller=1, window_s=600, max_concurrent=5); monkeypatch.setattr(R, "LIMITER", lim2)
+    calls = _ring_setup(monkeypatch, mode="sip")
+    for i in range(3):   # exempt number: three calls in a row, none rejected even though the per-caller cap is 1
+        p = _incoming(f"sess-F12-ex-{i}-12345678", f"v3:f12ex{i}1234567890"); p["from"] = "+1999"
+        asyncio.run(R.on_initiated(p))
+    assert [c[0] for c in calls] == ["answer"] * 3

@@ -128,7 +128,8 @@ async def on_initiated(p, base_ws=None, sim=False):
     log.warning("call.initiated payload key paths (no values): %s attestation=%s", sorted(_key_paths(p)), att)
     emit("call.incoming", sid, {"from": frm, "to": p.get("to", ""), "attestation": att, "scam_id_score": 0.8 if att in ("C", "none") else 0.1})
     d = _routing(frm, att)
-    reason = LIMITER.check(frm, sid) if d["decision"] != "BLOCKED_BACKFIRE" else None
+    exempt = {x.strip() for x in os.environ.get("VOIP_LIMIT_EXEMPT", "").split(",") if x.strip()}   # F12: demo numbers are never rate-limited
+    reason = LIMITER.check(frm, sid) if (d["decision"] != "BLOCKED_BACKFIRE" and frm not in exempt) else None
     if reason: d = {"decision": "BLOCKED_BACKFIRE", "reason": reason}
     emit("call.routed", sid, {"decision": d["decision"], "reason": d["reason"]})
     if d["decision"] == "BLOCKED_BACKFIRE":
@@ -681,6 +682,25 @@ async def _decoy_lost(sid):
         if st.get(k): await _safe(telnyx.hangup(st[k]), "hangup after decoy end", sim)
     _publish_demo_haul(sid)
     emit("call.ended", sid, {"ended_by": "decoy", "duration_s": round(time.time() - st["t0"], 1), **_legit(st)})
+
+def reset_state():
+    """F12: /demo/reset must also forget the per-caller rate-limit history and the active-call set (a rehearsal burst otherwise locks the demo number out
+    for 10 minutes, and a stale 'active' entry eats the concurrency cap). Ended calls are dropped; live ones are kept (a forced reset mid-call)."""
+    LIMITER.hits.clear(); LIMITER.active.intersection_update({k for k, v in CALLS.items() if not v.get("ended")})
+    for k in [k for k, v in CALLS.items() if v.get("ended")]: CALLS.pop(k, None)
+    log.warning("voip state reset (rate limiter + ended calls)")
+
+try:   # hook server.bus.reset (called by POST /demo/reset) without editing server/: idempotent
+    from server import bus as _hubbus
+    if not getattr(_hubbus.reset, "_voip_hooked", False):
+        _orig_reset = _hubbus.reset
+        def _reset_with_voip():
+            _orig_reset()
+            try: reset_state()
+            except Exception: log.exception("voip reset_state failed")
+        _reset_with_voip._voip_hooked = True; _hubbus.reset = _reset_with_voip
+except Exception:
+    log.warning("voip: bus.reset hook not installed (hub bus unavailable)")
 
 # ---- per-call journal for scripts/call_report: logs/calls/<sid8>.jsonl, one line per bus event with its timestamp (allowlisted scalar fields only:
 # no transcript text, no audio, no secrets). Fail open.
