@@ -518,7 +518,10 @@ async def talk(ws: WebSocket, call_id: str):
                 b64 = base64.b64encode(m["bytes"]).decode() if len(m["bytes"]) % 160 == 0 else None
             elif m.get("text") is not None:
                 try:
-                    b64 = json.loads(m["text"])["payload"]
+                    jm = json.loads(m["text"])
+                    if isinstance(jm, dict) and "diag" in jm:   # P1 09:20: the page's mic state (no audio), for silent-call diagnosis
+                        log.warning("talk %s diag: %s", call_id[:8], json.dumps(jm["diag"])[:300]); continue
+                    b64 = jm["payload"]
                     raw = base64.b64decode(b64, validate=True)
                     if not raw or len(raw) % 160 or len(raw) > 960: b64 = None
                 except (ValueError, KeyError, TypeError, binascii.Error):

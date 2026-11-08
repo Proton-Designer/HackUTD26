@@ -70,6 +70,8 @@
   const TAB = Math.random().toString(36).slice(2), lock = k => { try { const j = JSON.parse(localStorage.getItem(k) || "null"); return j && j.tab !== TAB && Date.now() - j.ts < 4000; } catch (e) { return false; } };
   const hold = k => { try { localStorage.setItem(k, JSON.stringify({ tab: TAB, ts: Date.now() })); } catch (e) {} };
   setInterval(() => { if (ws && ws.readyState <= 1 && wsCid) hold("bf.lock.talk." + wsCid); }, 1500);
+  // Diagnostics (P1 09:20, silent calls): every 3 s while on a call, tell the hub the mic state (never audio). Logged in hub.log as 'talk <id> diag'.
+  setInterval(() => { try { if (ws && ws.readyState === 1 && active) ws.send(JSON.stringify({ diag: { mic: stats.mic, state: stats.state, frames: stats.frames, gate: stats.gate, duck: stats.duck, rms: stats.rms, floor: stats.floor, play: stats.play, muted, handed, hubAnswered, earphones, ctx: ctx && ctx.state, track: stream && stream.getAudioTracks()[0] ? [stream.getAudioTracks()[0].readyState, stream.getAudioTracks()[0].muted, stream.getAudioTracks()[0].enabled].join("/") : "none" } })); } catch (e) {} }, 3000);
   function open(id) {
     if (!BF.talk || !id) return;
     if (lock("bf.lock.talk." + id)) { stats.state = "other-tab"; return; }   // another tab of this phone already talks on this call
