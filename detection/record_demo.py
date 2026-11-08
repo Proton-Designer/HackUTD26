@@ -42,8 +42,18 @@ SIM_STT = ["This is the fraud department at your bank.", "Your account has been 
            "Then, by gift cards and read me the numbers on the back."]
 
 
+# What real STT returned on P1's real /demo/caller.wav (IRS script; TASK-020). Re-derive from a fresh run if STT output drifts.
+SIM_REAL = ["This is Officer Daniel Brooks with the IRS Enforcement Division, am I speaking with the taxpayer? //",
+            "MUM, there is a warrant for your arrest for unpaid federal taxes from 2023.",
+            "You can avoid the arrest today if you settle the balance of $4,800 right now.",
+            "Do not hang up and do not tell anyone, or the officers will be sent to your home.",
+            "The fastest way is target gift cards. Go by them and read me the numbers on the back.",
+            "Call me back at 1-888.",
+            "555-0123, you can also pay at backfire demo example, if you prefer crypto, send bit.1A1ZP1F5QGP2DMPTFL5SLMV7DIVNA"]
+
+
 def sim_windows():
-    for seq in (SIM_CLEAN, SIM_STT):
+    for seq in (SIM_CLEAN, SIM_STT, SIM_REAL):
         yield from roll(seq)
 
 

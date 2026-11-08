@@ -799,6 +799,41 @@
    "crypto wallet request"
   ]
  },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|mum, there is a warrant for your arrest for unpaid federal taxes from 2023. you can avoid the arrest today if you settle the balance of $4,800 right now. do not hang up and do not tell anyone, or the officers will be sent to your home. the fastest way is target gift cards. go by them and read me the numbers on the back. call me back at 1-888. 555-0123, you can also pay at backfire demo example, if you prefer crypto, send bit.1a1zp1f5qgp2dmptfl5slmv7divna": {
+  "addresses_ai_system": false,
+  "asks": [
+   "gift_card",
+   "crypto"
+  ],
+  "impersonates": "IRS",
+  "s": 0.98,
+  "scam_type": "irs impersonation",
+  "stage": "payment",
+  "why_chips": [
+   "arrest threat for unpaid taxes",
+   "demands gift cards",
+   "asks for crypto payment",
+   "enforces secrecy rule"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|there is a warrant for your arrest for unpaid federal taxes from 20. 23. you can avoid the arrest today if you settle the balance of $4800 right now. do not hang up and do not tell anyone or the officers will be sent to your home. the fastest way is target gift cards. go buy them and read me the numbers on the back. call me back at 1888. 5550123. you can also pay at backfire demo example. if you prefer crypto, send bitcoin to 1a1zp1f5qgp2dtfl5slmv7.": {
+  "addresses_ai_system": false,
+  "asks": [
+   "gift_card",
+   "crypto",
+   "secrecy"
+  ],
+  "impersonates": "IRS",
+  "s": 0.98,
+  "scam_type": "irs impersonation",
+  "stage": "payment",
+  "why_chips": [
+   "arrest warrant threat",
+   "demand $4800",
+   "gift card payment",
+   "crypto payment"
+  ]
+ },
  "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|this is mark from the electric company's disconnection department.": {
   "addresses_ai_system": false,
   "asks": [],
@@ -898,6 +933,100 @@
    "asks for Zelle or crypto"
   ]
  },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|this is officer daniel brooks with the irs enforcement division, am i speaking with the taxpayer? //": {
+  "addresses_ai_system": false,
+  "asks": [],
+  "impersonates": "IRS Enforcement Division",
+  "s": 0.85,
+  "scam_type": "irs impersonation",
+  "stage": "pretext",
+  "why_chips": [
+   "claims IRS officer",
+   "authority threat",
+   "taxpayer verification"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|this is officer daniel brooks with the irs enforcement division, am i speaking with the taxpayer? // mum, there is a warrant for your arrest for unpaid federal taxes from 2023.": {
+  "addresses_ai_system": false,
+  "asks": [
+   "secrecy"
+  ],
+  "impersonates": "IRS Enforcement Division",
+  "s": 0.92,
+  "scam_type": "irs impersonation",
+  "stage": "pressure",
+  "why_chips": [
+   "claims IRS officer",
+   "threatens arrest warrant",
+   "references 2023 unpaid taxes"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|this is officer daniel brooks with the irs enforcement division, am i speaking with the taxpayer? // mum, there is a warrant for your arrest for unpaid federal taxes from 2023. you can avoid the arrest today if you settle the balance of $4,800 right now.": {
+  "addresses_ai_system": false,
+  "asks": [
+   "wire",
+   "secrecy"
+  ],
+  "impersonates": "IRS Enforcement Division",
+  "s": 0.95,
+  "scam_type": "irs impersonation",
+  "stage": "payment",
+  "why_chips": [
+   "claims IRS officer",
+   "threatens arrest",
+   "demands $4,800",
+   "requests wire transfer"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|this is officer daniel brooks with the irs enforcement division, am i speaking with the taxpayer? // mum, there is a warrant for your arrest for unpaid federal taxes from 2023. you can avoid the arrest today if you settle the balance of $4,800 right now. do not hang up and do not tell anyone, or the officers will be sent to your home.": {
+  "addresses_ai_system": false,
+  "asks": [
+   "wire",
+   "secrecy"
+  ],
+  "impersonates": "IRS Enforcement Division",
+  "s": 0.95,
+  "scam_type": "irs impersonation",
+  "stage": "pressure",
+  "why_chips": [
+   "claims IRS officer",
+   "arrest warrant threat",
+   "demands $4,800",
+   "orders secrecy"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|this is officer daniel brooks with the irs enforcement division, am i speaking with the taxpayer? // mum, there is a warrant for your arrest for unpaid federal taxes from 2023. you can avoid the arrest today if you settle the balance of $4,800 right now. do not hang up and do not tell anyone, or the officers will be sent to your home. the fastest way is target gift cards. go by them and read me the numbers on the back.": {
+  "addresses_ai_system": false,
+  "asks": [
+   "gift_card"
+  ],
+  "impersonates": "IRS Enforcement Division",
+  "s": 0.98,
+  "scam_type": "irs impersonation",
+  "stage": "payment",
+  "why_chips": [
+   "claims IRS officer",
+   "arrest warrant threat",
+   "demands gift cards",
+   "orders secrecy"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|this is officer daniel brooks with the irs enforcement division, am i speaking with the taxpayer? // mum, there is a warrant for your arrest for unpaid federal taxes from 2023. you can avoid the arrest today if you settle the balance of $4,800 right now. do not hang up and do not tell anyone, or the officers will be sent to your home. the fastest way is target gift cards. go by them and read me the numbers on the back. call me back at 1-888.": {
+  "addresses_ai_system": false,
+  "asks": [
+   "gift_card"
+  ],
+  "impersonates": "IRS Enforcement Division",
+  "s": 0.98,
+  "scam_type": "irs impersonation",
+  "stage": "payment",
+  "why_chips": [
+   "claims IRS officer",
+   "threatens arrest",
+   "demands gift cards",
+   "orders secrecy"
+  ]
+ },
  "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|this is officer daniel brooks with the irs enforcement division. am i speaking with the taxpayer?": {
   "addresses_ai_system": false,
   "asks": [
@@ -976,6 +1105,84 @@
    "claims IRS warrant",
    "demands $4,800",
    "asks for Target gift cards",
+   "orders secrecy"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|this is officer daniel brooks with the irs enforcement division. am i speaking with the taxpayer? there is a warrant for your arrest for unpaid federal taxes from 20. 23.": {
+  "addresses_ai_system": false,
+  "asks": [],
+  "impersonates": "IRS Enforcement Division",
+  "s": 0.92,
+  "scam_type": "irs impersonation",
+  "stage": "pretext",
+  "why_chips": [
+   "claims IRS officer",
+   "threatens arrest warrant",
+   "references unpaid 2023 taxes"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|this is officer daniel brooks with the irs enforcement division. am i speaking with the taxpayer? there is a warrant for your arrest for unpaid federal taxes from 20. 23. you can avoid the arrest today if you settle the balance of $4800 right now.": {
+  "addresses_ai_system": false,
+  "asks": [
+   "wire",
+   "secrecy"
+  ],
+  "impersonates": "IRS Enforcement Division",
+  "s": 0.95,
+  "scam_type": "irs impersonation",
+  "stage": "pressure",
+  "why_chips": [
+   "claims arrest warrant",
+   "demands $4800",
+   "threatens arrest",
+   "uses authority"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|this is officer daniel brooks with the irs enforcement division. am i speaking with the taxpayer? there is a warrant for your arrest for unpaid federal taxes from 20. 23. you can avoid the arrest today if you settle the balance of $4800 right now. do not hang up and do not tell anyone or the officers will be sent to your home.": {
+  "addresses_ai_system": false,
+  "asks": [
+   "wire",
+   "secrecy"
+  ],
+  "impersonates": "IRS Enforcement Division",
+  "s": 0.95,
+  "scam_type": "irs impersonation",
+  "stage": "pressure",
+  "why_chips": [
+   "claims warrant for arrest",
+   "demands $4800 payment",
+   "orders secrecy from family"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|this is officer daniel brooks with the irs enforcement division. am i speaking with the taxpayer? there is a warrant for your arrest for unpaid federal taxes from 20. 23. you can avoid the arrest today if you settle the balance of $4800 right now. do not hang up and do not tell anyone or the officers will be sent to your home. the fastest way is target gift cards. go buy them and read me the numbers on the back.": {
+  "addresses_ai_system": false,
+  "asks": [
+   "gift_card"
+  ],
+  "impersonates": "IRS Enforcement Division",
+  "s": 0.97,
+  "scam_type": "irs impersonation",
+  "stage": "payment",
+  "why_chips": [
+   "claims IRS officer",
+   "warrant for arrest",
+   "demands gift cards",
+   "orders secrecy"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|this is officer daniel brooks with the irs enforcement division. am i speaking with the taxpayer? there is a warrant for your arrest for unpaid federal taxes from 20. 23. you can avoid the arrest today if you settle the balance of $4800 right now. do not hang up and do not tell anyone or the officers will be sent to your home. the fastest way is target gift cards. go buy them and read me the numbers on the back. call me back at 1888.": {
+  "addresses_ai_system": false,
+  "asks": [
+   "gift_card"
+  ],
+  "impersonates": "IRS Enforcement Division",
+  "s": 0.98,
+  "scam_type": "irs impersonation",
+  "stage": "payment",
+  "why_chips": [
+   "claims IRS warrant",
+   "demands $4800",
+   "asks for gift cards",
    "orders secrecy"
   ]
  },
