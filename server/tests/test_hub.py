@@ -124,3 +124,12 @@ def test_static_mounts_load():
     for path in ("/app/", "/command-center/", "/command-center/app.js"):
         assert c.get(path).status_code == 200, path
     assert c.get("/healthz").json() == {"ok": True}  # API routes still win
+
+
+def test_sim_call_helpers():
+    import importlib.util, pathlib
+    sp = importlib.util.spec_from_file_location("sim_call", pathlib.Path(__file__).resolve().parents[2] / "scripts" / "sim_call.py")
+    m = importlib.util.module_from_spec(sp); sp.loader.exec_module(m)
+    assert m.lin2ulaw(0) == 0xFF and len(m.pcmu_tone(secs=1)) == 8000
+    w = m.webhook("call.initiated", {"from": "+1"})["data"]
+    assert w["event_type"] == "call.initiated" and w["payload"]["from"] == "+1"
