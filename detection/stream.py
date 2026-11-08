@@ -115,6 +115,7 @@ async def stt_ws(ws: WebSocket, call_id: str):
     await ws.accept()
     seg, ids, tasks = Segmenter(), [1, 0], set()   # ids: [next utterance number, last submitted]
     pstate = {"busy": False, "t": 0.0, "text": ""}
+    counts = {}   # frame diagnostics per event type, logged at close (P1 #31)
     chain = asyncio.Queue()   # preserve utterance order
     async def worker():
         while True:
@@ -143,6 +144,9 @@ async def stt_ws(ws: WebSocket, call_id: str):
         while True:
             raw = await ws.receive_text()
             ev, audio = parse_frame(raw)
+            counts[ev] = counts.get(ev, 0) + 1
+            if sum(counts.values()) == 1:
+                log.info("stt ws %s first frame: event=%s", call_id, ev)
             if ev == "media" and audio:
                 try:
                     submit(seg.feed(stt.mulaw_decode(audio)))
@@ -160,6 +164,7 @@ async def stt_ws(ws: WebSocket, call_id: str):
     except Exception:
         log.exception("stt ws error")
     finally:
+        log.info("stt ws %s closed: frames=%s utterances=%d", call_id, counts, ids[1])
         chain.put_nowait(None)
         try:
             await asyncio.wait_for(w, timeout=10)
