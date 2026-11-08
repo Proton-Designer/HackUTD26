@@ -18,7 +18,7 @@
 - Start the model: `bash detection/engines/run_local_llm.sh` (eng3's script; keep it running in its own tmux window). Check: `curl -s http://$(ip route | awk '/default/{print $3}'):8101/health` -> `{"status":"ok"}`.
 - `run.sh` and `acceptance.sh` now default `LOCAL_LLM_URL` to `http://<WSL gateway>:8101` when unset (override in `.env` if the model lives elsewhere). `/healthz` -> `engines.local_reachable` should be true.
 - Switch the live engine: restart P2 with `P2_ENGINE=local scripts/run.sh` (global), or per request `POST /detect {"engine":"local"}`. Back to cloud: unset `P2_ENGINE`.
-- NEEDS eng3's OpenAI-style `detection/engines/local.py` (uses /v1/chat/completions) to be pushed; the trunk copy speaks Ollama `/api/chat` and llama-server will 404.
+- (Resolved in 20ca58a: `detection/engines/local.py` speaks OpenAI /v1/chat/completions, so llama-server works.)
 - Measured (my box): detect() with engine=local ~1.6-1.7 s per scam window; acceptance case 6 PASS (irs alert s=0.95, bank no alert s=0.40).
 
 ## Cloud -> local failover (TASK-018)
