@@ -32,14 +32,16 @@ Source: `detection/eval/RESULTS.md` (eng3, a1b35a7). BEFORE = code `20ca58a`; AF
 
 | test split | local BEFORE (thr 0.95) | local AFTER | rules baseline (thr 0.85) | production rules (`detect.quick`, thr 0.80) |
 |---|---|---|---|---|
-| scam recall | 100% (33/33) [90-100] | 100% (33/33) [90-100] | 85% (28/33) [69-93] | 73% (24/33) [56-85] |
-| adversarial recall | 100% (13/13) [77-100] | 100% (13/13) [77-100] | 69% (9/13) [42-87] | 62% (8/13) [36-82] |
+| scam recall | 100% (33/33) [90-100] | 100% (33/33) [90-100] | 85% (28/33) [69-93] | 79% (26/33) [62-89] ² |
+| adversarial recall | 100% (13/13) [77-100] | 100% (13/13) [77-100] | 69% (9/13) [42-87] | 69% (9/13) [42-87] ² |
 | false alarm, all legit | 7% (2/27) [2-23] | 7% (2/27) [2-23] | 19% (5/27) [8-37] | 4% (1/27) [1-18] |
 | false alarm, keyword-bait legit | 29% (2/7) [8-64] | 29% (2/7) [8-64] | 57% (4/7) [25-84] | 14% (1/7) [3-51] |
 | AI-address flag false positives | 49% (27/55) [36-62] | **2% (1/55) [0-10]** | 0% (0/55) [0-7] | 0% (0/55) [0-7] |
 | asks precision | 36% (56/155) [29-44] | **65% (50/77) [54-75]** | 82% (47/57) [71-90] | 76% (28/37) [60-87] |
 | asks recall | 95% (56/59) [86-98] | 85% (50/59) [73-92] | 80% (47/59) [68-88] | 47% (28/59) [35-60] |
 | latency p50 | 2736 ms | 1606 ms | 0 ms | 1 ms (p95 20) |
+
+² Production-rules recall updated 2026-11-08 after TASK-057 (3c3dbe2): test 24/33 -> 26/33, adversarial 8/13 -> 9/13; its other rows are from the original scoring. See `eval/RESULTS.md` note ¹.
 
 Honesty notes:
 - Thresholds were tuned on the dev split only; test was scored once per code version, never used to tune.

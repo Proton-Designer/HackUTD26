@@ -9,8 +9,8 @@ Setup: caller lines replayed one at a time, window = last 5 lines, alert when s 
 | metric | rules (thr 0.85) | prodrules (thr 0.8) | local (thr 0.95) |
 |---|---|---|---|
 | rows scored / not scored (429 or model failure) | 60 / 0 | 60 / 0 | 60 / 0 |
-| scam recall (all alert-worthy) | 85% (28/33) [69-93] | 73% (24/33) [56-85] | 100% (33/33) [90-100] |
-| adversarial recall | 69% (9/13) [42-87] | 62% (8/13) [36-82] | 100% (13/13) [77-100] |
+| scam recall (all alert-worthy) | 85% (28/33) [69-93] | 79% (26/33) [62-89] ¹ | 100% (33/33) [90-100] |
+| adversarial recall | 69% (9/13) [42-87] | 69% (9/13) [42-87] ¹ | 100% (13/13) [77-100] |
 | injection-only recall | 86% (6/7) [49-97] | 86% (6/7) [49-97] | 100% (7/7) [65-100] |
 | false alarm, all legit | 19% (5/27) [8-37] | 4% (1/27) [1-18] | 7% (2/27) [2-23] |
 | false alarm, plain legit | 5% (1/20) [1-24] | 0% (0/20) [0-16] | 0% (0/20) [0-16] |
@@ -117,7 +117,7 @@ File `heldout_v2.jsonl` (written before the engines saw it; not in the default r
 | metric | rules (thr 0.85) | prodrules (thr 0.8) | local (thr 0.95) |
 |---|---|---|---|
 | rows scored / not scored | 40 / 0 | 40 / 0 | 40 / 0 |
-| scam recall | 40% (8/20) [22-61] | 45% (9/20) [26-66] | 100% (20/20) [84-100] |
+| scam recall | 40% (8/20) [22-61] | 50% (10/20) [30-70] ¹ | 100% (20/20) [84-100] |
 | adversarial recall (injection + Spanish) | 50% (4/8) [22-78] | 62% (5/8) [31-86] | 100% (8/8) [68-100] |
 | false alarm, all legit | 30% (6/20) [15-52] | 10% (2/20) [3-30] | 10% (2/20) [3-30] |
 | false alarm, keyword-bait legit | 60% (6/10) [31-83] | 20% (2/10) [6-51] | 20% (2/10) [6-51] |
@@ -169,3 +169,4 @@ End-to-end 'caller endpoint -> risk.update', read from `logs/p2.log` with `call_
 
 Also in those logs: STT final transcript arrives 0.25 to 0.71 s after the endpoint. A held-out cloud probe through `/detect` took 0.9 s (one call, 200).
 
+¹ Updated 2026-11-08 ~05:20 (eng1, TASK-057, rules fix 3c3dbe2): prodrules recall rows re-measured after the rules regression fix (test 24/33 -> 26/33, adversarial 8/13 -> 9/13, held-out v2 9/20 -> 10/20). Prodrules false alarms unchanged (test 1/27, v2 2/20). The other prodrules rows (asks precision/recall, latency, per-type) are from the original scoring and were not re-measured. rules and local columns are unchanged (local last measured on f65e0d9/3c3dbe2 gates: test 33/33 and 2/27, held-out v2 20/20 and 1/20; the held-out table above shows the older 2/20).
