@@ -459,3 +459,15 @@ def test_reset_never_deletes_device_tokens_even_if_intel_db_is_the_hub_db(tmp_pa
     assert device._valid(tok)
     assert c.get("/trusted").status_code == 200
     db.configure(":memory:")
+
+
+def test_intel_chain_and_map_open_get_only_nothing_else():
+    c = TestClient(app)                                              # remote, unpaired (the tunnel)
+    for p in ("/intel/chain", "/intel/map"):
+        assert c.get(p).status_code in (200, 404, 422), p            # reached the handler, not the guard
+        assert c.get(p).status_code != 401
+        assert c.post(p).status_code in (401,)                       # other methods stay gated
+        assert c.get(p + "/").status_code in (401, 404, 307)         # no prefix/trailing-slash widening
+    for p in ("/intel/chain/x", "/intel/mapx", "/intel/state", "/intel/blocked", "/intel/campaigns", "/intel/chains"):
+        assert c.get(p).status_code in (401, 404), p
+    assert c.get("/intel/state").status_code == 401

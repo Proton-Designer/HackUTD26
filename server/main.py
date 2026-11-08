@@ -87,9 +87,11 @@ def user_action(body: dict = Body(...)):
 intel_api = None
 DECOY_CALLS: set = set()   # call_ids where the decoy took over (hub-observed handoff)
 def _intel_guard(request: Request):
-    """Intel routes need a paired device / direct localhost / HUB_TOKEN, except exactly POST /intel/actions/<id>/approve (simulated analyst button)."""
+    """Intel routes need a paired device / direct localhost / HUB_TOKEN, except exactly POST /intel/actions/<id>/approve (simulated analyst button) and GET /intel/chain, GET /intel/map (read-only, synthetic)."""
     if request.method == "POST" and re.fullmatch(r"/intel/actions/[A-Za-z0-9_-]+/approve", request.url.path):
         return   # only this exact route: command center is an unpaired browser and its actions are simulated
+    if request.method == "GET" and request.url.path in ("/intel/chain", "/intel/map"):
+        return   # exact-path, GET-only: read-only synthetic views the command-center map needs over the tunnel (nothing else under /intel/ opens)
     device.require_device(request)
 try:
     from intel import api as intel_api
