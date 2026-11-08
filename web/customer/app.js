@@ -212,7 +212,7 @@
     $("callerNumber").textContent = fmtNum(info.from); $("activeName").textContent = fmtNum(info.from) || "Call in progress";
     $("phone").dataset.state = "active"; show("active"); setBadge("watching"); lockScreen();
     BF.resumed = true; const ts = new Date().toISOString(); BF.onEvent && BF.onEvent({ type: "call.answered", call_id: id, ts, data: { by: "resume" } });
-    if (info.handoff) { BF.onEvent && BF.onEvent({ type: "handoff.started", call_id: id, ts, data: {} }); showHandoff(); }
+    if (info.handoff === true || info.handoff === "started") { BF.onEvent && BF.onEvent({ type: "handoff.started", call_id: id, ts, data: {} }); showHandoff(); }
   }
 
   function needsSetup() { try { return !localStorage.getItem("bf.done") && !qs.has("skipsetup"); } catch (e) { return false; } }
