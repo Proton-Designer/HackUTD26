@@ -642,3 +642,23 @@ def test_hello_text_uses_customer_name_and_cache_follows_it(tmp_path, monkeypatc
     monkeypatch.setenv("CUSTOMER_NAME", "Priya")
     assert P.cached_hello() is None                                         # renamed: stale audio must not play the old name
     assert P.generate_hello() is not None and said[-1].endswith("Priya.") and P.cached_hello() is not None
+
+
+def test_inrms_logged_even_if_answered_webhook_not_processed_yet(monkeypatch):
+    monkeypatch.setenv("MARIA_LEG", "talk"); monkeypatch.delenv("VOIP_RMS_LOG", raising=False); monkeypatch.setattr(R, "_hub_relay", lambda: FakeRelay())
+    made = []
+    class Rec:
+        def __init__(self, sid): made.append(sid); self.n = 0
+        def add(self, payload, st): self.n += 1
+    monkeypatch.setattr(R, "InStats", Rec)
+    sid = "sess-rms-race-1234"; st = _state(sim=False); st["token"] = "tok"; R.CALLS[sid] = st
+    assert "listen" not in st                                   # call.answered not processed yet (the race)
+    frame = json.dumps({"event": "media", "media": {"track": "inbound", "payload": base64.b64encode(b"\xff" * 160).decode()}})
+    app = FastAPI(); app.include_router(R.router)
+    with TestClient(app).websocket_connect(f"/media/{sid}?t=tok") as ws:
+        ws.send_text(json.dumps({"event": "start"})); ws.send_text(frame); time.sleep(0.2)
+    assert made == [sid]
+    monkeypatch.setenv("VOIP_RMS_LOG", "0"); made.clear(); st["token"] = "tok"
+    with TestClient(app).websocket_connect(f"/media/{sid}?t=tok") as ws:
+        ws.send_text(json.dumps({"event": "start"})); time.sleep(0.1)
+    assert made == []                                            # switch off works

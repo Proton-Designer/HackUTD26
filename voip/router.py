@@ -288,7 +288,7 @@ async def media(ws: WebSocket, call_id: str, t: str = ""):
             s = await make_p2_sink(call_id)
             if s: local.add(s)
     except Exception as e: log.warning("relay open failed (fail open): %s", e)
-    n = 0; stats = {}; ins = InStats(call_id) if (st.get("listen") and os.environ.get("VOIP_RMS_LOG", "1") != "0") else None
+    n = 0; stats = {}; ins = InStats(call_id) if (listen_mode() and os.environ.get("VOIP_RMS_LOG", "1") != "0") else None   # by mode, not st["listen"]: the media WS can connect before call.answered sets it (same race as the hello)
     try:
         while True:
             raw = await ws.receive_text(); n += 1
