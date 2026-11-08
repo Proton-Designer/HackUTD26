@@ -280,3 +280,18 @@ Findings: the dept fix works on the demo card and card 2 (correct Nessie handle,
 - Relay sim card 6: haul = `zelle:refunds.dept@backfire-demo.example` (correct, matches the Nessie payee) PLUS a stray `zelle:dept@backfire-demo.example`; first decoy audio 2.16 s; reply latency 619-892 ms; 0 stalls/bails. Line scores [2,2,2,1,2]-style (the decoy doubted "send money to block it", no loop). So the hit now exists; one bogus partial handle remains in the haul.
 - Direct `core.extract` -> `intel.campaigns.normalize_artifacts` -> `intel.nessie.match_destinations` on the exact STT strings: (a) "refunds department at backfire-demo.example" alone: extractor returns no payment_handle (typed impersonated_org), no hit (no Zelle word, expected); (b) "Send $1800 by Zell to refunds department at backfire-demo.example Our support page ... number": model returns id `dept@backfire-demo.example` (drops "refunds"), normalised `zelle:dept@...`, NO hit; (c) "... to refunds dot department at backfire-demo.example": `zelle:refunds.dept@...`, hit; (d) "refunds dot dept at backfire dash demo dot example": hit.
 - Where it breaks: `decoy/core.py:407-412` repairs a model handle only when it has NO "@" (`if a["kind"] == "payment_handle" and "@" not in a["id"]`). When the model itself returns `dept@backfire-demo.example` it is left as is; in the full pipeline the Zelle backstop (core.py:~417) separately adds the correct `refunds.dept@...` from the transcript, which is why the relay run hits, but the truncated `dept@` stays as a second handle. Suggested fix: in that loop also handle ids with "@" whose local part is a strict suffix of a transcript email local on the same domain (`dept` vs `refunds.dept`) -> replace by the full email (or drop it as a duplicate).
+
+## Live calls (eng1, read-only hub WS, decoy at 67b5f8b+; one block per real call, my 0-2 char/natural/goal scores, flags = leak / empty / repeat / AI admission / generic streak x3)
+
+### 1b838cd2 (08:45:58; gift cards, then Zelle; alert 08:46:14, handoff 08:46:15, decoy hung up 08:47:28)
+| # | time | decoy line (spoken text) | ms | C N G |
+|---|---|---|---|---|
+| 1 | 08:46:18 | Wait, you want me to buy Target gift cards and mail them? Where do I send them? | 641 | 2 2 2 |
+| 2 | 08:46:35 | Oh, so I sell them to refunds dot department at backfire dash demo dot example? Is that right? | 681 | 2 1 2 |
+| 3 | 08:46:53 | Okay, so I buy Target gift cards and sell them to refunds dot department at ... How do I actually send them? Is there an app or a website I use? | 735 | 2 1 2 |
+| 4 | 08:47:11 | Zell? Like Zelle? What's the account handle or phone number I send it to? | 771 | 2 2 2 |
+| 5 | 08:47:27 | So I send it to the Zelle account at 920 7856782? Is that right? | 911 | 2 2 2 |
+| 6 | 08:47:28 | Okay, I've got all of that written down. I'm going to go take care of it right now. Bye bye. (canned wrap-up) | 0 | - |
+- Flags: none (no leak, empty reply, repeat, AI admission or generic streak; latency 641-911 ms, 6 decoy lines).
+- Goal: it pulled the handle (the scammer gave "refunds.department@backfire-demo.example", then "the Zell account", then the number 920 7856782) and read each back; wrap-up fired right after the number was repeated (about 70 s after handoff).
+- Weak spots: (1) lines 2-3 say "I sell them to ..." because the decoy's own speech-to-text heard "Zelle" as "Sell" ("Can you Sell it to the refunds.department ..."): the model copies the mishearing, and `fix_zelle` only rewrites "by/via/... sell" patterns, not "Can you sell it to"; (2) line 3 is 31 words and restates the task before asking (long for a phone); (3) the canned wrap-up line reports latency 0 ms (the screen's "Reply in 0 ms" shows again for the goodbye).
