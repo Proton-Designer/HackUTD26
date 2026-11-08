@@ -48,8 +48,8 @@
   async function startMic() {
     if (stream || starting || !BF.talk) return; starting = true;
     try {
+      ctx = new (window.AudioContext || window.webkitAudioContext)(); if (ctx.state === "suspended") ctx.resume().catch(() => {});   // F8: created inside the tap's gesture, before the await
       stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
-      ctx = new (window.AudioContext || window.webkitAudioContext)(); if (ctx.state === "suspended") ctx.resume().catch(() => {});
       src = ctx.createMediaStreamSource(stream); proc = ctx.createScriptProcessor(2048, 1, 1);
       proc.onaudioprocess = onAudio; src.connect(proc); proc.connect(ctx.destination);   // output stays silent (we never write to outputBuffer)
       stats.mic = "on"; hint("Use earphones so the caller doesn't hear himself.");

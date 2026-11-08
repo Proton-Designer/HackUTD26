@@ -24,14 +24,16 @@
   }
   let hubAnswered = false;   // the hub's call.answered has arrived for this call (nothing is opened before it, and never before the customer taps Answer)
   function afterAnswer() { start(); if (BF.listen && !lws && lastCid) { want = "caller"; stats.frames = 0; stats.late = 0; decoyStart(lastCid); } }
-  $("answerBtn").addEventListener("click", () => { tapped = true; setTimeout(() => { if (hubAnswered) afterAnswer(); }, 0); });   // if the hub already answered the caller while it was ringing, start now; otherwise wait for call.answered
+  function ensureCtx() { try { if (!dctx) dctx = new (window.AudioContext || window.webkitAudioContext)(); if (dctx.state === "suspended") dctx.resume().catch(() => {}); } catch (e) {} }
+  $("answerBtn").addEventListener("click", () => { ensureCtx(); tapped = true; setTimeout(() => { if (hubAnswered) afterAnswer(); }, 0); });   // if the hub already answered the caller while it was ringing, start now; otherwise wait for call.answered
   ["declineBtn", "endBtn", "btnHang"].forEach(id => $(id).addEventListener("click", stop));
   // ---- decoy listen-in: after handoff the page plays Backfire's decoy live (WS /listen/{call_id}, {track:'caller'|'decoy', payload: base64 PCMU 8 kHz 20 ms}) ----
   const ULAW = (() => { const t = new Float32Array(256); for (let i = 0; i < 256; i++) { const u = ~i & 255, s = u & 128 ? -1 : 1, e = (u >> 4) & 7, m = u & 15; t[i] = s * (((m << 3) + 132) * (1 << e) - 132) / 32768; } return t; })();
+  let queued = [];   // scheduled-but-unfinished AudioBufferSources (F8)
   let lws = null, lwsCid = null, lwsExpected = false, lwsTry = 0, lwsT = null, active = null, dctx = null, dgain = null, dnext = 0, dcid = null, want = "decoy", lastCid = null;   // want: which /listen track to play ('caller' in listening mode until handoff, then 'decoy')
   const stats = BF.decoyStats = { frames: 0, bytes: 0, late: 0, state: "idle" };
   function decoyLabel(on) { const l = $("decoyMsg"); if (l) { l.textContent = want === "caller" ? "🎧 Listening to the caller" : "🎧 Listening to Backfire's decoy"; l.hidden = !on; } }
-  function decoyStop() { clearTimeout(lwsT); lwsExpected = true; try { lws && lws.close(); } catch (e) {} lws = null; lwsCid = null; lwsTry = 0; dnext = 0; decoyLabel(false); stats.state = "idle"; try { dgain && dgain.disconnect(); } catch (e) {} dgain = null; }
+  function decoyStop() { queued.forEach(q => { try { q.stop(); } catch (e) {} }); queued = []; clearTimeout(lwsT); lwsExpected = true; try { lws && lws.close(); } catch (e) {} lws = null; lwsCid = null; lwsTry = 0; dnext = 0; decoyLabel(false); stats.state = "idle"; try { dgain && dgain.disconnect(); } catch (e) {} dgain = null; }
   function decoyPlay(b64) {
     let bin; try { bin = atob(b64); } catch (e) { return; }
     const n = bin.length; if (!n) return;
@@ -41,7 +43,12 @@
     const buf = dctx.createBuffer(1, n, 8000), ch = buf.getChannelData(0);
     for (let i = 0; i < n; i++) ch[i] = ULAW[bin.charCodeAt(i)];
     const src = dctx.createBufferSource(); src.buffer = buf; src.connect(dgain);
-    const now = dctx.currentTime; if (dnext < now + 0.02) { if (dnext) stats.late++; dnext = now + 0.12; }   // small jitter buffer (120 ms); re-prime after an underrun
+    const now = dctx.currentTime;
+    if (dnext > now + 0.3) {                                  // F8: backlog > 300 ms (burst, or the context is suspended and time stands still): drop what is queued and resync
+      queued.forEach(q => { try { q.stop(); } catch (e) {} }); queued = []; dnext = 0; stats.resync = (stats.resync || 0) + 1;
+    }
+    if (dnext < now + 0.02) { if (dnext) stats.late++; dnext = now + 0.12; }   // small jitter buffer (120 ms); re-prime after an underrun
+    queued.push(src); src.onended = () => { queued = queued.filter(q => q !== src); };
     src.start(dnext); dnext += n / 8000; stats.frames++; stats.bytes += n;
   }
   const TAB = Math.random().toString(36).slice(2), lock = k => { try { const j = JSON.parse(localStorage.getItem(k) || "null"); return j && j.tab !== TAB && Date.now() - j.ts < 4000; } catch (e) { return false; } };
