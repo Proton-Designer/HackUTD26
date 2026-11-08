@@ -838,3 +838,32 @@ def test_F13_decoy_crash_in_listen_mode_restores_instead_of_hanging_up(monkeypat
     # SIP mode keeps the old behaviour (Maria's leg exists)
     monkeypatch.setenv("MARIA_LEG", "sip"); sid3 = "sess-F13-sip-12345678"; st3 = _state(sim=False); st3.update(handed_off=True); R.CALLS[sid3] = st3
     asyncio.run(R._decoy_lost(sid3)); assert st3["ended"] is True
+
+
+def test_F15_double_tap_starts_one_decoy(monkeypatch):
+    class Slow(FakeRelay):
+        async def start_decoy(s, cid): s.calls.append(("start_decoy", cid)); await asyncio.sleep(0.2); return True
+    fr = Slow(); monkeypatch.setattr(R, "_hub_relay", lambda: fr); sid = "sess-F15-double-1234"; R.CALLS[sid] = _state()
+    async def go():
+        R.LOOP = asyncio.get_running_loop()
+        return await asyncio.gather(R.handoff(sid), R.handoff(sid))
+    r = asyncio.run(go())
+    assert sorted(r) == [False, True] and [c for c in fr.calls if c[0] == "start_decoy"] == [("start_decoy", sid)]
+
+def test_F14_caller_hangs_up_while_the_decoy_is_starting(monkeypatch):
+    sid = "sess-F14-hangup-1234"; st = _state(); R.CALLS[sid] = st
+    class Racy(FakeRelay):
+        async def start_decoy(s, cid): s.calls.append(("start_decoy", cid)); st["ended"] = True; return True   # caller hangs up during the await
+    fr = Racy(); monkeypatch.setattr(R, "_hub_relay", lambda: fr)
+    assert asyncio.run(R.handoff(sid)) is False
+    assert ("stop_decoy", sid) in fr.calls and not st.get("handed_off")
+    assert "handoff.started" not in [e["type"] for e in bus.history if e["call_id"] == sid]
+
+def test_F20_clear_sent_on_handoff_and_restore(monkeypatch):
+    fr = FakeRelay(); monkeypatch.setattr(R, "_hub_relay", lambda: fr); sent = []
+    async def send(fr_): sent.append(fr_)
+    sid = "sess-F20-clear-12345"; st = _state(); st["send_to_caller"] = send; st["talk_q"] = __import__("collections").deque(["x", "y"]); R.CALLS[sid] = st
+    async def go():
+        R.LOOP = asyncio.get_running_loop(); assert await R.handoff(sid); n1 = len(sent); assert await R.restore(sid); return n1
+    n1 = asyncio.run(go())
+    assert n1 == 1 and sent[0] == {"event": "clear"} and len(sent) == 2 and sent[1] == {"event": "clear"} and not st["talk_q"]

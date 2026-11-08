@@ -475,13 +475,32 @@ async def _stop_decoy(sid):
         try: await _maybe_await(hub.stop_decoy(sid))
         except Exception: log.exception("stop_decoy failed")
 
+async def _clear_caller(st):
+    """Telnyx 'clear' on the caller's bidirectional stream (flushes audio we already queued toward the caller) + drop Maria's paced queue. Fail open."""
+    try:
+        q = st.get("talk_q")
+        if q: q.clear()
+        send = st.get("send_to_caller")
+        if send: await send({"event": "clear"})
+    except Exception as e:
+        log.warning("clear caller skipped (%s)", type(e).__name__)
+
 async def handoff(sid):
     """Decoy first (no audible gap), then take Maria out of the conference. Her leg is kept (not hung up) for the restore window.
     Fail open: if the decoy cannot start, Maria stays on the call."""
     st = CALLS.get(sid); hub = _hub_relay()
-    if not st or st["ended"] or st.get("handed_off") or not hub: return False
+    if not st or st["ended"] or st.get("handed_off") or st.get("handoff_busy") or not hub: return False
+    st["handoff_busy"] = True   # F15: a double tap must not start two decoys (flag set before the first await)
+    try:
+        await _clear_caller(st)   # F20: flush hello / Maria audio still buffered on the caller leg before the decoy speaks
+        started = await _maybe_await(hub.start_decoy(sid))
+        if st["ended"]:   # F14: the caller hung up while the decoy was starting
+            if started: await _stop_decoy(sid)
+            return False
+    finally:
+        st["handoff_busy"] = False
     sim = st.get("sim", False)
-    if not await _maybe_await(hub.start_decoy(sid)):
+    if not started:
         log.warning("handoff aborted for %s: decoy not available (Maria stays)", sid)
         emit("handoff.failed", sid, {"reason": "decoy_unavailable"})   # F3: the tap must not fail silently (additive event; the page can say "decoy unavailable")
         return False
@@ -620,6 +639,7 @@ async def restore(sid, force=False):
     sim = st.get("sim", False)
     st["restored"] = True
     await _stop_decoy(sid)
+    await _clear_caller(st)   # F20: cut whatever decoy audio is still buffered toward the caller
     if st.get("listen"): pass   # MARIA_LEG=listen: nothing to rejoin, stopping the decoy is the restore
     elif st.get("maria_alive", True) and st.get("maria_ccid"):
         if st.get("conf_id"): await _safe(telnyx.join_conference(st["conf_id"], st["maria_ccid"]), "rejoin maria", sim)
