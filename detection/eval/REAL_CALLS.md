@@ -108,7 +108,7 @@ Zero = per-second RMS < 2 (digital zero, not line noise) after speech started. S
 | call | time | zero stretches > 1 s | vs 689c3f6 |
 |---|---|---|---|
 | 4d8dd2f8 | 03:04 | 5 (2-6 s each) | before |
-| 922262b2 | 03:06 | 1 (4 s + 11 s) | before |
+| 922262b2 | 03:06 | 1 (11 s, from 4 s) | before |
 | 37cbc8e2 | 03:17 | 2 (3 s, 2 s) | before |
 | 8894eb46 | 03:20 | 2 (5 s, 7 s) | before |
 | 6352e850 | 03:26 | 6+ (longest 15 s at 54-69 s) | before (the scam-card miss) |
