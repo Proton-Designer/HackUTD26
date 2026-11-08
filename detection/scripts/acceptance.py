@@ -7,7 +7,7 @@ import httpx, numpy as np, websockets
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from detection import stream
-HUB, P2 = 8190, 8191
+HUB, P2 = 8190, int(os.environ.get("ACC_P2_PORT", "8191"))
 ACC = ROOT / "detection/testdata/acc"
 PY = str(ROOT / ".venv/bin/python")
 SIL = 1.2   # seconds of silence between lines (> endpoint)
@@ -70,6 +70,7 @@ class Loop:
     async def start(self):
         self.tmp = tempfile.mkdtemp()
         env = {k: v for k, v in os.environ.items() if k not in ("PIPELINE_TOKEN", "HUB_TOKEN")}
+        if os.environ.get("ACC_BREAK_CLOUD") == "1": env["NVIDIA_BASE_URL"] = "http://127.0.0.1:9/v1"  # cloud LLM unreachable for this P2 only (failover check)
         env.update(HUB_DB=f"{self.tmp}/hub.db", HUB_URL=f"http://localhost:{HUB}", P2_ENGINE=self.engine)
         self.env = env
         self.log = open(f"{self.tmp}/p2.log", "w")

@@ -20,3 +20,8 @@
 - Switch the live engine: restart P2 with `P2_ENGINE=local scripts/run.sh` (global), or per request `POST /detect {"engine":"local"}`. Back to cloud: unset `P2_ENGINE`.
 - NEEDS eng3's OpenAI-style `detection/engines/local.py` (uses /v1/chat/completions) to be pushed; the trunk copy speaks Ollama `/api/chat` and llama-server will 404.
 - Measured (my box): detect() with engine=local ~1.6-1.7 s per scam window; acceptance case 6 PASS (irs alert s=0.95, bank no alert s=0.40).
+
+## Cloud -> local failover (TASK-018)
+- `detect(engine=cloud)`: on cloud exception/timeout/429/exhausted P2_CLOUD_RPM budget, if the local server answered a cached (10 s) `GET $LOCAL_LLM_URL/v1/models` probe, it retries ONCE on local inside the 4 s overall budget (cloud attempt is capped at 2.5 s when local is reachable). Output `engine="local"`, WARNING log `detect <id> failover: cloud <Err> -> local`, counter `detect.FAILOVERS`. Then the rule floor as always. `P2_FAILOVER=0` disables it. The cloud rate bucket never gates local.
+- Real check: `ACC_BREAK_CLOUD=1 ACC_P2_PORT=8102 bash detection/scripts/acceptance.sh` (cloud LLM base URL pointed at a dead port for that P2 only; STT unaffected).
+- Limit: llama-server runs `-np 1`, so many parallel calls queue; a local call that misses the remaining budget falls to rules-only for that window (score dips to the rule floor, then can re-arm the alert state: acceptance 4a flaked in that mode). One or two calls is fine (~1.7 s each).
