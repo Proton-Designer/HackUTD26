@@ -121,7 +121,7 @@
       seq: 0, count: 0,
       calls: new Map(), focus: null,
       engine: null, model: '', voice: null,
-      arts: new Map(), artOrder: [], orgs: [], tags: [], loose: [], instructions: [],
+      arts: new Map(), artOrder: [], orgs: [], tags: [], loose: [], instructions: [], standIn: false,
       trace: [], traceCall: null, proposed: new Set(), inputLogged: new Set(), agent: null,
       actions: new Map(), actOrder: [],
       blocks: [], rejects: [],
@@ -461,18 +461,30 @@
     },
     'artifacts.extracted'(e, d) {
       const list = normArtifacts(d);
+      // P1's phone-free SIM_MODE injects the script-card values with source 'demo_stand_in' until P3's extractor
+      // is wired (#35). Non-negotiable 7: say so everywhere these values show.
+      const standIn = /stand.?in|simulat/i.test(String(d.source || ''));
+      if (standIn) S.standIn = true;
       for (const a of list) {
         if (a.type === 'impersonated_org') { pushUniq(S.orgs, a.value); continue; }
         if (a.type === 'script_tags') { arr(a.value).forEach(t => pushUniq(S.tags, t)); continue; }
         if (a.type === 'instruction_to_ai') { pushUniq(S.instructions, a.meta.text || a.value); continue; } // the gate denies these
-        addArt(a.type, a.value, a.meta);
+        const art = addArt(a.type, a.value, a.meta);
+        if (art && standIn) art.standIn = true;
       }
       const kinds = [...new Set(list.filter(a => !['script_tags', 'instruction_to_ai'].includes(a.type)).map(a => (ART[a.type] || humanize(a.type)).toLowerCase()))];
+      const n = S.artOrder.length;
       traceCall(e.call_id);
       S.inputLogged.add(e.call_id || '_');
-      trace('input', 'INPUT', `${list.length} typed artifacts from the extractor <span class="res">· raw transcript never read</span>`);
-      stage('extract', `${S.artOrder.length} artifacts`);
-      head(`The decoy extracted <em>${S.artOrder.length} artifacts</em>`, kinds.join(' · '), 'alert');
+      if (standIn) {
+        trace('input', 'INPUT', `${list.length} typed artifacts from the demo stand-in <span class="res">· extractor simulated · raw transcript never read</span>`);
+        stage('extract', `${n} artifacts (stand-in)`);
+        head(`<em>${n} artifacts</em> loaded from the demo stand-in`, 'Extractor simulated with the script-card values; the lookups that follow are real', 'alert');
+      } else {
+        trace('input', 'INPUT', `${list.length} typed artifacts from the extractor <span class="res">· raw transcript never read</span>`);
+        stage('extract', `${n} artifacts`);
+        head(`The decoy extracted <em>${n} artifacts</em>`, kinds.join(' · '), 'alert');
+      }
       dirty('artifacts');
     },
     // ----- P4a agent trace: plan → lookups → Nemotron → proposals → gate -----
@@ -902,6 +914,9 @@
 
     artifacts() {
       const body = bodyOf('artifacts');
+      const meta = $('artifacts-meta');
+      if (S.standIn) meta.innerHTML = '<span class="pill sim">Demo stand-in · extractor simulated</span>';
+      else meta.textContent = 'checked against public records';
       // Money trail first, so the payoff is visible without scrolling. Stable within a type.
       const prio = ['domain', 'wallet', 'payment_handle', 'callback_phone', 'bank', 'gift_card_brand', 'remote_app', 'url'];
       const rank = t => (prio.includes(t) ? prio.indexOf(t) : prio.length);
@@ -1011,7 +1026,9 @@
     const rank = { conflict: 3, bad: 2, unknown: 1, ok: 0 };
     const worst = a.lookups.reduce((w, l) => (l.ok && rank[l.verdict] > rank[w] ? l.verdict : w), 'ok');
     const cls = worst === 'bad' ? ' hit' : worst === 'conflict' ? ' conflict' : '';
-    const chain = a.meta && a.meta.chain ? `<span>${esc(a.meta.chain)}</span>` : a.meta && a.meta.rail ? `<span>${esc(a.meta.rail)}</span>` : '';
+    const chainTxt = a.meta && (a.meta.chain || a.meta.rail);
+    const chain = chainTxt || a.standIn
+      ? `<span>${a.standIn ? '<span class="standin" title="Demo stand-in: extractor simulated">stand-in</span> ' : ''}${esc(chainTxt || '')}</span>` : '';
     const lks = a.lookups.length
       ? a.lookups.map(lookupHtml).join('')
       : LOOKUPABLE.has(a.type) ? '<div class="lk pending"><div class="sum">awaiting lookup…</div></div>' : '';

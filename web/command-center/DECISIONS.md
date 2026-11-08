@@ -51,6 +51,7 @@ Sources: `HackUTD-2026-Kit/domains/11-ux-interaction.md`, `12-visual-design.md`,
 - **Every network action, the attestation, the immunity count and the carrier network carry a SIMULATED label.** Non-negotiable 7.
 - **Decoy voice wording comes from `voice.enrolled` / `voice.deleted`.** If neither was seen (the screen opened after onboarding), it says "decoy voice", not "Maria's voice"; `?voice=clone` overrides for the demo.
 - **Attestation is static text labeled Simulated** (no attestation event exists in the contract); it switches to on-device wording when `risk.update.engine` is `local`.
+- **Stand-in artifacts are labeled everywhere they show (#35).** While Telnyx is blocked, P1's SIM_MODE hub publishes `artifacts.extracted` with `source: 'demo_stand_in'` (the script-card values) because P3's extractor isn't wired. The panel header says "Demo stand-in · extractor simulated", each card says "stand-in", and the trace, rail and headline say so too. The lookups that follow keep their own real / simulated tags.
 - **We never call a wallet, domain or number "scammer"** on screen; lookups state what the record shows ("Registered 3 days ago", "Matches Chase").
 
 ## Approve
