@@ -21,7 +21,7 @@ class Call:
     def __init__(self):
         self.utts = deque()          # (t, text)
         self.busy = False; self.dirty = False
-        self.fired = False; self.continued = False; self.armed = False; self.sticky = set()   # sticky: hard asks heard since the alert (TASK-062 F6 floor)
+        self.fired = False; self.continued = False; self.armed = False; self.sticky = set(); self.sticky_band = "low"   # sticky: hard asks heard since the alert (TASK-062 F6 floor); sticky_band: highest band seen while sticky (display only)
         self.prev_band = "low"; self.known_hard = set()
         self.decoy = False; self.muted = False; self.normal_since = None
         self.last = None
@@ -213,6 +213,9 @@ class AlertMachine:
             r = dict(r)
             if float(r["s"]) < STICKY_FLOOR:
                 r["s"] = STICKY_FLOOR; r["band"] = schema.band(STICKY_FLOOR)
+            # display: never show a band below the one seen while sticky (critical must not read "Watch" after the floor); s stays at the floor
+            _rk = ("low", "watch", "high", "critical"); ib = r.get("band") if r.get("band") in _rk else schema.band(float(r["s"]))
+            c.sticky_band = max(c.sticky_band, ib, key=_rk.index); r["band"] = c.sticky_band
             r["asks"] = [a for a in schema.ASKS if a in set(r.get("asks") or []) | c.sticky]
         s, asks = float(r["s"]), set(r.get("asks") or [])
         hard = asks & schema.HARD_ASKS
@@ -232,7 +235,7 @@ class AlertMachine:
             if not c.fired:
                 if s >= ALERT_S or (hard and s >= HARD_ASK_S):
                     c.fired = True
-                    c.known_hard = set(hard); c.sticky = set(hard)
+                    c.known_hard = set(hard); c.sticky = set(hard); c.sticky_band = bnd if bnd in ("low", "watch", "high", "critical") else schema.band(s)
                     log.info("alert.fired call=%s level=first src=%s s=%.2f", cid, c.src, s)
                     await self._emit_alert(cid, c, "first", chips)
             else:
@@ -256,7 +259,7 @@ class AlertMachine:
             if t == "user.action" and d.get("action") == "continue":
                 log.info("user.action continue seen call=%s", cid)
                 c = self._call(cid)
-                c.continued, c.armed, c.sticky = True, True, set()   # prev_band stays: critical must be a NEW transition after Continue
+                c.continued, c.armed, c.sticky, c.sticky_band = True, True, set(), "low"   # prev_band stays: critical must be a NEW transition after Continue
                 c.known_hard = set(c.last.get("asks", [])) & schema.HARD_ASKS if c.last else set()
                 c.utts.clear(); c.epoch += 1; c.dirty = False; c.cont_t = self.clock(); c.llm, c.llm_t, c.fail_n, c.clean_n = None, 0.0, 0, 0   # also drop the held pre-Continue score (TASK-046 L3); the user saw the alert and chose Continue: score only what is said from now on, so benign talk restores s within a line or two (a new hard ask still fires on its own)
             elif t == "handoff.started":
@@ -266,7 +269,7 @@ class AlertMachine:
                     c.utts.clear(); c.llm, c.llm_t = None, 0.0
             elif t == "handoff.restored":
                 log.info("handoff.restored seen call=%s", cid)
-                c = self._call(cid); c.decoy = False; c.fired = False; c.continued = False; c.armed = False; c.sticky = set()
+                c = self._call(cid); c.decoy = False; c.fired = False; c.continued = False; c.armed = False; c.sticky = set(); c.sticky_band = "low"
                 # restored = judged legit and handed back: like Continue, score only what is said from now on (old scam text must not re-fire 'first'); in-flight results drop (TASK-046 M1)
                 c.utts.clear(); c.epoch += 1; c.dirty = False; c.cont_t = self.clock(); c.llm, c.llm_t, c.fail_n, c.clean_n = None, 0.0, 0, 0; c.prev_band = "low"; c.known_hard = set()
             elif t == "call.ended":

@@ -238,3 +238,11 @@ def test_f6_floor_releases_after_continue_and_restored():
     r2 = Rig([R(0.95, ["ssn"]), R(0.05)])
     r2.say("read me your ssn"); r2.ev("handoff.started"); r2.ev("handoff.restored"); r2.say("thanks")
     assert _scores(r2)[-1] == 0.05
+
+def test_f6_floor_keeps_the_critical_band_but_s_stays_at_the_floor():
+    """F6 band fix: a critical hard-ask alert then a benign line: s floors at 0.60, the emitted band stays critical (command center must not read 'Watch')."""
+    r = Rig([R(0.97, ["ssn"]), R(0.05)])
+    r.say("read me your social security number"); assert r.alerts() == ["first"]
+    r.say("thanks, goodbye", dt=100)
+    last = [d for t, d in r.events if t == "risk.update"][-1]
+    assert last["s"] == 0.60 and last["band"] == "critical"
