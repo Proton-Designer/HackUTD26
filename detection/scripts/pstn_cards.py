@@ -87,6 +87,39 @@ VARIANTS = {"p20": (-20.0, 1.0), "p28": (-28.0, 1.0), "q38": (-38.0, 1.0), "fast
 LIVE = os.environ.get("PSTN_LIVE_URL", "http://localhost:8100")
 
 
+def live_active():
+    import urllib.request
+    try:
+        return int(json.load(urllib.request.urlopen(LIVE + "/healthz", timeout=3)).get("active_stt_sockets", 0))
+    except Exception:
+        return 0    # fail open
+
+
+async def guarded_call(L, cid, wav):
+    """Run one call; if a LIVE call opens meanwhile, SIGSTOP the test P2 at once (no new llama requests), wait for idle, SIGCONT. Returns (t0, was_paused)."""
+    import signal
+    paused = {"v": False}
+    async def watch():
+        while True:
+            await asyncio.sleep(1.0)
+            if live_active():
+                paused["v"] = True; p2 = L.procs[1]
+                try: os.killpg(p2.pid, signal.SIGSTOP)
+                except Exception: pass
+                print("live call opened: test P2 paused", flush=True)
+                while live_active(): await asyncio.sleep(2.0)
+                try: os.killpg(p2.pid, signal.SIGCONT)
+                except Exception: pass
+    w = asyncio.create_task(watch())
+    try:
+        t0 = await L.run_call(cid, wav)
+    finally:
+        w.cancel()
+        try: os.killpg(L.procs[1].pid, signal.SIGCONT)
+        except Exception: pass
+    return t0, paused["v"]
+
+
 def wait_idle(max_wait_s=1800):
     """RULES-CARD guard: never run llama-using batches while the LIVE service has a call (active_stt_sockets>0). Fails open if :8100 is unreachable."""
     import urllib.request
@@ -115,7 +148,7 @@ async def main(a):
         w = wave.open(str(p), "wb"); w.setnchannels(1); w.setsampwidth(2); w.setframerate(8000); w.writeframes(pcm.tobytes()); w.close(); wavs[(c, v)] = (str(p), spans)
     if a.stt == "whisper": os.environ["P2_STT"] = "whisper"
     ids = {j: f"pc_{j[0]}_{j[1]}_{a.stt}" for j in jobs}
-    L = Loop(os.environ.get("ACC_ENGINE", "local"), list(ids.values())); await L.start()
+    L = Loop(os.environ.get("ACC_ENGINE", "local"), [i + "r" * k for i in ids.values() for k in range(6)]); await L.start()
     rows = json.loads(Path(a.json).read_text()) if Path(a.json).exists() and a.resume else []
     done = {(r["card"], r["variant"]) for r in rows}
     try:
@@ -123,7 +156,13 @@ async def main(a):
             if (c, v) in done: continue
             wait_idle()
             cid = ids[(c, v)]; title, lines = cards[c]; wav, spans = wavs[(c, v)]
-            t0 = await L.run_call(cid, wav)
+            for attempt in range(6):
+                wait_idle()                                   # also before the call: a live socket that is already open means do not start
+                t0, was_paused = await guarded_call(L, f"{cid}{'r' * attempt}", wav)
+                if not was_paused: break
+                print(f"{c} {v}: discarded (a live call interrupted it), rerun", flush=True)
+            cid = f"{cid}{'r' * attempt}"
+            if was_paused: continue
             fin = [e for e in L.ev(cid, "transcript.caller") if e["data"].get("is_final", True)]
             hyp = " ".join(e["data"].get("text", "") for e in fin)
             ref_main = " ".join(lines[:5] if c.startswith("s") else lines)
