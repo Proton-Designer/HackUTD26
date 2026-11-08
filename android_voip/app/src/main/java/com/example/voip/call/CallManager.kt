@@ -219,6 +219,7 @@ object CallManager {
     fun hangUp() = exec.execute { hangUpInternal() }
 
     fun setMuted(value: Boolean) = exec.execute {
+        if (_state.value.decoy) return@execute   // disabling the track would also silence the decoy's voice
         muted = value
         localTrack?.setEnabled(!value)
         _state.update { it.copy(muted = value) }
@@ -242,6 +243,7 @@ object CallManager {
             muted = false
             localTrack?.setEnabled(true)
             _state.update { it.copy(muted = false, decoy = true) }
+            updateProximity()   // phone is silent and can be put down or used: no screen-off at the ear
             true
         }
         exec.execute(f)
@@ -251,6 +253,7 @@ object CallManager {
     fun stopDecoyMode() = exec.execute {
         Injector.stop()
         _state.update { it.copy(decoy = false) }
+        updateProximity()
     }
 
     /** Another app (Backfire) ends the call, e.g. when the decoy is done. */
@@ -642,7 +645,7 @@ object CallManager {
             is CallState.Outgoing, is CallState.Connecting, is CallState.Active -> true
             else -> false
         }
-        effects.setProximity(inCall && _state.value.route == AudioRoute.EARPIECE)
+        effects.setProximity(inCall && !_state.value.decoy && _state.value.route == AudioRoute.EARPIECE)
     }
 
     /** Logs failures and tears the call down; subclasses override the success callbacks they need. */

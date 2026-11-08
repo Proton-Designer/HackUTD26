@@ -38,6 +38,9 @@ object Injector {
         synchronized(lock) { head = 0; size = 0 }
         callId = id
         adm?.setMicrophoneMute(true)
+        // Silence this phone too: Maria doesn't hear the scammer while the decoy talks. Backfire still gets the
+        // caller's audio through the remote track sink (AudioBus), which is independent of the speaker.
+        adm?.setSpeakerMute(true)
         Log.i(TAG, "injecting into $id")
         return true
     }
@@ -46,6 +49,7 @@ object Injector {
         if (callId == null) return
         callId = null
         adm?.setMicrophoneMute(false)
+        adm?.setSpeakerMute(false)
         synchronized(lock) { head = 0; size = 0 }
     }
 

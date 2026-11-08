@@ -54,7 +54,12 @@ class AlertActivity : ComponentActivity() {
                     call != null && !call.decoyActive && (call.alertShown || call.note != null) -> AlertPanel(
                         peer = call.peer, chips = call.chips, sgsAvailable = st.cloudOk, note = call.note,
                     ) { a -> Guard.action(a); if (a != "scammer_get_scammed") finish() }
-                    st.handled != null -> Handled(st.handled!!) { Guard.dismissHandled(); finish() }
+                    st.handled != null -> Handled(st.handled!!) {
+                        Guard.dismissHandled(); finish()
+                        // The decoy keeps the call going on its own: send Maria home rather than back to the call screen.
+                        startActivity(android.content.Intent(android.content.Intent.ACTION_MAIN)
+                            .addCategory(android.content.Intent.CATEGORY_HOME).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+                    }
                     else -> LaunchedEffect(Unit) { finish() }
                 }
             }
@@ -103,7 +108,9 @@ fun Handled(peer: String, onOk: () -> Unit) {
         Text("Handled for you", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
         Text("Backfire's decoy is talking to $peer on this phone, so they waste their time and not yours. Nothing about you is shared. " +
             "Calls from this number will be blocked when it's over.", color = Color(0xFFCFD8DC), fontSize = 17.sp)
-        Big("OK", Purple, onOk)
+        Text("Your phone stays silent: you won't hear them and they won't hear you. You can put it away.",
+            color = Color(0xFFCFD8DC), fontSize = 17.sp)
+        Big("OK, close", Purple, onOk)
     }
 }
 

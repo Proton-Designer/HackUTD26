@@ -17,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BluetoothAudio
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CallEnd
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Headset
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
@@ -84,12 +85,22 @@ fun CallScreen(state: UiState) {
 
         if (state.decoy) {
             Spacer(Modifier.height(24.dp))
-            Text("🛡 Backfire is talking to this caller for you.\nYou can put the phone down.", color = Color(0xFFB39DDB),
+            Text("🛡 Backfire is talking to this caller for you.", color = Color(0xFFB39DDB),
                 fontSize = 18.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            Spacer(Modifier.height(8.dp))
+            Text("Your phone is silent: you can't hear them and they can't hear you.\nClose this screen and carry on with your day.",
+                color = Color(0xFFB0BEC5), fontSize = 15.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         }
         Spacer(Modifier.weight(1f))
         Column(Modifier.fillMaxWidth().padding(bottom = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            if (call is CallState.Incoming) {
+            if (state.decoy) {
+                val activity = androidx.compose.ui.platform.LocalContext.current as? android.app.Activity
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    // Close only hides the screen; the call and the decoy keep going (ongoing-call notification brings it back).
+                    RoundAction(Icons.Filled.Close, "Close", Color(0xFF455A64)) { activity?.moveTaskToBack(true) }
+                    RoundAction(Icons.Filled.CallEnd, "End call", Red) { CallManager.hangUp() }
+                }
+            } else if (call is CallState.Incoming) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                     RoundAction(Icons.Filled.CallEnd, "Decline", Red) { CallManager.decline() }
                     RoundAction(Icons.Filled.Call, "Answer", Green) { CallManager.accept() }
