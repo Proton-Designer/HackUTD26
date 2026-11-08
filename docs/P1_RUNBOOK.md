@@ -71,3 +71,5 @@ Restore variant: `--script benign` + tap, then hold low risk 10 s (`RESTORE_LOW_
 - Do Not Screen list: `GET/POST /trusted`, `DELETE /trusted/<number>` (device-authed; E.164 validated; same table routing uses for trusted+A NORMAL). Fallback detector: gov agency + arrest/warrant floors the regex score at 0.82; one retry on NVIDIA 429.
 
 - WS /talk/{call_id} (MARIA_LEG=talk, role-play demos): same auth as /listen (subprotocols ["bf-device", token] or loopback same-origin), call known on the bus and voip.talk_enabled(call_id); one talker per call; JSON {payload: b64 PCMU 8k, 160 B = 20 ms, up to 960 B} or binary 160 B multiples; <=60 frames/s; dropped while the decoy has the call. Maria's audio goes only to voip.inject_maria (caller leg), never to P2/P3, never stored or logged.
+
+- Restart guard: `scripts/restart_hub_safe [--check] [--force]` refuses (exit 2, prints call-id prefixes) while /demo/status flags.active_calls>0 (calls with an open media session; last_call_activity_ts shows recency), then stops the listener and execs run_hub. Use it instead of killing/restarting the hub by hand.

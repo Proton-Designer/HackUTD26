@@ -471,3 +471,21 @@ def test_intel_chain_and_map_open_get_only_nothing_else():
     for p in ("/intel/chain/x", "/intel/mapx", "/intel/state", "/intel/blocked", "/intel/campaigns", "/intel/chains"):
         assert c.get(p).status_code in (401, 404), p
     assert c.get("/intel/state").status_code == 401
+
+
+def test_status_active_calls_flag():
+    import asyncio
+    from server import relay
+    c = TestClient(app, client=("127.0.0.1", 5000))
+    f = c.get("/demo/status").json()
+    assert f["flags"]["active_calls"] == 0 and f["flags"]["last_call_activity_ts"] is None and f["active_call_ids"] == []
+    async def go():
+        async def back(x): pass
+        await relay.open("ACTIVE-CALL-1", back)
+        await relay.caller_frame("ACTIVE-CALL-1", {"event": "media", "media": {"track": "inbound", "payload": "AA=="}})
+        s = await asyncio.to_thread(lambda: c.get("/demo/status").json())
+        assert s["flags"]["active_calls"] == 1 and s["active_call_ids"] == ["ACTIVE-C"] and s["flags"]["last_call_activity_ts"] > 0
+        await relay.close("ACTIVE-CALL-1")
+        s = await asyncio.to_thread(lambda: c.get("/demo/status").json())
+        assert s["flags"]["active_calls"] == 0
+    asyncio.run(go())

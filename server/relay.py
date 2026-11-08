@@ -30,7 +30,7 @@ class _Session:
         self.p2_q = asyncio.Queue(QMAX); self.header = []; self.stream_id = None; self.p2_retry = 0.0
         self.p2_task = asyncio.create_task(_p2_pump(self))
         self.decoy_active = False; self.d_ws = None; self.d_q = None; self.d_tasks = []
-        self.n = 0; self.sent_t = {}; self.dropped = 0
+        self.n = 0; self.sent_t = {}; self.dropped = 0; self.t_act = time.time()
 
 # --- WS /listen/{call_id}: judges hear the caller + decoy audio in the phone-free demo. Caller inbound track and decoy->caller frames only
 # (Maria's audio never enters the relay). Text frames: {"track":"caller"|"decoy","payload": PCMU 8k base64} (20 ms each).
@@ -49,6 +49,11 @@ def _fan(call_id, track, frame):
     for q in list(qs):
         try: q.put_nowait(msg)
         except asyncio.QueueFull: pass   # slow listener: drop the frame; the listener loop closes it if its socket stalls
+
+def active_calls():
+    """Live calls with an open media session (relay.open ran, relay.close has not): ([call_id...], last_activity_ts or None). Used by the restart guard."""
+    ids = list(_S.keys())
+    return ids, (max((x.t_act for x in _S.values()), default=None))
 
 def listener_count():
     return sum(len(v) for v in _LQ.values())
@@ -97,6 +102,7 @@ async def caller_frame(call_id, frame):
         s = _S.get(call_id)
         if s is None:
             return
+        s.t_act = time.time()
         if isinstance(frame, (str, bytes)):
             frame = json.loads(frame)
         ev = frame.get("event")
