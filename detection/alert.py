@@ -224,6 +224,11 @@ class AlertMachine:
                 c.utts.clear(); c.epoch += 1; c.dirty = False; c.cont_t = self.clock(); c.llm, c.llm_t, c.fail_n, c.clean_n = None, 0.0, 0, 0; c.prev_band = "low"; c.known_hard = set()
             elif t in ("call.ended",) or (t == "user.action" and d.get("action") == "hang_up"):
                 self._mark_ended(cid)
+            elif t == "decoy.turn":
+                # TASK-058 instrumentation only (local log, no state): lets echo leaks be measured against caller finals
+                log.info("echo.decoy call=%s speaker=%s text=%r", cid, d.get("speaker"), str(d.get("text") or "")[:120])
+            elif t == "transcript.caller" and d.get("is_final", True):
+                log.info("echo.caller call=%s id=%s text=%r", cid, d.get("utterance_id"), str(d.get("text") or "")[:120])
         except Exception:
             log.exception("on_event failed (ignored)")
 

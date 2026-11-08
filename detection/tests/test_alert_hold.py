@@ -207,3 +207,18 @@ def test_older_window_result_never_emits_dip_or_arms_realert():
     assert len(ss) == 2 and all(s >= 0.8 for s in ss)                 # fast N + LLM N (floored); the stale N-1 result emitted nothing
     assert c.last["s"] >= 0.8                                          # no dip overwrote c.last
     assert c.prev_band != "low" and c.armed is False
+
+
+def test_echo_instrumentation_logs_and_never_changes_state(caplog):
+    import logging
+    r = Rig([])
+    before = (r.m._call("c1").decoy, r.m._call("c1").fired)
+    with caplog.at_level(logging.INFO, logger="p2.alert"):
+        asyncio.run(r.m.on_event({"type": "decoy.turn", "call_id": "c1", "data": {"speaker": "decoy", "text": "x" * 300}}))
+        asyncio.run(r.m.on_event({"type": "transcript.caller", "call_id": "c1", "data": {"utterance_id": "u1", "text": "hello", "is_final": True}}))
+        asyncio.run(r.m.on_event({"type": "transcript.caller", "call_id": "c1", "data": {"utterance_id": "u2", "text": "part", "is_final": False}}))
+        asyncio.run(r.m.on_event({"type": "decoy.turn", "call_id": "c1", "data": None}))      # malformed: must not raise
+    msgs = [m.getMessage() for m in caplog.records]
+    assert sum("echo.decoy" in m for m in msgs) == 2 and sum("echo.caller" in m for m in msgs) == 1
+    assert not any("x" * 121 in m for m in msgs)
+    assert (r.m._call("c1").decoy, r.m._call("c1").fired) == before and r.ev == []

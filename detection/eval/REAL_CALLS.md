@@ -48,3 +48,14 @@ Replayed in real time on :8104 with P2_ENGINE=local, idle live service, one llam
 - Decoy / customer text is not in p2.log (P2 never logs it) and the hub `/events` history was not reachable from this worktree (nothing listening on the local hub ports), so the fuzzy-match count against decoy.turn(speaker=decoy) could not be run: **0 of 0 measurable calls**.
 - Only known leak: 922262b2 (03:28, "Maria" as caller speech, 1 final). It did not move risk: every risk.update for that call is s=0.00 band=low and no alert fired.
 - Verdict: no evidence a guard is needed; the leak is real on PSTN but harmless so far, because a leaked decoy line is not scam content. Re-measure on the first #75-mode call (needs decoy.turn events from the hub). The proposed guard (drop caller finals fuzzy-matching decoy text from the last ~6 s) is NOT built.
+
+## adad65a0: first real PSTN scam alert (04:46:41-04:47:26, Telnyx PCMU 8 kHz, live f65e0d9, local engine)
+Team actor reading a known script, n=1. Quoted lines are team-actor speech.
+| t into call | event | result |
+|---|---|---|
+| +7.3 s / +11.2 s | benign openers ("What's up?", "Do you want to check the screen?") | s=0.05 low |
+| **+12.3 s** | fast-path partial, mid-sentence, before the final | **alert, s=0.82 high, asks=ssn** |
+| +17.5 s | final "give me your social security card and don't tell anybody" | s=0.95 critical, asks=secrecy,ssn |
+| +25 to +33 s | later benign-sounding lines, scores held | s=0.95 critical |
+| +45.4 s | u7 "give me your money" | dropped, arrived after the call ended (expected) |
+Finals arrived 0.23-0.35 s after endpoint; 1 alert, 0 failovers, 0 429s, 7 utterances (4 finals scored). Caveat: n=1, a team actor, a script the team knows; this shows the path works on a real phone line, not a detection rate.
