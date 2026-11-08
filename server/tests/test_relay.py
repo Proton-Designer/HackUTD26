@@ -134,10 +134,16 @@ def test_p2_connect_and_close_logged_with_frames_sent(monkeypatch, caplog):
     assert any("frames_sent=0 connected=False" in r.getMessage() for r in caplog.records)
 
 
+def lw(c, path, headers=None, **kw):
+    """Loopback WS client as a browser/tool on the hub machine sees it (TestClient always sends Host: testserver, so set it)."""
+    return c.websocket_connect(path, headers={"host": "127.0.0.1:8000", **(headers or {})}, **kw)
+
 def test_listen_fans_out_caller_and_decoy_tagged_and_is_gated(monkeypatch):
     from server import device
-    c = TestClient(app, client=("127.0.0.1", 5000))
+    c = TestClient(app, base_url="http://127.0.0.1:8000", client=("127.0.0.1", 5000))
     remote = TestClient(app)
+    from server import bus
+    bus.publish("call.incoming", "L1", {"from": "+15555550123", "to": "+15555550100", "attestation": "C", "scam_id_score": 0.8})   # call known to the hub
     async def go_decoy():
         async def h3(ws):
             async for m in ws:
@@ -159,7 +165,7 @@ def test_listen_fans_out_caller_and_decoy_tagged_and_is_gated(monkeypatch):
         with pytest.raises(Exception):
             with remote.websocket_connect("/listen/L1", **kw): pass
     # fan-out: use the loop that runs the TestClient portal
-    with c.websocket_connect("/listen/L1") as ws:
+    with lw(c, "/listen/L1") as ws:
         relay._fan("L1", "caller", fr(7)); relay._fan("L1", "decoy", {"event": "media", "media": {"payload": "REVDT1k="}})
         relay._fan("L1", "caller", {"event": "media", "media": {}})          # no payload: ignored
         a, b = json.loads(ws.receive_text()), json.loads(ws.receive_text())
@@ -168,6 +174,16 @@ def test_listen_fans_out_caller_and_decoy_tagged_and_is_gated(monkeypatch):
     assert relay.listener_count() == 0                                        # cleaned up on disconnect
     # paired device via subprotocol (browser path)
     tok = remote.post("/pair", json={"pin": device.PIN}).json()["device_token"]
+    # cross-site hijack: loopback client but a foreign page Origin (or rebinding Host) is refused; same-origin page and no-Origin tools are fine
+    for hdr in ({"origin": "https://evil.example"}, {"origin": "http://127.0.0.1:9999"}):
+        with pytest.raises(Exception):
+            with lw(c, "/listen/L1", headers=hdr): pass
+    with lw(c, "/listen/L1", headers={"origin": "http://127.0.0.1:8000"}): pass
+    rebind = TestClient(app, base_url="http://evil.example:8000", client=("127.0.0.1", 5000))
+    with pytest.raises(Exception):
+        with rebind.websocket_connect("/listen/L1", headers={"host": "evil.example:8000", "origin": "http://evil.example:8000"}): pass
+    with pytest.raises(Exception):                                            # unknown call id: refused (no slot squatting)
+        with lw(c, "/listen/never-seen-call"): pass
     with remote.websocket_connect("/listen/L1", subprotocols=["bf-device", tok]) as ws:
         assert ws.accepted_subprotocol == "bf-device"                         # token itself is never echoed
         relay._fan("L1", "caller", fr(2)); assert json.loads(ws.receive_text())["track"] == "caller"
@@ -178,21 +194,38 @@ def test_listen_fans_out_caller_and_decoy_tagged_and_is_gated(monkeypatch):
     lq = asyncio.Queue(50); relay._LQ["L1"] = {lq}                              # real relay path: caller frame in, decoy frame back
     run(go_decoy()); relay._LQ.pop("L1")
     got = []
-    while not lq.empty(): got.append(json.loads(lq.get_nowait()))
+    while not lq.empty():
+        m = lq.get_nowait()
+        if m is not None: got.append(json.loads(m))     # None = end-of-call sentinel from relay.close
     assert {"track": "caller", "payload": fr(1)["media"]["payload"]} in got and {"track": "decoy", "payload": "REVDT1k="} in got
 
 def test_listen_max_three_and_slow_drop(monkeypatch):
-    c = TestClient(app, client=("127.0.0.1", 5000))
+    c = TestClient(app, base_url="http://127.0.0.1:8000", client=("127.0.0.1", 5000))
+    from server import bus
+    bus.publish("call.incoming", "L2", {"from": "+15555550123", "to": "+15555550100", "attestation": "C", "scam_id_score": 0.8})
     from contextlib import ExitStack
     with ExitStack() as st:
-        for _ in range(3): st.enter_context(c.websocket_connect("/listen/L2"))
+        for _ in range(3): st.enter_context(lw(c, "/listen/L2"))
         assert relay.listener_count() == 3
         import pytest
         with pytest.raises(Exception):
-            with c.websocket_connect("/listen/L2"): pass                      # 4th refused
+            with lw(c, "/listen/L2"): pass                      # 4th refused
     assert relay.listener_count() == 0
     # a full per-listener queue drops frames instead of blocking the relay
     q = asyncio.Queue(2); relay._LQ["L3"] = {q}
     for i in range(10): relay._fan("L3", "caller", fr(i))
     assert q.qsize() == 2
     relay._LQ.pop("L3")
+
+
+def test_listener_released_when_session_closes():
+    c = TestClient(app, base_url="http://127.0.0.1:8000", client=("127.0.0.1", 5000))
+    async def go():
+        async def back(f): pass
+        await relay.open("L9", back)
+        with lw(c, "/listen/L9"):
+            assert relay.listener_count() == 1
+            await relay.close("L9")
+            await asyncio.sleep(0.8)                  # listener loop sees the end-of-call sentinel and exits
+            assert relay.listener_count() == 0
+    run(go())

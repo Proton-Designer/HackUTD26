@@ -35,6 +35,7 @@ class _Session:
 # --- WS /listen/{call_id}: judges hear the caller + decoy audio in the phone-free demo. Caller inbound track and decoy->caller frames only
 # (Maria's audio never enters the relay). Text frames: {"track":"caller"|"decoy","payload": PCMU 8k base64} (20 ms each).
 MAX_LISTENERS = 3
+LISTEN_IDLE_S = 300   # no frames for 5 min -> listener closed
 _LQ: dict = {}   # call_id -> set of per-listener bounded queues
 
 def _fan(call_id, track, frame):
@@ -263,6 +264,9 @@ async def close(call_id):
     try:
         await stop_decoy(call_id)
         s = _S.pop(call_id, None)
+        for lq in list(_LQ.get(call_id, ())):      # end of call: release the listeners' slots
+            try: lq.put_nowait(None)
+            except asyncio.QueueFull: pass
         if s:
             _put(s.p2_q, None, s)
             try: await asyncio.wait_for(s.p2_task, 2)
@@ -287,6 +291,27 @@ async def decoy_echo(ws: WebSocket, call_id: str):
         pass
 
 
+def _same_origin_or_none(ws: WebSocket) -> bool:
+    """Loopback bypass only for non-browser clients (no Origin) or a page served by this hub (Origin host == Host header, and Host is a
+    loopback name). Blocks cross-site WebSocket hijacking from a malicious page in the operator's browser, and DNS rebinding."""
+    from urllib.parse import urlsplit
+    host = ws.headers.get("host", "")
+    hn = urlsplit("//" + host).hostname or ""
+    if hn not in ("127.0.0.1", "localhost", "::1"):
+        return False
+    origin = ws.headers.get("origin")
+    return origin is None or urlsplit(origin).netloc.lower() == host.lower()
+
+def _known_call(call_id) -> bool:
+    """Only listen to calls the hub knows: a live relay session, or a call_id seen on the event bus (listener may attach at call.incoming, before the media stream opens)."""
+    if call_id in _S:
+        return True
+    try:
+        from . import bus
+        return any(e.get("call_id") == call_id for e in bus.history)
+    except Exception:
+        return False
+
 def _listen_authorized(ws: WebSocket):
     """Direct loopback (no token needed), x-hub-token == HUB_TOKEN, or a paired device token. Browsers can't set headers and the token must
     not be in the URL, so the client opens new WebSocket(url, ['bf-device', <token>]): Sec-WebSocket-Protocol 'bf-device, <token>'.
@@ -295,7 +320,7 @@ def _listen_authorized(ws: WebSocket):
     from . import device
     protos = [p.strip() for p in ws.headers.get("sec-websocket-protocol", "").split(",") if p.strip()]
     sub = "bf-device" if "bf-device" in protos else None
-    if device.is_direct_local(ws):
+    if device.is_direct_local(ws) and _same_origin_or_none(ws):
         return True, sub
     hub = os.environ.get("HUB_TOKEN")
     if hub and secrets.compare_digest(ws.headers.get("x-hub-token", ""), hub):
@@ -310,7 +335,7 @@ def _listen_authorized(ws: WebSocket):
 async def listen(ws: WebSocket, call_id: str):
     import re
     ok, proto = _listen_authorized(ws)
-    if not ok or not re.fullmatch(r"[A-Za-z0-9_.:-]{1,80}", call_id):
+    if not ok or not re.fullmatch(r"[A-Za-z0-9_.:-]{1,80}", call_id) or not _known_call(call_id):
         await ws.close(code=1008); return
     if listener_count() >= MAX_LISTENERS:
         await ws.close(code=1013); return          # try again later: at most 3 listeners
@@ -324,9 +349,14 @@ async def listen(ws: WebSocket, call_id: str):
             except Exception: pass
         gone = asyncio.create_task(_drain())
         try:
+            idle = time.time()
             while not gone.done():
                 try: msg = await asyncio.wait_for(q.get(), 0.5)
-                except asyncio.TimeoutError: continue
+                except asyncio.TimeoutError:
+                    if time.time() - idle > LISTEN_IDLE_S: break      # a stale listener must not hold one of the 3 slots forever
+                    continue
+                if msg is None: break                                  # call/relay session closed
+                idle = time.time()
                 await asyncio.wait_for(ws.send_text(msg), 1)   # a listener that cannot take a frame within 1 s is dropped
         finally:
             gone.cancel()
