@@ -31,6 +31,7 @@
 ## Blocked
 | What | Who is stuck | Waiting on | Since |
 |---|---|---|---|
+| Repo access for Evan (not a collaborator on Proton-Designer/HackUTD26) | Evan | Ayman sends the GitHub invite | 23:00 |
 | Command center build | Rayan | Ayman's `mock/events.json` (Rayan does Devpost first, so no idle time) | 22:45 |
 | Eval row format must match detector output | Kareem | Uses the enums in master context §5 (`asks[]`: otp, card, ssn, gift_card, crypto, wire, p2p, remote_app, secrecy); Evan confirms at next check-in | 22:45 |
 
@@ -51,6 +52,7 @@
 - **11:30 (H23:30)** Final Devpost submitted (hard deadline 12:00).
 
 ## Decisions log
+- 23:00 (H11:00) | Team talks to the delegator through the Discord bot (`@Delegation_Bot done/blocked/next/...`). Only the bot edits BOARD.md, to avoid merge conflicts. Bot runs on Rayan's laptop.
 - 22:55 (H10:55) | **Lanes reassigned by Ayman (Decider):** Ayman runs P1 Network & call control (machine A) and P2 Detection (machine B) in two Claude sessions; Evan runs P3 Decoy & voice; P4 Intel + command center + story starts later (by 02:00, owner TBD). Overrides the 22:45 lane split. Cost: Ayman carries Decider + integrator + two lanes; P4 starts late. Fallback: P1 ships a stub that adds decoy-ended callers to `confirmed_scammers`, so "callback rejected before ring" works without P4; real lookups are P4's first task at 02:00.
 - 22:45 (H10:45) | Lanes set by the team: Evan owns everything Nemotron + the VoIP app; Ayman owns the product workflow starting from the local server. This overrides the delegator default (Evan as integrator): **Ayman owns the shared event contract and merges**, because his server is the hub every screen reads from. Cost: Ayman carries both Decider and integrator load. Fallback: Evan takes merges if Ayman is stuck past 30 min.
 - 22:45 (H10:45) | Schedule compressed because the idea was locked at H10:30: feature freeze 05:00, code freeze 08:00, rehearsals from 09:00. Cost: about 6 hours of build time for the full path. Fallback: cut order below.
