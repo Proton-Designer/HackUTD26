@@ -653,3 +653,25 @@ def test_pwa_static_headers_and_types():
         assert r.status_code == 200 and r.headers["cache-control"] == "no-cache", path
     assert c.get("/app/assets/apple-touch-icon.png").headers["content-type"] == "image/png"
     assert c.get("/app/nope.js").status_code == 404
+
+
+def test_answer_and_decline_only_while_ringing():
+    c = paired()
+    act = lambda cid, a: c.post("/user/action", json={"call_id": cid, "action": a})
+    assert act("RING0", "answer").status_code == 404                                   # unknown call
+    bus.publish("call.incoming", "RING1", {"from": "+15555550123", "to": "+15555550100", "attestation": "C", "scam_id_score": 0.8})
+    bus.publish("call.routed", "RING1", {"decision": "LIVE_GUARD", "reason": "x"})
+    assert act("RING1", "answer").json() == {"ok": True}
+    assert bus.history[-1]["type"] == "user.action" and bus.history[-1]["data"] == {"action": "answer"}
+    bus.publish("call.answered", "RING1", {"by": "maria"})
+    assert act("RING1", "answer").status_code == 409 and act("RING1", "decline").status_code == 409   # no longer ringing
+    assert act("RING1", "hang_up").json() == {"ok": True}                              # other actions unchanged
+    bus.publish("call.incoming", "RING2", {"from": "+15555550124", "to": "+15555550100", "attestation": "C", "scam_id_score": 0.8})
+    assert act("RING2", "decline").json() == {"ok": True}
+    bus.publish("call.ended", "RING2", {"ended_by": "maria", "duration_s": 1})
+    assert act("RING2", "answer").status_code == 409
+    bus.publish("call.incoming", "RING3", {"from": "+15555550125", "to": "+15555550100", "attestation": "C", "scam_id_score": 0.8})
+    bus.publish("call.routed", "RING3", {"decision": "BLOCKED_BACKFIRE", "reason": "x"})
+    assert act("RING3", "answer").status_code == 409                                   # a blocked call never rings
+    assert act("RING3", "bogus").json()["ok"] is False
+    assert TestClient(app).post("/user/action", json={"call_id": "RING1", "action": "answer"}).status_code == 401

@@ -18,7 +18,19 @@ def _auth(token):
     if HUB_TOKEN and token != HUB_TOKEN:
         raise HTTPException(401, "bad or missing token")
 
-ACTIONS = {"continue", "scammer_get_scammed", "hang_up"}
+ACTIONS = {"continue", "scammer_get_scammed", "hang_up", "answer", "decline"}
+RING_ACTIONS = {"answer", "decline"}   # the customer accepts/declines an incoming call: valid only while it is ringing
+
+def _ringing(cid) -> bool:
+    """Ringing = call.incoming seen and not yet routed BLOCKED_BACKFIRE, answered or ended."""
+    seen = False
+    for e in bus.history:
+        if e.get("call_id") != cid: continue
+        t = e.get("type")
+        if t == "call.incoming": seen = True
+        elif t in ("call.answered", "call.ended", "handoff.started"): return False
+        elif t == "call.routed" and (e.get("data") or {}).get("decision") == "BLOCKED_BACKFIRE": return False
+    return seen
 
 app.include_router(relay.router)
 app.include_router(device.router)
@@ -151,6 +163,8 @@ def user_action(body: dict = Body(...)):
         return {"ok": False, "error": "call_id and action in %s required" % sorted(ACTIONS)}
     if cid not in CALLER_BY_CALL:  # only for calls the hub has seen
         raise HTTPException(404, "unknown call_id")
+    if action in RING_ACTIONS and not _ringing(cid):
+        raise HTTPException(409, f"'{action}' is only valid while the call is ringing")
     bus.publish("user.action", cid, {"action": action})
     return {"ok": True}
 

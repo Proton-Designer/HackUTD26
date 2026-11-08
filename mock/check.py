@@ -15,7 +15,7 @@ SCHEMA = {
  "transcript.caller": {"utterance_id": str, "text": str, "is_final": bool},
  "risk.update": {"s": float, "band": BAND, "asks": list, "scam_type": str, "stage": STAGE, "impersonates": (str, type(None)), "addresses_ai_system": bool, "why_chips": list, "engine": {"cloud", "local", "fallback", "device"}},
  "alert.fired": {"level": {"first", "realert"}, "why_chips": list},
- "user.action": {"action": {"continue", "scammer_get_scammed", "hang_up"}},
+ "user.action": {"action": {"continue", "scammer_get_scammed", "hang_up", "answer", "decline"}},
  "handoff.started": {"restore_deadline": float},
  "handoff.restored": {"restore_deadline": float},
  "decoy.turn": {"speaker": {"scammer", "decoy"}, "text": str, "latency_ms": int},
