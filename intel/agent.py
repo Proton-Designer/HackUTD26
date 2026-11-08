@@ -12,6 +12,7 @@ import os
 import re
 
 import httpx
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from . import gate, lookups as L
@@ -129,7 +130,9 @@ def run(call_id: str, artifacts, store, calling_number: str | None = None, attes
     emit("intel.plan", call_id, {"steps": [{"tool": t, "arg": v} for t, v in plan],
                                  "inputs": "typed artifacts only (raw transcript never read)"})
 
-    results = [tools[t](v, call_id=call_id) for t, v in plan]
+    # Parallel: a dead/slow public API costs one timeout, not the sum. Order (and the trace) stays the plan's.
+    with ThreadPoolExecutor(max_workers=max(1, min(8, len(plan)))) as pool:
+        results = list(pool.map(lambda tv: tools[tv[0]](tv[1], call_id=call_id), plan))
     hits = {r["value"] for r in results if r.get("kind") == "allowlist" and r.get("match")}
     camp = link_sighting(store, call_id, arts, calling_number=calling_number, carrier=carrier,
                          stages=stages, allowlist_hits=hits, emit=emit)

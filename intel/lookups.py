@@ -24,6 +24,10 @@ from pathlib import Path
 import httpx
 
 TIMEOUT = float(os.getenv("INTEL_LOOKUP_TIMEOUT", "6"))
+# Overridable for fail-open drills (point at a dead host) or a mirror if a public API is down on stage.
+RDAP_BASE = os.getenv("INTEL_RDAP_BASE", "https://rdap.org").rstrip("/")
+BTC_BASE = os.getenv("INTEL_BTC_BASE", "https://blockstream.info/api").rstrip("/")
+ETH_BASE = os.getenv("INTEL_ETH_BASE", "https://eth.blockscout.com/api/v2").rstrip("/")
 UA = {"User-Agent": "backfire-hackutd-intel/0.1"}
 ALLOWLIST_PATH = Path(__file__).with_name("allowlist.json")
 EVENTS_URL = os.getenv("BACKFIRE_EVENTS_URL")  # optional: P1 publish endpoint
@@ -108,7 +112,7 @@ def lookup_domain(raw: str, call_id: str | None = None, client: httpx.Client | N
     domain = norm_domain(raw)
     c = client or httpx.Client(timeout=TIMEOUT, headers=UA, follow_redirects=True)
     try:
-        r = c.get(f"https://rdap.org/domain/{domain}")
+        r = c.get(f"{RDAP_BASE}/domain/{domain}")
         if r.status_code == 404:
             res = {"kind": "domain", "value": domain, "status": "not_found",
                    "reason": "no RDAP record (unregistered or unsupported TLD)",
@@ -149,11 +153,11 @@ def lookup_wallet(raw: str, call_id: str | None = None, client: httpx.Client | N
     c = client or httpx.Client(timeout=TIMEOUT, headers=UA, follow_redirects=True)
     try:
         if BTC_RE.match(addr):
-            r = c.get(f"https://blockstream.info/api/address/{addr}")
+            r = c.get(f"{BTC_BASE}/address/{addr}")
             r.raise_for_status()
             res = parse_btc(addr, r.json())
         elif ETH_RE.match(addr):
-            base = f"https://eth.blockscout.com/api/v2/addresses/{addr}"
+            base = f"{ETH_BASE}/addresses/{addr}"
             info, cnt = c.get(base), c.get(base + "/counters")
             info.raise_for_status(); cnt.raise_for_status()
             res = parse_eth(addr, info.json(), cnt.json())

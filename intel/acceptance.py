@@ -24,6 +24,8 @@ def main(argv=None) -> int:
     ap.add_argument("--token", default=None, help="HUB_TOKEN if the hub requires one")
     ap.add_argument("--domain", default=CFG["domain"])
     ap.add_argument("--wallet", default=CFG["wallet"]["addr"])
+    ap.add_argument("--drill", action="store_true",
+                    help="fail-open drill: hub runs with INTEL_*_BASE pointed at a dead host; expect 'unavailable' lookups")
     a = ap.parse_args(argv)
     cfg = {**CFG, "domain": a.domain}
     if a.wallet != CFG["wallet"]["addr"]:
@@ -54,9 +56,16 @@ def main(argv=None) -> int:
 
     lk = {l.get("artifact_kind"): l for l in out.get("lookups", []) if l.get("kind") in ("domain", "wallet")}
     dom, wal = lk.get("domain", {}), lk.get("wallet", {})
-    check(dom.get("status") in ("ok", "not_found") and wal.get("status") == "ok" and not wal.get("simulated"),
-          "1 real domain age + on-chain inflows", f"domain={dom.get('status')} age_days={dom.get('age_days')} "
-          f"registrar={dom.get('registrar')} | BTC received={wal.get('total_received')} tx={wal.get('tx_count')} | {dt:.1f}s")
+    detail = (f"domain={dom.get('status')} age_days={dom.get('age_days')} registrar={dom.get('registrar')} "
+              f"| wallet={wal.get('status')} received={wal.get('total_received')} tx={wal.get('tx_count')} | {dt:.1f}s")
+    if a.drill:
+        check(dom.get("status") == "unavailable" and wal.get("status") == "unavailable"
+              and all("unavailable" in str(x.get("reason", "")) for x in (dom, wal)),
+              "1 DRILL lookups fail open as 'lookup unavailable' (no crash, event still emitted)",
+              f"{detail} | reason={dom.get('reason')}")
+    else:
+        check(dom.get("status") in ("ok", "not_found") and wal.get("status") == "ok" and not wal.get("simulated"),
+              "1 real domain age + on-chain inflows", detail)
     acts = out.get("actions", [])
     check(out.get("engine") in ("nemotron", "fallback"), "2a agent ran", f"engine={out.get('engine')}")
     auto = [x["kind"] for x in acts if x.get("status") == "applied"]

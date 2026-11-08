@@ -5,6 +5,9 @@
 - RDAP via rdap.org (one public endpoint, redirects to the right registry, no key).
 - BTC via blockstream.info (total received + tx count, no key). ETH via eth.blockscout.com (balance + tx count; no free "total received"). Demo wallet should be BTC.
 - Fail open: network errors/timeouts return status "unavailable" and still emit an event. Never raises.
+- Lookups run in parallel (one timeout worst case, not the sum) and hosts are env-overridable (INTEL_RDAP_BASE,
+  INTEL_BTC_BASE, INTEL_ETH_BASE) for drills or a mirror on stage. Drill (2026-11-08, live Nemotron, P1 hub in-process):
+  dead DNS and blackholed hosts both -> lookups "unavailable", gate still 7/7; worst case 10.9 s (6 s timeout + LLM).
 - Allowlist: seeded JSON of published bank/agency numbers and domains, marked seed data.
 
 ## Agent

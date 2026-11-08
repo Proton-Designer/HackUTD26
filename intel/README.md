@@ -34,6 +34,9 @@ BACKFIRE_DEMO_DOMAIN=... BACKFIRE_DEMO_WALLET=... (env) or edit the JSON. Placeh
 Acceptance checklist against a running hub (exit 0 = all pass):
     python -m intel.acceptance --hub http://127.0.0.1:8000 [--token $HUB_TOKEN] [--domain <demo domain>] [--wallet <demo BTC>]
 
+Fail-open drill: start the hub with INTEL_RDAP_BASE=http://10.255.255.1 INTEL_BTC_BASE=http://10.255.255.1, then
+    python -m intel.acceptance --hub <url> --drill   (lookups show 'unavailable'; gate checks must still pass)
+
 Endpoints: POST /intel/ingest · POST /intel/actions/{id}/approve · POST /intel/blocklist/{undo_token}/undo · GET /intel/blocked?number= · GET /intel/state
 
 Events: superset of contracts/events.md (required fields present; extras such as gate_status, n_baseline_added are
