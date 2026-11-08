@@ -46,7 +46,8 @@ def tag_status(head, tag_map, same_code=None):
     if latest and same_code:
         try:
             if same_code(latest[-1]): return True, f"HEAD {head[:7]} has the same runtime .py as {latest[-1]} (only non-P2 commits since)"
-        except Exception: pass
+        except Exception as e:
+            return False, f"HEAD {head[:7]}: same-code check against {latest[-1]} failed: {e}"
     return False, f"HEAD {head[:7]} matches no p2-known-good tag (latest tag {latest[-1] if latest else 'none'})"
 
 def stale_code(proc_start_ts, last_detection_commit_ts):
@@ -86,8 +87,14 @@ def post_detect(base, text, token):
     req = urllib.request.Request(base + "/detect", json.dumps({"call_id": "ready-check", "window_text": text, "engine": "local"}).encode(), h)
     with urllib.request.urlopen(req, timeout=15) as r: return json.loads(r.read().decode())
 
+class ShError(Exception):
+    """A command exited non-zero: its stderr is the message (a failing git lookup must never read as empty = PASS)."""
+
 def sh(cmd, cwd):
-    return subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=300).stdout.strip()
+    r = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=300)
+    if r.returncode != 0:
+        raise ShError(f"{' '.join(cmd[:3])} exited {r.returncode}: {(r.stderr or r.stdout).strip()[:200]}")
+    return r.stdout.strip()
 
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--live", default="http://127.0.0.1:8100"); ap.add_argument("--tunnel"); ap.add_argument("--tests", action="store_true"); ap.add_argument("--no-detect", action="store_true")
@@ -124,6 +131,7 @@ def main():
             add("detection/ clean in live checkout", "PASS" if not dirty else "FAIL", "clean" if not dirty else f"{len(dirty.splitlines())} changed paths", "commit or discard local edits in detection/ before judging")
             st = float(sh(["bash", "-c", f"date -d \"$(ps -o lstart= -p {pid})\" +%s"], root) or 0); lc = float(sh(["git", "log", "-1", "--format=%ct", "--", ":(glob)detection/*.py"], root) or 0)
             add("live process newer than last detection/*.py commit", "PASS" if not stale_code(st, lc) else "FAIL", f"process started {time.strftime('%H:%M:%S', time.localtime(st))}, last runtime commit {time.strftime('%H:%M:%S', time.localtime(lc))}", "live runs older code than HEAD: restart p2svc (not during a judge visit)")
+        except ShError as e: add("git checks", "FAIL", str(e), "a git command failed in the live checkout: fix it (is it a repo? tag missing?) before trusting this check")
         except Exception as e: add("git checks", "WARN", type(e).__name__, "run from the live checkout")
         if a.tests:
             try:

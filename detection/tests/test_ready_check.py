@@ -47,3 +47,12 @@ def test_tag_status_same_code_after_non_p2_commits():
     assert ok and "p2-known-good-0535" in d
     assert not R.tag_status("bbb222", tags, lambda t: False)[0]
     assert not R.tag_status("bbb222", tags, lambda t: 1 / 0)[0]
+
+
+def test_sh_raises_on_a_failing_command_and_same_code_error_is_a_fail():
+    import pytest
+    with pytest.raises(R.ShError): R.sh(["git", "diff", "--stat", "no-such-ref-xyz", "HEAD"], ".")
+    assert R.sh(["true"], ".") == ""
+    def boom(t): raise R.ShError("git diff exited 128: bad revision")
+    ok, d = R.tag_status("bbb222", {"p2-known-good-0535": "aaa111"}, boom)
+    assert not ok and "failed" in d and "bad revision" in d
