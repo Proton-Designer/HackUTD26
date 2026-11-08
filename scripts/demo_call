@@ -4,7 +4,7 @@
 Streams the SAME WAV the hub serves at GET /demo/caller.wav (DEMO_CALLER_WAV or $LOGDIR/sim_scam.wav) via scripts/sim_call.py, so Maria's page
 and the fake caller stay in sync. eng3 (or you) taps the on-screen button after the alert. Prints a timeline (seconds from call start) when done.
 --reset first POSTs /demo/reset (local only: clears blocklist/events, re-seeds)."""
-import argparse, asyncio, json, pathlib, subprocess, sys, time, urllib.request
+import argparse, asyncio, json, os, pathlib, subprocess, sys, time, urllib.request
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SHOW = ("call.incoming", "call.routed", "call.answered", "alert.fired", "user.action", "handoff.started", "handoff.restored", "call.ended",
@@ -21,6 +21,15 @@ async def main():
         r = urllib.request.Request(a.hub + "/demo/reset", b"", method="POST")
         try: print("reset:", urllib.request.urlopen(r, timeout=10).status)
         except Exception as e: sys.exit(f"reset failed ({e}); run it on the hub machine (loopback only)")
+    logs = pathlib.Path(os.environ.get("LOGDIR") or "logs"); logs = logs if logs.is_absolute() else ROOT / logs
+    tf = logs / "tunnel_url.txt"; tunnel = tf.read_text().strip() if tf.is_file() else None
+    print("PHONE TEST (Maria's phone, optional; skip for a screen-only run)")
+    print(f"  1. Open {(tunnel + '/app/') if tunnel else 'the tunnel URL + /app/ (start scripts/run_hub; it writes logs/tunnel_url.txt)'} on the phone")
+    print("  2. Pair once with the DEVICE PIN (DEVICE_PIN in .env, else logs/device_pin.txt; also printed by run_hub). Then allow sound.")
+    print("  3. Expected timeline (seconds from call start, typical): 0 incoming + routed to LIVE_GUARD; ~1-3 Maria's page rings, tap Answer;")
+    print("     ~8-20 two beeps + red alert on the scammer's ask; tap 'Scammer Get Scammed' -> decoy takes the caller;")
+    print("     then the decoy talks until the caller hangs up (~60 s of audio), and ~10-45 s after the end the intel block appears.")
+    print("  The final TIMELINE below shows what actually happened. Reset between runs: scripts/reset_demo (or --reset).\n")
     import websockets
     t0 = time.time(); evs = []; ended = asyncio.Event(); blocked = asyncio.Event(); sid = {}
     async def listen():

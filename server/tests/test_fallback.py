@@ -154,3 +154,12 @@ def test_never_below_last_real_p2_score():
     run(fd.ingest("c1", "hello how are you today"))  # regex alone would say 0
     last = [e for e in evs("risk.update") if e["data"]["engine"] == "fallback"][-1]["data"]
     assert last["s"] >= 0.9 and last["engine"] == "fallback"
+
+
+def test_agency_acronyms_uppercased_in_chip():
+    async def llm(w):
+        return '{"s":0.5,"asks":[],"scam_type":"gov","stage":"pretext","impersonates":"Irs","addresses_ai_system":false,"why_chips":[]}'
+    fd._llm = llm
+    run(fd.ingest("c1", "Hello there this is a call about your taxes"))
+    last = evs("risk.update")[-1]["data"]
+    assert last["impersonates"] == "IRS" and "Claims to be IRS" in last["why_chips"]

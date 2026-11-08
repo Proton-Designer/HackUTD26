@@ -100,6 +100,7 @@ def _clean_llm(raw: str) -> dict | None:
         d = json.loads(m.group(0))
         s = max(0.0, min(1.0, float(d["s"])))
         imp = re.sub(r"[^A-Za-z0-9 .&'-]", "", str(d.get("impersonates") or "")).strip()[:30]   # free text: sanitized, never shown raw as a reason
+        imp = re.sub(r"\b(?:irs|ssa|fbi|dea|ftc|usps|cdc|dhs|dmv)\b", lambda m: m.group(0).upper(), imp, flags=re.I)   # agency acronyms ("Irs" -> "IRS")
         return {"s": s, "asks": [a for a in (d.get("asks") or []) if a in ASKS],
                 "scam_type": re.sub(r"[^a-z0-9_]", "", str(d.get("scam_type") or "none").lower())[:40] or "none",
                 "stage": d.get("stage") if d.get("stage") in STAGES else None,
