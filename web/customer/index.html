@@ -116,37 +116,60 @@ if (!Element.prototype.replaceChildren) Element.prototype.replaceChildren = func
 
   </div>
 
-  <!-- PROTECTION LOG -->
+  <!-- PROTECTION: three sections (Status, Activity, Privacy & voice) -->
   <section id="protView" class="screen left" hidden>
     <h1>Protection</h1>
-    <div class="card"><h2>Live Guard</h2>
-      <p id="guardState" class="sub"></p>
-      <button class="big outline" id="guardToggle"></button>
-      <div id="guardOffBox" class="confirm" hidden role="group" aria-label="Turn Live Guard off">
-        <p>Turn Live Guard off? Backfire will stop watching your calls.</p>
-        <label class="check"><input type="checkbox" id="guardAlso"><span>Also delete my voice</span></label>
-        <div class="pair"><button class="big outline" id="guardOffNo">Cancel</button><button class="big outline danger" id="guardOffYes">Turn off</button></div>
-      </div></div>
-    <div class="card"><h2>Numbers we blocked</h2>
-      <ul id="blockedList" class="rows"></ul><p id="blockedEmpty" class="sub">None yet.</p></div>
-    <div class="card"><h2>Calls handled</h2><p class="stat" id="callsCount">0</p></div>
-    <div class="card"><h2>What we keep</h2>
-      <ul class="plainlist">
-        <li>Your side of a call: <b>never heard, never kept</b>.</li>
-        <li>The caller's words: kept only if an alert fired, deleted after 72 hours.</li>
-        <li>Scammer numbers and websites: kept so they can be stopped.</li>
-        <li>Your voice: an 8-second sample, kept until you delete it.</li></ul></div>
-    <div class="card"><h2>Numbers to never screen</h2>
-      <p class="sub">Family, your doctor, your bank.</p>
-      <button class="big outline" id="dnsOpen">Manage this list</button></div>
-    <div class="card"><h2>Your voice profile</h2>
-      <p id="voiceState" class="sub"></p>
-      <button class="big outline danger" id="voiceDelete" hidden>Delete my voice</button>
-      <div id="voiceConfirm" class="confirm" hidden role="alertdialog" aria-label="Delete my voice">
-        <p>This deletes the voice Backfire uses for every call. Delete?</p>
-        <div class="pair"><button class="big outline" id="voiceNo">Cancel</button><button class="big outline danger" id="voiceYes">Yes, delete</button></div>
+    <section class="card" aria-labelledby="hStatus"><h2 id="hStatus">Status</h2>
+      <div class="group">
+        <h3>Live Guard</h3>
+        <p id="guardState" class="sub"></p>
+        <button class="big outline" id="guardToggle"></button>
+        <div id="guardOffBox" class="confirm" hidden role="group" aria-label="Turn Live Guard off">
+          <p>Turn Live Guard off? Backfire will stop watching your calls.</p>
+          <label class="check"><input type="checkbox" id="guardAlso"><span>Also delete my voice</span></label>
+          <div class="pair"><button class="big outline" id="guardOffNo">Cancel</button><button class="big outline danger" id="guardOffYes">Turn off</button></div>
+        </div>
       </div>
-      <button class="big outline" id="voiceSetup" hidden>Set up my voice</button></div>
+      <div class="mini-stats" aria-label="Your protection so far">
+        <div><b id="callsCount">0</b><span>Calls handled</span></div>
+        <div><b id="blockedCount">0</b><span>Numbers blocked</span></div>
+      </div>
+    </section>
+    <section class="card" aria-labelledby="hActivity"><h2 id="hActivity">Activity</h2>
+      <p class="sub">Numbers Backfire blocked for you. Tap Undo if one was a mistake.</p>
+      <ul id="blockedList" class="rows"></ul><p id="blockedEmpty" class="sub empty">None yet.</p>
+    </section>
+    <section class="card" aria-labelledby="hPrivacy"><h2 id="hPrivacy">Privacy &amp; voice</h2>
+      <div class="group">
+        <h3>Your voice</h3>
+        <p id="voiceState" class="sub"></p>
+        <button class="big outline danger" id="voiceDelete" hidden>Delete my voice</button>
+        <div id="voiceConfirm" class="confirm" hidden role="alertdialog" aria-label="Delete my voice">
+          <p>This deletes the voice Backfire uses for every call. Delete?</p>
+          <div class="pair"><button class="big outline" id="voiceNo">Cancel</button><button class="big outline danger" id="voiceYes">Yes, delete</button></div>
+        </div>
+        <button class="big outline" id="voiceSetup" hidden>Set up my voice</button>
+      </div>
+      <div class="group">
+        <h3>Numbers to never screen</h3>
+        <p class="sub">Family, your doctor, your bank. Backfire never screens or blocks these.</p>
+        <ul id="dnsList" class="rows"></ul>
+        <button class="big outline" id="dnsOpen" aria-expanded="false" aria-controls="dnsForm">Add a number</button>
+        <div id="dnsForm" class="dns-form" hidden>
+          <input id="dnsNumber" inputmode="tel" autocomplete="off" aria-label="Phone number" placeholder="Phone number">
+          <input id="dnsLabel" autocomplete="off" aria-label="Name" placeholder="Name (for example: Dr. Lee)">
+          <div class="pair"><button class="big outline" id="dnsCancel">Cancel</button><button class="big accept" id="dnsAdd">Add</button></div>
+        </div>
+      </div>
+      <details class="group keep">
+        <summary>What we keep</summary>
+        <ul class="plainlist small">
+          <li>Your side of a call: <b>never heard, never kept</b>.</li>
+          <li>The caller's words: kept only if an alert fired, deleted after 72 hours.</li>
+          <li>Scammer numbers and websites: kept so they can be stopped.</li>
+          <li>Your voice: an 8-second sample, kept until you delete it.</li></ul>
+      </details>
+    </section>
   </section>
 
   <!-- ONBOARDING (each step: content, then a pinned .actions bar) -->
@@ -198,20 +221,6 @@ if (!Element.prototype.replaceChildren) Element.prototype.replaceChildren = func
           <button class="big outline" id="recAgain">Record again</button>
         </div>
         <button class="big outline" id="recSkip">Skip, use a synthetic voice</button>
-      </div>
-    </div>
-    <div id="stepDns" class="step" hidden>
-      <div class="step-body">
-        <p id="dnsNote" class="note" role="status"></p>
-        <h1>Numbers to never screen (optional)</h1>
-        <p class="body">Add family, your doctor or your bank. Backfire will never screen or block these numbers.</p>
-        <ul id="dnsList" class="rows"></ul>
-        <input id="dnsNumber" inputmode="tel" autocomplete="off" aria-label="Phone number" placeholder="Phone number">
-        <input id="dnsLabel" autocomplete="off" aria-label="Name" placeholder="Name (for example: Dr. Lee)">
-      </div>
-      <div class="actions">
-        <button class="big outline" id="dnsAdd">Add number</button>
-        <button class="big accept" id="dnsDone">Continue</button>
       </div>
     </div>
     <div id="step3" class="step" hidden>

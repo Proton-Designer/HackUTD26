@@ -14,7 +14,7 @@
 html,body{margin:0;background:var(--bg);color:var(--fg);font-family:Inter,-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
 [hidden]{display:none!important}
 button,input{font:inherit}
-h1,h2,p,ul{margin:0}
+h1,h2,h3,p,ul{margin:0}
 #phone{max-width:430px;min-height:100dvh;margin:0 auto;background:var(--bg);display:flex;flex-direction:column;padding:env(safe-area-inset-top) var(--sp5) env(safe-area-inset-bottom)}
 #callView{display:flex;flex-direction:column;flex:1;min-height:0}
 
@@ -207,3 +207,23 @@ input[type=text],input:not([type]),input[inputmode]{width:100%;min-height:var(--
 .card .big.outline{width:auto;align-self:flex-start;min-height:44px;font-size:var(--fs-md);padding:var(--sp2) var(--sp4)}
 .card .confirm .big.outline{width:100%;align-self:stretch}
 .mic .ic{width:26px;height:26px}
+
+/* UI review 2: call summary (flags one per line, labels never wrap), back-on-call, Protection in three sections */
+.summary li{align-items:flex-start}
+.summary li>span{white-space:nowrap;flex:none}
+.summary b.flags{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.summary b.flags span{display:block}
+#active[data-handoff=restored] .talk-title{display:none}
+.card h3{font-size:var(--fs-md);font-weight:600;line-height:1.3}
+.card .group{display:flex;flex-direction:column;gap:var(--sp2)}
+.card .group+.group,.card .group+.mini-stats{border-top:1px solid var(--line);padding-top:var(--sp3)}
+.mini-stats{display:grid;grid-template-columns:1fr 1fr;gap:var(--sp2)}
+.mini-stats div{display:flex;flex-direction:column;gap:2px}
+.mini-stats b{font-size:var(--fs-xl);font-variant-numeric:tabular-nums}
+.mini-stats span{font-size:var(--fs-sm);color:var(--mut)}
+.dns-form{display:flex;flex-direction:column;gap:var(--sp2)}
+details.keep summary{min-height:var(--tap);display:flex;align-items:center;font-weight:600;cursor:pointer;list-style-position:inside}
+details.keep[open] summary{margin-bottom:var(--sp1)}
+#dnsList:empty,#blockedList:empty{display:none}
+.rows li>span,.rows li>div{min-width:0;overflow-wrap:anywhere}
+.card .pair .big{width:100%;align-self:stretch}

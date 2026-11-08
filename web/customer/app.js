@@ -130,7 +130,7 @@
     const d = ev.data || {};
     switch (ev.type) {
       case "call.incoming":
-        st.callId = ev.call_id; st.alerted = false; st.risk = 0; st.chips = []; st.handed = false; st.haul = 0; st.lastFrom = String(d.from || "").replace(/\D/g, "").slice(-10);
+        st.callId = ev.call_id; st.blockedNow = false; clearTimeout(st.sumT); st.alerted = false; st.risk = 0; st.chips = []; st.handed = false; st.haul = 0; st.lastFrom = String(d.from || "").replace(/\D/g, "").slice(-10);
         $("active").dataset.handoff = ""; $("handoffMsg").hidden = true; $("alertBox").hidden = true; $("idleMsg").hidden = false; setBadge("watching");   // a new call never starts on the previous call's handoff/alert screen
         $("callerNumber").textContent = fmtNum(d.from);
         $("scamLabel").hidden = !(d.scam_id_score >= 0.5);
@@ -147,6 +147,7 @@
         st.alerted = true; setBadge("alert"); renderChips(d.why_chips);
         { const tg = $("alertTag"), n = (d.why_chips || []).length, s = Math.max(+d.s || 0, st.risk || 0), tier = s >= 0.85 ? "High risk" : s >= 0.6 ? "Elevated risk" : n >= 2 ? "High risk" : "Possible risk";
           if (tg) { tg.textContent = tier + (n ? " \u00b7 " + n + " signal" + (n > 1 ? "s" : "") : ""); tg.hidden = false; } st.chips = (d.why_chips || []).map(ACR); }
+        { const sub = document.querySelector("#btnGets .b-sub"); if (sub) sub.textContent = "Backfire talks to them in " + BF.voiceWord(); }
         $("alertBox").hidden = false; $("idleMsg").hidden = true; $("handoffMsg").hidden = true; $("active").dataset.handoff = "";
         twoBeeps(); break;
       case "user.action": {                               // first tap wins on the hub; show an action taken on ANOTHER phone
@@ -157,7 +158,7 @@
       case "handoff.started": clearTimeout(st.handT); st.handed = true; showHandoff(); break;
       case "risk.update": st.risk = Math.max(st.risk || 0, +d.s || 0); break;
       case "artifacts.extracted": st.haul = (d.artifacts || d.items || []).length || +d.n_artifacts || st.haul || 0; break;
-      case "blocklist.updated": if (st.lastFrom && String(d.number || "").replace(/\D/g, "").slice(-10) === st.lastFrom) { const b = $("sumBlocked"); if (b) { b.textContent = "Blocked for you"; b.className = "ok"; } } break;
+      case "blocklist.updated": if (st.lastFrom && String(d.number || "").replace(/\D/g, "").slice(-10) === st.lastFrom) { st.blockedNow = true; clearTimeout(st.sumT); const b = $("sumBlocked"); if (b) { b.textContent = "Blocked for you"; b.className = "ok"; b.parentNode.hidden = false; } } break;
       case "handoff.failed": failHandoff(d.reason); break;   // F3: the hub could not hand the call to Backfire: she is still on the call
       case "handoff.restored": st.alerted = false; clearTimeout(st.handT); twoBeeps(); setBadge("watching");   // F5: a later alert must fire again; F20: she hears/feels that she is back on the call
         $("alertBox").hidden = true; $("idleMsg").hidden = true; setHandoffUI("restored"); break;
@@ -165,17 +166,26 @@
     }
   }
   // Call-ended summary (UI review: the ended screen wasted the payoff). Filled from what this page saw during the call.
+  // "Number" row: only a real blocklist.updated for this number says "Blocked for you"; otherwise it resolves after ~5 s (UI review 2, bug 1) instead of "Checking…" forever.
+  const SUM_WAIT_MS = 5000;
+  BF.voiceWord = () => (BF.hasVoice && BF.hasVoice()) ? "your voice" : "a synthetic voice";
   function renderSummary(msg) {
     const box = $("summary"); if (!box) return;
+    clearTimeout(st.sumT);
     const secs = st.t0 && st.answered !== undefined ? Math.max(0, Math.floor((Date.now() - st.t0) / 1000)) : 0;
     const rows = [];
     if (st.callId && !/^Missed|declined/.test(msg || "")) rows.push(["Duration", String(Math.floor(secs / 60)).padStart(2, "0") + ":" + String(secs % 60).padStart(2, "0"), ""]);
     if ($("callerNumber").textContent) rows.push(["Caller", $("callerNumber").textContent, ""]);
-    if (st.alerted || (st.chips || []).length) rows.push(["Red flags", (st.chips || []).join(", ") || "Scam signs detected", "warn"]);
-    if (st.handed) rows.push(["Backfire", "Took the call in your voice" + (st.haul ? " \u00b7 saved " + st.haul + " detail" + (st.haul > 1 ? "s" : "") + " about the scammer" : ""), "ok"]);
-    if (st.handed || st.alerted) rows.push(["Number", "Checking\u2026", "", "sumBlocked"]);
-    box.replaceChildren(...rows.map(([k, v, cls, id]) => { const li = document.createElement("li"); const a = document.createElement("span"); a.textContent = k; const b = document.createElement("b"); b.textContent = v; if (cls) b.className = cls; if (id) b.id = id; li.append(a, b); return li; }));
+    if (st.alerted || (st.chips || []).length) rows.push(["Red flags", (st.chips || []).length ? st.chips : ["Scam signs detected"], "warn flags"]);
+    if (st.handed) rows.push(["Backfire", "Took the call in " + BF.voiceWord() + (st.haul ? " \u00b7 saved " + st.haul + " detail" + (st.haul > 1 ? "s" : "") + " about the scammer" : ""), "ok"]);
+    if (st.handed || st.alerted) rows.push(st.blockedNow ? ["Number", "Blocked for you", "ok", "sumBlocked"] : ["Number", "Checking\u2026", "", "sumBlocked"]);
+    box.replaceChildren(...rows.map(([k, v, cls, id]) => { const li = document.createElement("li"); const a = document.createElement("span"); a.textContent = k; const b = document.createElement("b");
+      if (Array.isArray(v)) v.forEach(x => { const l = document.createElement("span"); l.textContent = x; b.append(l); }); else b.textContent = v;
+      if (cls) b.className = cls; if (id) b.id = id; li.append(a, b); return li; }));
     box.hidden = !rows.length;
+    const handed = st.handed;
+    if (!st.blockedNow && $("sumBlocked")) st.sumT = setTimeout(() => { const b = $("sumBlocked"); if (!b || b.className === "ok") return;
+      if (handed) b.textContent = "Reported"; else b.parentNode.hidden = true; }, SUM_WAIT_MS);   // no block for this number (Continue, not a scam, or the event never came)
   }
   function ring() { if (st.callId && !st.answered && $("phone").dataset.state !== "ringing") { $("phone").dataset.state = "ringing"; show("incoming"); startRing(); } }
   // Handoff screen states (F3): pending -> done ("Backfire has the call") | failed (still on the call). data-view picks the layout.
@@ -187,7 +197,7 @@
   };
   function setHandoffUI(kind) {
     const h = HANDOFF[kind]; $("active").dataset.handoff = kind;
-    $("handoffTitle").textContent = h[0]; $("handoffLead").textContent = h[1]; $("handoffMain").textContent = h[2]; $("handoffSub").textContent = h[3]; $("handoffSub").hidden = !h[3];
+    $("handoffTitle").textContent = h[0]; $("handoffLead").textContent = h[1].replace("your voice", BF.voiceWord()); $("handoffMain").textContent = h[2]; $("handoffSub").textContent = h[3]; $("handoffSub").hidden = !h[3];
     $("handoffMsg").hidden = false; syncView();
   }
   function syncView() { const act = $("active"), k = act.dataset.handoff; act.dataset.view = !$("alertBox").hidden ? "alert" : (!$("handoffMsg").hidden && (k === "pending" || k === "done")) ? "handoff" : "call"; }

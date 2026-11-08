@@ -23,7 +23,7 @@
   // a call always takes over the screen; tabs return when it is over
   new MutationObserver(() => {
     const s = $("phone").dataset.state;
-    if (s === "ringing" || s === "active") { VIEWS.forEach(x => $(x).hidden = x !== "callView"); $("tabs").hidden = true; }
+    if (s === "ringing" || s === "active") { VIEWS.forEach(x => $(x).hidden = x !== "callView"); $("tabs").hidden = true; document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.v === "callView")); }
     else if ($("setupView").hidden) $("tabs").hidden = false;
   }).observe($("phone"), { attributes: true, attributeFilter: ["data-state"] });
 
@@ -57,7 +57,7 @@
       li.append(d, u); ul.append(li);
     });
     $("blockedEmpty").hidden = state.blocked.length > 0;
-    $("callsCount").textContent = state.calls; $("statCalls").textContent = state.calls; $("statBlocked").textContent = state.blocked.length;
+    $("callsCount").textContent = state.calls; $("blockedCount").textContent = state.blocked.length; renderDns(); $("statCalls").textContent = state.calls; $("statBlocked").textContent = state.blocked.length;
     $("guardState").textContent = state.guardOn ? "On. Backfire is watching the caller's side of calls from numbers it doesn't know." : "Off. Calls are not being checked.";
     $("guardToggle").textContent = state.guardOn ? "Turn Live Guard off" : "Turn Live Guard on";
     $("voiceState").textContent = state.voiceNote ? state.voiceNote : state.voiceId ? "Set up. Backfire keeps only a short voice sample, used only if you press Fire Back." + (HUB ? "" : " (Simulated)") : "No voice profile.";
@@ -103,26 +103,26 @@
   $("voiceDelete").onclick = () => { state.voiceNote = ""; $("voiceConfirm").hidden = false; $("voiceDelete").hidden = true; $("voiceNo").focus(); };
   $("voiceNo").onclick = () => { $("voiceConfirm").hidden = true; $("voiceDelete").hidden = !state.voiceId; };
   $("voiceYes").onclick = async () => { $("voiceConfirm").hidden = true; await deleteVoice(); };
-  $("voiceSetup").onclick = () => { setup(2); };
 
   // ---- onboarding: 1 turn on -> 2 voice consent (separate, optional) -> rec read-aloud -> dns Do Not Screen (optional) -> 3 done ----
-  const STEPS = ["step1", "step2", "stepRec", "stepDns", "step3"], STEP_NO = { 1: 0, 2: 1, rec: 2, dns: 3, 3: 4 };
+  const STEPS = ["step1", "step2", "stepRec", "step3"], STEP_NO = { 1: 0, 2: 1, rec: 2, 3: 3 };
   function setup(step) {
     VIEWS.forEach(x => $(x).hidden = x !== "setupView"); $("tabs").hidden = true;
     STEPS.forEach((s, i) => $(s).hidden = i !== STEP_NO[step]);
-    if (step === "dns") renderDns();
     window.scrollTo(0, 0);
   }
   function finish(msg) { $("doneMsg").textContent = msg; setup(3); }
-  function toDns(msg) { state.doneMsg = msg; $("dnsNote").textContent = msg; if (state.fromSettings) { state.fromSettings = false; view("protView"); } else setup("dns"); }
+  // end of the voice flow (the Do Not Screen list now lives in Protection only)
+  function toDns(msg) { state.doneMsg = msg; if (state.fromSettings) { state.fromSettings = false; view("protView"); } else finish(msg); }
   $("s1on").onclick = () => { store.set("on", "1"); state.guardOn = true; store.set("done", "1"); setup(2); };
   $("s2skip").onclick = () => toDns("Backfire is on. Scammers will hear a synthetic voice. You can set up your voice later in Protection.");
   $("s2agree").onclick = () => { const p = newParagraph(); if (!CONVO) $("paragraph").textContent = p; resetRec(); setup("rec"); };
   $("recSkip").onclick = () => { if (lowQ) { lowQ = false; toDns("Your voice is set up. Backfire is on. It keeps only a short voice sample, used only if you press Fire Back. You can delete it any time in Protection."); return; } stopMeter(); if (rec) { discard = true; rec.stop(); } toDns("Backfire is on. Scammers will hear a synthetic voice. You can set up your voice later in Protection."); };
   $("s3done").onclick = () => { view("callView"); applyGuard(); if (BF.pendingStart) { const f = BF.pendingStart; BF.pendingStart = null; f(); } };
-  $("voiceSetup").onclick = () => setup(2);
-  $("dnsOpen").onclick = () => { state.fromSettings = true; setup("dns"); };
-  $("dnsDone").onclick = () => { if (state.fromSettings) { state.fromSettings = false; view("protView"); } else finish(state.doneMsg || "Backfire is on."); };
+  $("voiceSetup").onclick = () => { state.fromSettings = true; setup(2); };
+  function dnsForm(open) { $("dnsForm").hidden = !open; $("dnsOpen").hidden = open; $("dnsOpen").setAttribute("aria-expanded", String(open)); if (open) $("dnsNumber").focus(); }
+  $("dnsOpen").onclick = () => dnsForm(true);
+  $("dnsCancel").onclick = () => { $("dnsNumber").value = ""; $("dnsLabel").value = ""; dnsForm(false); };
 
   // Do Not Screen list: kept on the phone; sent to the hub's trusted list when it has one (POST /trusted, fail soft).
   const dns = () => { try { return JSON.parse(store.get("dns") || "[]"); } catch (e) { return []; } };
@@ -135,7 +135,7 @@
     const number = $("dnsNumber").value.replace(/[^\d+]/g, ""), label = $("dnsLabel").value.trim().slice(0, 40);
     if (number.replace(/\D/g, "").length < 7) { $("dnsNumber").focus(); return; }
     const l = dns(); if (!l.some(x => x.number === number)) { l.push({ number, label }); saveDns(l); HUB && hub("POST", "/trusted", { number, label }).catch(() => {}); }
-    $("dnsNumber").value = ""; $("dnsLabel").value = ""; renderDns();
+    $("dnsNumber").value = ""; $("dnsLabel").value = ""; renderDns(); dnsForm(false);
   };
 
   // A random paragraph from a pool of 8, plus a random code word, so a recording can't simply be replayed. Each takes about 35-50 s at an easy pace.
@@ -239,4 +239,5 @@
   applyGuard();
   if (!store.get("done") && !qs.has("skipsetup")) setup(1); else view("callView");
   BF.setup = setup; BF.view = view; BF._enroll = enroll;
+  BF.hasVoice = () => !!state.voiceId;   // app.js words the handoff/summary as "your voice" only when a voice is enrolled
 })();
