@@ -79,3 +79,5 @@ Restore variant: `--script benign` + tap, then hold low risk 10 s (`RESTORE_LOW_
 - `POST /demo/reset` (and `scripts/reset_demo`, `demo_call --reset`) is refused with 409 while a call is live (`active_calls>0`); `?force=1` / `scripts/reset_demo <hub> --force` overrides.
 
 - `EVENTS_REDACT=1`: WS /events gives remote viewers that are neither loopback nor paired (subprotocol ["bf-device", token], x-device-token, x-hub-token) a redacted stream: no transcript text, no extracted artifacts, phone numbers masked. Default OFF: customer app and command center connect unauthenticated today, so enable it only after the customer app sends the subprotocol (and the command-center is viewed on the hub machine).
+
+- `VOICE_LOCK=1` (in .env): paired devices get 409 "voice is locked for the demo" on `DELETE /voice/*` and `POST /voice/enroll`; the operator on the hub machine (direct loopback, same-origin) can still manage voices. `scripts/ready_check` FAILs if the decoy reports `cloned_voice:false`. Takes effect on hub restart; to re-enroll the demo voice, do it from this Mac or unset it.

@@ -96,3 +96,25 @@ def test_ios_safari_mp4_aac_accepted_with_mime_params(c):
     assert c.post("/voice/enroll", json=body(rec=WEBM, mime="audio/mp4")).status_code == 415      # mime/content mismatch still refused
     assert c.post("/voice/enroll", json=body(rec=MP4, mime="audio/webm")).status_code == 415
     assert c.post("/voice/enroll", json=body(rec=b"\x00" * 2000, mime="audio/mp4")).status_code == 415
+
+
+def test_voice_lock_blocks_paired_devices_but_not_the_local_operator(c, monkeypatch):
+    from server import device
+    monkeypatch.setenv("VOICE_LOCK", "1")
+    remote = TestClient(app)
+    tok = remote.post("/pair", json={"pin": device.PIN}).json()["device_token"]
+    paired_dev = TestClient(app, headers={"x-device-token": tok})
+    vid = "v_abc123"
+    for r in (paired_dev.delete(f"/voice/{vid}"), paired_dev.post("/voice/enroll", json=body())):
+        assert r.status_code == 409 and r.json()["detail"] == "voice is locked for the demo"
+    assert not vevents()                                                   # nothing reached P3 / the bus
+    # cross-origin browser on the Mac does not get the loopback privilege
+    assert c.delete(f"/voice/{vid}", headers={"origin": "https://evil.example", "host": "127.0.0.1:8000"}).status_code in (401, 409)
+    # the operator on this Mac (direct loopback) can still manage voices
+    assert c.delete(f"/voice/{vid}").json() == {"ok": True}
+    assert c.post("/voice/enroll", json=body()).status_code == 200
+    assert TestClient(app, client=("127.0.0.1", 5000)).get("/demo/status").json()["flags"]["VOICE_LOCK"] is True
+    # unset: paired devices work as before
+    monkeypatch.delenv("VOICE_LOCK")
+    assert paired_dev.delete(f"/voice/{vid}").json() == {"ok": True}
+    assert paired_dev.post("/voice/enroll", json=body()).status_code == 200

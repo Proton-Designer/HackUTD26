@@ -90,3 +90,27 @@ def test_ready_check_fails_on_non_seed_trusted_numbers(tmp_path):
     assert line(run([{"number": "+15555550188", "label": "Her bank (synthetic)"}])).startswith("PASS")
     bad = line(run([{"number": "+15555550188", "label": "x"}, {"number": "+14695551234", "label": "mom"}]))
     assert bad.startswith("FAIL") and "1 extra" in bad and "+1469***34" in bad and "4695551234" not in bad
+
+
+def test_ready_check_fails_when_decoy_has_no_cloned_voice(tmp_path):
+    def run(cloned):
+        status = json.dumps({"flags": {"active_calls": 0, "MARIA_LEG": "sip", "telnyx_ok": True}, "pipelines": {}}).encode()
+        class Hub(http.server.BaseHTTPRequestHandler):
+            def do_GET(s):
+                s.send_response(200); s.send_header("content-type", "application/json"); s.end_headers(); s.wfile.write(status if s.path.startswith("/demo/status") else b'{"trusted":[]}')
+            def log_message(*a): pass
+        class Decoy(http.server.BaseHTTPRequestHandler):
+            def do_GET(s):
+                s.send_response(200); s.send_header("content-type", "application/json"); s.end_headers(); s.wfile.write(json.dumps({"ok": True, "cloned_voice": cloned}).encode())
+            def log_message(*a): pass
+        hub = http.server.HTTPServer(("127.0.0.1", 0), Hub); dec = http.server.HTTPServer(("127.0.0.1", 0), Decoy)
+        for sv in (hub, dec): threading.Thread(target=sv.serve_forever, daemon=True).start()
+        try:
+            env = dict(os.environ, LOGDIR=str(tmp_path), P3_BASE=f"http://127.0.0.1:{dec.server_port}"); env.pop("HUB_TOKEN", None)
+            return subprocess.run([sys.executable, str(ROOT / "scripts" / "ready_check"), "--local", f"http://127.0.0.1:{hub.server_port}", "--no-tunnel"], env=env, capture_output=True, text=True, timeout=120).stdout
+        finally:
+            hub.shutdown(); dec.shutdown()
+    line = lambda o: next(l for l in o.splitlines() if "cloned voice loaded" in l)
+    assert line(run(True)).startswith("PASS")
+    bad = line(run(False))
+    assert bad.startswith("FAIL") and "cloned_voice=False" in bad and "VOICE_LOCK" in bad

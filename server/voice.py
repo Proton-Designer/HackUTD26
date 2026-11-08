@@ -45,8 +45,20 @@ async def _read_body(request: Request) -> bytes:
             raise HTTPException(413, "recording too large (max 5 MB)")
     return bytes(buf)
 
+def _locked_out(request: Request) -> bool:
+    """VOICE_LOCK=1: the demo voice is frozen. Paired (remote) devices may not replace or delete it; the operator on this Mac (direct loopback,
+    same-origin) still can."""
+    if os.environ.get("VOICE_LOCK") != "1":
+        return False
+    return not (device.is_direct_local(request) and device._same_origin_or_none(request))
+
+LOCK_MSG = "voice is locked for the demo"
+
 @router.post("/voice/enroll", dependencies=[Depends(device.require_device)])
 async def enroll(request: Request):
+    if _locked_out(request):
+        log.warning("voice enroll refused: VOICE_LOCK=1 (paired device)")
+        raise HTTPException(409, LOCK_MSG)
     raw = await _read_body(request)
     try:
         body = json.loads(raw)
@@ -91,8 +103,11 @@ async def enroll(request: Request):
     return {"voice_id": vid}
 
 @router.delete("/voice/{voice_id}", dependencies=[Depends(device.require_device)])
-async def delete_voice(voice_id: str):
-    """Idempotent: always {ok: true}, even for unknown ids or when P3 is down. Proxies to P3 when connected."""
+async def delete_voice(voice_id: str, request: Request):
+    """Idempotent: always {ok: true}, even for unknown ids or when P3 is down. Proxies to P3 when connected. 409 for paired devices under VOICE_LOCK=1."""
+    if _locked_out(request):
+        log.warning("voice delete refused: VOICE_LOCK=1 (paired device)")
+        raise HTTPException(409, LOCK_MSG)
     base = _base()
     if base and VID_RE.fullmatch(voice_id):
         try:

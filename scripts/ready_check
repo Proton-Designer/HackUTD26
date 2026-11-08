@@ -86,8 +86,13 @@ def main():
     rec(p.returncode == 0 and nfail == 0, "scripts/preflight", f"{npass} PASS, {nfail} FAIL" + ("" if p.returncode == 0 else f", exit {p.returncode}"))
 
     print("\n-- services")
-    d, dsrc = decoy_origin(); st, _ = get(d + "/healthz")
+    d, dsrc = decoy_origin(); st, hb = get(d + "/healthz")
     rec(st == 200, "decoy (P3) /healthz", f"host={urlsplit(d).netloc} via {dsrc}, HTTP {st}")
+    try: hz = json.loads(hb or b"{}")
+    except ValueError: hz = {}
+    if st == 200:
+        rec(hz.get("cloned_voice") is not False, "decoy has the cloned voice loaded (cloned_voice)",
+            f"cloned_voice={hz.get('cloned_voice')}" + ("" if hz.get("cloned_voice") is not False else "; the stock synthetic voice would answer: re-enroll the demo voice (loopback) and set VOICE_LOCK=1"))
     o, osrc = p2_origin()
     if o:
         st, _ = get(o + "/healthz"); rec(st == 200, "P2 /healthz", f"host={urlsplit(o).netloc} via {osrc}, HTTP {st}")
