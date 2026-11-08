@@ -49,3 +49,19 @@ Evidence for call 1: hub `/events` log (`logs/eng2_events_live.log`). Calls 2-3:
 | 6-12 conference keeps stream, handoff, target_legs, leave/join audio, gap, callback rejection, limits | OPEN | blocked: Telnyx disabled outbound/termination on the trial account (D17, balance -0.03), so no further calls |
 Findings to carry: (a) POST /calls needs the Call Control App id; (b) trial credit can't be used for termination; (c) trial allows one Call Control app, so our own dialed legs come back through the same webhook - handled (`call.initiated` acted on only for direction=incoming); (d) webrtc-token on trial returns SIP login (device-gated).
 Next: on the backup account, re-run from check 3 with `TARGET_LEGS=self`, record media frame counts/track, then 6-12.
+
+## 5. Live results 2026-11-08 00:36-00:57 (backup Telnyx account, signed webhooks, calls #1-#5 via voip/test_call.py)
+| Check | Result |
+|---|---|
+| Ed25519 webhook signature | VERIFIED: unsigned POST -> 403; real Telnyx webhooks 200 with VOIP_ALLOW_UNSIGNED unset |
+| Caller-only audio, ONE stream | VERIFIED: media WS `frames_in` = only `media:inbound` (3599-3656 per 73 s call), zero outbound-track frames |
+| Maria SIP dial/ring/answer | VERIFIED after Telnyx fix (credential connection `sip_uri_calling_preference` must be `internal`; before that CDR `recv_refuse`) |
+| Own Maria leg arrives as call.initiated direction=incoming | BUG found + fixed (83639bc): ignore role=maria / `to`=her SIP user |
+| Conference keeps the stream, handoff | VERIFIED (#4, #5): handoff.started <1 s after tap; Maria leaves conference; leg kept 30 s window |
+| Echo decoy frames to caller | VERIFIED: `frames_to_caller={media: 2928}` (#4), 889 (#5, stopped at restore) |
+| call.ended + blocklist | VERIFIED: decoy call -> intel blocks caller after 20 s grace; legit restore -> `legit:true`, no block |
+| Restore | VERIFIED (#5): low risk s<0.5 held 10 s -> handoff.restored 18 s after handoff, caller + Maria rejoin conference |
+| P2 relay | VERIFIED (#3, #5): transcript.caller + risk.update + alert.fired; hub logs `P2 connected` / `P2 closed frames_sent=N` |
+| Attestation | NOT in webhook payload (key paths logged: no shaken/stir key); CDR shows `shaken_stir: A`. Webhook attestation stays "none" (fail-safe) |
+| Audible caller<->Maria audio, UI restore | NOT verified by voip (needs a listener) |
+Costs: ~$0.01-0.02 per 73 s call. Telnyx CDR check: `GET /v2/detail_records?filter[record_type]=sip-trunking` (hangup_details, cost, shaken_stir).
