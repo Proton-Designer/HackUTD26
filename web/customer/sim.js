@@ -30,6 +30,7 @@
   if ($("decoyBtn")) $("decoyBtn").addEventListener("click", () => { decoyMuted = !decoyMuted; if (dgain) dgain.gain.value = decoyMuted ? 0 : 1; decoyBtnSync(); });
   const showDecoyBtn = on => { const b = $("decoyBtn"); if (b) b.hidden = !(on && (BF.sim || BF.listen)); };
   $("sound").addEventListener("click", () => { try { if (dctx) dctx.resume(); } catch (e) {} });
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && dctx && dctx.state !== "running") { try { dctx.resume().catch(() => {}); } catch (e) {} } });   // iOS interruption: decoy/caller playback resumes when the page is visible again
   function ensureCtx() { try { if (!dctx) dctx = new (window.AudioContext || window.webkitAudioContext)(); if (dctx.state === "suspended") dctx.resume().catch(() => {}); } catch (e) {} }
   $("answerBtn").addEventListener("click", () => { ensureCtx(); tapped = true; setTimeout(() => { if (hubAnswered) afterAnswer(); }, 0); });   // if the hub already answered the caller while it was ringing, start now; otherwise wait for call.answered
   ["declineBtn", "endBtn", "btnHang"].forEach(id => $(id).addEventListener("click", stop));
@@ -92,7 +93,7 @@
   BF.onEvent = ev => {
     if (prev) prev(ev);
     switch (ev && ev.type) {
-      case "call.incoming": if (active === ev.call_id) break; hubAnswered = false; decoyMuted = false; decoyBtnSync(); showDecoyBtn(false); lastCid = ev.call_id; active = ev.call_id; decoyStop(); stop(); break;   // a repeated incoming for the same call must not tear the sockets down
+      case "call.incoming": if (active === ev.call_id) break; hubAnswered = false; decoyMuted = false; decoyBtnSync(); showDecoyBtn(false); lastCid = ev.call_id; active = ev.call_id; decoyStop(); stop(); stats.frames = 0; stats.late = 0; stats.bytes = 0; stats.resync = 0; break;   // a repeated incoming for the same call must not tear the sockets down
       case "call.answered":
         if (!BF.sim && !BF.listen) break;
         lastCid = ev.call_id || lastCid; active = lastCid; hubAnswered = true; if (!t0) t0 = Date.parse(ev.ts) || Date.now();

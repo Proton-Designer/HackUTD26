@@ -9,7 +9,8 @@ Written by the dev (Fable) session for the P1 lead. Live demo folder was only RE
 | 10:48 | **Task 2 done: `/listen` 403 reconnect loop** (root cause below, risk 5) | `f827838` pushed to `finalized-idea-backfire` | server **117** pass (new test), decoy 32, intel 44, e2e **50** pass (new check) |
 | 10:50 | **Task 1 done: this report** | — | — |
 | 11:20 | **Task 3 done: UI round-3 safe items** (one primary color = the brand pink for every primary action/on-state, green only on Answer, red only destructive, amber only risk; Live Guard is a real `role=switch` in the card title row, same id `guardToggle`; landscape alert (812x375) is two columns: title/tag/chips left, Fire Back / Continue / Hang up right, all buttons on screen: measured bottoms 282 px of 375) | next commit | e2e **50** pass (one run had step 6 `blocklist.updated` time out at 12 s with no code change: intel agent latency, rerun 50/50; flagged below as risk 11); screenshots at 375, 390, 812x375 in the dev scratchpad (`ui3/`) |
-| | Task 4: waiting for the lead's OK on the list at the end; meanwhile doing the customer-app-only small items (risk 2 resume, risk 9 per-call counters) | | |
+| 11:35 | **Task 4, small customer-app items shipped**: per-call reset of the mic/decoy diag counters (risk 9), audio contexts resumed when the page becomes visible again (risk 2), `faster-whisper` added to `decoy/requirements.txt` (risk 3; install on the live machine is the lead's call). Risk 7 re-classified as preflight's own check. | next commit | e2e 50 pass |
+| | **Task 4, waiting for the lead's OK** on the two larger items: (1) shared AudioContext + AudioWorklet mic (risk 1b, needs an on-phone test), (2) tolerant Zelle handle match in intel (risk 6) | | |
 
 ## Top 10 remaining risks for the judged demo (ranked)
 
@@ -37,9 +38,9 @@ Written by the dev (Fable) session for the P1 lead. Live demo folder was only RE
 **Evidence:** the hold fires only when a `payment_handle` artifact canonicalizes to `zelle:refunds.dept@backfire-demo.example` (`intel/nessie.py match_destinations`). Live hauls so far: `domain, gift_card_brand, payment_handle:paypal` (4ad7e15e), `gift_card_brand` (aecc22f2): no Zelle handle. `canon_handle` handles "dot/at/dash/department", but STT variants I tested fail: "refunds department at backfire demo dot example" -> `backfiredemo.example` (dash dropped), "refund stepped at..." (STT) -> no match.
 **Fix:** scammer reads the card slowly, says "dash" and "dot" explicitly, repeats once. Code (intel, needs lead OK): compare the domain with dashes/dots removed and accept a local part within 2 edits of the payee's (`refunds.dept`), so "backfiredemo" and "refund stepped" still hold the $1,800.
 
-### 7. Telnyx webhooks rejected: `POST /telnyx/webhook 403 Forbidden` from the campus IP
-**Evidence:** 6 lines, each right after `GET /healthz` + `GET /demo/status` from the same IP (`129.110.242.17`): a periodic probe (ready_check/preflight?) posting to the webhook without a valid signature, not Telnyx (Telnyx webhooks come from `192.76.120.130` and return 200). Harmless now, but noise next to real failures, and if that probe is P2's monitor it will also fail the day the signature check matters.
-**Fix:** find the prober (`grep -rn "telnyx/webhook" scripts detection`) and make it use `/healthz` only.
+### 7. (explained, not a bug) `POST /telnyx/webhook 403 Forbidden` from the campus IP
+**Evidence:** 6 lines, each right after `GET /healthz` + `GET /demo/status` from the same IP. It is `scripts/preflight` (line 126): it deliberately posts an `x-sim-call` webhook through the tunnel and PASSES only on 403 ("simulated webhooks must be loopback-only"). Real Telnyx webhooks come from `192.76.120.130` and return 200.
+**Fix:** none needed; noted in the report so nobody chases it on demo day.
 
 ### 8. Pre-alert window: detection fires at 9-19 s, the judge may already be past line 1
 **Evidence** (`logs/calls/*.jsonl`): alert at +9.1 s (83ea9b14, aecc22f2), +13.6 s (4ad7e15e), +19.1 s (eb66fef0, first transcript only at +16.9 s: the caller started late). If the judge reads all three lines quickly, the Zelle line (which drives the hold) may be spoken before Fire Back, and the decoy never hears it.
@@ -60,6 +61,6 @@ Written by the dev (Fable) session for the P1 lead. Live demo folder was only RE
 ## Task 4 candidates (low risk, high value; waiting for the lead's OK)
 1. **Risk 1b**: shared AudioContext + AudioWorklet mic in the customer app (customer app only, but touches the live audio path: needs one on-phone test before promotion).
 2. **Risk 6**: tolerant Zelle handle match in `intel/nessie.py` (dash/dot-insensitive domain, 2-edit local part) with tests on the STT variants above.
-3. **Risk 3**: add `faster-whisper` to `decoy/requirements.txt` (install on the live machine is the lead's call).
-4. **Risk 7**: find and fix the webhook prober.
-5. **Risk 9**: per-call reset of diag counters (talk.js/sim.js).
+3. ~~Risk 3: `faster-whisper` in `decoy/requirements.txt`~~ done (dev); live machine still needs `decoy/.venv/bin/pip install faster-whisper` (lead).
+4. ~~Risk 7~~ explained (preflight's own check).
+5. ~~Risk 9: per-call reset of diag counters~~ done (dev).

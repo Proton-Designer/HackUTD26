@@ -118,6 +118,8 @@
   function show(on) { const b = $("talkBox"); if (b) b.hidden = !(on && BF.talk) || !!BF.observer; }
   function end() { active = null; hubAnswered = false; refused = 0; BF.observer = false; { const o = $("observerMsg"); if (o) o.hidden = true; } close(); stopMic(); show(false); handed = false; muted = false; render(); }
 
+  // iOS: an interrupted/suspended mic context after a phone-side interruption (live aecc22f2: ctx "interrupted") is resumed as soon as the page is visible again; the watchdog rebuilds the pipeline if audio still does not flow
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && ctx && ctx.state !== "running") { try { ctx.resume().catch(() => {}); } catch (e) {} } });
   const eb = $("earBox"); if (eb) { eb.checked = earphones; eb.onchange = () => { earphones = eb.checked; try { localStorage.setItem("bf.earphones", earphones ? "1" : "0"); } catch (e) {} }; }
   setInterval(() => { const d = $("micDot"); if (!d) return; const on = !!stream && Date.now() - lastSend < 1000; d.className = "dot " + (on ? "live" : stats.mic === "blocked" || stats.state === "error" ? "bad" : "idle"); d.title = on ? "Your voice is reaching the call" : "Not sending"; d.setAttribute("aria-label", d.title); }, 300);
   $("micBtn").addEventListener("click", () => { if (handed) return; if (stream && fixTries >= 3) { stopMic(); fixTries = 0; lastAudio = Date.now(); startMic(); return; }   // frozen mic: a tap rebuilds it inside the gesture
@@ -130,7 +132,7 @@
     if (prev) prev(ev);
     if (!BF.talk || !ev) return;
     switch (ev.type) {
-      case "call.incoming": if (active === ev.call_id) break; hubAnswered = false; end(); cid = ev.call_id; active = ev.call_id; break;   // a repeated incoming for the same call must not close the mic/socket
+      case "call.incoming": if (active === ev.call_id) break; hubAnswered = false; end(); cid = ev.call_id; active = ev.call_id; stats.frames = 0; stats.watchdog = 0; fixTries = 0; lastAudio = 0; break;   // a repeated incoming for the same call must not close the mic/socket; counters are per call (live diag showed 'frames' carried over from the previous call)
       case "call.answered": cid = ev.call_id || cid; active = cid; hubAnswered = true; if ($("phone").dataset.state === "active") { open(cid); show(true); if (BF.resumed) { hint("Tap the microphone button to rejoin the conversation."); render0(); } else if (!stream) startMic(); } break;   // a resumed call never opens the mic by itself: it needs a tap   // ringing + hub-answered: wait for the customer's Answer tap
       case "handoff.started": handed = true; render(); break;
       case "handoff.restored": handed = false; render(); break;
