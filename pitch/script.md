@@ -18,12 +18,14 @@ the demo ends on the money (Capital One Nessie) with one Approve click; slide 8 
 8,269 vs 1,790, ages 60+) · $3,000 vs $599 median loss, phone vs social media (FTC, Protecting Older
 Consumers, Oct 2026) · 280,000+ scam calls TPG Telecom sent to AI "victims" (GSMA case study, Oct 2025) ·
 67 million Scam Callback Protection warnings (T-Mobile, Nov 2026) · our test: 33 of 33 scams caught, 2 of 27
-look-alike legit calls wrongly flagged (our rules-only fallback, no AI: 26 of 33 and 1 of 27) · on real phone calls the alert fired 12 to 15 s in.
+look-alike legit calls wrongly flagged (our rules-only fallback, no AI: 26 of 33 and 1 of 27) · on real phone calls the alert fired 12 to 18 s in.
+
+**If asked "why 12 seconds?" (P2, 5 real phone calls, team actors):** "Backfire alerts 12 to 18 seconds into the call, and 0.3 to 3 seconds after the scammer says the key words. Most of that time is the scammer working up to the ask." Real-call tally: 5 of 6 scam calls alerted (the miss had the caller's audio muted upstream), 7 of 7 harmless calls stayed quiet.
 
 **On screen only:** scammers spotted the AI as a bot in about 1 in 20 calls (slide 5); "Tricks aimed at
 the AI: 13 of 13 vs 9 of 13" (slide 8 table).
 
-**Never say:** "Scammer get scammed" before the Approve click (it's the payoff line; the button is called Fire Back); "Maria", "her voice" (say "their voice"); "instant" or "real-time" (say "about 12 to 15 seconds
+**Never say:** "Scammer get scammed" before the Approve click (it's the payoff line; the button is called Fire Back); "Maria", "her voice" (say "their voice"); "instant" or "real-time" (say "about 12 to 18 seconds
 in"); "100%"; "on device" or "nothing leaves the phone" (on this path detection runs on our server, and
 speech-to-text uses NVIDIA-hosted Riva); "we held the money" (Nessie cancels the pending transfer: say
 "stopped"); "real bank" (it is Capital One's Nessie sandbox with mock data); "scammers stay on for 54
@@ -45,7 +47,7 @@ minutes" (longest call, not typical); "no carrier turns scam calls into intellig
 | 1:10 | 6 Follow the money | Rayan | "Scammers change numbers for pennies, but not where the money goes. The decoy's job is to get his payout account. Capital One stops the transfer and flags that account; T-Mobile warns anyone who dials his callback number. Let's show you. Ayman's the scammer." |
 | 1:30 | Demo | All | See the demo block below. The command center does the talking from about 2:30. |
 | 3:00 | 7 How it works | Ayman | "The hard part was letting an AI talk to a scammer without the scammer turning it against the customer. The detector and the decoy only hear the caller and have no tools. A separate Nemotron agent sees only what the decoy extracted, runs real lookups, and only proposes actions. Plain code applies what affects only the customer, like stopping their own transfer, and queues anything bank-wide or network-wide for one human click." |
-| 3:25 | 8 Proof | Rayan | "On 60 test scripts, the Nemotron model on our laptop caught 33 of 33 scams and wrongly flagged 2 of 27 real look-alike calls. Our rules-only fallback, with no AI, caught 26 and wrongly flagged 1, which is why it's a floor, not the detector. On real phone calls, the alert fired 12 to 15 seconds in. Next, we'd pilot on T-Mobile's call servers with a Capital One payee-risk feed." |
+| 3:25 | 8 Proof | Rayan | "On 60 test scripts, the Nemotron model on our laptop caught 33 of 33 scams and wrongly flagged 2 of 27 real look-alike calls. Our rules-only fallback, with no AI, caught 26 and wrongly flagged 1, which is why it's a floor, not the detector. On real phone calls, the alert fired 12 to 18 seconds in. Next, we'd pilot on T-Mobile's call servers with a Capital One payee-risk feed." |
 | 3:45 | 8 Proof | Rayan | "One scam call. The customer kept their $1,800, his account is flagged for every customer, and he can't reach a Backfire customer again." |
 | 3:52 | 8 Proof | Rayan + Kareem | "Scammer get scammed!" Beat. Then: "What would you like to go deeper on?" |
 
@@ -61,7 +63,7 @@ Card for Ayman (same scam as slide 2; Card 2, "Bank Fraud Department", trimmed):
 | 1 | Ayman dials (469) 908-8594 from his phone, caller ID on, on speaker. The customer's phone rings full screen. | Live call view: "Ringing the customer with Live Guard on" |
 | 2 | Kareem taps **Answer** (do not let it ring out: no answer rejects the call) and says, in his normal voice: "Hello?" | |
 | 3 | Ayman reads line 1. Nobody else talks while the call is live. | Caller-only transcript scrolls; risk gauge climbs |
-| 4 | Two beeps, about 12 to 15 seconds in. Kareem shows the judge the three buttons, taps **Fire Back**, puts the phone face down, raises both hands. | "The customer tapped Fire Back" |
+| 4 | Two beeps, about 12 to 18 seconds in. Kareem shows the judge the three buttons, taps **Fire Back**, puts the phone face down, raises both hands. | "The customer tapped Fire Back" |
 | 5 | The AI, in Kareem's voice: "Sorry, I lost you there for a second," then asks how to pay. | Banner: "The scammer is talking to the decoy in the customer's voice" |
 | 6 | Ayman reads the payment line, then the Zelle line. The decoy repeats it back slowly, then says goodbye and hangs up by itself. | |
 | 7 | Rayan, while intel runs (5 to 15 s): "Kareem's been off that call since his hands went up. Backfire only ever listened to the caller. That was a Nemotron decoy in his voice, and it just got the scammer's payout account." | Screen moves to **Money trail** by itself; Capital One lockup appears |

@@ -55,7 +55,7 @@
   ],
   "highlight_col": 1
  },
- "proof_models_note": "Local Nemotron Nano 4B on a laptop GPU scores the live call; NVIDIA-hosted Nemotron is the fallback (never scored on our test set). On real phone calls the alert fired 12 to 15 s in.",
+ "proof_models_note": "Local Nemotron Nano 4B on a laptop GPU scores the live call; NVIDIA-hosted Nemotron is the fallback (never scored on our test set). On real phone calls the alert fired 12 to 18 s in.",
  "metric_big": "33 of 33",
  "metric_context": "test scams caught, with 2 of 27 look-alike legit calls wrongly flagged",
  "metric_method": "60 team-written synthetic scripts (33 scam, 27 legit), tuned on a separate dev set. Small sample. Test set re-scored after later fixes; a separate held-out set of 40 gave 20 of 20 and 1 of 20 false alarms.",
