@@ -32,9 +32,13 @@ Rules:
 - If asked whether you're a robot or AI, laugh it off naturally.
 - You cannot call anyone back, send money, open links, or install anything; you can only say you will try."""
 
-OPENER = "Hello? Sorry, I lost you there for a second. Who did you say was calling?"
+# #124: zero-shot cloning drifts off the speaker on very short texts (speaker similarity: 1-3 word fillers 0.01-0.54,
+# mean 0.26; full sentences 0.66-0.71), which made the handoff sound robotic. So the opener is one flowing sentence
+# and every filler is a full phrase of 6+ words.
+OPENER = "Oh, hi, sorry about that, I think the line cut out for a second there, who did you say was calling?"
 GOODBYE = "Oh, someone's at the door. I have to go. Bye now."
-FILLERS = ["Mm-hmm.", "Oh my.", "Let me see.", "Hmm.", "Okay, okay."]
+FILLERS = ["Okay, hold on, let me see here.", "Mm-hmm, okay, I'm writing this down.",
+           "Oh my, okay, just one second please."]
 
 
 def clean(s: str) -> str:

@@ -54,6 +54,10 @@ STALLS = ["Hold on, let me find my glasses.", "Oh, sorry, the line went funny. S
           "Sorry, can you repeat that? I was writing.", "Wait, wait, slow down a little for me.",
           "Hmm, hang on, I dropped my pen.", "Sorry, it's a bit noisy here. What was that last part?",
           "One second, let me get a piece of paper.", "Okay, okay. And then what do I do?"]
+# First ~20 s of what the decoy sends, saved per call to logs/decoy_audio/<call_id>.wav (gitignored) to verify the
+# handoff voice (#124). DECOY_RECORD_S=0 turns it off.
+RECORD_S = float(__import__("os").environ.get("DECOY_RECORD_S", "20"))
+RECORD_DIR = __import__("pathlib").Path(__file__).resolve().parent.parent / "logs" / "decoy_audio"
 LLM_RETRY_WITHIN_S = 3.0   # a fast failure (e.g. 429) gets one retry after a short backoff before we stall (#92)
 
 
@@ -203,6 +207,20 @@ class Session:
         self.turns = 0
         self.wrap_at: int | None = None
         self.stream_id = None
+        self.rec: list[bytes] = []     # first RECORD_S of outbound audio (PCMU frames)
+
+    def save_recording(self):
+        if not self.rec:
+            return
+        try:
+            import re as _re, wave
+            RECORD_DIR.mkdir(parents=True, exist_ok=True)
+            name = _re.sub(r"[^A-Za-z0-9_-]", "_", self.call_id)[:80] or "call"
+            pcm = np.concatenate([self.decode(f) for f in self.rec]).astype("<i2")
+            with wave.open(str(RECORD_DIR / f"{name}.wav"), "wb") as w:
+                w.setnchannels(1); w.setsampwidth(2); w.setframerate(8000); w.writeframes(pcm.tobytes())
+        except Exception as e:
+            log.warning("decoy recording not saved: %s", type(e).__name__)
 
     def ev(self, type_, data):
         asyncio.create_task(emit(type_, self.call_id, data))
@@ -220,6 +238,8 @@ class Session:
             msg = {"event": "media", "media": {"payload": base64.b64encode(f).decode()}}
             if self.stream_id:
                 msg["stream_id"] = self.stream_id
+            if len(self.rec) < RECORD_S * 50:
+                self.rec.append(f)
             await self.ws.send_text(json.dumps(msg))
             delay = next_t - time.monotonic() - 0.1   # keep ~100 ms queued downstream
             if delay > 0:
@@ -410,7 +430,8 @@ class Session:
                 self.history.append({"role": "user", "content": f"<caller>{core.clean(heard)}</caller>"})
                 task = asyncio.create_task(core.chat([{"role": "system", "content": core.SYSTEM}] + self.history[-16:]))
                 done, _ = await asyncio.wait({task}, timeout=FILLER_AFTER_S)
-                if not done and self.fillers and not self.speaking() and not self.caller_talking():
+                # never before the first real reply (#124): the handoff should sound like the rest of the call
+                if not done and self.turns > 0 and self.fillers and not self.speaking() and not self.caller_talking():
                     self.play(random.choice(self.fillers))     # mask the thinking time
                 try:
                     out = await asyncio.wait_for(task, LLM_TIMEOUT_S - FILLER_AFTER_S)
@@ -463,12 +484,13 @@ class Session:
         asyncio.create_task(warm_stt())
 
         async def warm():
+            # opener first and alone; the rest one at a time after it has been queued (no burst of clone requests)
             await self.say(core.OPENER, record=True)
             for f in core.FILLERS:
                 fr = await self.voice.frames(f)
                 if fr:
                     self.fillers.append(fr)
-            for t in STALLS[:4]:   # only a few pre-rendered: every one is a clone request at call start (429 risk)
+            for t in STALLS[:3]:   # only a few pre-rendered: every one is a clone request at call start (429 risk)
                 fr = await self.voice.frames(t)
                 if fr:
                     self.stalls.append(fr)
@@ -501,6 +523,7 @@ class Session:
             self.active = False
             self.out.put_nowait(None)
             send_task.cancel()
+            self.save_recording()
             t_end = time.monotonic()
             for _ in range(40):                      # an incremental pass may still be running
                 if not self.extracting:
@@ -510,8 +533,9 @@ class Session:
                 await self.extract_now(tries=3)
             arts = list(self.arts.values())
             ok = await emit_retry("artifacts.extracted", self.call_id, {"artifacts": arts}) if arts else True
-            log.info("decoy %s done: %d scammer lines, %d artifacts (%s, %.1f s after stop), voice=%s", self.call_id,
-                     len(self.scammer_lines), len(arts), "posted" if ok else "NOT POSTED", time.monotonic() - t_end,
+            kinds = sorted(a["kind"] + (":" + a["rail"] if a.get("rail") else "") for a in arts)   # kinds only, no values
+            log.info("decoy %s done: %d scammer lines, %d artifacts %s (%s, %.1f s after stop), voice=%s", self.call_id,
+                     len(self.scammer_lines), len(arts), kinds, "posted" if ok else "NOT POSTED", time.monotonic() - t_end,
                      "clone" if self.voice.cloned else "synthetic")
 
 
