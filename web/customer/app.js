@@ -4,7 +4,16 @@
   const qs = new URLSearchParams(location.search);
   // ?server=<hub base URL> (http://host:8000, or ws://host:8000/events) -> live; absent -> replay of mock/events.json
   const SERVER_RAW = qs.get("server");
-  const HUB = SERVER_RAW ? SERVER_RAW.replace(/\/events\/?$/, "").replace(/^ws/, "http") : null;
+  // Security: the hub URL comes from the query string, and voice recordings go to it, so only trust same-origin or localhost hubs.
+  function trustedHub(raw) {
+    try {
+      const u = new URL(raw.replace(/\/events\/?$/, "").replace(/^ws/, "http"));
+      const ok = u.origin === location.origin || ["localhost", "127.0.0.1"].includes(u.hostname);
+      return ok ? u.origin + u.pathname.replace(/\/$/, "") : null;
+    } catch (e) { return null; }
+  }
+  const HUB = SERVER_RAW ? trustedHub(SERVER_RAW) : null;
+  if (SERVER_RAW && !HUB) console.warn("[backfire] ignoring untrusted ?server= (must be same-origin or localhost)");
   const SERVER = HUB ? HUB.replace(/^http/, "ws") + "/events" : null;
   const MOCK_URL = qs.get("mock") || "../../mock/events.json";
   const MOCK_CALL = qs.get("call") || "irs";   // substring of the mock call_id: irs | bank | crypto
@@ -71,11 +80,11 @@
         $("alertBox").hidden = false; $("idleMsg").hidden = true; $("handoffMsg").hidden = true;
         twoBeeps(); break;
       case "handoff.started": showHandoff(); break;
-      case "handoff.restored": $("handoffMsg").hidden = true; $("idleMsg").hidden = false; break;
+      case "handoff.restored": $("handoffMsg").textContent = "You're back on the call. Backfire stepped aside."; $("handoffMsg").hidden = false; $("alertBox").hidden = true; $("idleMsg").hidden = true; break;
       default: break;
     }
   }
-  function showHandoff() { $("alertBox").hidden = true; $("idleMsg").hidden = true; $("handoffMsg").hidden = false; }
+  function showHandoff() { $("handoffMsg").textContent = "We've got it. You can put the phone down."; $("alertBox").hidden = true; $("idleMsg").hidden = true; $("handoffMsg").hidden = false; }
 
   // ---- buttons ----
   $("answerBtn").onclick = () => {
