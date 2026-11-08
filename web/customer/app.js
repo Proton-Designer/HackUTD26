@@ -92,7 +92,7 @@
   const ACR = s => String(s).replace(/\b(Irs|Ssa|Fbi|Dea|Ftc|Usps|Cdc|Dhs)\b/g, m => m.toUpperCase());   // server title-cases impersonated agencies
   function renderChips(chips) { const ul = $("chips"); ul.replaceChildren(...(chips || []).map(c => { const li = document.createElement("li"); li.textContent = ACR(c); return li; })); }
   function endCall(msg) {
-    stopRing(); unlockScreen(); { const k = $("keepOpen"); if (k) k.hidden = true; }
+    clearTimeout(st.handT); stopRing(); unlockScreen(); { const k = $("keepOpen"); if (k) k.hidden = true; }
     { const n = $("actedMsg"); if (n) n.hidden = true; }
     clearInterval(st.timer); st.answered = false; show("ended"); $("endedMsg").textContent = msg || "";
     $("phone").dataset.state = "ended";
@@ -129,12 +129,16 @@
         const who = d.by || d.device || d.client || "another phone", n = $("actedMsg");
         if (!mine && n && d.action) { n.textContent = ({ continue: "Continue", scammer_get_scammed: "Scammer Get Scammed", hang_up: "Hang up" }[d.action] || d.action) + " was chosen on " + (/^another/.test(who) ? who : "the " + who) + "."; n.hidden = false; }
         break; }
-      case "handoff.started": showHandoff(); break;
+      case "handoff.started": clearTimeout(st.handT); showHandoff(); break;
+      case "handoff.failed": failHandoff(d.reason); break;   // F3: the hub could not hand the call to Backfire: she is still on the call
       case "handoff.restored": setBadge("watching"); $("handoffMsg").textContent = "You're back on the call. Backfire stepped aside."; $("handoffMsg").hidden = false; $("alertBox").hidden = true; $("idleMsg").hidden = true; break;
       default: break;
     }
   }
   function ring() { if (st.callId && !st.answered && $("phone").dataset.state !== "ringing") { $("phone").dataset.state = "ringing"; show("incoming"); startRing(); } }
+  // F3: "We've got it" only after the hub confirms handoff.started. Until then: "Handing off…"; on handoff.failed (or no answer in 8 s) she is told she is still on the call and the buttons come back.
+  function pendingHandoff() { clearTimeout(st.handT); $("alertBox").hidden = true; $("idleMsg").hidden = true; const m = $("handoffMsg"); m.textContent = "Handing off… please stay on the line."; m.hidden = false; st.handT = setTimeout(() => failHandoff(), 8000); }
+  function failHandoff() { clearTimeout(st.handT); if ($("phone").dataset.state !== "active") return; setBadge("alert"); const m = $("handoffMsg"); m.textContent = "Couldn't hand off. You're still on the call."; m.hidden = false; $("alertBox").hidden = false; $("idleMsg").hidden = true; }
   function showHandoff() { setBadge("handed"); $("handoffMsg").textContent = "We've got it. You can put the phone down."; $("alertBox").hidden = true; $("idleMsg").hidden = true; $("handoffMsg").hidden = false; }
 
   // ---- buttons ----
@@ -150,7 +154,7 @@
   $("declineBtn").onclick = () => { stopRing(); emitUserAction("decline"); if (BF.voip) BF.voip.hangup(); endCall("You declined the call."); };
   $("endBtn").onclick = () => { emitUserAction("hang_up"); if (BF.voip) BF.voip.hangup(); stopReplay(); endCall("You ended the call."); };
   $("btnContinue").onclick = () => { emitUserAction("continue"); setBadge("watching"); $("alertBox").hidden = true; $("idleMsg").hidden = false; };
-  $("btnGets").onclick = () => { emitUserAction("scammer_get_scammed"); showHandoff(); };
+  $("btnGets").onclick = () => { emitUserAction("scammer_get_scammed"); if (SERVER) pendingHandoff(); else showHandoff(); };
   $("btnHang").onclick = () => { emitUserAction("hang_up"); if (BF.voip) BF.voip.hangup(); stopReplay(); endCall("You hung up."); };
   $("replayBtn").onclick = start;
 
