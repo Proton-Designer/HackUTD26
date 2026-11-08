@@ -7,7 +7,7 @@ All HTTP/WS paths hang off the P1 hub base URL (public tunnel in demo). Audio ev
 - `POST /events`: `{type, call_id, ts?, data}` publishes an event from another pipeline (P2/P3/P4). Response `{"ok":true}`. (ts defaults to now.)
 - `GET /routing/lookup?from=+1555...` -> `{"decision":"NORMAL|BLOCKED_BACKFIRE|LIVE_GUARD","reason":"...","attestation":"A|B|C|none"}` in under 50 ms. Optional `&attestation=A`.
 - `POST /user/action` `{call_id, action}` -> publishes `user.action`. `{"ok":true}`
-- `POST /intel/ingest` (P1 stub, logs only; P4 later) `{call_id, scammer_transcript, artifacts[]}` -> `{"ok":true,"stub":true}`
+- `POST /intel/ingest` (P4a, mounted in the hub; needs device/hub token or direct localhost) `{call_id, scammer_transcript?, artifacts[], calling_number?, attestation?, carrier?}` (the three optional fields are filled from call.incoming by the in-process observer)
 - `GET /protection-log` -> `{"blocked":[{number,reason,ts,undo_token}],"calls":[{call_id,from_number,decision,reason,ts}]}` (`decision` = NORMAL|BLOCKED_BACKFIRE|LIVE_GUARD, `ts` unix seconds, newest first, max 50); `POST /protection-log/undo {undo_token}` -> `{"ok":true}`
 - `GET /app/` serves `web/customer/` static (same origin as the hub, for the phone via tunnel).
 - `GET /healthz` -> `{"ok":true}`

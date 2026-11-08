@@ -23,14 +23,18 @@ SCHEMA = {
  "guardrail.tripped": {"rule": str},
  "artifacts.extracted": {"artifacts": list},
  "intel.lookup": {"artifact_kind": str, "value": str, "result": dict, "source": str},
- "intel.action": {"action_id": str, "kind": str, "target": str, "status": {"applied", "queued", "approved"}, "simulated": bool},
+ "intel.action": {"action_id": str, "kind": str, "target": str, "status": {"applied", "queued", "approved", "denied", "held"}, "simulated": bool},
  "injection.denied": {"attempted_target": str, "reason": str},
  "campaign.updated": {"campaign_id": str, "indicators": list, "numbers": list},
- "blocklist.updated": {"number": str, "scope": {"her", "campaign"}, "undo_token": str},
+ "blocklist.updated": {"number": str, "scope": {"her", "campaign", "network"}, "undo_token": str},
+ "intel.plan": {}, "intel.agent": {}, "intel.proposals": {},   # P4 trace events: all fields optional, not required in mocks
  "voice.enrolled": {"voice_id": str, "consent_version": str},
  "voice.deleted": {"voice_id": str},
 }
-ARTIFACT_KINDS = {"callback_phone", "domain", "url", "wallet", "payment_handle", "gift_card_brand", "bank", "remote_app", "impersonated_org", "script_tags"}
+OPTIONAL = {"intel.action": {"gate_status", "scope", "approval", "reason", "evidence"}, "blocklist.updated": {"active", "reason"},
+            "intel.plan": {"steps", "inputs"}, "intel.agent": {"engine", "model", "plan", "n_proposals", "n_baseline_added", "error"}, "intel.proposals": {"engine", "actions"}}
+TRACE_ONLY = {"intel.plan", "intel.agent", "intel.proposals"}
+ARTIFACT_KINDS = {"instruction_to_ai", "callback_phone", "domain", "url", "wallet", "payment_handle", "gift_card_brand", "bank", "remote_app", "impersonated_org", "script_tags"}
 
 def check_field(t, k, spec, v, errs):
     if isinstance(spec, set):
@@ -52,7 +56,7 @@ def main():
                 if k not in d: errs.append(f"{t} missing {k}")
                 else: check_field(t, k, spec, d[k], errs)
             for k in d:
-                if k not in SCHEMA[t]: errs.append(f"{t} extra field {k}")
+                if k not in SCHEMA[t] and k not in OPTIONAL.get(t, ()) : errs.append(f"{t} extra field {k}")
             if t == "risk.update":
                 for a in d["asks"]:
                     if a not in ASKS: errs.append(f"bad ask {a}")
@@ -61,7 +65,7 @@ def main():
                     if a.get("kind") not in ARTIFACT_KINDS: errs.append(f"bad artifact {a}")
     doc_types = set(re.findall(r"^\| `([a-z_.]+)` \|", (ROOT / "contracts" / "events.md").read_text(), re.M))
     if doc_types != set(SCHEMA): errs.append(f"events.md vs schema mismatch: {sorted(doc_types ^ set(SCHEMA))}")
-    missing = set(SCHEMA) - seen
+    missing = set(SCHEMA) - seen - TRACE_ONLY
     if missing: errs.append(f"types not in mocks: {sorted(missing)}")
     if errs: print("FAIL"); [print(" -", e) for e in errs]; sys.exit(1)
     print(f"OK: {len(seen)} event types, {sum(len(c['events']) for c in doc['calls'])} events")

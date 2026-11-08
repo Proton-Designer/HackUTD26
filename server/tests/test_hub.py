@@ -12,6 +12,9 @@ def paired(c=None):
 
 @pytest.fixture(autouse=True)
 def fresh():
+    import intel.store as istore
+    from intel import api as iapi
+    st = istore.Store(":memory:"); istore._default = st; iapi._cfg["store"] = st; iapi._cfg["use_llm"] = False; iapi._calls.clear()
     db.configure(":memory:"); db.reset_all(); bus.reset(); yield
 
 def test_routing_decisions():
@@ -54,9 +57,11 @@ def test_bad_action_and_ingest_stub():
     assert not c.post("/user/action", json={"call_id": "x", "action": "nope"}).json()["ok"]
     assert c.post("/user/action", json={"call_id": "zzz", "action": "hang_up"}).status_code == 404
     assert c.post("/events", json={"type": "user.action", "call_id": "x", "data": {}}).status_code == 403
-    assert c.post("/intel/ingest", json={"call_id": "x", "artifacts": []}).json()["stub"]
+    assert c.post("/intel/ingest", json={"call_id": "x", "artifacts": []}).status_code in (200, 401)   # real intel mounted (device-gated), no stub
 
-def test_decoy_end_blocks_caller_and_callback_rejected():
+def test_decoy_end_blocks_caller_and_callback_rejected(monkeypatch):
+    import server.main as M
+    monkeypatch.setattr(M, "intel_api", None)   # fallback path: P1 stub blocks on decoy call.ended when intel is not mounted
     c = paired()
     with c.websocket_connect("/events") as ws:
         for t, d in [("call.incoming", {"from": "+15555550142", "to": "+15555550100", "attestation": "C", "scam_id_score": 0.7}),
@@ -174,3 +179,42 @@ def test_pair_rate_limit_and_hub_token(monkeypatch):
     device._fails.clear()
     monkeypatch.setenv("HUB_TOKEN", "svc")
     assert c.get("/protection-log", headers={"x-hub-token": "svc"}).status_code == 200
+
+
+def _wait(cond, secs=5):
+    t = time.time()
+    while time.time() - t < secs:
+        if cond(): return True
+        time.sleep(0.05)
+    return False
+
+def test_intel_mounted_blocks_after_artifacts_and_undo_works():
+    import server.main as M
+    assert M.intel_api is not None
+    c = paired(); n = "+15555550177"
+    assert routing.decide(n)["decision"] == "LIVE_GUARD"
+    bus.publish("call.incoming", "i1", {"from": n, "to": "+15555550100", "attestation": "C", "scam_id_score": 0.8})
+    bus.publish("handoff.started", "i1", {"restore_deadline": 1.0})
+    bus.publish("artifacts.extracted", "i1", {"artifacts": [{"kind": "callback_phone", "value": "+15555550166"}, {"kind": "impersonated_org", "value": "IRS"}]})
+    assert _wait(lambda: routing.decide(n)["decision"] == "BLOCKED_BACKFIRE"), "intel did not block the caller"
+    assert any(e["type"].startswith("intel.") or e["type"] == "blocklist.updated" for e in bus.history if e["call_id"] in ("i1", None))
+    log = c.get("/protection-log").json()
+    row = next(r for r in log["blocked"] if r["number"] == n)
+    assert c.post("/protection-log/undo", json={"undo_token": row["undo_token"]}).json()["ok"]
+    assert routing.decide(n)["decision"] == "LIVE_GUARD"
+    assert routing.decide("911", "A")["decision"] == "NORMAL"
+
+def test_intel_routes_protected_and_stub_removed():
+    c = TestClient(app)
+    assert c.post("/intel/ingest", json={"call_id": "x", "artifacts": []}).status_code == 401
+    assert c.get("/intel/state").status_code == 401
+    assert c.post("/intel/actions/nope/approve").status_code == 404   # exact approve route stays open (404 = reached the handler)
+    assert c.get("/intel/actions/nope/approve").status_code in (401, 405)   # other methods are gated
+    assert c.get("/intel/blocked", params={"number": "+15555550177"}).status_code == 401
+    assert c.post("/intel/ingest", json={"call_id": "x", "artifacts": []}, headers=paired().headers).json().get("stub") is None
+
+def test_routing_fails_open_without_intel(monkeypatch):
+    import sys
+    monkeypatch.setitem(sys.modules, "intel.store", None)   # import error inside decide()
+    assert routing.decide("+15555550999")["decision"] == "LIVE_GUARD"
+    db.add_confirmed("+15555550999"); assert routing.decide("+15555550999")["decision"] == "BLOCKED_BACKFIRE"

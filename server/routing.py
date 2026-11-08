@@ -16,6 +16,13 @@ def decide(from_number, attestation="none"):
             return {"decision": "BLOCKED_BACKFIRE", "reason": "Confirmed scammer for her", "attestation": attestation}
         if db.has("campaign_numbers", n):
             return {"decision": "BLOCKED_BACKFIRE", "reason": "Linked to a confirmed scam campaign", "attestation": attestation}
+        try:  # P4a intel store (campaign/network blocks), fail open
+            from intel.store import is_blocked
+            blocked, why = is_blocked(n)
+            if blocked:
+                return {"decision": "BLOCKED_BACKFIRE", "reason": why or "Blocked by Backfire intel", "attestation": attestation}
+        except Exception:
+            log.warning("intel is_blocked unavailable; skipping", exc_info=True)
         if db.has("trusted", n) and attestation == "A":
             return {"decision": "NORMAL", "reason": "Trusted contact, caller ID verified", "attestation": attestation}
         label = "Caller ID not verified" if attestation in ("none", "C") else "Not in her trusted list"

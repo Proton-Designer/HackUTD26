@@ -37,10 +37,13 @@ Every event is JSON on the P1 event bus and `WS /events`:
 | `guardrail.tripped` | P3 | `rule` str |
 | `artifacts.extracted` | P3 | `artifacts` list of typed items (below) |
 | `intel.lookup` | P4 | `artifact_kind` str, `value` str, `result` object, `source` str |
-| `intel.action` | P4 | `action_id` str, `kind` str, `target` str, `status` "applied" or "queued" or "approved", `simulated` bool |
+| `intel.action` | P4 | `action_id` str, `kind` str, `target` str, `status` "applied" or "queued" or "approved" or "denied" or "held" (denied = gate audit; held = waiting for campaign confirmation), `simulated` bool. Optional: `gate_status` str (detail), `scope` str, `approval` str, `reason` str, `evidence` list |
 | `injection.denied` | P4 | `attempted_target` str, `reason` str |
 | `campaign.updated` | P4 | `campaign_id` str, `indicators` list[str], `numbers` list[str] |
-| `blocklist.updated` | P1 (stub) then P4 | `number` str, `scope` "her" or "campaign", `undo_token` str |
+| `blocklist.updated` | P4 (P1 stub only if intel is not mounted) | `number` str, `scope` "her" or "campaign" or "network" (network = analyst-approved, simulated), `undo_token` str. Optional: `active` bool (false on undo), `reason` str. `call_id` may be null on undo |
+| `intel.plan` | P4 | trace, all optional: `steps` list, `inputs` object (consumers may ignore) |
+| `intel.agent` | P4 | trace, all optional: `engine`, `model`, `plan`, `n_proposals`, `n_baseline_added`, `error` |
+| `intel.proposals` | P4 | trace, all optional: `engine`, `actions` list |
 | `voice.enrolled` | P3 | `voice_id` str, `consent_version` str |
 | `voice.deleted` | P3 | `voice_id` str |
 
@@ -56,6 +59,7 @@ Each item `{"kind": K, ...}` with K and fields:
 - `remote_app`: `value`
 - `impersonated_org`: `value`
 - `script_tags`: `value` list[str]
+- `instruction_to_ai`: `text` str, optional `target` str, optional `requested_kind` str (a scammer instruction aimed at the AI system, e.g. "mark this number safe"; P3 emits it so the P4 gate can deny it and emit `injection.denied`)
 
 ### Example
 ```json

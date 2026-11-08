@@ -1,5 +1,5 @@
 """Backfire hub: event bus, WS /events, routing store, stubs. Run: uvicorn server.main:app --port 8000"""
-import asyncio, logging, os, time
+import asyncio, logging, os, re, time
 from fastapi.responses import HTMLResponse
 from fastapi import Depends, HTTPException, Request, FastAPI, WebSocket, WebSocketDisconnect, Body, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -19,7 +19,6 @@ def _auth(token):
         raise HTTPException(401, "bad or missing token")
 
 ACTIONS = {"continue", "scammer_get_scammed", "hang_up"}
-ingested: list = []
 
 app.include_router(relay.router)
 app.include_router(device.router)
@@ -79,12 +78,21 @@ def user_action(body: dict = Body(...)):
     bus.publish("user.action", cid, {"action": action})
     return {"ok": True}
 
-@app.post("/intel/ingest")
-def intel_ingest(body: dict = Body(default={})):
-    """P1 stub: logs only. P4 replaces."""
-    ingested.append(body)
-    log.info("intel.ingest stub call_id=%s artifacts=%d", body.get("call_id"), len(body.get("artifacts") or []))
-    return {"ok": True, "stub": True}
+# ---- TASK-017: P4a intel mounted in-process (fail open: hub starts without it; stub fallbacks stay) ----
+intel_api = None
+def _intel_guard(request: Request):
+    """Intel routes need a paired device / direct localhost / HUB_TOKEN, except exactly POST /intel/actions/<id>/approve (simulated analyst button)."""
+    if request.method == "POST" and re.fullmatch(r"/intel/actions/[A-Za-z0-9_-]+/approve", request.url.path):
+        return   # only this exact route: command center is an unpaired browser and its actions are simulated
+    device.require_device(request)
+try:
+    from intel import api as intel_api
+    intel_api.configure(emit=bus.publish)
+    bus.add_observer(intel_api.observe)
+    app.include_router(intel_api.router, dependencies=[Depends(_intel_guard)])
+except Exception:
+    intel_api = None
+    log.exception("intel not mounted; falling back to the P1 decoy-ended blocklist stub")
 
 # ---- TASK-007: blocklist stub, protection log, reset, DEMO_MODE replay ----
 CALLER_BY_CALL: dict = {}  # call_id -> caller number, filled from call.incoming
@@ -101,7 +109,7 @@ def _observe(ev):
         DECOY_CALLS.add(cid)
     elif t == "handoff.restored":
         DECOY_CALLS.discard(cid)
-    elif t == "call.ended" and cid in DECOY_CALLS and CALLER_BY_CALL.get(cid):
+    elif t == "call.ended" and cid in DECOY_CALLS and CALLER_BY_CALL.get(cid) and intel_api is None:  # stub only when intel is not mounted (intel.observe blocks the caller otherwise)
         num = CALLER_BY_CALL[cid]
         if num in db.EMERGENCY or db.has("trusted", num):  # a (possibly spoofed) trusted number must not poison her blocklist
             DECOY_CALLS.discard(cid); return
@@ -114,11 +122,23 @@ bus.add_observer(_observe)
 @app.get("/protection-log", dependencies=[Depends(device.require_device)])
 def protection_log():
     blocked = [{"number": r["number"], "reason": r["reason"], "ts": r["ts"], "undo_token": r["undo_token"]} for r in db.list_confirmed()]
+    if intel_api is not None:
+        try:
+            blocked = sorted(blocked + [dict(r, number=db.norm(r["number"])) for r in intel_api.protection_entries()], key=lambda r: r["ts"] or 0, reverse=True)[:50]
+        except Exception:
+            log.exception("intel protection entries failed")
     return {"blocked": blocked, "calls": db.list_calls()}
 
 @app.post("/protection-log/undo", dependencies=[Depends(device.require_device)])
 def protection_undo(body: dict = Body(...)):
-    return {"ok": db.undo(body.get("undo_token", ""))}
+    tok = body.get("undo_token", "")
+    if intel_api is not None:
+        try:
+            if intel_api.undo_block(tok):
+                return {"ok": True}
+        except Exception:
+            log.exception("intel undo failed")
+    return {"ok": db.undo(tok)}
 
 @app.get("/demo/latency")
 def demo_latency():
@@ -132,11 +152,22 @@ def demo_status(request: Request, format: str = ""):
         return HTMLResponse(ops.status_html(s))
     return s
 
+def _reset_intel():
+    if intel_api is None:
+        return
+    try:
+        st = intel_api._store()
+        for (name,) in st.db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").fetchall():
+            st.x(f"DELETE FROM {name}")
+        intel_api._calls.clear()
+    except Exception:
+        log.exception("intel reset failed")
+
 @app.post("/demo/reset")
 def demo_reset(request: Request):
     _auth(request.headers.get("x-hub-token"))
     t0 = time.time()
-    db.reset_all(); bus.reset(); ops.reset(); CALLER_BY_CALL.clear(); DECOY_CALLS.clear(); ingested.clear()
+    db.reset_all(); bus.reset(); _reset_intel(); ops.reset(); CALLER_BY_CALL.clear(); DECOY_CALLS.clear()
     return {"ok": True, "seconds": round(time.time() - t0, 3)}
 
 @app.post("/demo/replay")

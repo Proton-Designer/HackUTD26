@@ -9,3 +9,4 @@ __pycache__/
 
 # hub latency log
 logs/
+intel/*.db
