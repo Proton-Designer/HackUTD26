@@ -113,11 +113,11 @@ def main():
     tun, base = start_tunnel(a.port)
     try:
         url = f"{base}/{a.script}.mp3"
-        for _ in range(20):   # wait for the quick tunnel to route
+        for _ in range(20):   # best-effort local reachability check; a fresh quick-tunnel name can fail on THIS machine's DNS cache while Telnyx resolves it fine
             try:
-                if urllib.request.urlopen(url, timeout=4).status == 200: break
+                if urllib.request.urlopen(url, timeout=4).status == 200: print("tunnel serves the audio"); break
             except Exception: time.sleep(1)
-        else: sys.exit("tunnel did not serve the audio")
+        else: print("WARNING: could not fetch the audio through the tunnel from here (local DNS?); dialing anyway, Telnyx resolves it itself")
         body = body_for(url, line, limit)
         req = urllib.request.Request("https://api.telnyx.com/v2/calls", json.dumps(body).encode(), {"Authorization": "Bearer " + os.environ["TELNYX_API_KEY"], "Content-Type": "application/json"})
         try:
