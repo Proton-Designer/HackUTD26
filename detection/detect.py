@@ -10,21 +10,22 @@ _NEG = re.compile(r"\b(never|won'?t|will not|would not|do not|don'?t|doesn'?t|do
 # a new clause starts after a sentence end, or at "but/however/now ..." or ", read me ...": a later real request must still fire
 _CLAUSE = re.compile(r"[.?!;:\n]|,?\s+\b(?:but|however|except|instead|now)\b|,\s*(?:now |please |then |so )?\b(?:read|tell|give|send|text|repeat)\s+(?:me|us)\b", re.I)
 # weak asks (bare nouns) only count with a request verb / question cue within ~6 words
-_REQ = re.compile(r"\b(pay|paid|paying|send|sending|buy|bought|accept|accepts|accepted|take|takes|taking|can take|using|purchase|read|give|tell|install|share|provide|verify|confirm|deposit|wire|withdraw|load|scan|text|enter|need|needs|require|requires|mail|get|go|use|put|move|download|transfer|what'?s|what is|may i|can i|i'?ll need)\b", re.I)
+_REQ = re.compile(r"\b(pay|paid|paying|send|sending|buy|bought|accept|accepts|accepted|take|takes|taking|can take|using|purchase|read|give|tell|install|share|provide|verify|confirm|deposit|wire|withdraw|load|scan|text|enter|need|needs|require|requires|mail|get|go|use|put|move|download|transfer|what'?s|what is|may i|can i|i'?ll need|can you|could you|will you|would you|please|pagar|pague|compre|comprar|env[ií]e|enviar|lea|d[eé]me|necesito|deposite)\b", re.I)
 _WEAK = {"gift_card", "crypto", "p2p", "ssn", "card"}
 # the user's own past action / status ("the Zelle you made", "is ready") is a confirmation, not a request
 _OWN = re.compile(r"^\W*(?:\w+\W+){0,3}?(you|your)\b\W+(?:\w+\W+){0,2}?(made|started|initiated|sent|requested|ordered|authori[sz]ed|did|set up)\b", re.I)
 
+_WEAK_WIRE = re.compile(r"wire transfer|(por )?transferencia|wire (\w+ ){0,3}(dollars|bucks)|wire \$", re.I)
 ASK_RULES = {
-    "gift_card": r"gift ?cards?|itunes card|google play card|steam card",
+    "gift_card": r"gift ?cards?|itunes card|google play card|steam card|prepaid (debit )?cards?|tarjetas? de regalo|tarjetas? prepago",
     "otp": r"(read|tell|give|send|share|repeat)\b[^.?!]{0,25}\b(code|otp|passcode|pin|digits?)\b|(read|tell|give|send|repeat)\s+me\b[^.?!]{0,15}\b(numbers|digits)\b|one[- ]time (code|passcode|password)|verification code|six[- ]digit code",
-    "wire": r"wire (the |some )?(money|funds|transfer)|wire transfer|safe account|protected account|move (your |the )?(money|funds)|transfer (your |the )?(money|funds)",
-    "crypto": r"bitcoin|crypto|\bbtc\b|ethereum|wallet address|bitcoin atm|(safe|secure|new|cold|digital|different) wallet",
+    "wire": r"wire (the |some )?(money|funds|transfer)|wire transfer|wire (\w+ ){0,3}(dollars|bucks)|wire \$\s?\d|transferencia (bancaria )?(ahora|hoy|urgente)|por transferencia|safe account|protected account|move (your |the )?(money|funds)|transfer (your |the )?(money|funds)",
+    "crypto": r"bitcoin|crypto|\bbtc\b|ethereum|wallet address|bitcoin atm|(safe|secure|new|cold|digital|different) wallet|buy (some )?(coins|tokens)|crypto (kiosk|atm)|criptomonedas?",
     "p2p": r"\bzelle\b|venmo|cash ?app|paypal me",
     "remote_app": r"any ?desk|team ?viewer|ultra ?viewer|remote (access|control|desktop)|screen ?shar",
     "ssn": r"social security|\bssn\b|last four of your social",
-    "card": r"card number|\bcvv\b|\bcvc\b|security code on (the )?back|expiration date",
-    "secrecy": r"tell (no ?one|nobody)|(don'?t|do not|not to) tell (anyone|anybody|your (bank|family|wife|husband|son|daughter))|keep (this|it) (a )?(secret|private|between us|confidential)|(don'?t|do not) (hang up|talk to)",
+    "card": r"card number|card (details|info|information)|n[uú]mero de (la )?tarjeta|\bcvv\b|\bcvc\b|security code on (the )?back|expiration date",
+    "secrecy": r"tell (no ?one|nobody)|(don'?t|do not|not to) tell (anyone|anybody|your (bank|family|wife|husband|son|daughter))|keep (this|it) (a )?(secret|private|between us|confidential)|(don'?t|do not) (hang up|talk to)|no le diga (nada )?a|no (se lo|les? diga)\b[^.?!]{0,20}(a nadie|a su familia|a mis)|no se lo diga a nadie",
 }
 ASK_RE = {k: re.compile(v, re.I) for k, v in ASK_RULES.items()}
 
@@ -71,7 +72,7 @@ def rule_scan(text: str) -> dict:
         for m in rx.finditer(text):
             if k != "secrecy" and _negated(text, m.start()):
                 continue
-            weak = k in _WEAK or (k == "wire" and m.group(0).lower().startswith("wire transfer"))
+            weak = k in _WEAK or (k == "wire" and _WEAK_WIRE.match(m.group(0)))
             if weak and not _is_request(text, m.start(), m.end()):
                 continue
             asks.append(k)
