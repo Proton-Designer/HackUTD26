@@ -16,7 +16,29 @@ Run: bash detection/scripts/run.sh (:8100); tunnel: bash detection/scripts/tunne
 **DEMO_MODE=1.** Serves `detection/demo_cache.json` (63 recorded LLM answers for the script-card and mock-call windows). Exact key = engine|model|normalized text; on a miss, the nearest recorded window by char n-gram cosine >= 0.92 is served only if the live rule asks are a subset of the cached asks; the rule floor still applies. Off outside DEMO_MODE. Re-record with `DEMO_RECORD=1 PYTHONPATH=. .venv/bin/python detection/record_demo.py` (resumable, <= 18 rpm). Log lines: `demo cache hit` / `fuzzy hit` / `miss`.
 **Run / check.** See `detection/RUNBOOK.md`. Tests: `.venv/bin/python -m pytest -q detection`.
 **Checked in a DEMO_MODE run (second port :8101, 2026-11-08):** 63 card+mock windows through `POST /detect`: 63 exact hits, 0 fuzzy, 0 misses, max 0.07 s per call. `replay_mock --real` alerted on the IRS call and not on the bank call.
-**Honest limits.** (1) Live STT text can differ from the script, so DEMO_MODE hits depend on the fuzzy match; in the real-STT acceptance run, lines outside the recorded set missed (they went live). (2) Rate budget is shared by the team key; when exhausted a window gets rules only. (3) No Super verifier (not servable). (4) `engine=local` is untested end to end here. (5) Campaign matching is only as broad as the script cards plus the dev-split eval rows. (6) Synthetic data only; thresholds were tuned on small sets.
+**Honest limits.** (1) Live STT text can differ from the script, so DEMO_MODE hits depend on the fuzzy match; in the real-STT acceptance run, lines outside the recorded set missed (they went live). (2) Rate budget is shared by the team key; when exhausted a window gets rules only. (3) No Super verifier (not servable). (4) `engine=local` is a 4B model on a laptop GPU: slower (p50 2.7 s) and over-flags the AI-address field; the cloud engine is the default. (5) Campaign matching is only as broad as the script cards plus the dev-split eval rows. (6) Synthetic data only; thresholds were tuned on small sets.
+## Reliability, safety rules, and what changed (eng1)
+- **Cloud -> local failover** (`detect.py`, 463280f/34b788e): if the cloud engine fails or is slow, the same window is scored by the local engine when `LOCAL_LLM_URL` answers a cached probe (10 s, 0.5 s timeout). Cloud gets 2 s when local is reachable; the overall cap is 4 s. If both are down the window gets rules only. `P2_FAILOVER=0` turns it off.
+- **Circuit breaker** (75ece5f): 3 cloud failures (429/5xx/timeout/transport) in 30 s open it for 60 s, so calls go straight to local instead of waiting out the timeout. Then one half-open probe; backoff 60/120/240 s, capped at 300. Cached answers are still served while open. `/healthz` shows `cloud_breaker`. `P2_BREAKER=0` disables it. State is per process.
+- **Hold last score** (bfa0bac, `alert.py`): a window scored by rules only because the engine failed keeps the last LLM-backed s for up to 10 s / 3 windows, then decays. A real low LLM score always passes through. No dip, no spurious re-alert.
+- **Continue** (34b788e, 476aca8): after the user taps Continue, the utterance window is cleared and results scored before it are dropped, as are late finals whose audio ended before Continue. Benign talk then restores s quickly; a NEW hard ask still re-alerts.
+- **Fewer false alarms** (7859d33): negation is clause-scoped ("we never ask for codes" does not fire; "never ask for codes, but read me the 6 digits" does), a weak bare-noun ask (gift card, crypto, SSN, card, wire transfer) needs a request verb and must not be the user's own past action, and the shared prompt has WARNING != REQUEST, CONFIRMATION != REQUEST, GIVEN != ASKED examples. Rules only ever raise s; nothing the caller says lowers it.
+- **AI-address gating** (8874f7f): the LLM's `addresses_ai_system` flag counts only if the text has an AI cue or the injection rule fired; it never lowers s.
+- **Chips** (1715892): negative chips ("No pin ask") are dropped; chips describe risk signals only.
+- **Auth and logs**: `PIPELINE_TOKEN` (if set) is required on WS `/stt` and `POST /detect`; unset = open and logged. `detection/scripts/call_report.py` prints a per-call timeline from `p2.log` (8e18ef4).
+
+## Evaluation (synthetic, n=60 test rows: 33 scam / 27 legit)
+Numbers are from `detection/eval/RESULTS.md` (eng3, 1242399), the BEFORE table scored on code `20ca58a`, before the false-alarm fixes above. Thresholds were tuned on the dev split only, frozen in `FROZEN.json`, then the test split was scored once. All cells carry Wilson 95% CIs in RESULTS.md; n is small.
+
+| test split | rules baseline (thr 0.85) | local Nemotron Nano 4B (thr 0.95) |
+|---|---|---|
+| scam recall | 85% (28/33) | 100% (33/33) |
+| adversarial / injection recall | 69% (9/13) / 86% (6/7) | 100% (13/13) / 100% (7/7) |
+| false alarm, all legit | 19% (5/27) | 7% (2/27) |
+| false alarm, keyword-bait legit | 57% (4/7) | 29% (2/7) |
+| latency p50 | 0 ms | 2.7 s |
+
+Honesty notes: the cloud engine was **not scored on test** (the shared NVIDIA key returned 429s), so there is no cloud test number; cloud dev numbers exist but are optimistic (tuned on dev). The "rules" column is eng3's plain keyword baseline, not the production `rule_scan`. Local over-flags the AI-address field (27/55 false positives before the fix). The AFTER table (current code) goes in the slot below when TASK-028 lands.
 <!-- EVAL TABLE (eng3) -->
 ## Local engine + eval (eng3)
 Local engine (`engine=local`): Nemotron 3 Nano 4B `Q4_K_M` (nvidia/NVIDIA-Nemotron-3-Nano-4B-GGUF) served by llama.cpp `llama-server` on the laptop GPU (RTX 3050 Ti 4 GB).
