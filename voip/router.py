@@ -215,7 +215,7 @@ async def media(ws: WebSocket, call_id: str, t: str = ""):
             try:   # evidence for LIVE_TEST_PLAN check 3/4: event + track counts, start frame metadata (never payload audio)
                 _f = json.loads(raw); _k = _f.get("event", "?") + ((":" + str(_f.get("media", {}).get("track"))) if _f.get("event") == "media" else "")
                 stats[_k] = stats.get(_k, 0) + 1
-                if _f.get("event") in ("connected", "start") and stats[_k] == 1: log.warning("media %s: %s", _f["event"], json.dumps({k: v for k, v in _f.items() if k != "media"})[:400])
+                if _f.get("event") in ("connected", "start") and stats[_k] == 1: log.warning("media %s: %s", _f["event"], json.dumps({"event": _f.get("event"), "media_format": (_f.get("start") or {}).get("media_format"), "tracks": (_f.get("start") or {}).get("tracks")})[:200])
             except Exception: pass
             try:   # caller track only (stream_track=inbound_track); Maria's audio never streamed
                 if hub: await _maybe_await(hub.caller_frame(call_id, json.loads(raw)))
