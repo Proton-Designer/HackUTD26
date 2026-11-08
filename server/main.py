@@ -38,17 +38,40 @@ def mount_router(router, prefix=""):
 def healthz():
     return {"ok": True}
 
+_PHONE_RX = re.compile(r"\+?\d[\d\s().-]{7,}\d")
+
+def _mask_num(m):
+    d = re.sub(r"\D", "", m.group(0))
+    return ("+" if m.group(0).startswith("+") else "") + d[:1] + "*" * max(0, len(d) - 3) + d[-2:]
+
+def _mask(v):
+    if isinstance(v, str): return _PHONE_RX.sub(_mask_num, v)
+    if isinstance(v, list): return [_mask(x) for x in v]
+    if isinstance(v, dict): return {k: _mask(x) for k, x in v.items()}
+    return v
+
+def redact_event(ev: dict) -> dict:
+    """F17: what an unauthenticated remote viewer of WS /events gets: no transcript text, no extracted artifacts, phone numbers masked."""
+    out = dict(ev); d = _mask(dict(ev.get("data") or {}))
+    if ev.get("type") == "transcript.caller": d["text"] = ""; d["redacted"] = True
+    if ev.get("type") == "artifacts.extracted": d["artifacts"] = []; d["redacted"] = True
+    out["data"] = d
+    return out
+
 @app.websocket("/events")
 async def ws_events(ws: WebSocket, call_id: str | None = None, token: str | None = None):
     if HUB_TOKEN and token != HUB_TOKEN:
         await ws.close(code=1008); return
-    await ws.accept()
+    # F17 (EVENTS_REDACT=1): loopback, a paired device (subprotocol ["bf-device", token] or x-device-token) or x-hub-token see everything; other remote viewers get a redacted stream
+    trusted, proto = relay._listen_authorized(ws)
+    redact = os.environ.get("EVENTS_REDACT") == "1" and not trusted and not (HUB_TOKEN and token == HUB_TOKEN)
+    await ws.accept(subprotocol=proto)
     q = bus.subscribe()
     try:
         while True:
             ev = await q.get()
             if call_id is None or ev["call_id"] == call_id:
-                await ws.send_json(ev)
+                await ws.send_json(redact_event(ev) if redact else ev)
     except (WebSocketDisconnect, asyncio.CancelledError):
         pass
     except Exception:

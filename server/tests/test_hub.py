@@ -742,3 +742,37 @@ def test_call_registry_survives_history_eviction():
     assert relay._decoy_on("LONG1") and not relay._call_ended("LONG1")
     bus.publish("call.ended", "LONG1", {}); assert relay._call_ended("LONG1") and not relay._decoy_on("LONG1")
     assert not any(x["call_id"] == "LONG1" for x in c.get("/demo/status").json()["active_calls_detail"])
+
+
+def test_f17_events_redaction_for_remote_unpaired_viewers(monkeypatch):
+    from server import device
+    remote = TestClient(app)
+    local = TestClient(app, base_url="http://127.0.0.1:8000", client=("127.0.0.1", 5000))
+    tok = remote.post("/pair", json={"pin": device.PIN}).json()["device_token"]
+    def watch(client, **kw):
+        with client.websocket_connect("/events", **kw) as ws:
+            bus.publish("call.incoming", "F17", {"from": "+15555550123", "to": "+15555550100", "attestation": "C", "scam_id_score": 0.8})
+            a = ws.receive_json()
+            bus.publish("transcript.caller", "F17", {"utterance_id": "u", "text": "send gift card 4111 1111 1111 1111", "is_final": True})
+            b = ws.receive_json()
+            bus.publish("artifacts.extracted", "F17", {"artifacts": [{"type": "payment", "value": "4111111111111111"}]})
+            c = ws.receive_json()
+            bus.publish("blocklist.updated", "F17", {"number": "+15555550123", "scope": "her"})
+            d = ws.receive_json()
+            return a, b, c, d
+    monkeypatch.delenv("EVENTS_REDACT", raising=False)
+    a, b, c, d = watch(remote)                                                      # default: unchanged (existing UIs keep working)
+    assert a["data"]["from"] == "+15555550123" and "gift card" in b["data"]["text"]
+    monkeypatch.setenv("EVENTS_REDACT", "1")
+    a, b, c, d = watch(remote)
+    assert a["data"]["from"] != "+15555550123" and a["data"]["from"].endswith("23") and "*" in a["data"]["from"] and a["data"]["attestation"] == "C"
+    assert b["data"]["text"] == "" and b["data"]["redacted"] is True and c["data"]["artifacts"] == [] and d["data"]["number"].endswith("23") and "*" in d["data"]["number"]
+    for kw in ({"subprotocols": ["bf-device", tok]},):                              # paired device: full stream, subprotocol accepted
+        a, b, c, d = watch(remote, **kw)
+        assert a["data"]["from"] == "+15555550123" and "gift card" in b["data"]["text"] and d["data"]["number"] == "+15555550123"
+    a, b, c, d = watch(local, headers={"host": "127.0.0.1:8000"})                  # operator's own browser (loopback, same origin): full
+    assert a["data"]["from"] == "+15555550123" and "gift card" in b["data"]["text"]
+    # and the masking helper never leaves a raw number behind in nested data
+    from server.main import redact_event
+    r = redact_event({"type": "intel.agent", "call_id": "x", "ts": 1, "data": {"plan": ["call +1 (555) 555-0123 now"], "n": {"k": "+15555550123"}}})
+    assert "555-0123" not in str(r) and "5550123" not in str(r)

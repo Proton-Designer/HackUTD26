@@ -77,3 +77,5 @@ Restore variant: `--script benign` + tap, then hold low risk 10 s (`RESTORE_LOW_
 - Customer display name: env `CUSTOMER_NAME` (default `Maria`, empty = no name) -> `/demo/status` flags.CUSTOMER_NAME, page title + judge card text, and the listen/talk greeting ("Hello? ... Yes, this is <name>." / "Hello?"). Event enums (`by:"maria"`) are unchanged. Restart the hub after changing it; the greeting audio re-synthesizes on the first call.
 
 - `POST /demo/reset` (and `scripts/reset_demo`, `demo_call --reset`) is refused with 409 while a call is live (`active_calls>0`); `?force=1` / `scripts/reset_demo <hub> --force` overrides.
+
+- `EVENTS_REDACT=1`: WS /events gives remote viewers that are neither loopback nor paired (subprotocol ["bf-device", token], x-device-token, x-hub-token) a redacted stream: no transcript text, no extracted artifacts, phone numbers masked. Default OFF: customer app and command center connect unauthenticated today, so enable it only after the customer app sends the subprotocol (and the command-center is viewed on the hub machine).
