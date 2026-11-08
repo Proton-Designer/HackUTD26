@@ -249,5 +249,16 @@ async def extract(lines: list[str]) -> list[dict]:
         log.warning("extractor: unparseable output")
         return []
     out = [v for v in (validate(a) for a in arr if isinstance(a, dict)) if v]
+    # The model sometimes splits a spoken email ("refunds dot dept at backfire dash demo dot example") into a handle
+    # without its domain plus a separate domain. Rebuild the full address from the transcript so intel can match it.
+    t = " " + clean(" ".join(lines)).lower() + " "
+    for word, sym in ((r"\s+dot\s+", "."), (r"\s+at\s+", "@"), (r"\s+(?:dash|hyphen)\s+", "-"), (r"\s+underscore\s+", "_")):
+        t = re.sub(word, sym, t)   # spoken separators only; real sentence punctuation keeps its space
+    emails = re.findall(r"[a-z0-9._%+-]+@[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}(?![a-z0-9-])", t)
+    for a in out:
+        if a["kind"] == "payment_handle" and "@" not in a["id"]:
+            full = next((e for e in emails if e.split("@")[0].endswith(a["id"].lower())), None)
+            if full:
+                a["id"] = full
     log.info("extractor: %d of %d artifacts valid", len(out), len(arr))
     return out
