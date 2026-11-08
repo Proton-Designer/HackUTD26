@@ -2,7 +2,12 @@
   "use strict";
   const $ = id => document.getElementById(id);
   const qs = new URLSearchParams(location.search);
-  const SERVER = qs.get("server");            // e.g. ws://localhost:8000/events ; absent -> in-app replay
+  // ?server=<hub base URL> (http://host:8000, or ws://host:8000/events) -> live; absent -> replay of mock/events.json
+  const SERVER_RAW = qs.get("server");
+  const HUB = SERVER_RAW ? SERVER_RAW.replace(/\/events\/?$/, "").replace(/^ws/, "http") : null;
+  const SERVER = HUB ? HUB.replace(/^http/, "ws") + "/events" : null;
+  const MOCK_URL = qs.get("mock") || "../../mock/events.json";
+  const MOCK_CALL = qs.get("call") || "irs";   // substring of the mock call_id: irs | bank | crypto
   const DEBUG = qs.has("debug");
   window.__userActions = [];                  // test hook: every user.action emitted
 
@@ -31,7 +36,8 @@
     const msg = { type: "user.action", call_id: st.callId, ts: new Date().toISOString(), data: { action } };
     window.__userActions.push(msg);
     log("user.action", msg);
-    if (ws && ws.readyState === 1) ws.send(JSON.stringify(msg));
+    if (HUB) fetch(HUB + "/user/action", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ call_id: st.callId, action }) })
+      .catch(e => log("POST /user/action failed (fail open, screen keeps working)", String(e)));
     return msg;
   }
 
@@ -63,6 +69,7 @@
         $("alertBox").hidden = false; $("idleMsg").hidden = true; $("handoffMsg").hidden = true;
         twoBeeps(); break;
       case "handoff.started": showHandoff(); break;
+      case "handoff.restored": $("handoffMsg").hidden = true; $("idleMsg").hidden = false; break;
       default: break;
     }
   }
@@ -85,12 +92,21 @@
 
   // ---- sources ----
   function stopReplay() { st.tos.forEach(clearTimeout); st.tos = []; }
-  function startReplay() {
-    stopReplay(); const fx = window.BACKFIRE_FIXTURE || [];
-    st.replay = fx.filter(e => e.afterAnswer);
-    fx.filter(e => !e.afterAnswer && !e.onAnswer).forEach(e => st.tos.push(setTimeout(() => onEvent(e), e.t)));
+  // The UI itself produces user.action / handoff.started / call.answered in replay, so those mock events are skipped.
+  const SKIP = new Set(["user.action", "handoff.started", "call.answered"]);
+  async function startReplay() {
+    stopReplay(); st.replay = [];
+    try {
+      const doc = await (await fetch(MOCK_URL)).json();
+      const call = doc.calls.find(c => c.call_id.includes(MOCK_CALL)) || doc.calls[0];
+      const evs = call.events.filter(e => e.ts >= 0 && !SKIP.has(e.type));
+      const answerAt = ((call.events.find(e => e.type === "call.answered") || {}).ts) || 3;
+      evs.filter(e => e.ts <= answerAt).forEach(e => st.tos.push(setTimeout(() => onEvent(e), e.ts * 1000)));
+      st.replay = evs.filter(e => e.ts > answerAt).map(e => ({ ...e, delay: Math.max(0, (e.ts - answerAt) * 1000) }));
+      $("src").textContent = "· demo replay: " + call.call_id;
+    } catch (e) { log("could not load mock", String(e)); $("endedMsg").textContent = "Could not load mock/events.json"; }
   }
-  function scheduleAfterAnswer() { st.replay.forEach(e => st.tos.push(setTimeout(() => onEvent(e), e.t))); }
+  function scheduleAfterAnswer() { st.replay.forEach(e => st.tos.push(setTimeout(() => onEvent(e), e.delay))); }
 
   function connectWS() {
     ws = new WebSocket(SERVER);
