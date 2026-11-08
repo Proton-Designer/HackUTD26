@@ -29,6 +29,9 @@ MERCHANTS = [("Fake Fresh Grocery (demo)", "grocery"), ("Demo Fuel Stop (fake)",
              ("Fictional Diner (demo)", "food"), ("Demo Hardware (fake)", "home"), ("Placeholder Books (demo)", "shopping")]
 OTHERS = [("Alex", "Sandbox"), ("Priya", "Sandbox"), ("Jordan", "Sandbox")]
 EVIDENCE = [(13, 950), (8, 2400), (3, 1500)]  # (days ago, amount) completed transfers to the payee
+# Laundering chain (additive): more victims paying the mule, then the mule's hop to a cash-out account.
+EXTRA_VICTIMS = [("Sam", 11, 3200), ("Taylor", 9, 4100), ("Morgan", 6, 2650), ("Casey", 4, 3300)]  # +13,250 -> 18,100 in
+CASHOUT_HOPS = [(7, 6000), (5, 7500), (2, 3800)]  # (days ago, amount) mule -> cash-out, 17,300 out
 CONFIG = Path(__file__).with_name("demo_config.json")
 
 
@@ -61,6 +64,67 @@ def resolves(ids: dict | None) -> bool | None:
     return True
 
 
+def _transfer(src: str, dst: str, days_ago: int, amount: int, what: str) -> dict:
+    day = (date.today() - timedelta(days=days_ago)).isoformat()
+    r = N.post(f"/accounts/{src}/transfers",
+               {"transaction_date": day, "status": "completed", "amount": amount, "description": "Zelle payment"},
+               payee_id=dst)
+    return {"src_account": src, "dst_account": dst, "transfer_id": _ok(r, what), "amount": amount, "date": day}
+
+
+def seed_chain(ids: dict, say=print) -> dict:
+    """Add the laundering chain to an existing seed WITHOUT touching Maria, the mule (payee) or her flow.
+    Nessie transfer reads return no payer/payee and the list endpoints time out, so the graph is RECORDED here as an
+    edge list (ids["chain"]) and only confirmed by id at read time, never discovered."""
+    mule = ids["payee"]["account_id"]
+    edges = []
+    # existing evidence edges: confirm amount/date by id (fast enterprise read), else the seeded constants
+    for (days, amt), o, tid in zip(EVIDENCE, ids["others"][:len(EVIDENCE)], ids["evidence_transfer_ids"]):
+        t = N.get(f"/enterprise/transfers/{tid}")
+        td = t["data"] if t["ok"] and isinstance(t["data"], dict) else {}
+        edges.append({"src_account": o["account_id"], "dst_account": mule, "transfer_id": tid,
+                      "amount": td.get("amount", amt),
+                      "date": td.get("transaction_date", (date.today() - timedelta(days=days)).isoformat())})
+    for first, days, amt in EXTRA_VICTIMS:
+        cid = _customer(first, "Sandbox")
+        aid, _ = _checking(cid, f"{first} checking (synthetic)", 2500 + amt)
+        ids["others"].append({"name": f"{first} Sandbox", "customer_id": cid, "account_id": aid})
+        e = _transfer(aid, mule, days, amt, f"victim transfer {first}")
+        ids["evidence_transfer_ids"].append(e["transfer_id"])
+        edges.append(e)
+    co_c = _customer("SIMULATED", "CashOut")
+    co_a, _ = _checking(co_c, "SIMULATED cash-out account (demo)", 0)
+    ids["cashout"] = {"label": "SIMULATED cash-out account", "customer_id": co_c, "account_id": co_a}
+    for days, amt in CASHOUT_HOPS:
+        edges.append(_transfer(mule, co_a, days, amt, "cash-out hop"))
+
+    nodes = [{"id": "maria", "role": "target", "label": "Maria (protected by Backfire)",
+              "account_id": ids["maria"]["account_id"]}]
+    nodes += [{"id": f"v{i + 1}", "role": "victim", "label": o["name"], "account_id": o["account_id"]}
+              for i, o in enumerate(ids["others"])]
+    nodes += [{"id": "mule", "role": "mule", "label": "SIMULATED mule account (scammer destination)", "account_id": mule},
+              {"id": "cashout", "role": "cashout", "label": "SIMULATED cash-out account", "account_id": co_a}]
+    by_acct = {n["account_id"]: n["id"] for n in nodes}
+    for e in edges:
+        e["src"], e["dst"] = by_acct[e["src_account"]], by_acct[e["dst_account"]]
+    # Maria's edge is the one Backfire cuts. Its transfer is created at every /demo/reset, so it's resolved live.
+    edges.insert(0, {"src": "maria", "dst": "mule", "src_account": ids["maria"]["account_id"], "dst_account": mule,
+                     "transfer_id": None, "dynamic": "maria_pending_demo_transfer",
+                     "amount": int(json.loads(CONFIG.read_text()).get("payout_destination", {})
+                                   .get("demo_transfer_amount", 1800)), "date": None})
+    ids["chain"] = {"_note": "Recorded edge list (not discovered): Nessie transfers expose no payer/payee. Synthetic.",
+                    "nodes": nodes, "edges": edges}
+    N.save_ids(ids)
+    n_in = sum(e["amount"] for e in edges if e["dst"] == "mule" and e["src"] != "maria")
+    say(f"  chain: {len(ids['others'])} victims -> mule (${n_in:,}) -> cash-out "
+        f"(${sum(a for _, a in CASHOUT_HOPS):,} in {len(CASHOUT_HOPS)} hops); Maria's edge resolved live")
+    return ids
+
+
+def resolves_account(account_id: str) -> bool:
+    return bool(N.get(f"/accounts/{account_id}")["ok"])
+
+
 def seed(force: bool = False, quiet: bool = False) -> dict:
     say = (lambda *a: None) if quiet else print
     if not N.api_key():
@@ -72,9 +136,12 @@ def seed(force: bool = False, quiet: bool = False) -> dict:
         if r is None:
             say("Nessie unreachable: keeping intel/nessie_ids.json as is (fail open)")
             return {"status": "unavailable"}
-        if r:
-            say(f"Nessie already seeded (intel/nessie_ids.json resolves): skip")
+        if r and existing.get("chain") and existing.get("cashout") and resolves_account(existing["cashout"]["account_id"]):
+            say(f"Nessie already seeded (intel/nessie_ids.json resolves, chain present): skip")
             return {"status": "exists", **existing}
+        if r:
+            say("Nessie base seed resolves; adding the laundering chain (additive)")
+            return {"status": "extended", **seed_chain(existing, say)}
     t0 = time.time()
     today = date.today()
     d = lambda n: (today - timedelta(days=n)).isoformat()
@@ -124,6 +191,7 @@ def seed(force: bool = False, quiet: bool = False) -> dict:
            "payee": {"label": "SIMULATED scammer destination", "customer_id": payee_c, "account_id": payee_a},
            "merchants": merchants, "evidence_transfer_ids": evidence}
     N.save_ids(ids)
+    seed_chain(ids, say)
     cfg = json.loads(CONFIG.read_text())
     pd = cfg.setdefault("payout_destination", {})
     pd.update(nessie_payee_account_id=payee_a, bank_last4=payee_num[-4:] or None,
@@ -144,7 +212,7 @@ def main(argv=None) -> int:
     except RuntimeError as e:
         print(e)
         return 1
-    return 0 if r["status"] in ("created", "exists", "no_key", "unavailable") else 1
+    return 0 if r["status"] in ("created", "extended", "exists", "no_key", "unavailable") else 1
 
 
 if __name__ == "__main__":

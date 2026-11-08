@@ -35,6 +35,12 @@ Capital One Nessie (mock bank sandbox; all data synthetic):
     (analyst Approve, simulated). Nessie down -> lookup "unavailable", no bank actions, everything else unchanged.
     python -m intel.acceptance --hub http://127.0.0.1:8000 --require-nemotron --nessie   # 12/12 expected
 
+Laundering chain + network map (Nessie mock bank, synthetic):
+    python -m intel.seed_nessie        # also adds the chain (additive): 7 victims -> mule ($18,100) -> cash-out ($17,300)
+    GET /intel/chain                   # read-only graph {nodes, edges, mule_total_in/out, held_count, simulated}
+    GET /intel/map                     # standalone page: victims -> mule -> cash-out; Maria's edge shows CUT when held
+    On the hub machine: http://localhost:8000/intel/map (polls every 3 s; paste-JSON fallback if the hub is unreachable)
+
 Rehearsal reset (idempotent, ~5 ms, no network): `python -m intel.seed_demo` clears the intel DB and seeds one
 synthetic sighting from "yesterday" sharing the demo wallet + callback, so the judge's call confirms the campaign live.
 `--check` prints counts only.

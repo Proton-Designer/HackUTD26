@@ -45,3 +45,22 @@
 - hold_transfer: auto, scope her, simulated=true (sandbox), status applied, undo token "hold-..." (via POST /intel/blocklist/{token}/undo or intel.api.undo_block). If the PUT fails after a successful lookup, no action is shown as applied (logged as skipped). flag_payee_bankwide: queued, analyst Approve, simulated payload simulated/bank-payee-flag/v0.
 - Mock bank ids live in intel/nessie_ids.json (committed, so every machine with the key shares one mock bank). The scammer's handle appears in Nessie only as the description of Maria's own scripted transfer, as her banking app would write it.
 - Security (#54, P1 review): the gate no longer trusts a proposal's target_source alone. hold_transfer needs target_source "nessie:pending_transfer" AND the id in ctx.bank_transfer_ids (filled only from the Nessie lookup on her account); flag_payee_bankwide needs "nessie:payee" AND the payout key in ctx.bank_payees. LLM proposals are re-stamped target_source "llm" (claimed value kept as llm_claimed_source) and lose gate-trusted fields (destination, destination_allow_key, payee_account_id, amount, proposer, rail). Nessie ids must match ^[0-9a-fA-F-]{24,36}$ before they reach any URL path.
+
+## Laundering chain + network map (2026-11-08)
+- Model: 7 synthetic victims each send ONE completed transfer into the existing "SIMULATED ScammerDestination" payee,
+  which is now the MULE ($18,100 in). The mule then makes 3 completed transfers to a new "SIMULATED CashOut" account
+  ($17,300 out). Maria is role "target"; her $1,800 edge is the one Backfire cuts. All synthetic, whole dollars.
+- Edges are RECORDED, not discovered: Nessie transfer reads return no payer/payee and ?type=payee 404s, and the
+  /enterprise list endpoints dump the whole shared sandbox and time out. seed_nessie writes ids["chain"] = {nodes, edges}
+  (edge = src/dst account + transfer_id + amount + date). GET /intel/chain only CONFIRMS each recorded edge by id via
+  GET /enterprise/transfers/{id} (parallel, cached 60 s since completed transfers don't change).
+- Maria's edge has no fixed transfer id (a new pending transfer is created at every /demo/reset), so it's resolved live:
+  held = an active hold in the intel store (this reset) whose transfer reads "cancelled" in Nessie (nessie.transfer_status).
+  Her pending or held $1,800 never counts toward the mule's total_in (it hasn't arrived, and with Backfire it never does).
+- Additive: seed_chain() extends an existing seed (Maria, mule, her pending flow and the original 3 evidence transfers are
+  untouched); evidence_transfer_ids grows to all 7 victims, so flag_payee_bankwide evidence now says 7 customers / $18,100.
+  payee_activity reads run in parallel to keep the hold path fast.
+- Fail open: Nessie down -> seeded edge values, status "unavailable"; the endpoint never raises.
+- /intel/map: a standalone page I own (intel/chain_map.html), not part of P4b's command center. Self-contained HTML +
+  inline SVG + vanilla JS, fetches only same-origin `chain` every 3 s, with a paste-JSON fallback. Both routes sit under
+  P1's intel guard (paired device / localhost / HUB_TOKEN), so over the public tunnel they need P1 to allow them.

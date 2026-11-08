@@ -79,6 +79,7 @@ class FakeNessie:
 @pytest.fixture
 def bank(tmp_path, monkeypatch):
     fake = FakeNessie()
+    monkeypatch.setitem(N._edge_cache, "edges", None)  # chain edge cache is per process
     monkeypatch.setenv("NESSIE_API_KEY", "test-key")
     monkeypatch.setattr(N, "IDS_PATH", tmp_path / "nessie_ids.json")
     cfg_path = tmp_path / "demo_config.json"
@@ -123,7 +124,7 @@ def test_hold_applied_and_undoable(bank, tmp_path):
     store, ev = Store(str(tmp_path / "s.db")), []
     run(store, ev)
     lk = [e["data"] for e in ev if e["type"] == "intel.lookup" and e["data"].get("source") == "nessie"]
-    assert lk and lk[0]["status"] == "ok" and lk[0]["pending_count"] == 1 and lk[0]["activity_count"] == 3
+    assert lk and lk[0]["status"] == "ok" and lk[0]["pending_count"] == 1 and lk[0]["activity_count"] == 7
     assert tid not in json.dumps(lk)                                    # transfer ids never in events/LLM input
     hold = acts(ev, "hold_transfer")
     assert len(hold) == 1 and hold[0]["status"] == "applied" and hold[0]["simulated"] is True
@@ -131,7 +132,7 @@ def test_hold_applied_and_undoable(bank, tmp_path):
     assert "Nessie" in hold[0]["reason"] and hold[0]["undo_token"].startswith("hold-") and hold[0]["evidence"]
     assert bank.transfers[tid]["status"] == "cancelled"
     flag = acts(ev, "flag_payee_bankwide")
-    assert flag and flag[0]["status"] == "queued" and "3 other customers" in flag[0]["evidence"][0]
+    assert flag and flag[0]["status"] == "queued" and "7 other customers" in flag[0]["evidence"][0]
     q = [a for a in store.actions("pending_approval") if a["kind"] == "flag_payee_bankwide"]
     assert q[0]["payload"]["body"]["payeeAccountId"] == ids["payee"]["account_id"]
     api.configure(store=store, emit=lambda *a: None)
@@ -175,7 +176,7 @@ def test_seed_idempotent_and_reset_hook(bank, tmp_path):
     assert seed_nessie.seed(quiet=True)["status"] == "exists"
     assert sum(1 for m, _ in bank.calls if m == "POST") == n_posts      # second run creates nothing
     ids = N.load_ids()
-    assert len(ids["others"]) == 3 and len(ids["evidence_transfer_ids"]) == 3 and 8 <= len(ids["merchants"]) <= 10
+    assert len(ids["others"]) == 7 and len(ids["evidence_transfer_ids"]) == 7 and 8 <= len(ids["merchants"]) <= 10
     assert all(bank.transfers[t]["status"] == "completed" for t in ids["evidence_transfer_ids"])
     cfg = json.loads(seed_nessie.CONFIG.read_text())["payout_destination"]
     assert cfg["nessie_payee_account_id"] == ids["payee"]["account_id"] and cfg["bank_last4"]
@@ -238,3 +239,68 @@ def test_repeated_resets_leave_exactly_one_pending(bank):
     for _ in range(4):
         assert seed_demo.start_pending_transfer()
     assert len(N.pending_transfers(maria, description_contains=HANDLE)["transfers"]) == 1
+
+
+# ---------- laundering chain (/intel/chain, /intel/map) ----------
+def chain_client(tmp_path):
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    store = Store(str(tmp_path / "chain.db"))
+    api.configure(store=store, emit=lambda *a: None, llm=mock_llm, tools=fixture_tools())
+    app = FastAPI(); app.include_router(api.router)
+    return TestClient(app), store
+
+
+def test_chain_seed_shape(bank):
+    seed_nessie.seed(quiet=True)
+    c = N.load_ids()["chain"]
+    roles = [n["role"] for n in c["nodes"]]
+    assert roles.count("target") == 1 and roles.count("victim") == 7 and roles.count("mule") == 1 and roles.count("cashout") == 1
+    vic = [e for e in c["edges"] if e["dst"] == "mule" and e["src"] != "maria"]
+    hops = [e for e in c["edges"] if e["dst"] == "cashout"]
+    assert len(vic) == 7 and sum(e["amount"] for e in vic) == 18100
+    assert len(hops) == 3 and sum(e["amount"] for e in hops) == 17300 and all(e["src"] == "mule" for e in hops)
+    assert all(N.valid_id(e["transfer_id"]) for e in vic + hops)
+    assert [e for e in c["edges"] if e.get("dynamic")][0]["src"] == "maria"
+    assert seed_nessie.seed(quiet=True)["status"] == "exists"        # idempotent with the chain present
+
+
+def test_chain_added_to_existing_seed_is_additive(bank):
+    seed_nessie.seed(quiet=True)
+    ids = N.load_ids()
+    base = {k: ids[k] for k in ("maria", "payee")}
+    for k in ("chain", "cashout"):
+        ids.pop(k)
+    ids["others"], ids["evidence_transfer_ids"] = ids["others"][:3], ids["evidence_transfer_ids"][:3]
+    N.save_ids(ids)                                                    # = the seed as it was before this change
+    assert seed_nessie.seed(quiet=True)["status"] == "extended"
+    after = N.load_ids()
+    assert {k: after[k] for k in ("maria", "payee")} == base and len(after["others"]) == 7 and after["chain"]
+
+
+def test_chain_endpoint_full_graph_then_maria_held(bank, tmp_path):
+    seeded(bank)
+    c, store = chain_client(tmp_path)
+    g = c.get("/intel/chain").json()
+    assert g["status"] == "ok" and g["simulated"] is True
+    assert g["victim_count"] == 7 and g["mule_total_in"] == 18100 and g["mule_total_out"] == 17300
+    assert g["held_count"] == 0 and len(g["edges"]) == 11 and len(g["nodes"]) == 10
+    m = [e for e in g["edges"] if e["kind"] == "target"][0]
+    assert m["held"] is False and m["amount"] == 1800
+    assert [n for n in g["nodes"] if n["id"] == "mule"][0]["total_in"] == g["mule_total_in"] == 18100  # pending isn't in
+    ev = []
+    run(store, ev)                                                     # judge's call -> hold fires
+    g = c.get("/intel/chain").json()
+    m = [e for e in g["edges"] if e["kind"] == "target"][0]
+    assert m["held"] is True and g["held_count"] == 1 and g["held_amount"] == 1800
+    mule = [n for n in g["nodes"] if n["id"] == "mule"][0]
+    assert mule["total_in"] == 18100                                   # the cut edge moved no money
+    assert c.get("/intel/map").headers["content-type"].startswith("text/html")
+
+
+def test_chain_fails_open_to_seeded_values(bank, tmp_path):
+    seeded(bank)
+    c, _ = chain_client(tmp_path)
+    bank.down = True
+    g = c.get("/intel/chain").json()
+    assert g["status"] == "unavailable" and g["mule_total_in"] == 18100 and len(g["edges"]) == 11

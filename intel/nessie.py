@@ -20,6 +20,8 @@ from __future__ import annotations
 import json
 import logging
 import re
+import time
+from concurrent.futures import ThreadPoolExecutor
 import os
 from pathlib import Path
 
@@ -163,8 +165,10 @@ def payee_activity(payee_account_id: str, evidence_transfer_ids: list[str]) -> d
     if not acct["ok"]:
         return {"status": "unavailable", "count": 0, "error": acct["error"]}
     n, total = 0, 0
-    for tid in filter(valid_id, evidence_transfer_ids):
-        t = get(f"/enterprise/transfers/{tid}")
+    tids = [t for t in evidence_transfer_ids if valid_id(t)]
+    with ThreadPoolExecutor(max_workers=max(1, min(8, len(tids)))) as pool:   # parallel: one round-trip, not N
+        reads = list(pool.map(lambda tid: get(f"/enterprise/transfers/{tid}"), tids))
+    for t in reads:
         if not t["ok"]:
             if t["status"] == "unavailable":
                 return {"status": "unavailable", "count": 0, "error": t["error"]}
@@ -239,3 +243,76 @@ def lookup_destination(hit: dict, call_id: str | None = None, emit=None) -> tupl
                summary=f"{len(tr)} pending transfer(s) from Maria to this payee; {act['count']} other customers sent money to it")
     L._emit_lookup(call_id, res)
     return res, tr
+
+
+# ---------- laundering chain (read-only view for GET /intel/chain and the /intel/map page) ----------
+_edge_cache: dict = {"t": 0.0, "edges": None}
+EDGE_TTL = float(os.getenv("NESSIE_CHAIN_TTL", "60"))  # completed transfers don't change; the map polls every 3 s
+
+
+def _confirm_edges(edges: list[dict]) -> tuple[list[dict], str]:
+    """Confirm each recorded edge by id (enterprise read-only). Nessie down -> seeded values, status unavailable."""
+    now = time.time()
+    if _edge_cache["edges"] is not None and now - _edge_cache["t"] < EDGE_TTL:
+        return _edge_cache["edges"], "ok"
+    tids = [e.get("transfer_id") for e in edges]
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        reads = list(pool.map(lambda tid: get(f"/enterprise/transfers/{tid}") if valid_id(tid) else None, tids))
+    if any(r is not None and r["status"] == "unavailable" for r in reads):
+        return [dict(e) for e in edges], "unavailable"
+    out = []
+    for e, r in zip(edges, reads):
+        e = dict(e)
+        if r is not None and r["ok"] and isinstance(r["data"], dict):
+            e["amount"] = r["data"].get("amount", e["amount"])
+            e["date"] = r["data"].get("transaction_date", e["date"])
+            e["bank_status"] = r["data"].get("status")
+        out.append(e)
+    _edge_cache.update(t=now, edges=out)
+    return out, "ok"
+
+
+def chain(active_holds: list[dict] | None = None) -> dict:
+    """Graph for the map. Built from the RECORDED chain in nessie_ids.json (Nessie can't be queried for it).
+    Maria's edge is held when one of this reset's holds (intel store) reads cancelled in Nessie."""
+    ids = load_ids() or {}
+    c = ids.get("chain")
+    if not c:
+        return {"status": "unavailable", "reason": "chain not seeded (python -m intel.seed_nessie)", "nodes": [],
+                "edges": [], "simulated": True}
+    static = [e for e in c["edges"] if not e.get("dynamic")]
+    maria_e = next((dict(e) for e in c["edges"] if e.get("dynamic")), None)
+    edges, status = _confirm_edges(static)
+    edges = [{**e, "held": False} for e in edges]
+    if maria_e:
+        held_amt = None
+        for h in active_holds or []:
+            st = transfer_status(h.get("transfer_id"))
+            if st is None and h.get("transfer_id"):
+                status = "unavailable"
+            if st == "cancelled":
+                held_amt = h.get("amount") or held_amt or maria_e["amount"]
+        maria_e.update(held=held_amt is not None, amount=held_amt or maria_e["amount"],
+                       date=maria_e.get("date") or time.strftime("%Y-%m-%d"),
+                       bank_status="cancelled" if held_amt is not None else "pending")
+        edges.insert(0, maria_e)
+    totals = {n["id"]: {"in": 0, "out": 0} for n in c["nodes"]}
+    for e in edges:
+        if e["held"]:
+            continue  # a cut edge moves no money
+        totals[e["src"]]["out"] += e["amount"]
+        if not e.get("dynamic"):  # Maria's pending transfer hasn't reached the mule (yet, or ever if Backfire holds it)
+            totals[e["dst"]]["in"] += e["amount"]
+    nodes = [{"id": n["id"], "label": n["label"], "role": n["role"],
+              "total_in": totals[n["id"]]["in"], "total_out": totals[n["id"]]["out"]} for n in c["nodes"]]
+    victims_in = [e for e in edges if e["dst"] == "mule" and e["src"] != "maria"]
+    return {"status": status, "nodes": nodes,
+            "edges": [{"src": e["src"], "dst": e["dst"], "amount": e["amount"], "date": e["date"],
+                       "held": bool(e["held"]), "kind": "target" if e["src"] == "maria" else
+                       ("cashout" if e["dst"] == "cashout" else "victim")} for e in edges],
+            "victim_count": len({e["src"] for e in victims_in}),
+            "mule_total_in": sum(e["amount"] for e in victims_in),
+            "mule_total_out": sum(e["amount"] for e in edges if e["src"] == "mule"),
+            "held_count": sum(1 for e in edges if e["held"]),
+            "held_amount": sum(e["amount"] for e in edges if e["held"]),
+            "simulated": True, "source": SOURCE}

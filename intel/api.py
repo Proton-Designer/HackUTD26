@@ -3,7 +3,10 @@ and wires events to its bus:            intel.api.configure(emit=bus_publish)
 where bus_publish(type, call_id, data) publishes the contract envelope."""
 from __future__ import annotations
 
+from pathlib import Path
+
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from . import agent, gate, lookups as L
@@ -89,6 +92,27 @@ def blocked(number: str):
 @router.get("/state")
 def state():
     return _store().state()
+
+
+@router.get("/chain")
+def chain():
+    """Read-only laundering-chain graph (Capital One Nessie sandbox, mock data) for the /intel/map page.
+    Never raises: Nessie down -> seeded values with status 'unavailable'."""
+    from . import nessie
+    try:
+        holds = _store().q("SELECT transfer_id, amount FROM holds WHERE active=1")
+    except Exception:
+        holds = []
+    try:
+        return nessie.chain(active_holds=holds)
+    except Exception as e:  # fail open
+        return {"status": "unavailable", "reason": type(e).__name__, "nodes": [], "edges": [], "simulated": True}
+
+
+@router.get("/map")
+def chain_map():
+    """Standalone network-map page (self-contained HTML; it only fetches /intel/chain, same origin)."""
+    return FileResponse(Path(__file__).with_name("chain_map.html"), media_type="text/html")
 
 
 # ---- In-process seam for P1's hub (no HTTP hop): bus.add_observer(intel.api.observe) ----
