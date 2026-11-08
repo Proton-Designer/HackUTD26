@@ -60,7 +60,7 @@
   const ATTEST = { A: 'Caller Verified', B: 'caller ID partly verified', C: 'caller ID not verified', NONE: 'no caller ID check' };
   const attestWords = a => ATTEST[String(a || 'none').toUpperCase()] || `attestation ${a}`;
   const TAGLINE = 'T-Mobile customers hand a scam call to an AI decoy that <em>stops the payout and blocks the scammer.</em>';
-  const CALL_EVENTS = new Set(['call.incoming', 'call.routed', 'call.answered', 'call.ended', 'transcript.caller', 'risk.update', 'alert.fired', 'user.action', 'handoff.started', 'handoff.restored', 'decoy.turn', 'decoy.fake_value', 'guardrail.tripped']);
+  const CALL_EVENTS = new Set(['call.incoming', 'call.routed', 'call.answered', 'call.ended', 'transcript.caller', 'risk.update', 'alert.fired', 'user.action', 'handoff.started', 'handoff.restored', 'handoff.failed', 'decoy.turn', 'decoy.fake_value', 'guardrail.tripped']);
 
   // ---------- helpers ----------
   const $ = id => document.getElementById(id);
@@ -494,6 +494,13 @@
       c.feed.push({ kind: 'sys', tone: 'hot', text: `Decoy took over in ${voiceName()}${dl}`, seq: S.seq });
       stage('handoff', voiceShort());
       head(`The decoy took over in <em>${esc(voiceName())}</em>`, 'The scammer is now talking to Nemotron. The customer is off the call.', 'alert');
+      dirty('feed');
+    },
+    // The decoy couldn't take the call: say so plainly, the customer is still on it (#112)
+    'handoff.failed'(e, d, c) {
+      c.restored = true; focusOn(c);
+      c.feed.push({ kind: 'sys', tone: 'hot', text: `Decoy unavailable${d.reason ? ` (${humanize(d.reason)})` : ''}: the customer is still on the call`, seq: S.seq });
+      head('Decoy unavailable · <em>the customer is still on the call</em>', 'Live Guard keeps listening to the caller', 'alert');
       dirty('feed');
     },
     'handoff.restored'(e, d, c) {
@@ -1235,7 +1242,7 @@
     if (CHAIN.busy || VIEW.shown !== 'money') return;
     CHAIN.busy = true;
     try {
-      const r = await fetch(`${MODE.base || CFG.server || TEAM_HUB}/intel/chain`, { cache: 'no-store' });
+      const r = await fetch(`${MODE.base || CFG.server || (FROM_HUB ? location.origin : TEAM_HUB)}/intel/chain`, { cache: 'no-store' });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const d = await r.json();
       if (!d || !Array.isArray(d.nodes) || !Array.isArray(d.edges)) throw new Error('unexpected /intel/chain shape');
@@ -1449,6 +1456,7 @@
   const TEAM_HUB = 'https://reg-subjects-curriculum-whenever.trycloudflare.com';
   function serverCandidates() {
     if (CFG.server) return [CFG.server];
+    if (FROM_HUB) return [location.origin]; // served by a hub: only ever that hub (#112)
     const c = [];
     if (/^https?:$/.test(location.protocol)) c.push(location.origin); // served by the hub = same origin, Approve needs no CORS
     c.push(TEAM_HUB, 'http://localhost:8000');
