@@ -455,6 +455,8 @@ class Session:
                     return
                 text = kept
         self.scammer_lines.append(text)
+        if LOG_TEXT:
+            log.info("heard %s: %s", self.call_id, text)
         self.caller_turns += 1
         self.last_heard = time.monotonic()
         if PLAYBOOKS_ON:

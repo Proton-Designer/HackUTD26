@@ -430,6 +430,13 @@ async def extract(lines: list[str]) -> list[dict]:
             a["rail"], a["id"] = "zelle", e
         if not same:
             out.append({"kind": "payment_handle", "rail": "zelle", "id": e})
+    # Backstop (P1, live call 1b838cd2): when the caller gives BOTH an email and a Zelle phone number, the model keeps
+    # only the phone and drops the email. Any email spoken on a call where Zelle came up anywhere is a Zelle handle too.
+    if re.search(r"\bzelle\b", t):
+        have_ids = {a["id"] for a in out if a["kind"] == "payment_handle"}
+        for e in dict.fromkeys(emails):
+            if e not in have_ids and not any(a["kind"] == "payment_handle" and "@" in a["id"] and a["id"].endswith("." + e.split("@")[0]) for a in out):
+                out.append({"kind": "payment_handle", "rail": "zelle", "id": e}); have_ids.add(e)
     seen, uniq = set(), []
     for a in out:   # the rebuild/backstop can make two identical handles
         key = json.dumps(a, sort_keys=True)

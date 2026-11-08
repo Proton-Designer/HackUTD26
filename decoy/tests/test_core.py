@@ -66,3 +66,16 @@ def test_guard_strips_private_have_tail():   # P2 #135 follow-up: bolt ended 32/
         spoken = core.guard(raw, p, set(), lambda *a: None)[1]
         assert spoken == "Okay, so where do I send it?", spoken
     assert core.guard("I have to go to the bank, what do I have to do?", p, set(), lambda *a: None)[1] == "I have to go to the bank, what do I have to do?"
+
+
+def test_email_kept_when_model_returns_only_a_zelle_phone(monkeypatch):   # live call 1b838cd2: no Nessie hold
+    import asyncio, json
+    from decoy import core
+    async def fake_chat(*a, **k):
+        return json.dumps({"artifacts": [{"kind": "gift_card_brand", "value": "Target"},
+                                         {"kind": "payment_handle", "rail": "zelle", "id": "920 785 6782"}]})
+    monkeypatch.setattr(core, "chat", fake_chat)
+    arts = asyncio.run(core.extract(["Buy Target gift cards and sell them to refunds dot department at backfire dash demo dot example.",
+                                     "Use Zelle. The Zelle number is 920 785 6782."]))
+    ids = {a["id"] for a in arts if a["kind"] == "payment_handle"}
+    assert "refunds.dept@backfire-demo.example" in ids, ids
