@@ -85,9 +85,9 @@ def chromium_path():
     return None
 
 def main():
-    env = dict(os.environ, NO_TUNNEL="1", SIM_MODE="1", VOIP_OPEN_TOKEN="1", HUB_PORT=PORT, DEVICE_PIN=PIN, HUB_DB=tempfile.mkdtemp() + "/e2e.db")
+    env = dict(os.environ, NO_TUNNEL="1", SIM_MODE="1", VOIP_OPEN_TOKEN="1", HUB_PORT=PORT, DEVICE_PIN=PIN, HUB_DB=tempfile.mkdtemp() + "/e2e.db", INTEL_DB=tempfile.mkdtemp() + "/intel.db")
     # voip's on_answered reads these with os.environ[...] (KeyError -> no call.answered in SIM_MODE if unset); dummies are harmless, sim never calls Telnyx
-    env.setdefault("TELNYX_CRED_CONNECTION_ID", "sim"); env.setdefault("TELNYX_SIP_USER", "sim")
+    env.setdefault("TELNYX_CRED_CONNECTION_ID", "sim"); env.setdefault("TELNYX_SIP_USER", "sim"); env.setdefault("INTEL_EXTRACT_GRACE", "1")  # intel blocks the caller this long after a decoy call ends (default 20s)
     for k in ("HUB_TOKEN", "PUBLIC_WS"): env.pop(k, None)
     hub = subprocess.Popen([str(ROOT / "scripts" / "run_hub")], cwd=ROOT, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
     try:
@@ -147,8 +147,8 @@ def main():
             # 6. end call -> blocklist -> second call rejected pre-ring
             call.hangup()
             check("6", "call.ended", bool(wait_for(lambda: has("call.ended"))))
-            bl = wait_for(lambda: has("blocklist.updated", number=SCAMMER), 4)
-            check("6", "blocklist.updated for the scammer", bool(bl), "none (it only fires after a decoy session ends)", gap="follows from the handoff gap above" if not ho else None)
+            bl = wait_for(lambda: next((e for e in events if e["type"] == "blocklist.updated" and str(e["data"].get("number", "")).replace("+", "")[-10:] == SCAMMER[-10:]), None), 12)
+            check("6", "blocklist.updated for the scammer", bool(bl), "seen: " + json.dumps([e["data"] for e in events if e["type"] == "blocklist.updated"])[:200], gap="follows from the handoff gap above" if not ho else None)
             time.sleep(0.5); pg.evaluate("BF.view('protView')"); time.sleep(0.6); shot("06-protection")
             n_inc = len([e for e in events if e["type"] == "call.incoming"]); before = len(events)
             out = subprocess.run([sys.executable, str(ROOT / "scripts" / "sim_call.py"), "--from", SCAMMER, "--hub", BASE, "--fast"], capture_output=True, text=True, timeout=40, env=dict(os.environ))

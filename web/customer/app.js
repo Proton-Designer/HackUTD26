@@ -86,8 +86,11 @@
         $("callerNumber").textContent = d.from || "";
         $("scamLabel").hidden = !(d.scam_id_score >= 0.5);
         $("attest").textContent = d.attestation === "A" ? "Caller ID verified" : "Caller ID not verified";
-        $("phone").dataset.state = "ringing"; show("incoming"); break;
-      case "call.routed": $("guard").hidden = d.decision !== "LIVE_GUARD"; setBadge("watching"); break;
+        // Hold the ring until call.routed: a blocked call must never ring Maria's phone. Live source only; 1s fallback if routed never comes.
+        if (SERVER) { clearTimeout(st.ringT); st.ringT = setTimeout(ring, 1000); } else ring(); break;
+      case "call.routed":
+        if (d.decision === "BLOCKED_BACKFIRE") { clearTimeout(st.ringT); st.callId = null; break; }
+        $("guard").hidden = d.decision !== "LIVE_GUARD"; setBadge("watching"); clearTimeout(st.ringT); ring(); break;
       case "call.answered": break; // UI answers on tap
       case "call.ended": if (st.callId === ev.call_id) endCall(d.ended_by === "caller" ? "The caller hung up." : "Call ended."); break;
       case "alert.fired":
@@ -100,6 +103,7 @@
       default: break;
     }
   }
+  function ring() { if (st.callId && !st.answered && $("phone").dataset.state !== "ringing") { $("phone").dataset.state = "ringing"; show("incoming"); } }
   function showHandoff() { setBadge("handed"); $("handoffMsg").textContent = "We've got it. You can put the phone down."; $("alertBox").hidden = true; $("idleMsg").hidden = true; $("handoffMsg").hidden = false; }
 
   // ---- buttons ----
