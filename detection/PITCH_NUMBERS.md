@@ -1,0 +1,16 @@
+# P2 pitch numbers (one screen). Every line: number, n, source, caveat.
+All eval data is synthetic (team-written scripts). Intervals are Wilson 95%. Say counts, not bare percentages.
+
+| # | What a judge hears | n | Source | Caveat (say it if asked) |
+|---|---|---|---|---|
+| 1 | Local on-device model alerts on **33 of 33** test scams, **2 of 27** false alarms (keyword baseline 28/33 and 5/27) | 33 scam / 27 legit | `eval/RESULTS.md` "split = test" (AFTER table) | Thresholds tuned on dev only; test was scored before and after our fixes, so it is no longer blind |
+| 2 | Fresh held-out set: local **20 of 20** scams, **2 of 20** false alarms; keyword baseline 8/20 and 6/20 | 20 scam / 20 legit | `eval/RESULTS.md` "Held-out v2" (scored once, trunk ebabe10) | n=40, intervals wide (CI 84-100 and 3-30). Rerun on the current prompt (9f2baac), pure local, is pending in this doc until eng1 posts it |
+| 3 | Production rules (what runs if both models fail): **24/33** test scams, **9/20** held-out, 1/27 and 2/20 false alarms | 33 / 20 | `eval/RESULTS.md` prodrules column | Rules-only is a floor, not a detector: 1 of 8 no-keyword and 1 of 4 Spanish scams on held-out. Dev gain 26 to 33 (TASK-033) did not carry over, treat as overfit |
+| 4 | AI-address flag false positives **27/55 to 1/55** after the cue gate; asks precision 36% to 65%, **asks recall 95% to 85%** | 55 scripts / 59 asks | `eval/RESULTS.md` "Before vs after" | Recall cost is real; scam recall and false alarms did not change |
+| 5 | Latency p50: rules ~2 ms; local model **1.7 s** alone, **3.2 s** with 2 concurrent calls, **4.0 s** with 4 | 40 windows per level | `eval/RESULTS.md` "Latency benchmark" | One GPU slot (RTX 3050 Ti 4 GB), so concurrent calls queue; p95 at 4 calls is at the 4 s timeout |
+| 6 | Demo call: first alert **+7.5 s**, 2.0 s after the opening line; secrecy line ~28.7 s, gift-card ask ended 36.3 s (alert ~21 s / ~29 s earlier) | 1 call | `eval/DEMO_TIMING.md` (call_report verbatim) | n=1, synthetic caller; alert came from the opening authority claim, not a payment ask; 429s hit lines 5 and 7 (hold-last-score kept s) |
+| 7 | Real phone (PSTN) calls through P1's relay: call `a99a2060` at 02:30-02:31 transcribed (PCMU 8 kHz, 2 finals, risk posted); call `4d8dd2f8` at 03:04-03:06 (72 s, 11 utterances, scored low = correct for a benign call), **3 local timeouts, each recovered by cloud failover** | 2 calls | `.claude/overnight/run-20261108-0031/LOG.md` (02:31, 03:06 lines) and RESUME_PLAN-lead | Only these two calls; both anecdotes, not a benchmark. A first real call (7420a294) got 0 utterances under the old VAD before the fix (TASK-032). The timeouts were llama-server sharing with test runs (rule added) |
+| 8 | Cloud model: **no test number** (shared NVIDIA key returned 429); acceptance suite 9 of 9 pass on the current rules | 9 cases | `eval/RESULTS.md` "Not scored"; acceptance run at c03a3a9 (4fd3df9 report) | Acceptance uses TTS-synthesized calls and small case counts |
+
+Don't say: "100%", "real-time" (say 1.7 s), "validated", "outperforms", "nothing leaves the device" (hosted STT unless `P2_STT=whisper`).
+One line to leave with a judge: "A small model on the laptop caught every scam in our synthetic sets, with a couple of false alarms on look-alikes, and if it and the cloud both fail, keyword rules still catch about half."
