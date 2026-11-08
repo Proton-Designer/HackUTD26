@@ -340,6 +340,25 @@ class Session:
         overlap = sum(max(0.0, min(e, end) - max(s0, start)) for s0, e in self.spoke)
         return overlap > 0.5 * (end - start)
 
+    def touched_us(self, utt: np.ndarray) -> bool:
+        """Any real overlap with our own speech (the echo tail can merge into the caller's utterance) (#131)."""
+        end = time.monotonic(); start = end - len(utt) / 8000 - 0.45
+        return sum(max(0.0, min(e, end) - max(s0, start)) for s0, e in self.spoke) > 0.3
+
+    def strip_echo(self, text: str) -> str:
+        """Remove runs of 3+ words that match what we said recently (our voice coming back on the line), keep the rest.
+        #131: P2 saw 'I can't find my phone right now. Are you talking about' logged as the caller."""
+        import re
+        toks = re.findall(r"\S+", text)
+        norm = [re.sub(r"[^a-z0-9']", "", t.lower()) for t in toks]
+        ours = re.findall(r"[a-z0-9']+", " ".join(self.said[-4:]).lower())
+        grams = {tuple(ours[i:i + 3]) for i in range(len(ours) - 2)}
+        drop = [False] * len(toks)
+        for i in range(len(norm) - 2):
+            if tuple(norm[i:i + 3]) in grams:
+                drop[i] = drop[i + 1] = drop[i + 2] = True
+        return " ".join(t for t, d in zip(toks, drop) if not d).strip()
+
     def is_our_words(self, text: str) -> bool:
         """The transcript is mostly words we just said (echo), not the caller."""
         import re
@@ -393,7 +412,7 @@ class Session:
         return first_ms
 
     # -------------------------------------------------- turns
-    async def on_utterance(self, pcm: np.ndarray, maybe_echo: bool = False):
+    async def on_utterance(self, pcm: np.ndarray, maybe_echo: bool = False, touched: bool = False):
         self.last_heard = time.monotonic()   # they just finished speaking: not silence, even while STT runs
         self.stt_inflight += 1
         try:
@@ -412,6 +431,14 @@ class Session:
         if maybe_echo and self.is_our_words(text):
             log.info("drop %s: echo of our own words (%r)", self.call_id, text[:60])
             return
+        if touched:
+            kept = self.strip_echo(text)
+            if kept != text:
+                log.info("echo %s: stripped our own words from a caller line (%d -> %d words)", self.call_id,
+                         len(text.split()), len(kept.split()))
+                if len(kept.split()) < 2:
+                    return
+                text = kept
         self.scammer_lines.append(text)
         self.caller_turns += 1
         self.last_heard = time.monotonic()
@@ -646,7 +673,7 @@ class Session:
                 elif ev == "media" and (m.get("media") or {}).get("track") in (None, "inbound"):
                     pcm = self.decode(base64.b64decode(m["media"]["payload"]))
                     for utt in self.seg.feed(pcm):
-                        asyncio.create_task(self.on_utterance(utt, self.overlapped_us(utt)))
+                        asyncio.create_task(self.on_utterance(utt, self.overlapped_us(utt), self.touched_us(utt)))
                     # barge-in: sustained caller speech clearly above our echo, after the onset grace period
                     if self.speaking() and time.monotonic() - self.speak_start > BARGE_GRACE_S:
                         self.loud_ms = self.loud_ms + 20 if self.caller_loud(pcm) else max(0, self.loud_ms - 10)   # tolerate syllable gaps
