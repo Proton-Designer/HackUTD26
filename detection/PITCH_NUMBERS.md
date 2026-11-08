@@ -21,3 +21,20 @@ All eval data is synthetic (team-written scripts). Intervals are Wilson 95%. Say
 
 Don't say: "100%", "real-time" (say 1.7 s), "validated", "outperforms", "nothing leaves the device" (hosted STT unless `P2_STT=whisper`).
 One line to leave with a judge: "A small model on our own GPU caught every scam in our synthetic sets, with a couple of false alarms on look-alikes, and if it and the cloud both fail, keyword rules still catch roughly half to three-quarters (10 of 20 held-out, 26 of 33 test)."
+
+## Freeze gate @ f822b6b (TASK-082, eng1, ~07:00 CT; trunk HEAD when the runs started; no detection/*.py change since 3589532)
+Re-ran each headline eval exactly as stated above: local = llama nemotron-nano-4b, `P2_FAILOVER=0` (pure local), live-socket guard on (0 active sockets at start and end); prodrules = `run_eval --engine prodrules`. Synthetic data; the keyword-baseline column was not re-run (not a headline claim). Claimed = the numbers in rows 1-3 and 9 above; none were edited.
+
+| metric | claimed | now | match? |
+|---|---|---|---|
+| Local, test split: scams caught / false alarms | 33/33 and 2/27 | 33/33 (CI 90-100) and 2/27 | YES |
+| Local, test split: adversarial rows | 13/13 | 13/13 | YES |
+| Local, held-out v2: scams caught / false alarms | 20/20 and 1/20 | 20/20 (CI 84-100) and 1/20 | YES |
+| Local, hardneg_v3 (25 look-alike legit) | 1/25 (hn-22) | 1/25 (hn-22 again) | YES |
+| Production rules, test split | 26/33 and 1/27 | 26/33 and 1/27 (adversarial 9/13) | YES |
+| Production rules, held-out v2 | 10/20 and 2/20 | 10/20 and 2/20 | YES |
+| Production rules, hardneg_v3 | 0/25 | 0/25 | YES |
+| Rules on eng3's 10 adversarial lines (s >= 0.80) | 10/10 | 10/10 (s 0.82-0.95); local also 10/10 at 0.95+ | YES |
+| Local latency p50 on test (informational) | 1.7 s (row 5, alone) | 1.5 s test, 1.5 s held-out; p95 2.9 s / 1.7 s | within noise |
+
+Result: 8 of 8 headline checks match, 0 mismatches. Not re-run here: the real-call numbers (rows 7, 12, 13: replayed in REAL_CALLS "Regression @ 1fbf6de"), phone-quality cards (row 10), the two-call overlap, and anything involving the cloud model.
