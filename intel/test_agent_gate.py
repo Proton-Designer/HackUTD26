@@ -279,3 +279,11 @@ def test_legit_call_never_actioned(tmp_path, monkeypatch):
                  "data": {"artifacts": [{"kind": "wallet", "chain": "BTC", "addr": WALLET}]}})  # late artifacts too
     _t.sleep(0.3)
     assert not s.is_blocked(n)[0] and s.q("SELECT * FROM sightings") == []
+
+
+def test_intel_key_override(monkeypatch):
+    monkeypatch.setenv("NVIDIA_API_KEY", "shared")
+    monkeypatch.delenv("INTEL_NVIDIA_API_KEY", raising=False)
+    assert agent._api_key() == "shared"
+    monkeypatch.setenv("INTEL_NVIDIA_API_KEY", "intel-only")
+    assert agent._api_key() == "intel-only"

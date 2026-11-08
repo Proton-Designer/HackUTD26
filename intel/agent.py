@@ -40,7 +40,9 @@ Reply with JSON only: {"plan": "<one sentence>", "actions": [{"kind": "...", "ta
 
 def _api_key() -> str | None:
     """Env first; else the repo-root .env (P1's hub doesn't load it). Value is never logged."""
-    return env_secret("NVIDIA_API_KEY")
+    # INTEL_NVIDIA_API_KEY lets the hub give intel its own NVIDIA account (quota split, data/NVIDIA_KEY_SPLIT.md)
+    # without touching NVIDIA_API_KEY, which other code in the same hub process also reads.
+    return env_secret("INTEL_NVIDIA_API_KEY") or env_secret("NVIDIA_API_KEY")
 
 
 def call_nemotron(messages: list[dict], client: httpx.Client | None = None) -> str:
