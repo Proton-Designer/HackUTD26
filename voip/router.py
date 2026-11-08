@@ -178,6 +178,7 @@ async def on_hangup(p):
     other = st.get("maria_ccid") if role == "caller" else st.get("caller_ccid")
     if other: await _safe(telnyx.hangup(other), "hangup other leg", st.get("sim", False))
     await _stop_decoy(sid)
+    _publish_demo_haul(sid)   # sim echo stand-in: haul goes out before call.ended
     emit("call.ended", sid, {"ended_by": "caller" if role == "caller" else "maria", "duration_s": round(time.time() - st["t0"], 1), **_legit(st)})
     r = RELAYS.pop(sid, None)
     if r: await r.close()
@@ -317,9 +318,33 @@ async def handoff(sid):
         await _safe(telnyx.leave_conference(st["conf_id"], st["maria_ccid"]), "leave maria", sim)
     deadline = time.time() + RESTORE_WINDOW_S; st["restore_deadline"] = deadline
     emit("handoff.started", sid, {"restore_deadline": deadline})
+    if sim and not os.environ.get("P3_DECOY_URL"): asyncio.create_task(_demo_haul_later(sid))   # echo stand-in decoy extracts nothing: supply the demo haul
     asyncio.create_task(_restore_expiry(sid, deadline))
     asyncio.create_task(_low_watch(sid, deadline))
     return True
+
+DEMO_HAUL_DELAY_S = float(os.environ.get("DEMO_HAUL_DELAY_S", "8"))
+
+def _publish_demo_haul(sid):
+    """SIM_MODE + no P3_DECOY_URL only (echo stand-in): publish P3's artifacts.extracted from intel's demo config, once per call, never after a restore.
+    Fail open: intel missing/failing never affects the call."""
+    st = CALLS.get(sid)
+    if not st or not st.get("sim") or st.get("haul_sent") or st.get("restored") or not st.get("handed_off") or os.environ.get("P3_DECOY_URL") or _legit(st): return
+    st["haul_sent"] = True
+    try:
+        from intel import demo_config
+        emit("artifacts.extracted", sid, {"artifacts": demo_config.judge_haul(), "source": "demo_stand_in"})
+        log.warning("sim: published demo_stand_in artifacts.extracted for %s", sid[:8])
+    except Exception as e:
+        log.warning("demo haul skipped (fail open): %s", e)
+
+async def _demo_haul_later(sid):
+    end = time.time() + DEMO_HAUL_DELAY_S
+    while time.time() < end:
+        await asyncio.sleep(0.5)
+        st = CALLS.get(sid)
+        if not st or st["ended"] or st.get("restored"): return
+    _publish_demo_haul(sid)
 
 async def _restore_expiry(sid, deadline):
     await asyncio.sleep(max(0, deadline - time.time()))
@@ -380,6 +405,7 @@ async def _decoy_lost(sid):
     sim = st.get("sim", False)
     for k in ("caller_ccid", "maria_ccid"):
         if st.get(k): await _safe(telnyx.hangup(st[k]), "hangup after decoy end", sim)
+    _publish_demo_haul(sid)
     emit("call.ended", sid, {"ended_by": "decoy", "duration_s": round(time.time() - st["t0"], 1), **_legit(st)})
 
 def _on_bus(ev):

@@ -277,3 +277,28 @@ def test_sim_only_from_direct_loopback(client):
     with pytest.raises(Exception):   # media from the tunnel side: refused even with the right token
         with client.websocket_connect(path, headers={"x-forwarded-for": "9.9.9.9"}): pass
     with client.websocket_connect(path) as ws: ws.send_text(json.dumps({"event": "connected"}))
+
+
+def test_demo_haul_published_in_sim_without_p3(monkeypatch):
+    monkeypatch.delenv("P3_DECOY_URL", raising=False); monkeypatch.setattr(R, "DEMO_HAUL_DELAY_S", 0.6); monkeypatch.setattr(R, "RESTORE_LOW_S", 99)
+    fr = FakeRelay(); monkeypatch.setattr(R, "_hub_relay", lambda: fr)
+    sid = "sess-haul-12345678"; R.CALLS[sid] = _state()
+    async def go():
+        R.LOOP = asyncio.get_running_loop(); await R.handoff(sid); await asyncio.sleep(1.4)
+    asyncio.run(go())
+    ev = [e for e in bus.history if e["type"] == "artifacts.extracted" and e["call_id"] == sid]
+    assert len(ev) == 1 and ev[0]["data"]["source"] == "demo_stand_in" and any(a["kind"] == "wallet" for a in ev[0]["data"]["artifacts"])
+    R._publish_demo_haul(sid); assert len([e for e in bus.history if e["type"] == "artifacts.extracted" and e["call_id"] == sid]) == 1   # once per call
+
+def test_demo_haul_not_with_p3_or_after_restore_or_real(monkeypatch):
+    fr = FakeRelay(); monkeypatch.setattr(R, "_hub_relay", lambda: fr); monkeypatch.setattr(R, "DEMO_HAUL_DELAY_S", 0.2)
+    def n(sid): return len([e for e in bus.history if e["type"] == "artifacts.extracted" and e["call_id"] == sid])
+    monkeypatch.setenv("P3_DECOY_URL", "wss://p3.example")                    # real decoy present
+    s1 = "sess-haul-p3-123456"; R.CALLS[s1] = _state()
+    s2 = "sess-haul-real-12345"; R.CALLS[s2] = _state(sim=False)             # not a sim call
+    async def go():
+        R.LOOP = asyncio.get_running_loop(); await R.handoff(s1); await R.handoff(s2); await asyncio.sleep(0.8)
+    asyncio.run(go()); assert n(s1) == 0 and n(s2) == 0
+    monkeypatch.delenv("P3_DECOY_URL")
+    s3 = "sess-haul-rest-123456"; R.CALLS[s3] = _state(); R.CALLS[s3].update(handed_off=True, restored=True)
+    R._publish_demo_haul(s3); assert n(s3) == 0
