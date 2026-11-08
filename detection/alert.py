@@ -23,7 +23,7 @@ class Call:
         self.prev_band = "low"; self.known_hard = set()
         self.decoy = False; self.muted = False; self.normal_since = None
         self.last = None
-        self.llm = None; self.llm_t = 0.0; self.fail_n = 0; self.clean_n = 0; self.epoch = 0; self.cont_t = 0.0; self.src = "llm"     # last LLM-backed result, its time, consecutive failed windows
+        self.llm = None; self.llm_t = 0.0; self.fail_n = 0; self.clean_n = 0; self.epoch = 0; self.seq = 0; self.emit_seq = 0; self.cont_t = 0.0; self.src = "llm"     # last LLM-backed result, its time, consecutive failed windows
 
 class AlertMachine:
     def __init__(self, emit=None, detect=None, clock=time.time, engine=None):
@@ -85,12 +85,12 @@ class AlertMachine:
             c.utts.append((now, str(utt.get("text", ""))))
             while len(c.utts) > WINDOW_N or (c.utts and now - c.utts[0][0] > WINDOW_S):
                 c.utts.popleft()
-            c.dirty = True
+            c.dirty = True; c.seq += 1; sq0 = c.seq     # window seq: bumped on every append (TASK-046 residual)
             q = quick("\n".join(t for _, t in c.utts), self.engine)      # rules only, no I/O: alert before the LLM returns
             c.src = "fast-final"
             if self._decide(c, q):
                 log.info("fast-path alert call=%s s=%.2f", call_id, q["s"])
-                await self._process(call_id, c, q)
+                await self._process(call_id, c, q, sq0)
             if isinstance(q, dict) and q.get("s", 0) >= (c.llm or {"s": 0})["s"] and q.get("s", 0) >= 0.5:
                 c.llm, c.llm_t = q, now          # rule-backed score is a valid hold anchor too (rules never lower risk)
             if c.busy:
@@ -99,7 +99,7 @@ class AlertMachine:
             try:
                 while c.dirty and not c.muted:
                     c.dirty = False
-                    text = "\n".join(t for _, t in c.utts); ep = c.epoch
+                    text = "\n".join(t for _, t in c.utts); ep = c.epoch; sq = c.seq
                     try:
                         r = await self.detect(call_id, text, {"utterances": len(c.utts)})
                     except Exception:
@@ -108,8 +108,11 @@ class AlertMachine:
                     if ep != c.epoch:
                         log.info("drop stale result: Continue arrived mid-flight call=%s", call_id)
                         continue             # Continue arrived mid-flight: this result scored the pre-Continue window, drop it
+                    if sq < c.emit_seq:
+                        log.info("drop stale result: newer window already emitted call=%s seq=%d<%d", call_id, sq, c.emit_seq)
+                        continue             # an older window must not overwrite c.last/prev_band or emit an s dip (checked before _hold so the anchor is untouched too)
                     r = self._floor(r, quick(text, self.engine)); c.src = "llm"
-                    await self._process(call_id, c, self._hold(call_id, c, r))
+                    await self._process(call_id, c, self._hold(call_id, c, r), sq)
             finally:
                 c.busy = False
         except Exception:
@@ -160,11 +163,16 @@ class AlertMachine:
             return "realert"
         return None
 
-    async def _process(self, cid, c, r):
+    async def _process(self, cid, c, r, seq=None):
+        """seq = window seq of the scored text (final-based scorings only; interim partials pass None and are neither checked nor recorded)."""
         if cid in self.ended:
             log.info("drop result: call already ended call=%s", cid); return      # in-flight detect landing after call.ended
         if not isinstance(r, dict) or not isinstance(r.get("s"), (int, float)):
             return
+        if seq is not None:
+            if seq < c.emit_seq:
+                log.info("drop stale result: older window call=%s seq=%d<%d", cid, seq, c.emit_seq); return
+            c.emit_seq = seq
         s, asks = float(r["s"]), set(r.get("asks") or [])
         hard = asks & schema.HARD_ASKS
         chips = [x for x in (r.get("why_chips") or []) if isinstance(x, str)][:4]

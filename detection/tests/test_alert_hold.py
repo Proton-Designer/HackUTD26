@@ -180,3 +180,30 @@ def test_continue_resets_held_score():
     r.say(); r.user("continue")
     c = r.m.calls["c1"]
     assert c.llm is None and c.llm_t == 0.0
+
+
+def test_older_window_result_never_emits_dip_or_arms_realert():
+    # TASK-046 residual: window N fast-path is high; the slow LLM result for window N-1 lands afterwards -> dropped
+    import asyncio as a
+    ev = []
+    gate = {}
+    async def emit(t, c, d): ev.append((t, d))
+    async def det(cid, text, meta, engine):
+        D.ENGINE_FAILED[cid] = False
+        await gate["go"].wait()
+        return R(0.1)                                   # slow, LOW result for the OLDER window
+    m = alert.AlertMachine(emit=emit, detect=det, clock=lambda: 1000.0)
+    async def run():
+        gate["go"] = a.Event()
+        t1 = a.create_task(m.on_final("c1", {"text": "hello there"}))     # window 1: detect in flight (busy)
+        await a.sleep(0.01)
+        await m.on_final("c1", {"text": "read me the six digit code from your text message"})   # window 2: fast path high
+        n = len(ev)
+        gate["go"].set(); await t1
+        return n
+    n = a.run(run())
+    c = m.calls["c1"]
+    ss = [d["s"] for t, d in ev if t == "risk.update"]
+    assert len(ss) == 2 and all(s >= 0.8 for s in ss)                 # fast N + LLM N (floored); the stale N-1 result emitted nothing
+    assert c.last["s"] >= 0.8                                          # no dip overwrote c.last
+    assert c.prev_band != "low" and c.armed is False
