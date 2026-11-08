@@ -47,7 +47,9 @@ Tags as in docs/P1_JUDGE_QA.md: **[live]** real Telnyx calls, **[sim]** phone-fr
   changes the sandbox transfer for real; the bank-wide flag is a simulated payload. **[design]**
 
 ## Which NVIDIA models, and why?
-- Speech: **Parakeet CTC 1.1B** (Riva). Detection: **Nemotron 3.5 Lightning** cloud + **Nemotron Nano 4B** local.
+- Speech: **Parakeet CTC 1.1B** (hosted Riva). Detection: **Nemotron 3 Nano 4B** on Backfire's server (laptop GPU) as
+  primary, **Nemotron 3.5 Lightning** cloud as the other engine. Not "on device" on the phone-call demo; only the
+  customer's caller-side audio is sent, never the customer's own voice (#96).
   Decoy: **Nemotron 3.5 Bolt E4B** + **Magpie TTS** zero-shot voice. Intel agent: **Nemotron 3.5 Super VL 120B**.
   **[design]** (see data/DEVPOST_TRACKS.md for evidence per row)
 - Why Super for intel: it's the planner/reasoner, and it runs once per call, off the live audio path, so its few
