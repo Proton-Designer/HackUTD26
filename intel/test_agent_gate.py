@@ -263,3 +263,19 @@ def test_seed_demo_idempotent_and_judge_confirms_live(store, events):
     assert "4695550100" in camp_blocks and r["immunity"] > 0
     assert any(e["type"] == "intel.action" and e["data"]["kind"] == "callback_protection_warning"
                and e["data"]["status"] == "applied" for e in events)
+
+
+def test_legit_call_never_actioned(tmp_path, monkeypatch):
+    import time as _t
+    from intel import api
+    s = Store(str(tmp_path / "legit.db"))
+    api.configure(store=s, emit=cap([]), llm=mock_llm, tools=fixture_tools())
+    monkeypatch.setattr(api, "GRACE_S", 0.05)
+    n = "+1 555 555 0166"
+    api.observe({"type": "call.incoming", "call_id": "g1", "data": {"from": n, "attestation": "C"}})
+    api.observe({"type": "handoff.started", "call_id": "g1", "data": {}})
+    api.observe({"type": "call.ended", "call_id": "g1", "data": {"ended_by": "decoy", "legit": True}})
+    api.observe({"type": "artifacts.extracted", "call_id": "g1",
+                 "data": {"artifacts": [{"kind": "wallet", "chain": "BTC", "addr": WALLET}]}})  # late artifacts too
+    _t.sleep(0.3)
+    assert not s.is_blocked(n)[0] and s.q("SELECT * FROM sightings") == []

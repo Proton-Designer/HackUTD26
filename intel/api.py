@@ -86,7 +86,7 @@ _calls_lock = threading.Lock()
 def _run_bg(call_id: str, artifacts) -> None:
     with _calls_lock:
         c = _calls.setdefault(call_id, {})
-        if c.get("ingested"):
+        if c.get("ingested") or c.get("legit"):  # legit: Maria restored, caller looked legitimate -> enforce nothing
             return
         c["ingested"] = True
 
@@ -105,6 +105,7 @@ def observe(ev: dict) -> None:
     - call.incoming: remember the network calling number + attestation (trusted metadata).
     - handoff.started / call.answered by decoy: mark it a decoy call.
     - artifacts.extracted (P3): run the intel chain on the typed artifacts (scammer_transcript is never read).
+    - call.ended with legit=true: the call is never actioned (no block, no campaign sighting), even if artifacts follow.
     - call.ended on a decoy call: if no artifacts arrive within INTEL_EXTRACT_GRACE s, run with none, which still
       blocks the caller for her (replaces P1's call.ended blocklist stub)."""
     try:
@@ -122,6 +123,10 @@ def observe(ev: dict) -> None:
                 _calls.setdefault(cid, {})["decoy"] = False
         elif t == "artifacts.extracted":
             _run_bg(cid, d.get("artifacts") or [])
+        elif t == "call.ended" and d.get("legit") is True:
+            # contracts/events.md: legit=true -> hub/intel must NOT blocklist this call (no block, no sighting)
+            with _calls_lock:
+                _calls.setdefault(cid, {}).update(legit=True, decoy=False)
         elif t == "call.ended" and _calls.get(cid, {}).get("decoy"):
             threading.Timer(GRACE_S, _run_bg, args=(cid, [])).start()
     except Exception:
