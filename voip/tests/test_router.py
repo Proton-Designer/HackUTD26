@@ -455,3 +455,44 @@ def test_persona_cache_rebuilds_when_voice_changes(tmp_path, monkeypatch):
     P.generate_hello(); assert len(seen) == n                                   # cached: same voice/rate/text
     monkeypatch.setenv("DECOY_VOICE", "VoiceB"); P.generate_hello(); assert seen[-1] == "VoiceB" and len(seen) == n + 1   # voice changed -> rebuilt
     assert "Yes, this is Maria" in P.HELLO_TEXT
+
+
+def _talk_call(monkeypatch, sid, mode="talk"):
+    monkeypatch.setenv("MARIA_LEG", mode); got = []
+    async def send(fr): got.append(fr)
+    st = _state(sim=False, conf=False); st.update(listen=True, send_to_caller=send); R.CALLS[sid] = st
+    return st, got
+
+PAY = base64.b64encode(b"\xff" * 160).decode()
+
+def test_talk_injects_maria_into_caller_stream_and_never_the_relay(monkeypatch):
+    fr = FakeRelay(); monkeypatch.setattr(R, "_hub_relay", lambda: fr)
+    st, got = _talk_call(monkeypatch, "sess-talk-1234567")
+    assert asyncio.run(R.inject_maria("sess-talk-1234567", PAY)) is True
+    assert got == [{"event": "media", "media": {"payload": PAY}}] and st["talk_frames"] == 1
+    assert fr.calls == []                                           # nothing went to the relay (P2/recordings)
+
+def test_talk_muted_during_decoy_and_unmuted_on_restore(monkeypatch):
+    st, got = _talk_call(monkeypatch, "sess-talk-2234567")
+    st["handed_off"] = True
+    assert asyncio.run(R.inject_maria("sess-talk-2234567", PAY)) is False and got == [] and st["talk_dropped"] == 1
+    st["restored"] = True
+    assert asyncio.run(R.inject_maria("sess-talk-2234567", PAY)) is True and len(got) == 1
+
+def test_talk_refused_when_not_talk_mode_or_not_ready_or_bad(monkeypatch):
+    st, got = _talk_call(monkeypatch, "sess-talk-3234567", mode="listen")
+    assert R.talk_enabled("sess-talk-3234567") is False and asyncio.run(R.inject_maria("sess-talk-3234567", PAY)) is False
+    st, got = _talk_call(monkeypatch, "sess-talk-4234567")
+    assert R.talk_enabled("sess-talk-4234567") and asyncio.run(R.inject_maria("sess-talk-4234567", "not base64!!")) is False
+    assert asyncio.run(R.inject_maria("sess-talk-4234567", base64.b64encode(b"\0" * 5000).decode())) is False   # oversize
+    st.pop("send_to_caller"); assert asyncio.run(R.inject_maria("sess-talk-4234567", PAY)) is False             # stream not ready -> dropped
+    assert asyncio.run(R.inject_maria("unknown-call-id", PAY)) is False
+    st["ended"] = True; st["send_to_caller"] = lambda f: None; assert R.talk_enabled("sess-talk-4234567") is False
+
+def test_talk_mode_skips_hello_and_never_dials(monkeypatch):
+    monkeypatch.setenv("MARIA_LEG", "talk"); calls = _no_telnyx(monkeypatch)
+    sid = "sess-talk-5234567"; R.CALLS[sid] = _state(sim=False, conf=False)
+    asyncio.run(R.on_answered({"call_session_id": sid, "call_control_id": "v3:caller1234567", "client_state": R._cs(sid=sid, role="caller")}))
+    assert calls == [] and R.CALLS[sid]["listen"] is True and R.listen_mode() and R.talk_mode()
+    ans = [e for e in bus.history if e["call_id"] == sid and e["type"] == "call.answered"]
+    assert ans[0]["data"] == {"by": "maria", "via": "talk"}

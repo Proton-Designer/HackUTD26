@@ -33,9 +33,12 @@ RELAYS: dict[str, Relay] = {}
 MAX_STREAM_FRAMES = 50 * 60 * 10  # 10 min of 20 ms frames
 
 def sim_mode() -> bool: return os.environ.get("SIM_MODE") == "1"
+def _maria_leg() -> str: return os.environ.get("MARIA_LEG", "sip").strip().lower()
+def talk_mode() -> bool: return _maria_leg() == "talk"
 def listen_mode() -> bool:
-    """MARIA_LEG=listen: never dial Maria's SIP leg (no Telnyx dial/conference calls); her page just listens. Default 'sip'."""
-    return os.environ.get("MARIA_LEG", "sip").strip().lower() == "listen"
+    """MARIA_LEG=listen|talk: never dial Maria's SIP leg (no Telnyx dial/conference calls); her page listens (talk: and speaks back via
+    WS /talk -> inject_maria). Default 'sip'."""
+    return _maria_leg() in ("listen", "talk")
 PROXY_HEADERS = ("cf-connecting-ip", "cf-ray", "x-forwarded-for", "x-forwarded-host", "forwarded", "x-real-ip")
 def direct_local(conn) -> bool:
     """Same rule as server.device.is_direct_local: loopback peer AND no proxy/tunnel headers (cloudflared connects from 127.0.0.1 but adds them)."""
@@ -158,7 +161,7 @@ async def on_answered(p):
     sim = st.get("sim", False)
     if role == "caller" and listen_mode():
         st["listen"] = True; st["maria_answered"] = True   # no conference, no Maria dial: the UI flows as if she answered
-        emit("call.answered", sid, {"by": "maria", "via": "listen"})
+        emit("call.answered", sid, {"by": "maria", "via": "talk" if talk_mode() else "listen"})
         log.warning("MARIA_LEG=listen: not dialing Maria for %s (answer + caller stream only)", sid[:8])
     elif role == "caller":
         conf = await _safe(telnyx.create_conference(st["caller_ccid"], f"bf-{sid[:12]}"), "create_conference", sim)
@@ -253,7 +256,7 @@ async def media(ws: WebSocket, call_id: str, t: str = ""):
         k = str(frame.get("event", "?")) if isinstance(frame, dict) else "?"; sent[k] = sent.get(k, 0) + 1
         if k == "media" and sent[k] == 1: log.warning("first decoy->caller media frame sent on %s", call_id[:8])
     st["send_to_caller"] = send_to_caller
-    hello = asyncio.create_task(_listen_hello(call_id, send_to_caller)) if st.get("listen") else None
+    hello = asyncio.create_task(_listen_hello(call_id, send_to_caller)) if st.get("listen") and not talk_mode() else None   # talk mode: Maria says hello herself
     try:
         if hub: await _maybe_await(hub.open(call_id, send_to_caller, on_decoy_lost=_decoy_lost))
         else:
@@ -278,12 +281,39 @@ async def media(ws: WebSocket, call_id: str, t: str = ""):
     except (WebSocketDisconnect, RuntimeError): pass
     finally:
         if hello: hello.cancel()
-        st.pop("send_to_caller", None); log.warning("media WS closed %s frames_in=%s frames_to_caller=%s", call_id[:8], stats, sent)
+        st.pop("send_to_caller", None); log.warning("media WS closed %s frames_in=%s frames_to_caller=%s talk_frames=%s talk_dropped=%s", call_id[:8], stats, sent, st.get("talk_frames", 0), st.get("talk_dropped", 0))
         try:
             if hub: await _maybe_await(hub.close(call_id))
             elif local: await local.close()
         except Exception: pass
         RELAYS.pop(call_id, None)
+
+TALK_MAX_BYTES = 960   # one 20 ms PCMU frame is 160 bytes; tolerate up to 120 ms per message
+
+def talk_enabled(sid) -> bool:
+    """For eng1's WS /talk/{call_id}: only a live, known, talk-mode call accepts Maria's uplink."""
+    st = CALLS.get(sid)
+    return bool(st and st.get("listen") and talk_mode() and not st["ended"])
+
+async def inject_maria(sid, payload_b64: str) -> bool:
+    """MARIA_LEG=talk: write one PCMU 8 kHz frame of MARIA's page microphone to the caller's bidirectional stream (the same path decoy/hello
+    audio uses; stream target_legs=self). Returns False = dropped (never queued): not a talk call, a decoy is active (handed_off and not
+    restored: muted), stream not ready, or bad payload. Maria's audio goes ONLY to the caller leg: never to the relay/P2/recordings."""
+    try:
+        st = CALLS.get(sid)
+        if not talk_enabled(sid): return False
+        if st.get("handed_off") and not st.get("restored"):
+            st["talk_dropped"] = st.get("talk_dropped", 0) + 1; return False   # decoy owns the caller's ears
+        send = st.get("send_to_caller")
+        if not send: st["talk_dropped"] = st.get("talk_dropped", 0) + 1; return False   # stream not up yet: drop, don't buffer
+        if not isinstance(payload_b64, str) or len(payload_b64) > 4 * TALK_MAX_BYTES // 3 + 8: return False
+        base64.b64decode(payload_b64, validate=True)   # reject garbage
+        await send({"event": "media", "media": {"payload": payload_b64}})
+        n = st["talk_frames"] = st.get("talk_frames", 0) + 1
+        if n == 1: log.warning("talk: first Maria->caller frame on %s", sid[:8])
+        return True
+    except Exception as e:
+        log.warning("inject_maria dropped (%s)", type(e).__name__); return False
 
 async def _listen_hello(sid, send):
     """MARIA_LEG=listen: play a short pre-recorded 'Hello? ... Yes?' (SIMULATED synthetic voice) to the caller once, then silence.
