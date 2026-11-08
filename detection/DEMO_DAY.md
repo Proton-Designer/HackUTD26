@@ -3,9 +3,9 @@ Repo root = ~/HackUTD26 (live service runs from the trunk checkout). Live P2 = :
 
 ## 1. Start order (one tmux window each; tmux session `backfire-p2`, llama in `backfire-p2-eng:llama`)
 1. **llama-server** (GPU, local detector): `bash detection/engines/run_local_llm.sh`  (wait ~30 s for the model; `curl -s $LOCAL_LLM_URL/health` -> 200)
-2. **p2svc**: `P2_ENGINE=local HUB_URL=<hub url> bash detection/scripts/run.sh`  (supervised, restarts itself; logs/p2.log)
-3. **tunnel**: `bash detection/scripts/tunnel.sh`  (prints a *.trycloudflare.com URL; the watchdog writes logs/p2_tunnel_url.txt)
-4. **watchdog**: `bash detection/scripts/watchdog.sh`  (restarts p2svc / tunnel / llama on repeated failure; logs/watchdog.log)
+2. **p2svc**: `P2_ENGINE=local HUB_URL=<hub url> bash detection/scripts/run.sh`  (supervised, restarts itself; logs/p2.log; ready in ~6 s). `<hub url>` = the hub P1/lead runs (e.g. `http://localhost:8000`). No hub yet (rehearsal): `HUB_DB=/tmp/hub.db .venv/bin/uvicorn server.main:app --port 8190` in its own window, then `HUB_URL=http://localhost:8190`.
+3. **tunnel**: `bash detection/scripts/tunnel.sh`  (prints a *.trycloudflare.com URL in ~5 s). **Then save it for the watchdog** (otherwise the watchdog probes a stale built-in URL, sees it fail and restarts the tunnel by itself, changing the URL): `grep -o 'https://[a-z0-9-]*\.trycloudflare\.com' logs/p2-tunnel.log | tail -1 > logs/p2_tunnel_url.txt`
+4. **watchdog**: `bash detection/scripts/watchdog.sh`  (restarts p2svc / tunnel / llama on repeated failure; logs/watchdog.log). Rehearsing next to the live stack: use `WD_SESSION=<your tmux session> WD_PORT=<your P2 port> WD_LLAMA=0 bash detection/scripts/watchdog.sh` or it manages the live `backfire-p2` windows and llama.
 LOCAL_LLM_URL defaults to the WSL gateway `:8101`. `.env` is sourced by run.sh; never cat it.
 
 ## 2. 30-second health check
@@ -15,7 +15,7 @@ LOCAL_LLM_URL defaults to the WSL gateway `:8101`. `.env` is sourced by run.sh; 
 - `hub_subscriber_connected` = true.
 - `stt.backend` riva and `stt.primary_bypassed` = false (true = Riva down, whisper CPU fallback in use, slower finals).
 - `active_stt_sockets` 0 before a call, 1 during. `last_error` empty or old.
-Then: `curl -s <tunnel url>/healthz` -> 200. Then one test call; `python3 detection/scripts/call_report.py --last 1` (needs `.venv/bin/python`).
+Then: `curl -s <tunnel url>/healthz` -> 200. Then one test call: `(set -a; . ./.env; set +a; .venv/bin/python detection/scripts/stream_wav.py detection/testdata/acc/irs.wav --url ws://localhost:8100 --call "demo_test?token=$PIPELINE_TOKEN")` (the token rides on the call id because P2 rejects a missing PIPELINE_TOKEN with 403; synthetic IRS caller, ~10 s, alert at about +8 s), wait 4 s, then `.venv/bin/python detection/scripts/call_report.py --last 1` -> expect `ALERT first`, `alerts 1`, `failovers 0`.
 
 ## 3. If X then Y
 | X | Fix (1 line) | Tell |
@@ -38,12 +38,12 @@ Then: `curl -s <tunnel url>/healthz` -> 200. Then one test call; `python3 detect
 Offline insurance: `OFFLINE=1 bash detection/scripts/demo_local.sh` (hub+P2+decoy+simulated caller, no internet).
 
 ## 4. Freeze rules
-- Known-good tag: **p2-known-good-0250** (older: 0241, 0240, 0221). Do not deploy during a judge visit; do not deploy after code freeze (08:00) except a rollback.
-- Roll back: `git checkout p2-known-good-0250` in the live checkout, then restart p2svc (Ctrl-C twice in its window, rerun step 2). Return later with `git checkout <branch>`.
+- Known-good tag = the newest `git tag -l 'p2-known-good-*' | tail -1` (now **p2-known-good-0443**; older 0334, 0250). Do not deploy during a judge visit; do not deploy after code freeze (08:00) except a rollback.
+- Roll back: `git checkout <newest p2-known-good tag>` in the live checkout, then restart p2svc (Ctrl-C twice in its window, rerun step 2). Return later with `git checkout <branch>`.
 - Never `pkill`/`tmux kill-*` in the live session; interrupt (Ctrl-C) the one window you mean.
 
 ## 5. Before judging
 - Stop evals/benchmarks (shared GPU + NVIDIA key): no `eval/` runs, no acceptance runs, no llama tuning.
 - `rm -f logs/audio/*.wav`; make sure `P2_DUMP_AUDIO` is unset/0 (caller audio is not kept on stage).
 - `engines.primary` = local, cloud breaker closed, one rehearsal call done, then leave services alone.
-- **Run `bash detection/scripts/ready_check.sh --tunnel <p2 tunnel URL>`** (add `--tests` before the freeze). Read-only: healthz fields, tunnel matches live, `P2_DUMP_AUDIO` off in the live process (key only, never values), `logs/audio` empty, llama answers, watchdog alive, live HEAD is a `p2-known-good` tag and the process is newer than the last `detection/*.py` commit, plus one positive (gift card + secrecy -> critical) and one negative (benign -> low) control through `/detect` (skipped while a call is active). Every FAIL prints a one-line fix. Do not start judging on `NOT READY`; WARN is acceptable if you know why (e.g. cloud breaker open while local is primary).
+- **Run `bash detection/scripts/ready_check.sh --tunnel <p2 tunnel URL>`** (checks `:8100`; for another port add `--live http://localhost:<port>`; the two checks tag/clean-tree only pass in the live checkout) (add `--tests` before the freeze). Read-only: healthz fields, tunnel matches live, `P2_DUMP_AUDIO` off in the live process (key only, never values), `logs/audio` empty, llama answers, watchdog alive, live HEAD is a `p2-known-good` tag and the process is newer than the last `detection/*.py` commit, plus one positive (gift card + secrecy -> critical) and one negative (benign -> low) control through `/detect` (skipped while a call is active). Every FAIL prints a one-line fix. Do not start judging on `NOT READY`; WARN is acceptable if you know why (e.g. cloud breaker open while local is primary).
