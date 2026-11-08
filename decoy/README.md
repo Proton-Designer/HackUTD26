@@ -5,7 +5,7 @@ Same brain as the on-phone decoy in `android_voip/backfire` (tested live on a Ga
 
 ```
 caller audio (PCMU 8k, from P1's relay) -> P2's Segmenter + speech-to-text (detection/, Parakeet on NVIDIA Riva)
-  -> Nemotron (NVIDIA cloud, DECOY_MODEL, default nvidia/nemotron-3.5-bolt-e4b) as "Alex Morgan" (a generic, ordinary person), placeholders only
+  -> Nemotron (NVIDIA cloud, DECOY_MODEL, default nvidia/nemotron-3.5-bolt-e4b) as the customer (no named persona; a plain fake name only if the scammer insists), placeholders only
   -> code guardrails + per-call fake values (decoy.fake_value, guardrail.tripped)
   -> voice: Magpie TTS Zero-shot with Maria's enrolled voice (else Magpie Multilingual EN-US.Aria.Calm, labeled synthetic)
   -> PCMU 20 ms media frames back, paced in real time; `clear` when the caller talks over it (barge-in)
