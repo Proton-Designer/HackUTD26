@@ -455,7 +455,7 @@
       const p = pct(c.risk.s);
       const word = bandWord(c.risk);
       if (c.risk.s >= 0.5) stage('detect', word.toLowerCase());
-      if (!c.handoff && !S.stage.extract) {
+      if ((!c.handoff || c.restored) && !S.stage.extract) {
         if (isHot(c.risk)) {
           // Lead with what he asked for, in plain words; the score stays small in the Risk panel
           const ask = c.risk.asks.find(a => a !== 'secrecy') || c.risk.asks[0];
@@ -495,6 +495,8 @@
     'handoff.restored'(e, d, c) {
       c.restored = true;
       c.feed.push({ kind: 'sys', text: 'The customer is back on the call (decoy stepped out)', seq: S.seq });
+      // The banner must not keep saying "the customer is off the call" (#106); risk.update takes over again below
+      head('The customer is <em>back on the call</em>', 'The decoy stepped out', '');
       dirty('feed');
     },
     'decoy.turn'(e, d, c) {
