@@ -43,7 +43,7 @@ async def webhook(req: Request):
     ccid = p.get("call_control_id")
     if et == "call.initiated" and p.get("direction") == "incoming":
         if not (ccid and CCID_RE.match(ccid) and CCID_RE.match(p.get('call_session_id', ''))): return {"ok": False}
-        tok = TOKENS[p['call_session_id']] = secrets.token_urlsafe(16)
+        tok = TOKENS.setdefault(p['call_session_id'], secrets.token_urlsafe(16))
         body = {"stream_url": f"{os.environ['PUBLIC_WS']}/media/{p['call_session_id']}?t={tok}",
                 "stream_track": "inbound_track", "stream_codec": "PCMU",
                 "stream_bidirectional_mode": "rtp", "stream_bidirectional_codec": "PCMU",
