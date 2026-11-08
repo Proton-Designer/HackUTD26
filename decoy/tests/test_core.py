@@ -79,3 +79,11 @@ def test_email_kept_when_model_returns_only_a_zelle_phone(monkeypatch):   # live
                                      "Use Zelle. The Zelle number is 920 785 6782."]))
     ids = {a["id"] for a in arts if a["kind"] == "payment_handle"}
     assert "refunds.dept@backfire-demo.example" in ids, ids
+
+
+def test_guard_allows_readback_when_stt_spelled_digits_as_words():   # P3 #141: Judge card read-back became the 'can't read this' stall
+    from decoy import core
+    p = core.Persona("t")
+    caller = "Our secure line is one eight eight eight five five five zero one two three."
+    assert core.guard("Okay, 1-888-555-0123?", p, set(), lambda *a: None, caller)[1] == "Okay, 1-888-555-0123?"
+    assert "can't read" in core.guard("Okay, 1-888-555-9999?", p, set(), lambda *a: None, caller)[1]

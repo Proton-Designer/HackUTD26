@@ -137,7 +137,9 @@ def guard(raw: str, persona: Persona, given: set, emit, caller_text: str = "") -
     raw = re.sub(r"(?im)^\s*(private note|note|steering note)\s*:.*$", " ", raw)
     t = re.sub(r"(?<![.!?,;:])[ \t]*\n+\s*", ". ", raw.strip())   # a newline with no punctuation = a sentence break (TTS run-on)
     t = re.sub(r"\s+", " ", t).strip().strip('"')
-    caller_digits = re.sub(r"\D", "", caller_text or "")
+    _w = {"zero": "0", "oh": "0", "one": "1", "two": "2", "three": "3", "four": "4", "five": "5", "six": "6", "seven": "7", "eight": "8", "nine": "9"}
+    caller_digits = re.sub(r"\D", "", re.sub(r"\b(zero|oh|one|two|three|four|five|six|seven|eight|nine)\b",
+                                            lambda m: _w[m.group(1).lower()], caller_text or "", flags=re.I))   # STT may spell digits as words
     for rule, pat, repl in RULES:
         m = pat.search(t)
         if m and rule == "invented_number" and caller_digits and all(
