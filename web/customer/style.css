@@ -102,3 +102,13 @@ nav#tabs button.on{background:#fff;color:#000;border-color:#fff}
 
 .observer{margin:0;padding:10px 14px;border-radius:14px;background:#1a2540;border:2px solid #4a6cff;color:#dfe6ff;font-weight:700;font-size:1rem;text-align:center;width:100%}
 .alert-tag{margin:0;font-size:.75rem;color:#c9a3ab;text-align:center}
+
+/* PWA / phone feel */
+.hint-bar{margin:6px 0 0;padding:10px 12px;border-radius:12px;background:#1a2540;border:2px solid #4a6cff;color:#dfe6ff;font-size:.8rem;display:flex;gap:10px;align-items:center;justify-content:space-between}
+.hint-bar button{flex:none;min-height:44px;min-width:56px;border-radius:10px;border:2px solid #4a6cff;background:transparent;color:#fff;font-weight:700}
+.keep-open{margin:0;font-size:.8rem;color:#ffd166;text-align:center}
+/* desktop: show the app as a phone in the middle of the screen */
+@media (min-width:700px) and (min-height:600px){
+  html,body{background:#05060a}
+  #phone{min-height:0;height:min(880px,calc(100dvh - 32px));margin:16px auto;border-radius:36px;border:10px solid #1b1f2a;box-shadow:0 20px 60px #000a;overflow:auto;box-sizing:border-box}
+}

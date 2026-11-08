@@ -61,6 +61,21 @@
   }
   const twoBeeps = () => { beep(0, 0.18); beep(0.3, 0.18); if (navigator.vibrate) navigator.vibrate([150, 100, 150]); };
 
+  // ---- phone feel: ringtone (WebAudio, needs the tap-unlocked context), vibrate, 45 s no-answer, screen wake lock ----
+  const RING_TIMEOUT_MS = 45000; let ringI = null, ringTO = null, wake = null;
+  function ringBurst() { const c = st.ctx; if (c && c.state === "running") for (const [at, f] of [[0, 440], [0.45, 480], [0.9, 440], [1.35, 480]]) { const o = c.createOscillator(), g = c.createGain(); o.type = "sine"; o.frequency.value = f; o.connect(g); g.connect(c.destination); const t = c.currentTime + at; g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.25, t + 0.03); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.38); o.start(t); o.stop(t + 0.42); } if (navigator.vibrate) navigator.vibrate([700, 300, 700, 300]); }
+  function startRing() { stopRing(); ringBurst(); ringI = setInterval(ringBurst, 3000); ringTO = setTimeout(() => { if ($("phone").dataset.state === "ringing") { if (BF.voip) BF.voip.hangup(); endCall("Missed call."); } }, RING_TIMEOUT_MS); }
+  function stopRing() { clearInterval(ringI); clearTimeout(ringTO); ringI = ringTO = null; if (navigator.vibrate) navigator.vibrate(0); }
+  async function lockScreen() { try { if (navigator.wakeLock && !wake && document.visibilityState === "visible") { wake = await navigator.wakeLock.request("screen"); wake.addEventListener("release", () => { wake = null; }); } } catch (e) { wake = null; } }
+  function unlockScreen() { try { wake && wake.release(); } catch (e) {} wake = null; }
+  let hiddenAt = 0;
+  document.addEventListener("visibilitychange", () => {
+    const inCall = $("phone").dataset.state === "active";
+    if (document.visibilityState === "visible") { if (inCall) { lockScreen(); if (hiddenAt && Date.now() - hiddenAt > 2000) { const k = $("keepOpen"); if (k) { k.hidden = false; k.textContent = "You left Backfire for a moment. Keep it open during calls so the call audio keeps playing."; } } } hiddenAt = 0; }
+    else if (inCall) hiddenAt = Date.now();
+  });
+  const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
   // ---- the ONE place user actions leave the app. Adapt here when interfaces.md lands. ----
   let ws = null;
   function emitUserAction(action) {
@@ -77,6 +92,7 @@
   const ACR = s => String(s).replace(/\b(Irs|Ssa|Fbi|Dea|Ftc|Usps|Cdc|Dhs)\b/g, m => m.toUpperCase());   // server title-cases impersonated agencies
   function renderChips(chips) { const ul = $("chips"); ul.replaceChildren(...(chips || []).map(c => { const li = document.createElement("li"); li.textContent = ACR(c); return li; })); }
   function endCall(msg) {
+    stopRing(); unlockScreen(); { const k = $("keepOpen"); if (k) k.hidden = true; }
     { const n = $("actedMsg"); if (n) n.hidden = true; }
     clearInterval(st.timer); st.answered = false; show("ended"); $("endedMsg").textContent = msg || "";
     $("phone").dataset.state = "ended";
@@ -116,11 +132,12 @@
       default: break;
     }
   }
-  function ring() { if (st.callId && !st.answered && $("phone").dataset.state !== "ringing") { $("phone").dataset.state = "ringing"; show("incoming"); } }
+  function ring() { if (st.callId && !st.answered && $("phone").dataset.state !== "ringing") { $("phone").dataset.state = "ringing"; show("incoming"); startRing(); } }
   function showHandoff() { setBadge("handed"); $("handoffMsg").textContent = "We've got it. You can put the phone down."; $("alertBox").hidden = true; $("idleMsg").hidden = true; $("handoffMsg").hidden = false; }
 
   // ---- buttons ----
   $("answerBtn").onclick = () => {
+    stopRing(); lockScreen(); { const k = $("keepOpen"); if (k) { k.textContent = "Keep Backfire open during calls. If you switch apps, the call audio can pause."; k.hidden = !IOS; } }
     unlockAudio();                                   // tap unlocks audio so the alert beeps can play
     if (BF.voip) BF.voip.answer();                   // real WebRTC call, if one is ringing
     st.answered = true; st.t0 = Date.now(); st.timer = setInterval(tick, 500); tick();
@@ -128,7 +145,7 @@
     $("phone").dataset.state = "active"; show("active");
     if (!SERVER) scheduleAfterAnswer();
   };
-  $("declineBtn").onclick = () => { if (BF.voip) BF.voip.hangup(); endCall("You declined the call."); };
+  $("declineBtn").onclick = () => { stopRing(); if (BF.voip) BF.voip.hangup(); endCall("You declined the call."); };
   $("endBtn").onclick = () => { emitUserAction("hang_up"); if (BF.voip) BF.voip.hangup(); stopReplay(); endCall("You ended the call."); };
   $("btnContinue").onclick = () => { emitUserAction("continue"); setBadge("watching"); $("alertBox").hidden = true; $("idleMsg").hidden = false; };
   $("btnGets").onclick = () => { emitUserAction("scammer_get_scammed"); showHandoff(); };
@@ -174,6 +191,11 @@
     else startReplay();
   }
 
+  // "Add to Home Screen" hint: first visit, iOS Safari (not yet installed). Dismissed once = never again.
+  (function () { try { const standalone = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone; if (standalone || localStorage.getItem("bf.a2hs") === "1") return; const h = $("a2hs"); if (!h) return;
+    const android = /Android/.test(navigator.userAgent); if (!IOS && !android) return;
+    $("a2hsText").textContent = IOS ? "Add Backfire to your Home Screen: tap Share, then Add to Home Screen." : "Add Backfire to your Home Screen: open the browser menu, then Install app.";
+    h.hidden = false; $("a2hsClose").onclick = () => { h.hidden = true; try { localStorage.setItem("bf.a2hs", "1"); } catch (e) {} }; } catch (e) {} })();
   setInterval(() => { const n = new Date(); $("clock").textContent = (n.getHours() % 12 || 12) + ":" + String(n.getMinutes()).padStart(2, "0"); }, 1000);
   window.BF.deliver = onEvent; BF.endUI = endCall; BF.ui = () => $("phone").dataset.state;
   start();

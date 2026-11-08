@@ -5,6 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Backfire</title>
 <link rel="icon" type="image/png" href="assets/backfire-favicon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<meta name="theme-color" content="#0e0d14">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Backfire">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <style>html,body{background:#0d1117;color:#fff}</style>
 <script>
 // Safety net for phones without dev tools (older iOS Safari): never a blank white page. Shows the first script error on screen and polyfills replaceChildren (Safari < 14).
@@ -20,6 +27,7 @@ if (!Element.prototype.replaceChildren) Element.prototype.replaceChildren = func
 </head>
 <body>
 <main id="phone" data-state="idle">
+  <p id="a2hs" class="hint-bar" hidden role="note"><span id="a2hsText">Add Backfire to your Home Screen: tap Share, then Add to Home Screen.</span> <button id="a2hsClose" aria-label="Close">OK</button></p>
   <header class="status"><img class="flame" src="assets/backfire-flame.png" alt="" width="14" height="21"><span id="clock">9:41</span><span class="badge sound" id="sound">🔇 Tap for sound</span><span class="badge guard" id="guard">🛡 Live Guard on</span></header>
 
   <div id="callView">
@@ -65,6 +73,7 @@ if (!Element.prototype.replaceChildren) Element.prototype.replaceChildren = func
 
     <p id="handoffMsg" class="handoff" hidden>We've got it. You can put the phone down.</p>
     <p id="decoyMsg" class="decoy" hidden>🎧 Listening to Backfire's decoy</p>
+    <p id="keepOpen" class="keep-open" hidden role="note">Keep Backfire open during calls. If you switch apps, the call audio can pause.</p>
     <p id="idleMsg" class="sub">Backfire is listening to the caller only, never to you.</p>
 
     <button class="big hang plain" id="endBtn">End call</button>
