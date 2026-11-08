@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# Send a message to another pipeline's agent (GitHub Issues via REST; works with any gh login).
+#   bash scripts/comms/send P3 "subject" "body"        new thread to P3   (targets: P1 P2 P3 P4 P4a P4b ALL;
+#                                                      P4 reaches both P4a=Kareem intel and P4b=Rayan command center)
+#   bash scripts/comms/send P3 "subject" -              same, body read from stdin (long text / quotes)
+#   bash scripts/comms/send reply 12 "body" [P3]        reply on thread #12 (optionally also address it to P3)
+#   bash scripts/comms/send close 12 "resolution"       close thread #12 with a note
+#   bash scripts/comms/send list                        open threads addressed to me or ALL
+#   bash scripts/comms/send ping P2                     test message (the receiver's agent should see it within ~1 min)
+set -eu
+source "$(dirname "$0")/common.sh"
+FROM="$(me)"
+[ -z "$FROM" ] && { echo "No pipeline identity. Run: bash scripts/comms/setup P1   (P1|P2|P3|P4a|P4b)" >&2; exit 1; }
+sig() { printf '\n\n---\n_from: %s · %s_' "$FROM" "$(date '+%H:%M')"; }
+need() { [ "$1" -ge "$2" ] || { sed -n '2,9p' "$0" >&2; exit 1; }; }
+body_of() { if [ "$1" = "-" ]; then cat; else printf '%s' "$1"; fi; }
+valid_to() { case "$1" in P1|P2|P3|P4|P4a|P4b|ALL) ;; *) echo "Unknown target '$1' (use $TARGETS)" >&2; exit 1;; esac; }
+
+case "${1:-}" in
+  reply)
+    need $# 3; n="$2"; body="$(body_of "$3")"; to="${4:-}"
+    gh api "repos/$REPO/issues/$n/comments" -f body="${body}$(sig)" --jq '.html_url' >/dev/null
+    if [ -n "$to" ]; then valid_to "$to"; gh api "repos/$REPO/issues/$n/labels" -f "labels[]=to:$to" >/dev/null; fi
+    echo "replied on #$n";;
+  close)
+    need $# 2; n="$2"; body="${3:-resolved}"
+    gh api "repos/$REPO/issues/$n/comments" -f body="Resolved: ${body}$(sig)" >/dev/null
+    gh api -X PATCH "repos/$REPO/issues/$n" -f state=closed >/dev/null
+    echo "closed #$n";;
+  list)
+    for l in $(my_labels "$FROM"); do
+      gh api -X GET "repos/$REPO/issues" -f labels="$l" -f state=open \
+        --jq '.[] | select(.pull_request==null) | "#\(.number)  \(.title)  (updated \(.updated_at))"'
+    done;;
+  ping)
+    need $# 2; valid_to "$2"
+    exec bash "$0" "$2" "ping from $FROM" "Comms test from $FROM. Agent: reply with: bash scripts/comms/send close <this #> \"pong from <your pipeline>\"";;
+  P1|P2|P3|P4|P4a|P4b|ALL)
+    need $# 2; to="$1"; subj="$2"; body="$(body_of "${3:-}")"
+    [ "$to" = "$FROM" ] && { echo "That's you ($FROM). Pick another pipeline." >&2; exit 1; }
+    url=$(gh api "repos/$REPO/issues" -f title="[$FROM→$to] $subj" -f body="${body}$(sig)" \
+          -f "labels[]=to:$to" -f "labels[]=from:$FROM" --jq '.html_url')
+    echo "sent: $url";;
+  *) sed -n '2,9p' "$0"; exit 1;;
+esac

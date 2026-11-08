@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "SessionStart": [
+      { "hooks": [ { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/scripts/comms/inbox\" hook-start", "timeout": 30 } ] }
+    ],
+    "UserPromptSubmit": [
+      { "hooks": [ { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/scripts/comms/inbox\" hook-prompt", "timeout": 30 } ] }
+    ],
+    "PostToolUse": [
+      { "matcher": "*", "hooks": [ { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/scripts/comms/inbox\" hook-post", "timeout": 30 } ] }
+    ],
+    "Stop": [
+      { "hooks": [ { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/scripts/comms/inbox\" hook-stop", "timeout": 30 } ] }
+    ]
+  }
+}

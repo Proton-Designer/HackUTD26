@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Report what this pipeline is doing right now (shown on the team dashboard).
+#   bash scripts/comms/status 3 "Telnyx number bought, wiring call.initiated"   step 3 of your pipeline guide's outcomes
+#   bash scripts/comms/status "debugging the swap"                              text only, keep the step number
+#   bash scripts/comms/status blocked "waiting on P3 echo bot"                  mark blocked (red on the dashboard)
+#   bash scripts/comms/status unblocked                                         clear blocked
+#   bash scripts/comms/status show                                              print what's currently reported
+set -u
+source "$(dirname "$0")/common.sh"
+ME="$(me)"; [ -z "$ME" ] && { echo "No pipeline identity. Run: bash scripts/comms/setup P1" >&2; exit 1; }
+source "$(dirname "$0")/presence.sh"
+case "${1:-show}" in
+  show) cat "$P_STATE" 2>/dev/null; exit 0;;
+  blocked)   pset status_override blocked; [ -n "${2:-}" ] && pset step_text "BLOCKED: $2";;
+  unblocked) pset status_override "";;
+  *[!0-9]*)  pset step_text "$1"; pset status_override "";;
+  *)         pset step_n "$1"; [ -n "${2:-}" ] && pset step_text "$2"; pset status_override "";;
+esac
+presence_push working
+echo "reported: $ME step $(pget step_n) · $(pget step_text) $( [ -n "$(pget status_override)" ] && echo '[BLOCKED]')"

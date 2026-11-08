@@ -1,0 +1,107 @@
+#!/usr/bin/env bash
+# Deliver new messages addressed to this pipeline (or ALL) straight into the agent's context.
+#   inbox hook-post    PostToolUse hook: throttled; exit 2 + stderr when there is new mail (Claude sees it)
+#   inbox hook-stop    Stop hook: refuses to let the agent go idle while unread mail exists
+#   inbox hook-prompt  SessionStart / UserPromptSubmit hook: prints new mail as context (exit 0)
+#   inbox check        same as hook-prompt, for humans (prints new mail, marks it read)
+#   inbox list         show open threads addressed to me (no state change)
+#   inbox watch        block until new mail arrives, print it, exit (run in background during integration)
+#   inbox reset        forget read-state (next check re-delivers every open thread)
+# Every hook also refreshes this machine's presence (pipeline, step, agents, last tool) for the dashboard.
+# Never breaks the session: missing identity / gh / network => silent exit 0.
+source "$(dirname "$0")/common.sh"
+MODE="${1:-list}"
+ME="$(me)"
+HOOK_IN=""; case "$MODE" in hook-*) [ -t 0 ] || HOOK_IN="$(cat 2>/dev/null)";; esac   # hook stdin JSON
+[ -z "$ME" ] && exit 0
+command -v gh >/dev/null 2>&1 || exit 0
+SEEN_IDS="$STATE_DIR/seen_ids_$ME"       # c<comment id> / i<issue number> already delivered
+HW="$STATE_DIR/highwater_$ME"            # newest GitHub (server) timestamp seen, epoch seconds
+LAST="$STATE_DIR/lastcheck_$ME"          # local epoch of last poll (throttle only)
+THROTTLE="${BACKFIRE_COMMS_THROTTLE:-60}"
+source "$(dirname "$0")/presence.sh"
+OVERLAP=900                              # re-scan 15 min behind the high-water mark; IDs dedupe
+US=$'\x1f'; RS=$'\x1e'
+
+seen()  { grep -qxF "$1" "$SEEN_IDS" 2>/dev/null; }
+mark()  { echo "$1" >> "$SEEN_IDS"; }
+mine()  { printf '%s' "$1" | grep -q "_from: $ME "; }
+
+fetch_new() {
+  # Prints unseen messages (thread openers + replies) to me or ALL, excluding my own. Returns 3 if GitHub unreachable.
+  local hw since_args=() out="" newhw lbl rec num upd title body cid cbody
+  hw=$(cat "$HW" 2>/dev/null | tr -dc '0-9')
+  newhw="${hw:-0}"
+  [ -n "$hw" ] && since_args=(-f since="$(iso_from_epoch $((hw - OVERLAP)))")
+  for lbl in $(my_labels "$ME"); do
+    local issues
+    issues=$(T gh api -X GET "repos/$REPO/issues" -f labels="$lbl" -f state=open -f per_page=50 ${since_args[@]+"${since_args[@]}"} \
+      --jq '.[] | select(.pull_request==null) | "\(.number)\u001f\(.updated_at|fromdateiso8601)\u001f\(.title)\u001f\(.body // "")\u001e"' </dev/null 2>/dev/null) || return 3
+    while IFS= read -r -d "$RS" rec; do
+      rec="${rec#$'\n'}"; [ -z "$rec" ] && continue
+      num="${rec%%$US*}"; rec="${rec#*$US}"
+      upd="${rec%%$US*}"; rec="${rec#*$US}"
+      title="${rec%%$US*}"; body="${rec#*$US}"
+      [ "$upd" -gt "$newhw" ] 2>/dev/null && newhw="$upd"
+      if ! seen "i$num"; then
+        mark "i$num"
+        mine "$body" || out+=$'\n'"### #$num $title (new thread)"$'\n'"$(printf '%s' "$body" | tr -d '\r')"$'\n'
+      fi
+      while IFS= read -r -d "$RS" rec; do
+        rec="${rec#$'\n'}"; [ -z "$rec" ] && continue
+        cid="${rec%%$US*}"; cbody="${rec#*$US}"
+        seen "c$cid" && continue
+        mark "c$cid"
+        mine "$cbody" && continue
+        out+=$'\n'"### #$num $title (reply)"$'\n'"$(printf '%s' "$cbody" | tr -d '\r')"$'\n'
+      done < <(T gh api -X GET "repos/$REPO/issues/$num/comments" -f per_page=100 ${since_args[@]+"${since_args[@]}"} \
+                 --jq '.[] | "\(.id)\u001f\(.body)\u001e"' </dev/null 2>/dev/null)
+    done <<<"$issues"
+  done
+  echo "$newhw" > "$HW"
+  printf '%s' "$out"
+}
+
+banner() {
+  cat <<MSG
+📨 NEW MESSAGE(S) FOR $ME FROM ANOTHER PIPELINE (Backfire agent comms, delivered automatically).
+Read them now. If one blocks you or asks you something, answer before continuing:
+  bash scripts/comms/send reply <#> "your answer" [P1|P2|P3|P4|P4a|P4b]      (or: bash scripts/comms/send close <#> "resolution")
+Contract changes are proposals; only P1 edits contracts/. Tell your human if a message changes their plan.
+$1
+MSG
+}
+
+deliver() {  # $1 = stderr|stdout ; returns 0 only if something was delivered
+  local msgs
+  msgs=$(fetch_new) || { date +%s > "$LAST"; return 1; }   # GitHub unreachable: fail open, retry next time
+  date +%s > "$LAST"
+  [ -z "$msgs" ] && return 1
+  if [ "$1" = stderr ]; then banner "$msgs" >&2; else banner "$msgs"; fi
+  return 0
+}
+
+case "$MODE" in
+  hook-post)
+    note_hook "$HOOK_IN"
+    l=$(cat "$LAST" 2>/dev/null | tr -dc '0-9'); l="${l:-0}"
+    [ $(( $(date +%s) - l )) -lt "$THROTTLE" ] && exit 0
+    presence_push working
+    deliver stderr && exit 2; exit 0;;
+  hook-stop)
+    note_hook "$HOOK_IN"
+    deliver stderr && exit 2
+    presence_push idle; exit 0;;
+  hook-start)
+    note_hook "$HOOK_IN"; presence_push working
+    echo "Backfire comms: you are pipeline $ME. Messages from other pipelines arrive automatically. Send: bash scripts/comms/send <P1|P2|P3|P4|P4a|P4b|ALL> \"subject\" \"body\". When you start a new step of your pipeline guide, report it: bash scripts/comms/status <step#> \"what you're doing\"  (shown on the team dashboard)."
+    deliver stdout; exit 0;;
+  hook-prompt)
+    note_hook "$HOOK_IN"; presence_push working
+    deliver stdout; exit 0;;
+  check)       deliver stdout; exit 0;;
+  list)        bash "$(dirname "$0")/send" list;;
+  watch)       while true; do deliver stdout && exit 0; sleep "${BACKFIRE_WATCH_INTERVAL:-30}"; done;;
+  reset)       rm -f "$SEEN_IDS" "$HW" "$LAST"; echo "read-state cleared for $ME";;
+  *)           sed -n '2,10p' "$0";;
+esac

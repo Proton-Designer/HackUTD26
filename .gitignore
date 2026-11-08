@@ -3,3 +3,6 @@ __pycache__/
 *.pyc
 .env
 .env.*
+
+# Backfire agent comms: per-machine identity (P1|P2|P3|P4)
+.backfire-pipeline
