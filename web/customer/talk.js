@@ -57,6 +57,7 @@
     starting = false;
   }
   function stopMic() { try { proc && proc.disconnect(); src && src.disconnect(); } catch (e) {} try { stream && stream.getTracks().forEach(x => x.stop()); } catch (e) {} try { ctx && ctx.close(); } catch (e) {} proc = src = stream = ctx = null; n = 0; sum = cnt = t = 0; stats.mic = "off"; }
+  function render0() { const b = $("micBtn"); if (b) { b.textContent = "🎤"; b.setAttribute("aria-label", "Tap to turn the microphone on"); } }
   function hint(s) { const h = $("talkHint"); if (h) h.textContent = s; }
   function render() {
     const b = $("micBtn"); if (!b) return;
@@ -102,7 +103,7 @@
 
   const eb = $("earBox"); if (eb) { eb.checked = earphones; eb.onchange = () => { earphones = eb.checked; try { localStorage.setItem("bf.earphones", earphones ? "1" : "0"); } catch (e) {} }; }
   setInterval(() => { const d = $("micDot"); if (!d) return; const on = !!stream && Date.now() - lastSend < 1000; d.className = "dot " + (on ? "live" : stats.mic === "blocked" || stats.state === "error" ? "bad" : "idle"); d.title = on ? "Your voice is reaching the call" : "Not sending"; d.setAttribute("aria-label", d.title); }, 300);
-  $("micBtn").addEventListener("click", () => { if (handed) return; if (!stream) { startMic(); return; } muted = !muted; render(); });   // first tap also (re)starts a blocked mic
+  $("micBtn").addEventListener("click", () => { if (handed) return; if (!stream) { BF.resumed = false; startMic(); return; } muted = !muted; render(); });   // first tap also (re)starts a blocked mic
   $("answerBtn").addEventListener("click", () => { if (!BF.talk) return; show(true); startMic(); if (hubAnswered) open(cid); });   // the tap is the gesture iOS wants for the mic prompt
   ["endBtn", "btnHang", "declineBtn"].forEach(id => $(id).addEventListener("click", end));
   new MutationObserver(() => { const a = $("alertBox"), b = $("talkBox"); if (a && b) b.classList.toggle("compact", !a.hidden); }).observe($("alertBox"), { attributes: true, attributeFilter: ["hidden"] });
@@ -112,7 +113,7 @@
     if (!BF.talk || !ev) return;
     switch (ev.type) {
       case "call.incoming": if (active === ev.call_id) break; hubAnswered = false; end(); cid = ev.call_id; active = ev.call_id; break;   // a repeated incoming for the same call must not close the mic/socket
-      case "call.answered": cid = ev.call_id || cid; active = cid; hubAnswered = true; if ($("phone").dataset.state === "active") { open(cid); show(true); if (!stream) startMic(); } break;   // ringing + hub-answered: wait for the customer's Answer tap
+      case "call.answered": cid = ev.call_id || cid; active = cid; hubAnswered = true; if ($("phone").dataset.state === "active") { open(cid); show(true); if (BF.resumed) { hint("Tap the microphone button to rejoin the conversation."); render0(); } else if (!stream) startMic(); } break;   // a resumed call never opens the mic by itself: it needs a tap   // ringing + hub-answered: wait for the customer's Answer tap
       case "handoff.started": handed = true; render(); break;
       case "handoff.restored": handed = false; render(); break;
       case "call.ended": active = null; end(); break;

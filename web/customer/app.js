@@ -92,7 +92,7 @@
   const ACR = s => String(s).replace(/\b(Irs|Ssa|Fbi|Dea|Ftc|Usps|Cdc|Dhs)\b/g, m => m.toUpperCase());   // server title-cases impersonated agencies
   function renderChips(chips) { const ul = $("chips"); ul.replaceChildren(...(chips || []).map(c => { const li = document.createElement("li"); li.textContent = ACR(c); return li; })); }
   function endCall(msg) {
-    clearTimeout(st.handT); stopRing(); unlockScreen(); { const k = $("keepOpen"); if (k) k.hidden = true; }
+    BF.resumed = false; clearTimeout(st.handT); stopRing(); unlockScreen(); { const k = $("keepOpen"); if (k) k.hidden = true; }
     { const n = $("actedMsg"); if (n) n.hidden = true; }
     clearInterval(st.timer); st.answered = false; show("ended"); $("endedMsg").textContent = msg || "";
     $("phone").dataset.state = "ended";
@@ -192,7 +192,7 @@
     st.t0 = Date.now() - 1000 * (+info.age_s || 0); clearInterval(st.timer); st.timer = setInterval(tick, 500); tick();
     $("callerNumber").textContent = info.from || ""; $("activeName").textContent = info.from || "Call in progress";
     $("phone").dataset.state = "active"; show("active"); setBadge("watching"); lockScreen();
-    const ts = new Date().toISOString(); BF.onEvent && BF.onEvent({ type: "call.answered", call_id: id, ts, data: { by: "resume" } });
+    BF.resumed = true; const ts = new Date().toISOString(); BF.onEvent && BF.onEvent({ type: "call.answered", call_id: id, ts, data: { by: "resume" } });
     if (info.handoff) { BF.onEvent && BF.onEvent({ type: "handoff.started", call_id: id, ts, data: {} }); showHandoff(); }
   }
 
@@ -204,7 +204,9 @@
     if (SERVER) {
       if (!ws) connectWS();
       // F10: a reload / iOS resume in the middle of a call must not lose it: ask the hub for the active call (paired /demo/status: active_call_ids = ["id"] or [{call_id, from, age_s, handoff}], top level or in flags) and re-subscribe /listen + /talk.
-      BF.hubFetch("/demo/status?format=json").then(r => r.ok ? r.json() : null).then(j => { const ids = j && (j.active_call_ids || (j.flags && j.flags.active_call_ids)); if (Array.isArray(ids) && ids.length) resumeCall(ids[ids.length - 1]); }).catch(() => {});
+      BF.hubFetch("/demo/status?format=json").then(r => r.ok ? r.json() : null).then(j => { const f = (j && j.flags) || {}, det = j && (j.active_calls_detail || f.active_calls_detail), ids = j && (j.active_call_ids || f.active_call_ids);
+        if (Array.isArray(det) && det.length) { const c = det.filter(x => x && x.call_id && x.answered !== false).pop(); if (c) resumeCall(c); }   // active_calls_detail: [{call_id, from, age_s, handoff, answered}] (paired only); a call that is still ringing is not resumed
+        else if (Array.isArray(ids) && ids.length) resumeCall(ids[ids.length - 1]); }).catch(() => {});
       // Honest footer: a hub in fallback/demo mode is replaying a recorded story, not a live phone line (fail soft: keep "live" if unknown).
       fetch(HUB + "/demo/status?format=json").then(r => r.json()).then(j => { const f = (j && j.flags) || {}; if (f.FALLBACK || f.DEMO_MODE) { $("src").textContent = "· replay (recorded demo)"; BF.replay = true; } }).catch(() => {});
     }
