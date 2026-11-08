@@ -84,3 +84,34 @@ Frozen detector (detection/ runtime unchanged since p2-known-good-0750), local e
 Greeting-only (d) is eng2's. Findings: 8/8 alert, all before the payment line, but **card 7 is the tight one: 0.6 / 0.8 s margin, so a slower read or a missed line 5 means the alert lands with or after the Zelle line.** Latest alerts on my cards: card 7 (both voices), then card 8 Jason (22.8 s) and card 8 Mia (19.5 s).
 Smallest tip for a loose read: card 7, say lines 3 and 5 exactly ("If it's not paid today, we close the account and report you for check fraud", "Pay it now") and do not skip line 4; card 6, say "AnyDesk" clearly and keep line 3 (the code ask); card 8, keep line 4 ("move your money to a verified account"); card 10, keep line 3 (account number + texted code) and line 4 (the $1,800 deposit). Paraphrase tests are eng2's pass, not mine: the cue column comes from the alert chips, not from dropping lines.
 Not done: n=1 per card+voice (±1-2 s run to run, LLM latency varies), no real PSTN, no greeting-only, no dropped-cue run, no 2nd run for card 7 to measure the margin spread.
+
+### Judge bucket verification (#147), eng2 part: demo card, greeting-only for all 9, paraphrase pass
+Method: frozen detector (code = tag p2-known-good-0750, detection/ unchanged), scratch hub + P2 on my ports (8190/8102, temp hub DB, P2_ENGINE=local with llama via the WSL gateway, never the live hub), phone-quality synthetic TTS (`pstn_cards.build`: -28 dBFS, 300-3400 Hz band-pass, noise 25 dB SNR; Magpie voices Mia and Jason), one call at a time, socket guard on :8100 (the driver paused while real calls were open), driver `detection/eval/judge_verify.py`. Alert time and scores are read from the scratch P2's own log (exact), seconds are from the stream start unless "from first word" (first word = 1.0 s after stream start). n=1 run per cell, synthetic voices only.
+
+**Demo / Judge card (trimmed 3 lines: pitch, secure line + portal, Zelle line), full call:**
+| card | voice | alert | fires on | s from first word | before the Zelle (payment) line | margin | before line 2 (secure line) | max s |
+|---|---|---|---|---|---|---|---|---|
+| demo | Mia | yes, 8.6 s | line 1 (the pitch itself, mid-line: line 1 ends 10.2 s) | 7.6 s | yes | +12.2 s (Zelle line starts 20.8 s) | yes, +2.8 s | 1.00 |
+| demo | Jason | yes, 10.6 s | line 1 (mid-line: line 1 ends 12.1 s) | 9.6 s | yes | +14.8 s (Zelle line starts 25.5 s) | yes, +2.7 s | 1.00 |
+
+**Greeting line ALONE (first line of each card, then silence): no alert on 16 of 16 bucket greetings.**
+| card | Mia max s | Jason max s |
+|---|---|---|
+| 1 Safe account | 0.05 | 0.05 |
+| 2 Zelle reversal | 0.05 | **0.40** (watch band, below 0.80) |
+| 4 New device login | 0.05 | 0.05 |
+| 5 Inside job | 0.05 | 0.05 |
+| 6 Screen share | 0.05 | 0.05 |
+| 7 Bounced check | 0.05 | 0.05 |
+| 8 Bank plus police | 0.05 | 0.05 |
+| 10 Account verification | 0.05 | 0.05 |
+| demo (line 1) | 0.95, ALERT 8.6 s | 0.95, ALERT 10.5 s |
+The demo card is the exception by design: its "first line" is already the whole pitch (draining your account, safe account, don't tell the branch), not a greeting. Card 2 with Jason touched 0.40 on "This is Marcus with Zelle disputes... someone just sent $1,800 out" (a transfer notice reads as watch, never an alert).
+
+**Paraphrase pass (the key cue line dropped, the rest read; Mia; the 3 latest-alerting cards from eng1's rows so far: 7 at 23.1 s, 8 at 19.5 s, 10 at 18.4 s; eng3's cards 1/2/4/5 were not available to me when I chose):**
+| card | dropped line (cue) | alert | fires on | s from first word | before payment line | margin | max s | risk / smallest tip |
+|---|---|---|---|---|---|---|---|---|
+| 7 Bounced check | L5 "Pay it now and we'll keep this off your record." | 36.5 s | the payment step itself (line 5; the alert lands 3.3 s AFTER the Zelle line ends at 33.2 s, on the model path) | 35.5 s | **no** | -14.9 s (payment line starts 21.6 s) | 0.95 | full card had only +0.6 s margin; without "pay it now / off your record" nothing fires before the Zelle line. Tip: say "pay it now, we'll keep this off your record" (urgency + secrecy), or read the payment line without trailing off |
+| 8 Bank plus police | L4 "To prove you're not involved, you need to move your money to a verified account today." | 20.3 s | line 4, the sealed-investigation line ("if you tell your bank or your family, you'll be charged too") | 19.3 s | yes | +3.1 s | 0.95 | the secrecy-under-threat line carries it; margin shrinks from +8.2 s (full) to +3.1 s. Tip: always read the "sealed investigation, don't tell your bank or family" line |
+| 10 Account verification | L4 "We also need a $1,800 verification deposit. It's refunded within 24 hours." | 18.5 s | line 4, the deadline/closure line ("if we don't finish today the account is closed and your balance is mailed as a paper check") | 17.5 s | yes | +4.2 s | 0.95 | margin shrinks from +10.2 s (full) to +4.2 s. Tip: keep either the $1,800 deposit line or the "closed today" threat line |
+Caveats: one run per cell, one voice for the paraphrase pass, synthetic TTS (no accents or handset noise), alert times are from the stream start (a real call adds about 0.5 s for the relay). First attempts of this driver returned empty events (hub websocket path, then a call-id regex) and were discarded; the numbers above are from the corrected run.
