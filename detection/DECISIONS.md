@@ -1,2 +1,5 @@
 - eng2: STT = NVIDIA hosted Parakeet-CTC-1.1B via Riva gRPC (NVCF, our NVIDIA_API_KEY) on endpointed utterances (offline_recognize), because it is on-brand for the NVIDIA track and measured 0.4-0.5 s after endpoint on synthetic audio; faster-whisper base.en int8 is the automatic fallback (P2_STT=whisper forces it).
 - eng2: endpointing = energy VAD (adaptive noise floor), 450 ms silence (P2_ENDPOINT_MS), because it is simple and keeps alert latency low; finals only, no partials.
+- eng1: cloud primary = nemotron-3.5-lightning-30b-a3b with enable_thinking=false + json_object, because thinking-on leaves empty content and costs ~300 ms more (contracts/models.md).
+- eng1: no Super verifier in the live path, because no tested Super is servable (3-super 404) and the 2.5 s budget is tight; rules + one model is simpler.
+- eng1: rule backstop only raises (floor 0.82 hard ask, 0.9 gift_card/otp, 0.95 2+ asks or ask+secrecy, 0.85 injection), negation guard ("never ask for a code"), because caller text is untrusted.
