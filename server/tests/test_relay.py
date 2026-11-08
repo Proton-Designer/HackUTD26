@@ -1,0 +1,73 @@
+import asyncio, base64, json
+import websockets
+from fastapi.testclient import TestClient
+from server import relay
+from server.main import app
+
+def fr(i, track="inbound"):
+    return {"event": "media", "media": {"track": track, "chunk": str(i), "timestamp": str(i * 20), "payload": base64.b64encode(bytes([i % 256]) * 160).decode()}}
+
+async def _server(handler):
+    srv = await websockets.serve(handler, "127.0.0.1", 0)
+    return srv, srv.sockets[0].getsockname()[1]
+
+def run(coro):
+    return asyncio.run(coro)
+
+def test_p2_always_p3_after_handoff_and_echo_back(monkeypatch):
+    async def go():
+        p2, p3 = [], []
+        async def h2(ws):
+            async for m in ws: p2.append(json.loads(m))
+        async def h3(ws):
+            async for m in ws:
+                d = json.loads(m); p3.append(d)
+                if d["event"] == "media":
+                    await ws.send(json.dumps({"event": "media", "media": {"payload": d["media"]["payload"]}}))
+                    await ws.send(json.dumps({"event": "mark", "mark": {"name": "m"}}))
+        s2, port2 = await _server(h2); s3, port3 = await _server(h3)
+        monkeypatch.setenv("P2_STT_URL", f"ws://127.0.0.1:{port2}"); monkeypatch.setenv("P3_DECOY_URL", f"ws://127.0.0.1:{port3}")
+        back = []
+        async def to_caller(f): back.append(f)
+        await relay.open("c1", to_caller)
+        await relay.caller_frame("c1", {"event": "connected"})
+        await relay.caller_frame("c1", {"event": "start", "stream_id": "S1", "start": {}})
+        for i in range(1, 6): await relay.caller_frame("c1", fr(i))
+        await asyncio.sleep(0.2)
+        assert [m["event"] for m in p2] == ["connected", "start"] + ["media"] * 5 and p3 == []   # P2 always, P3 not yet
+        await relay.caller_frame("c1", fr(99, track="outbound"))  # never enters
+        assert await relay.start_decoy("c1")
+        for i in range(6, 9): await relay.caller_frame("c1", fr(i))
+        await asyncio.sleep(0.3)
+        assert [m["event"] for m in p3][:2] == ["connected", "start"] and p3[1]["stream_id"] == "S1"
+        assert [m["event"] for m in p3[2:]] == ["media"] * 3          # only caller media after handoff
+        assert [b["event"] for b in back].count("media") == 3 and any(b["event"] == "mark" for b in back)
+        assert len([m for m in p2 if m["event"] == "media"]) == 8      # still fanned to P2 (outbound dropped)
+        await relay.close("c1"); s2.close(); s3.close()
+    run(go())
+
+def test_p3_crash_and_p2_down_fail_open(monkeypatch):
+    async def go():
+        lost = []
+        async def h3(ws):
+            await ws.recv(); await ws.recv(); await ws.close()   # crash right after handshake
+        s3, port3 = await _server(h3)
+        monkeypatch.setenv("P3_DECOY_URL", f"ws://127.0.0.1:{port3}"); monkeypatch.setenv("P2_STT_URL", "ws://127.0.0.1:1")  # P2 unreachable
+        async def to_caller(f): pass
+        await relay.open("c2", to_caller, on_decoy_lost=lambda cid: lost.append(cid))
+        assert await relay.start_decoy("c2")
+        for i in range(30):
+            await relay.caller_frame("c2", fr(i)); await asyncio.sleep(0.01)   # must never raise
+        await asyncio.sleep(0.3)
+        assert lost == ["c2"] and relay.stats("c2")["decoy_active"] is False
+        await relay.close("c2"); s3.close()
+        monkeypatch.setenv("P3_DECOY_URL", "ws://127.0.0.1:1")
+        await relay.open("c3", to_caller); assert await relay.start_decoy("c3") is False; await relay.close("c3")
+        await relay.caller_frame("nope", fr(1))  # unknown call: no raise
+    run(go())
+
+def test_builtin_echo_decoy():
+    c = TestClient(app)
+    with c.websocket_connect("/decoy-echo/x") as ws:
+        ws.send_text(json.dumps(fr(1)))
+        assert json.loads(ws.receive_text())["media"]["payload"] == fr(1)["media"]["payload"]

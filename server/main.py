@@ -5,7 +5,7 @@ from fastapi import HTTPException, Request, FastAPI, WebSocket, WebSocketDisconn
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import pathlib
-from . import bus, db, routing, replay, ops
+from . import bus, db, routing, replay, ops, relay
 
 log = logging.getLogger("hub")
 app = FastAPI(title="Backfire hub (Simulated carrier network)")
@@ -20,6 +20,8 @@ def _auth(token):
 
 ACTIONS = {"continue", "scammer_get_scammed", "hang_up"}
 ingested: list = []
+
+app.include_router(relay.router)
 
 def mount_router(router, prefix=""):
     """Mount point for routers from voip/ and other pipelines."""

@@ -31,3 +31,11 @@ P1 --> P2 /stt/{call_id}   (always, caller frames)
 after handoff: P1 --> P3 WSS /decoy/{call_id} (caller frames), P3 media/clear --> P1 --> Telnyx stream --> caller hears decoy
 ```
 Never use forking. Maria's audio is never streamed. Fail open: if the relay breaks the call stays connected.
+
+### Media relay seam (TASK-013, `server/relay.py`; voip/ calls it in-process)
+All async, none raises, none blocks on P2/P3 (bounded queues, drop on full).
+- `await relay.open(call_id, send_to_caller, on_decoy_lost=None)`; `send_to_caller(frame: dict)` writes a Telnyx `media`/`clear`/`mark` frame to the Telnyx WS.
+- `await relay.caller_frame(call_id, frame)` for EVERY Telnyx frame (`connected`/`start`/`media`/`stop`; dict or JSON str). Always forwarded verbatim to P2 (`P2_STT_URL` -> `WS /stt/{call_id}`; or in-process `relay.feed_audio_hook(call_id, frame)`). After `start_decoy`, `media`/`stop` also go to P3. Media whose `track` is not `inbound` is dropped (Maria's audio never enters).
+- `await relay.start_decoy(call_id) -> bool`: connects to `P3_DECOY_URL` -> `WSS /decoy/{call_id}` (unset: built-in echo decoy `/decoy-echo/{call_id}` on the hub), sends `connected` + `start` (stream_id = Telnyx stream id, `custom_parameters.call_id`). P3 `media`/`clear`/`mark` -> `send_to_caller`. False = P3 unreachable (decoy not started; call unaffected).
+- `await relay.stop_decoy(call_id)`, `await relay.close(call_id)`. `on_decoy_lost(call_id)` fires if P3 drops mid-call (voip may restore Maria).
+- Latency: `relay_decoy_rtt_ms` (caller frame -> decoy reply) and `relay_p2_send_ms`, sampled, in `logs/latency.jsonl` / `GET /demo/latency`.
