@@ -8,7 +8,8 @@ Written by the dev (Fable) session for the P1 lead. Live demo folder was only RE
 | 10:22 | baseline of the dev worktree | — | server 116 pass, decoy 32 pass, intel 44 pass, e2e 49 pass |
 | 10:48 | **Task 2 done: `/listen` 403 reconnect loop** (root cause below, risk 5) | `f827838` pushed to `finalized-idea-backfire` | server **117** pass (new test), decoy 32, intel 44, e2e **50** pass (new check) |
 | 10:50 | **Task 1 done: this report** | — | — |
-| | Task 3 (UI round-3 safe items): in progress | | |
+| 11:20 | **Task 3 done: UI round-3 safe items** (one primary color = the brand pink for every primary action/on-state, green only on Answer, red only destructive, amber only risk; Live Guard is a real `role=switch` in the card title row, same id `guardToggle`; landscape alert (812x375) is two columns: title/tag/chips left, Fire Back / Continue / Hang up right, all buttons on screen: measured bottoms 282 px of 375) | next commit | e2e **50** pass (one run had step 6 `blocklist.updated` time out at 12 s with no code change: intel agent latency, rerun 50/50; flagged below as risk 11); screenshots at 375, 390, 812x375 in the dev scratchpad (`ui3/`) |
+| | Task 4: waiting for the lead's OK on the list at the end; meanwhile doing the customer-app-only small items (risk 2 resume, risk 9 per-call counters) | | |
 
 ## Top 10 remaining risks for the judged demo (ranked)
 
@@ -51,6 +52,10 @@ Written by the dev (Fable) session for the P1 lead. Live demo folder was only RE
 ### 10. UI tells (round-3 skipped items) that a judge sees in the first 10 s
 **Evidence:** `FEEDBACK.md` round 3: five competing hues (pink Fire Back, green, red, amber, white), Live Guard as a button instead of a switch, landscape alert buttons below the fold, root font-size pinned at 16 px, Inter from Google Fonts (third-party request from a privacy app, flash of fallback font on venue Wi-Fi).
 **Fix:** task 3 (safe subset: one primary color, Live Guard switch, landscape alert fit); self-hosted Inter and root font-size 100 % as follow-ups; no transitions/fades (risk of iOS repaint bugs on demo day).
+
+### 11. e2e flake: `blocklist.updated` can take > 12 s (intel agent latency)
+**Evidence:** one of three e2e runs today failed only `6 blocklist.updated for the scammer - seen: []` (12 s wait) with no code change between runs; live calls landed the block ~2.2 s after `call.ended`. If the NVIDIA call behind `intel.agent` stalls, the command center's block and the app's "Blocked for you" row arrive late (the app already falls back to "Sent to Backfire" after 5 s, so it degrades gracefully).
+**Fix:** keep; make the intel LLM timeout + rules fallback explicit (lead's call) and raise the e2e wait to 20 s so the suite is a reliable gate.
 
 ## Task 4 candidates (low risk, high value; waiting for the lead's OK)
 1. **Risk 1b**: shared AudioContext + AudioWorklet mic in the customer app (customer app only, but touches the live audio path: needs one on-phone test before promotion).

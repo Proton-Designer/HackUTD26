@@ -123,11 +123,10 @@ if (!Element.prototype.replaceChildren) Element.prototype.replaceChildren = func
   <!-- PROTECTION: three sections (Status, Activity, Privacy & voice) -->
   <section id="protView" class="screen left" hidden>
     <h1>Protection</h1>
-    <section class="card" aria-labelledby="hStatus"><h2 id="hStatus">Status</h2>
+    <section class="card" aria-labelledby="hStatus">
       <div class="group">
-        <h3>Live Guard</h3>
+        <div class="row-switch"><h2 id="hStatus">Live Guard</h2><button class="switch" id="guardToggle" type="button" role="switch" aria-checked="true" aria-labelledby="hStatus"><span class="knob" aria-hidden="true"></span></button></div>
         <p id="guardState" class="sub"></p>
-        <button class="big outline" id="guardToggle"></button>
         <div id="guardOffBox" class="confirm" hidden role="group" aria-label="Turn Live Guard off">
           <p>Turn Live Guard off? Backfire will stop watching your calls.</p>
           <label class="check"><input type="checkbox" id="guardAlso"><span>Also delete my voice</span></label>

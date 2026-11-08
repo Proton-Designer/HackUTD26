@@ -3,6 +3,7 @@
   font-size:16px;
   --bg:#0e1116;--surface:#171c25;--surface2:#1d2431;--line:#2a3242;--fg:#f4f6fa;--mut:#9aa3b2;
   --pink:#dc1675;--pink-ink:#ff9ac7;--pink-bg:#3a1228;--pink-line:#7a2150;
+  --primary:var(--pink);--primary-ink:var(--pink-ink);--primary-bg:var(--pink-bg);--primary-line:var(--pink-line);   /* UI review 3: ONE primary (the brand). Green = Answer only, red = destructive only, amber = risk only */
   --ok:#147a38;--ok-ink:#7df0a0;--ok-bg:#14301f;
   --bad:#d6283f;--bad-ink:#ff8a9a;--bad-line:#5a2430;
   --amber-ink:#ffd479;--amber-bg:#3a2a10;--info-bg:#1a2540;--info-line:#4a6cff;
@@ -274,3 +275,41 @@ details.keep>summary{cursor:pointer}
 details.keep>summary::after{content:"";width:10px;height:10px;margin-left:auto;border-right:2px solid var(--mut);border-bottom:2px solid var(--mut);transform:rotate(45deg);transition:transform .15s ease}
 details.keep[open]>summary::after{transform:rotate(-135deg)}
 input[type=checkbox]{accent-color:var(--ok)}
+
+/* UI review 3 (round 2): one primary color. Every primary action, "on" state and progress tint uses the brand; green stays on Answer only. */
+.accept{background:var(--primary)}
+#answerBtn.accept{background:var(--ok)}
+.badge.watching,.badge.guard.watching{background:var(--primary-bg);color:var(--primary-ink);border-color:var(--primary-line)}
+.mic{background:var(--primary)}
+.meter i{background:var(--primary-ink)}
+.dot.live{background:var(--primary-ink);box-shadow:0 0 8px var(--primary-ink)}
+.note{background:var(--primary-bg);border-color:var(--primary-line)}
+.summary b.ok{color:var(--primary-ink)}
+.trust li::before{background:var(--primary-ink)}
+input[type=checkbox]{accent-color:var(--primary)}
+#pairPin:focus,input[inputmode]:focus,input[type=text]:focus,input:not([type]):focus{outline:none;border-color:var(--primary-line);box-shadow:0 0 0 3px var(--primary-bg)}
+
+/* UI review 3 (round 2): Live Guard is a real switch (role=switch, aria-checked), in one row with the card title */
+.row-switch{display:flex;align-items:center;justify-content:space-between;gap:var(--sp3);min-height:var(--tap)}
+.row-switch h2{font-size:var(--fs-lg)}
+.switch{position:relative;flex:none;width:56px;height:32px;padding:0;border-radius:99px;border:2px solid var(--line);background:var(--surface2);cursor:pointer;transition:background .15s ease,border-color .15s ease}
+.switch .knob{position:absolute;top:2px;left:2px;width:24px;height:24px;border-radius:50%;background:var(--mut);transition:transform .15s ease,background .15s ease}
+.switch[aria-checked=true]{background:var(--primary);border-color:var(--primary)}
+.switch[aria-checked=true] .knob{transform:translateX(24px);background:#fff}
+.switch:focus-visible{outline:3px solid #fff;outline-offset:2px}
+
+/* UI review 3 (round 2): landscape phone (812x375): the alert's buttons must not sit below the fold. Two columns: what we saw | what to do. */
+@media (orientation:landscape) and (max-height:480px){
+  .status{min-height:40px;padding:var(--sp1) 0}
+  #active[data-view=alert]{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto auto auto minmax(0,1fr) auto;column-gap:var(--sp4);row-gap:var(--sp1);align-items:start;text-align:left;padding-top:var(--sp1)}
+  #active[data-view=alert] .who{grid-column:1;grid-row:1;display:flex;align-items:baseline;gap:var(--sp3)}
+  #active[data-view=alert] .who h1{font-size:var(--fs-lg);white-space:nowrap}
+  #active[data-view=alert] .alert-title{grid-column:1;grid-row:2;font-size:var(--fs-xl);margin-top:0}
+  #active[data-view=alert] .alert-tag{grid-column:1;grid-row:3}
+  #active[data-view=alert] .chips{grid-column:1;grid-row:4;min-height:0;overflow:auto;padding:var(--sp1) var(--sp3)}
+  #active[data-view=alert] .chips li{padding:4px 0;font-size:var(--fs-sm)}
+  #active[data-view=alert] .alert-actions{grid-column:2;grid-row:1/6;align-self:stretch;justify-content:center;margin-top:0}
+  #active[data-view=alert] .gets{min-height:56px}
+  #active[data-view=alert] .handoff,#active[data-view=alert] .observer,#active[data-view=alert] .keep-open{grid-column:1/3;grid-row:5}
+  #active[data-view=alert] .mic{display:none}
+}
