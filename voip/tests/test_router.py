@@ -183,6 +183,16 @@ def test_low_risk_interrupted_by_high_does_not_restore(monkeypatch):
     asyncio.run(go())
     assert "handoff.restored" not in _types(sid)
 
+def test_fallback_engine_risk_does_not_restore(monkeypatch):
+    fr = FakeRelay(); monkeypatch.setattr(R, "_hub_relay", lambda: fr); monkeypatch.setattr(R, "RESTORE_LOW_S", 0.5)
+    sid = "sess-r4-1234567"; R.CALLS[sid] = _state(); R.CALLS[sid]["maria_alive"] = True
+    async def go():
+        R.LOOP = asyncio.get_running_loop(); await R.handoff(sid)
+        for _ in range(4):
+            bus.publish("risk.update", sid, {"s": 0.1, "engine": "fallback"}); await asyncio.sleep(0.3)
+    asyncio.run(go())
+    assert "handoff.restored" not in _types(sid)
+
 def test_no_restore_after_window_and_legit_flag(monkeypatch):
     fr = FakeRelay(); monkeypatch.setattr(R, "_hub_relay", lambda: fr); monkeypatch.setattr(R, "RESTORE_LOW_S", 0.5)
     sid = "sess-r3-1234567"; R.CALLS[sid] = _state(); R.CALLS[sid].update(handed_off=True, restore_deadline=time.time() - 1, low_since=time.time() - 5)

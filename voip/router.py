@@ -349,7 +349,7 @@ def _on_bus(ev):
         if t == "user.action":
             if d.get("action") == "scammer_get_scammed": asyncio.run_coroutine_threadsafe(handoff(sid), LOOP)
             elif d.get("action") == "hang_up": asyncio.run_coroutine_threadsafe(_maria_hangup(sid), LOOP)
-        elif t == "risk.update" and isinstance(d.get("s"), (int, float)):
+        elif t == "risk.update" and isinstance(d.get("s"), (int, float)) and d.get("engine") != "fallback":   # fallback scores never drive restore/legit
             LOOP.call_soon_threadsafe(_note_risk, sid, float(d["s"]))
     except Exception:
         log.exception("voip bus observer failed")
