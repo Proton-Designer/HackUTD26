@@ -125,6 +125,17 @@ def test_status_reports_key_presence_never_value(monkeypatch):
     assert f["NVIDIA_API_KEY_set"] is True and f["intel_engine"].startswith("nemotron:")
     assert "SECRETVALUE" not in r.text
 
+def test_status_p2_probe_derives_from_stt_url(monkeypatch):
+    from server import ops
+    monkeypatch.delenv("P2_BASE", raising=False)
+    assert ops._remote_base("P2_BASE") is None
+    monkeypatch.setenv("P2_STT_URL", "wss://p2.example.com:9000/ignored")
+    assert ops._remote_base("P2_BASE") == "https://p2.example.com:9000/healthz"
+    monkeypatch.setenv("P2_STT_URL", "ws://127.0.0.1:8100")
+    assert ops._remote_base("P2_BASE") == "http://127.0.0.1:8100/healthz"
+    monkeypatch.setenv("P2_BASE", "http://explicit:1")
+    assert ops._remote_base("P2_BASE") == "http://explicit:1"
+
 def test_token_required(monkeypatch):
     import server.main as m
     monkeypatch.setattr(m, "HUB_TOKEN", "s3")

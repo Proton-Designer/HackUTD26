@@ -45,6 +45,22 @@ def _url(env, path, default=None):
         base = base.replace("http", "ws", 1)
     return f"{base.rstrip('/')}{path}" if base else default
 
+async def _connect_p2(url):
+    """Open WS /stt/{call_id} on P2. When PIPELINE_TOKEN is set send it as x-pipeline-token (header); if this websockets build
+    can't take headers, fall back to ?token=. Never logged."""
+    import websockets
+    tok = os.environ.get("PIPELINE_TOKEN")
+    if not tok:
+        return await websockets.connect(url)
+    try:
+        return await websockets.connect(url, additional_headers={"x-pipeline-token": tok})
+    except TypeError:   # older websockets (extra_headers) or unknown kwarg
+        try:
+            return await websockets.connect(url, extra_headers={"x-pipeline-token": tok})
+        except TypeError:
+            from urllib.parse import quote
+            return await websockets.connect(url + ("&" if "?" in url else "?") + "token=" + quote(tok, safe=""))
+
 async def open(call_id, send_to_caller, on_decoy_lost=None):
     try:
         if call_id in _S:
@@ -95,7 +111,7 @@ async def _p2_pump(s):
                     continue
                 url = _url("P2_STT_URL", f"/stt/{s.call_id}")
                 try:
-                    ws = await asyncio.wait_for(websockets.connect(url), 2)
+                    ws = await asyncio.wait_for(_connect_p2(url), 2)
                     for h in s.header:  # late connect: replay connected/start so P2 sees the stream header
                         await ws.send(json.dumps(h)); skip.add(h["event"])
                     if frame.get("event") in skip:

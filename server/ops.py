@@ -56,6 +56,20 @@ EXPECTED = {
     "P4 /intel":  ("/intel/actions", "P4_BASE"),
 }
 
+def _remote_base(env):
+    """Remote pipeline base URL for the probe: <env> if set, else derive the http(s) host from the relay's ws URL
+    (P2_STT_URL / P3_DECOY_URL, ws->http, path dropped) and probe /healthz there."""
+    b = os.environ.get(env)
+    if b:
+        return b
+    ws_env = {"P2_BASE": "P2_STT_URL", "P3_BASE": "P3_DECOY_URL"}.get(env)
+    u = os.environ.get(ws_env or "")
+    if not u:
+        return None
+    from urllib.parse import urlsplit
+    sp = urlsplit(u)
+    return f"{'https' if sp.scheme == 'wss' else 'http'}://{sp.netloc}/healthz" if sp.netloc else None
+
 def _probe(base):
     if not base:
         return "not configured"
@@ -98,7 +112,7 @@ def status(app):
     paths = _paths(app.routes)
     names = {}
     with ThreadPoolExecutor(4) as ex:
-        futs = {n: ex.submit(_probe, os.environ.get(env)) for n, (_, env) in EXPECTED.items()}
+        futs = {n: ex.submit(_probe, _remote_base(env)) for n, (_, env) in EXPECTED.items()}
         for n, (prefix, env) in EXPECTED.items():
             names[n] = {"mounted": any(p.startswith(prefix) for p in paths), "remote": futs[n].result()}
     try:

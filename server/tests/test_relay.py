@@ -71,3 +71,43 @@ def test_builtin_echo_decoy():
     with c.websocket_connect("/decoy-echo/x") as ws:
         ws.send_text(json.dumps(fr(1)))
         assert json.loads(ws.receive_text())["media"]["payload"] == fr(1)["media"]["payload"]
+
+
+def test_p2_gets_pipeline_token_header_only_when_set(monkeypatch):
+    async def go(tok):
+        seen = []
+        async def h2(ws):
+            seen.append(ws.request.headers.get("x-pipeline-token"))
+            async for m in ws: pass
+        s2, port2 = await _server(h2)
+        monkeypatch.setenv("P2_STT_URL", f"ws://127.0.0.1:{port2}")
+        if tok: monkeypatch.setenv("PIPELINE_TOKEN", tok)
+        else: monkeypatch.delenv("PIPELINE_TOKEN", raising=False)
+        async def to_caller(f): pass
+        await relay.open("ct", to_caller)
+        await relay.caller_frame("ct", {"event": "connected"})
+        await relay.caller_frame("ct", {"event": "start", "stream_id": "S", "start": {}})
+        await relay.caller_frame("ct", fr(1))
+        await asyncio.sleep(0.2)
+        await relay.close("ct"); s2.close()
+        return seen
+    assert run(go("s3cret")) == ["s3cret"]
+    assert run(go(None)) == [None]
+
+def test_p2_token_query_fallback(monkeypatch):
+    async def go():
+        got = []
+        async def h2(ws):
+            got.append(ws.request.path)
+            async for m in ws: pass
+        s2, port2 = await _server(h2)
+        monkeypatch.setenv("PIPELINE_TOKEN", "a b&c")
+        real = websockets.connect
+        def no_headers(url, **kw):
+            if kw: raise TypeError("no headers")
+            return real(url)
+        monkeypatch.setattr(websockets, "connect", no_headers)
+        ws = await relay._connect_p2(f"ws://127.0.0.1:{port2}/stt/x")
+        await ws.close(); s2.close()
+        return got
+    assert run(go()) == ["/stt/x?token=a%20b%26c"]
