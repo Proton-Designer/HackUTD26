@@ -43,3 +43,27 @@ def test_bad_action_and_ingest_stub():
     c = TestClient(app)
     assert not c.post("/user/action", json={"call_id": "x", "action": "nope"}).json()["ok"]
     assert c.post("/intel/ingest", json={"call_id": "x", "artifacts": []}).json()["stub"]
+
+def test_decoy_end_blocks_caller_and_callback_rejected():
+    c = TestClient(app)
+    with c.websocket_connect("/events") as ws:
+        for t, d in [("call.incoming", {"from": "+15555550142", "to": "+15555550100", "attestation": "C", "scam_id_score": 0.7}),
+                     ("call.routed", {"decision": "LIVE_GUARD", "reason": "x"}),
+                     ("handoff.started", {"restore_deadline": 1.0}),
+                     ("call.ended", {"ended_by": "caller", "duration_s": 5.0})]:
+            c.post("/events", json={"type": t, "call_id": "k1", "data": d})
+        types = [ws.receive_json()["type"] for _ in range(5)]
+        assert types[-1] == "blocklist.updated"
+    assert c.get("/routing/lookup", params={"from": "+15555550142"}).json()["decision"] == "BLOCKED_BACKFIRE"
+    log = c.get("/protection-log").json(); tok = log["blocked"][0]["undo_token"]
+    assert c.post("/protection-log/undo", json={"undo_token": tok}).json()["ok"]
+    assert c.get("/routing/lookup", params={"from": "+15555550142"}).json()["decision"] == "LIVE_GUARD"
+
+def test_reset_and_replay():
+    c = TestClient(app); db.add_confirmed("+15555550999")
+    assert c.post("/demo/reset").json()["seconds"] < 30
+    assert c.get("/protection-log").json()["blocked"] == []
+    import asyncio
+    from server import replay
+    asyncio.run(replay.run("c_demo_bank", speed=1000))
+    assert any(e["type"] == "call.ended" for e in bus.history)

@@ -3,6 +3,7 @@ import asyncio, time, json, logging
 log = logging.getLogger("hub.bus")
 _subs: set = set()  # asyncio.Queue
 _loop = None
+_observers: list = []
 history: list = []  # last events, for late WS subscribers / debugging
 HISTORY_MAX = 500
 
@@ -23,10 +24,19 @@ def publish(type_, call_id, data=None, ts=None):
                     q.put_nowait(ev)
             except Exception:
                 log.exception("subscriber enqueue failed")
+        for fn in list(_observers):
+            try:
+                fn(ev)
+            except Exception:
+                log.exception("observer failed")
         return ev
     except Exception:
         log.exception("publish failed")
         return None
+
+def add_observer(fn):
+    """fn(event) called synchronously on every publish; exceptions are swallowed."""
+    _observers.append(fn)
 
 def subscribe():
     global _loop

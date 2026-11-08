@@ -65,3 +65,9 @@ def reset_all(seed=True):
         q(f"DELETE FROM {t}")
     if seed:
         add_trusted("+15555550188", "Her bank (synthetic)")
+
+def log_call(call_id, from_number, decision, reason):
+    q("INSERT OR REPLACE INTO calls VALUES(?,?,?,?,?)", (call_id, norm(from_number), decision, reason, time.time()))
+
+def list_calls():
+    return [dict(r) for r in q("SELECT * FROM calls ORDER BY ts DESC LIMIT 50").fetchall()]

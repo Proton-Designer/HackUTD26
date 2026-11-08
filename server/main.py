@@ -2,7 +2,7 @@
 import asyncio, logging, os, time
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Body, Query
 from fastapi.middleware.cors import CORSMiddleware
-from . import bus, db, routing
+from . import bus, db, routing, replay
 
 log = logging.getLogger("hub")
 app = FastAPI(title="Backfire hub (Simulated carrier network)")
@@ -60,3 +60,52 @@ def intel_ingest(body: dict = Body(default={})):
     ingested.append(body)
     log.info("intel.ingest stub call_id=%s artifacts=%d", body.get("call_id"), len(body.get("artifacts") or []))
     return {"ok": True, "stub": True}
+
+# ---- TASK-007: blocklist stub, protection log, reset, DEMO_MODE replay ----
+CALLER_BY_CALL: dict = {}  # call_id -> caller number, filled from call.incoming
+DECOY_CALLS: set = set()   # call_ids where the decoy took over
+
+def _observe(ev):
+    """Bus observer: track callers, log calls, and on decoy call.ended add to confirmed_scammers."""
+    t, cid, d = ev["type"], ev["call_id"], ev["data"]
+    if t == "call.incoming":
+        CALLER_BY_CALL[cid] = d.get("from", "")
+    elif t == "call.routed":
+        db.log_call(cid, CALLER_BY_CALL.get(cid, ""), d.get("decision"), d.get("reason"))
+    elif t in ("handoff.started",) or (t == "call.answered" and d.get("by") == "decoy"):
+        DECOY_CALLS.add(cid)
+    elif t == "handoff.restored":
+        DECOY_CALLS.discard(cid)
+    elif t == "call.ended" and cid in DECOY_CALLS and CALLER_BY_CALL.get(cid):
+        num = CALLER_BY_CALL[cid]
+        token = db.add_confirmed(num, "Decoy session ended")
+        DECOY_CALLS.discard(cid)
+        bus.publish("blocklist.updated", cid, {"number": num, "scope": "her", "undo_token": token})
+
+bus.add_observer(_observe)
+
+@app.get("/protection-log")
+def protection_log():
+    blocked = [{"number": r["number"], "reason": r["reason"], "ts": r["ts"], "undo_token": r["undo_token"]} for r in db.list_confirmed()]
+    return {"blocked": blocked, "calls": db.list_calls()}
+
+@app.post("/protection-log/undo")
+def protection_undo(body: dict = Body(...)):
+    return {"ok": db.undo(body.get("undo_token", ""))}
+
+@app.post("/demo/reset")
+def demo_reset():
+    t0 = time.time()
+    db.reset_all(); bus.reset(); CALLER_BY_CALL.clear(); DECOY_CALLS.clear(); ingested.clear()
+    return {"ok": True, "seconds": round(time.time() - t0, 3)}
+
+@app.post("/demo/replay")
+async def demo_replay(body: dict = Body(default={})):
+    """DEMO_MODE: replay mock/events.json on WS /events. body: {call_id?: str, speed?: float}"""
+    asyncio.create_task(replay.run(body.get("call_id"), float(body.get("speed", 1.0))))
+    return {"ok": True}
+
+if os.environ.get("DEMO_MODE") == "1":
+    @app.on_event("startup")
+    async def _auto_replay():
+        asyncio.create_task(replay.run(None, 1.0, loop=True))
