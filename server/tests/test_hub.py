@@ -85,6 +85,18 @@ def test_reset_and_replay():
     asyncio.run(replay.run("c_demo_bank", speed=1000))
     assert any(e["type"] == "call.ended" for e in bus.history)
 
+def test_reset_seeds_intel_and_fails_open(monkeypatch):
+    c = paired()
+    r = c.post("/demo/reset").json()
+    assert r["ok"] and r["seeded"] and r["check"]["campaigns"] == 1 and r["check"]["actions"] == 0 and r["check"]["blocklist"] == 0
+    assert r["seed"]["sightings"] == 1
+    assert c.get("/routing/lookup", params={"from": "+12145550199"}).json()["decision"] == "LIVE_GUARD"
+    assert c.post("/demo/reset?seed=0").json()["seeded"] is False
+    import intel.seed_demo as sd
+    monkeypatch.setattr(sd, "seed", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom")))
+    r = c.post("/demo/reset").json()
+    assert r["ok"] and r["seeded"] is False and r["seed_error"] == "RuntimeError"
+
 def test_token_required(monkeypatch):
     import server.main as m
     monkeypatch.setattr(m, "HUB_TOKEN", "s3")

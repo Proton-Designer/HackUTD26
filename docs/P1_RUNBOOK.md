@@ -35,7 +35,7 @@ First run shows "Enter the code shown on the demo screen": type the DEVICE PIN p
 - [ ] Keep `scripts/run_hub --fallback` ready in a second terminal (use a different `HUB_PORT`).
 
 ## Reset between judges
-`scripts/reset_demo` (local) or `scripts/reset_demo <public URL>` (needs `x-hub-token` only if `HUB_TOKEN` is set). It clears hub calls/blocklist and the intel store and re-seeds the trusted bank number. It does NOT touch Telnyx or Maria's pairing.
+`scripts/reset_demo` (local) or `scripts/reset_demo <public URL>` (needs `x-hub-token` only if `HUB_TOKEN` is set). It clears hub calls/blocklist and the intel store and re-seeds the trusted bank number. It does NOT touch Telnyx or Maria's pairing. As of TASK-021 the same reset also runs `intel.seed_demo` in-process (hub's own intel DB) and prints the `--check` summary (expect 1 campaign, all else 0) plus the routing check for the judge number (must be `LIVE_GUARD`); `POST /demo/reset?seed=0` skips seeding. Details: `data/RESET.md` (P4a's doc).
 
 ## When X fails
 | failure | do |

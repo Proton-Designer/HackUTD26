@@ -184,11 +184,27 @@ def _reset_intel():
         log.exception("intel reset failed")
 
 @app.post("/demo/reset")
-def demo_reset(request: Request):
+def demo_reset(request: Request, seed: bool = Query(True)):
+    """One reset for everything (data/RESET.md): hub state + intel tables, then intel.seed_demo in-process
+    (yesterday's synthetic sighting) unless ?seed=0. Seeding fails open: reset still succeeds."""
     _auth(request.headers.get("x-hub-token"))
     t0 = time.time()
     db.reset_all(); bus.reset(); _reset_intel(); ops.reset(); CALLER_BY_CALL.clear(); DECOY_CALLS.clear()
-    return {"ok": True, "seconds": round(time.time() - t0, 3)}
+    out = {"ok": True, "seeded": False}
+    if seed and intel_api is not None:
+        try:
+            from intel import seed_demo
+            st = intel_api._store()
+            info = seed_demo.seed(st, quiet=True)
+            state = st.state()
+            out.update(seeded=True, seed={"campaign_id": info.get("campaign_id"), "status": info.get("status"),
+                                         "sightings": info.get("sightings"), "indicators": info.get("indicators")},
+                       check={k: (len(v) if isinstance(v, list) else v) for k, v in state.items()})
+        except Exception as e:
+            log.exception("seed_demo failed (reset itself succeeded)")
+            out["seed_error"] = type(e).__name__
+    out["seconds"] = round(time.time() - t0, 3)
+    return out
 
 @app.post("/demo/replay")
 async def demo_replay(request: Request, body: dict = Body(default={})):

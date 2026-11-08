@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
-# Reset demo state (< 30 s). Usage: scripts/reset_demo [hub_base_url]
+# One reset for the demo (< 5 s): hub calls/blocklist/intel tables wiped, then yesterday's synthetic sighting seeded
+# in-process (data/RESET.md). Usage: scripts/reset_demo [hub_base_url]   (default http://127.0.0.1:8000; ?seed=0 skips seeding)
+# Run against the hub's LOCAL url (not the tunnel). x-hub-token only matters if HUB_TOKEN is set.
+set -u
 BASE="${1:-http://127.0.0.1:8000}"
-curl -fsS -m 10 -H "x-hub-token: ${HUB_TOKEN:-}" -X POST "$BASE/demo/reset" && echo
+OUT=$(curl -fsS -m 15 -H "x-hub-token: ${HUB_TOKEN:-}" -X POST "$BASE/demo/reset") || { echo "reset failed: is the hub up at $BASE (and HUB_TOKEN right)?" >&2; exit 1; }
+echo "$OUT"
+echo "$OUT" | grep -q '"seeded":true' || echo "WARNING: intel not seeded (intel not mounted or seed_demo failed; see seed_error above)" >&2
+# the judge's number must route LIVE_GUARD, not BLOCKED_BACKFIRE
+echo -n "routing check +12145550199: "; curl -fsS -m 5 "$BASE/routing/lookup?from=%2B12145550199"; echo
