@@ -102,3 +102,21 @@ Result: no alert moved by more than 0.2 s versus the earlier numbers, 0 new fals
 | a9142648 | 05:08 | SCAM (IRS unpaid taxes + SSN ask) | +13.13 s | true positive |
 | ba80d152 | 05:37 | SCAM (IRS + gift cards + tell nobody) | +13.49 s | true positive |
 PSTN vs simulated for these three: not stated in any file I have (not guessed; asked the lead).
+
+## Caller-track mute (TASK-083, read only, 06:05; per-second RMS of the caller track in logs/audio, aggregates only)
+Zero = per-second RMS < 2 (digital zero, not line noise) after speech started. Stretch = start second + length in s, only runs > 1 s. P1's `689c3f6` (03:33) added per-second inbound RMS logging and 20 ms paced Maria injection; no commit claims a mute fix.
+| call | time | zero stretches > 1 s | vs 689c3f6 |
+|---|---|---|---|
+| 4d8dd2f8 | 03:04 | 5 (2-6 s each) | before |
+| 922262b2 | 03:06 | 1 (4 s + 11 s) | before |
+| 37cbc8e2 | 03:17 | 2 (3 s, 2 s) | before |
+| 8894eb46 | 03:20 | 2 (5 s, 7 s) | before |
+| 6352e850 | 03:26 | 6+ (longest 15 s at 54-69 s) | before (the scam-card miss) |
+| 497ef1d4 | 03:32 | 3 (2-3 s) | before |
+| 93c95fd6 | 03:34 | 3 (2-3 s) | before |
+| adad65a0 | 04:46 | 0 | after |
+| 0afc3446 | 05:03 | 0 | after |
+| 499a20d2 | 05:05 | 0 | after |
+| a9142648 | 05:08 | 0 | after |
+| ba80d152 | 05:37 | 0 | after |
+Verdict: **not seen since 689c3f6 (0 of 5 dumps), unproven for Maria talk-over.** The 5 later calls are continuously spoken scam scripts and none had Maria talking over the caller; no hub inrms log is kept, so the cause of the old gaps is not shown. Proof needs one talk-mode call with Maria speaking over a silent caller and the hub log kept (P1 rehearsal 09:00). The simulated b58cec24 (one 2 s gap) is not counted.

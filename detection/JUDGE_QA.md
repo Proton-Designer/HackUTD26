@@ -136,3 +136,9 @@ Same rules as above: n is small, all scam scripts are team-written, real calls a
 - Answer: Yes, a small number: 7-8 real Telnyx phone calls from teammates, 2 with scripted scams (SSN and IRS+OTP). Both alerted, at +12 s (adad65a0) and +14.9 s (499a20d2), during the ask, and the benign calls had 0 false alerts. n=2 scams with a script the team knows, so this is a smoke test, not recall.
 - Show: `detection/eval/REAL_CALLS.md`; `detection/PITCH_NUMBERS.md` row 12.
 - Don't say: "validated on real calls", "alerts in 5 seconds". Say "about 8 to 15 seconds on real calls".
+
+**20. "Why did you miss call 6352e850?"** (Owner: Ayman)
+- Answer: That one was our own plumbing, not the detector. On that test call the caller's audio reached us as digital zero for about 15 seconds while the scam script was read, so the detector never heard the words; it scored the greetings it did hear as safe. In the phone calls recorded after our 03:33 change to the audio path we see no such silence (0 of 5), and we are re-checking it with a rehearsal call where our own voice talks over the caller. So the claim is: 5 of 6 real scam calls alerted, and the 1 miss was upstream audio, not a wrong judgement.
+- Show: `detection/eval/REAL_CALLS.md` ("Caller-track mute"); `detection/PITCH_NUMBERS.md` row 14.
+- Don't say: "fixed" or "can't happen again". Say "not seen since 03:33, being verified". It is n=1 and the cause is not proven.
+
