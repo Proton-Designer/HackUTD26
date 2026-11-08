@@ -505,6 +505,7 @@ async def talk(ws: WebSocket, call_id: str):
     try:
         await ws.accept(subprotocol=proto)
         log.warning("talk %s accepted (%s)", call_id[:8], ident)
+        diag_last = 0.0
         tokens, last, n = float(TALK_FPS), time.monotonic(), 0
         while True:
             try:
@@ -518,9 +519,18 @@ async def talk(ws: WebSocket, call_id: str):
                 b64 = base64.b64encode(m["bytes"]).decode() if len(m["bytes"]) % 160 == 0 else None
             elif m.get("text") is not None:
                 try:
+                    if len(m["text"]) < 1024 and '"diag"' in m["text"][:12]:   # P1 09:20: the page's mic state (no audio), for silent-call diagnosis
+                        jm = json.loads(m["text"])
+                        n += 1
+                        if n % 25 == 0 and _call_ended(call_id):
+                            reason = "call ended"; break
+                        d = jm.get("diag") if isinstance(jm, dict) else None
+                        now_d = time.monotonic()
+                        if isinstance(d, dict) and len(d) <= 20 and now_d - diag_last >= 2.5:   # small flat dict, at most one line per 2.5 s per socket
+                            diag_last = now_d
+                            log.warning("talk %s diag: %s", call_id[:8], json.dumps({str(k)[:20]: (v if isinstance(v, (int, float, bool)) or v is None else str(v)[:40]) for k, v in d.items()})[:400])
+                        continue
                     jm = json.loads(m["text"])
-                    if isinstance(jm, dict) and "diag" in jm:   # P1 09:20: the page's mic state (no audio), for silent-call diagnosis
-                        log.warning("talk %s diag: %s", call_id[:8], json.dumps(jm["diag"])[:300]); continue
                     b64 = jm["payload"]
                     raw = base64.b64decode(b64, validate=True)
                     if not raw or len(raw) % 160 or len(raw) > 960: b64 = None
