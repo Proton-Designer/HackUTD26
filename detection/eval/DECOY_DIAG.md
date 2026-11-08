@@ -264,3 +264,14 @@ Scores by the same rubric (one scorer): demo [1,1,2] mean 1.33; card 2 [1,2,2,2]
 - haul: remote_app=AnyDesk; callback_phone=+18885550123; domain=backfire-demo.example; payment_handle=refunds department@backfire-demo.example; payment_handle=department@backfire-demo.example
 
 Findings (011b2a5): time to first decoy audio 1.37 / 1.47 / 2.13 s (3473a4a: 1.68-1.73 s; the demo run's first line took 1012 ms of LLM+TTS). Reply latency 573-1123 ms except ONE 2901 ms on the demo card's Zelle-line read-back (single sample; the 7 s LLM timeout is not close, but a 2.9 s silence is audible on a phone). The haul is unchanged: the handle is still `refunds.department@backfire-demo.example`, not the Nessie payee `refunds.dept@...` (STT hears "dept" as "department"), and card 6 still yields two partial handles; the bogus `zelle disputes@your bank` handle from the 3473a4a card-2 run did not appear this time (one run each, so not proof it is gone). Conversation quality: no website/handle loop on card 6 this time (the decoy engages with the AnyDesk code, the hackers' payment and the blocking payment), first lines remain generic ("I'm worried about my account. What should I do next?"). Not done: 1 run per cell, synthetic voice, 3 of 10 cards.
+
+### AFTER 8a6167b (P3 extractor canonicalises STT-expanded handles), same harness and cases, 1 run each
+| | demo | card 2 | card 6 |
+|---|---|---|---|
+| line scores (same rubric) | [2,2,2] 2.00 | [2,2,2,2] 2.00 | [2,2,2,1,2] 1.80 |
+| haul payment handle | `zelle:refunds.dept@backfire-demo.example` (correct, only handle) | `zelle:refunds.dept@backfire-demo.example` (correct, only handle) | WRONG: `zelle:refundsdepartment@backfire-demo.example` and `zelle:dept@backfire-demo.example`; no correct handle |
+| other haul | callback, domain, impersonated_org | callback, domain | AnyDesk, callback, domain |
+| first decoy audio | 1.56 s | 1.63 s | 1.65 s |
+| reply latency (ms) | 712 / 3434 / 645 | 664 / 623 / 640 / 683 | 713 / 663 / 711 / 961 / 767 |
+Mean over 12 lines = 1.92 (011b2a5: 1.50, 3473a4a: 1.67; all inside scorer noise). Stalls/bails/leaks 0; no bogus `zelle disputes@your bank`.
+Findings: the dept fix works on the demo card and card 2 (correct Nessie handle, no bogus handles). It does NOT cover card 6: its payment line reaches STT as "refunds department at backfire-demo.example" with no "dot" (the caller line is "refunds dot dept" read from `refunds.dept@`), the extractor splits it into `refundsdepartment@` and `dept@`, so card 6 would not match the Nessie payee. One run; the demo card is fine. One slow reply: 3434 ms on the demo card's first model reply (a long 2-sentence read-back of the phone number and portal; the 7 s LLM timeout is not near, but 3.4 s is a noticeable silence). Suggest P3: also canonicalise "refunds (no dot) department|dept at <domain>" and the split handle/domain forms `X@` + `dept@` (card 6 spoken form), and cap the read-back to one detail.
