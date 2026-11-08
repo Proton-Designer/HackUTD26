@@ -28,17 +28,26 @@ Run: bash detection/scripts/run.sh (:8100); tunnel: bash detection/scripts/tunne
 - **Auth and logs**: `PIPELINE_TOKEN` (if set) is required on WS `/stt` and `POST /detect`; unset = open and logged. `detection/scripts/call_report.py` prints a per-call timeline from `p2.log` (8e18ef4).
 
 ## Evaluation (synthetic, n=60 test rows: 33 scam / 27 legit)
-Numbers are from `detection/eval/RESULTS.md` (eng3, 1242399), the BEFORE table scored on code `20ca58a`, before the false-alarm fixes above. Thresholds were tuned on the dev split only, frozen in `FROZEN.json`, then the test split was scored once. All cells carry Wilson 95% CIs in RESULTS.md; n is small.
+Source: `detection/eval/RESULTS.md` (eng3, a1b35a7). BEFORE = code `20ca58a`; AFTER = trunk `1972d5d` (AI-address gating, clause negation, request-verb gate, few-shots). Thresholds were tuned on dev only, frozen in `FROZEN.json` and not retuned; the test split was scored once per code version. Cells show the value with its Wilson 95% CI; n is small.
 
-| test split | rules baseline (thr 0.85) | local Nemotron Nano 4B (thr 0.95) |
-|---|---|---|
-| scam recall | 85% (28/33) | 100% (33/33) |
-| adversarial / injection recall | 69% (9/13) / 86% (6/7) | 100% (13/13) / 100% (7/7) |
-| false alarm, all legit | 19% (5/27) | 7% (2/27) |
-| false alarm, keyword-bait legit | 57% (4/7) | 29% (2/7) |
-| latency p50 | 0 ms | 2.7 s |
+| test split | local BEFORE (thr 0.95) | local AFTER | rules baseline (thr 0.85) | production rules (`rule_scan`) |
+|---|---|---|---|---|
+| scam recall | 100% (33/33) [90-100] | 100% (33/33) [90-100] | 85% (28/33) [69-93] | _pending (eng3)_ |
+| adversarial recall | 100% (13/13) [77-100] | 100% (13/13) [77-100] | 69% (9/13) [42-87] | _pending_ |
+| false alarm, all legit | 7% (2/27) [2-23] | 7% (2/27) [2-23] | 19% (5/27) [8-37] | _pending_ |
+| false alarm, keyword-bait legit | 29% (2/7) [8-64] | 29% (2/7) [8-64] | 57% (4/7) [25-84] | _pending_ |
+| AI-address flag false positives | 49% (27/55) [36-62] | **2% (1/55) [0-10]** | 0% (0/55) [0-7] | _pending_ |
+| asks precision | 36% (56/155) [29-44] | **65% (50/77) [54-75]** | 82% (47/57) [71-90] | _pending_ |
+| asks recall | 95% (56/59) [86-98] | 85% (50/59) [73-92] | 80% (47/59) [68-88] | _pending_ |
+| latency p50 | 2736 ms | 1606 ms | 0 ms | _pending_ |
 
-Honesty notes: the cloud engine was **not scored on test** (the shared NVIDIA key returned 429s), so there is no cloud test number; cloud dev numbers exist but are optimistic (tuned on dev). The "rules" column is eng3's plain keyword baseline, not the production `rule_scan`. Local over-flags the AI-address field (27/55 false positives before the fix). The AFTER table (current code) goes in the slot below when TASK-028 lands.
+Honesty notes:
+- Thresholds were tuned on the dev split only; test was scored once per code version, never used to tune.
+- **Cloud was not scored on test** (the shared NVIDIA key returned 429s), so there is no cloud test number.
+- The fixes cleaned up the model's noisy fields (AI-flag false positives 49% to 2%, asks precision 36% to 65%) but **asks recall dropped 10 points (95% to 85%)**: an honest trade-off, since fewer spurious asks also means a few real ones are no longer listed. Scam recall and false-alarm rates on test did not change; most false-alarm gains were measured on dev (rules-only 5/27 to 0/27, local 9/27 to 1/27), where they are optimistic.
+- The "rules baseline" column is eng3's plain keyword scorer, not the production `rule_scan`; the production-rules column is being added. The latency change also reflects a lighter load on the model server, not only the code.
+- Scripts are short, team-written and synthetic; real STT text will be noisier.
+
 <!-- EVAL TABLE (eng3) -->
 ## Local engine + eval (eng3)
 Local engine (`engine=local`): Nemotron 3 Nano 4B `Q4_K_M` (nvidia/NVIDIA-Nemotron-3-Nano-4B-GGUF) served by llama.cpp `llama-server` on the laptop GPU (RTX 3050 Ti 4 GB).
