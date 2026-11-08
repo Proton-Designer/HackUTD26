@@ -100,6 +100,8 @@
 
   function onEvent(ev) {
     if (!ev || !ev.type) return;
+    // F1: while a call is ringing or in progress, EVERYTHING about another call (incl. its call.incoming) is ignored, by this file and by sim.js/talk.js (they hang off BF.onEvent)
+    if (st.callId && ev.call_id && ev.call_id !== st.callId && ["ringing", "active"].includes($("phone").dataset.state)) { log("ignored event for another call while busy", ev.type); return; }
     if (window.BF && BF.onEvent) BF.onEvent(ev);
     if (st.callId && ev.call_id && ev.call_id !== st.callId && ev.type !== "call.incoming") return;
     const d = ev.data || {};
