@@ -423,6 +423,39 @@ def scored_only(recs):
     return good, len(recs) - len(good)
 
 
+def _read_before(engine: str) -> list[dict]:
+    f = EVAL_DIR / "results" / "before" / f"{engine}-test.jsonl"
+    return [json.loads(l) for l in f.read_text().splitlines() if l.strip()] if f.exists() else []
+
+
+def before_after_section(fz: dict) -> list[str]:
+    """BEFORE (1242399 numbers, code at 20ca58a) vs AFTER (current trunk), same frozen thresholds, split=test."""
+    rules_after = {r["id"]: r for r in read_results("rules", "test")}
+    rules_before = {r["id"]: r for r in _read_before("rules")}
+    L = ["## Before vs after TASK-022/023 (split = test, thresholds unchanged)", "",
+         f"BEFORE = results/before/ (scored on code at `{fz.get('git_sha', 'n/a')}`, prior to AI-address gating, clause negation, request-verb gate, few-shots). "
+         f"AFTER = current trunk `{git_sha()}`. No retuning; thresholds tuned on dev only. The rules row is the standalone keyword baseline in run_eval.py, so it is identical by construction.", ""]
+    for e in ("local", "rules"):
+        b_all, a_all = _read_before(e), read_results(e, "test")
+        if not b_all or not a_all:
+            continue
+        t = fz["thresholds"].get(e, {}).get("threshold", DEFAULT_THRESHOLD)
+        bg, bn = scored_only(b_all)
+        ag, an = scored_only(a_all)
+        mb = compute_metrics(bg, t, rules_before)
+        ma = compute_metrics(ag, t, rules_after)
+        L += [f"**{e}** (thr {t}); rows scored before {mb['n']} (not scored {bn}), after {ma['n']} (not scored {an})", "",
+              "| metric | before | after |", "|---|---|---|"]
+        for name, k in [("scam recall", "recall"), ("adversarial recall", "adv_recall"),
+                        ("false alarm, all legit", "false_alarm"), ("false alarm, keyword-bait legit", "legit_bait"),
+                        ("addresses_ai false positives", "ai_fp"), ("asks precision", "asks_precision"),
+                        ("asks recall", "asks_recall")]:
+            L.append(f"| {name} | {pct(*mb[k])} | {pct(*ma[k])} |")
+        L.append(f"| /detect latency p50 (ms) | {mb['p50_ms']:.0f} | {ma['p50_ms']:.0f} |")
+        L.append("")
+    return L
+
+
 def build_report() -> str:
     fz = json.loads(FROZEN.read_text()) if FROZEN.exists() else {"thresholds": {}}
     engines = [e for e in ENGINES if read_results(e, "dev") or read_results(e, "test")]
@@ -471,13 +504,15 @@ def build_report() -> str:
         for t in types:
             L.append(f"| {t} | " + " | ".join("{}/{}".format(*ms[e]["recall_by_type"].get(t, (0, 0))) for e in have) + " |")
         L.append("")
+    L += before_after_section(fz)
     if missing:
         L += ["**Not scored (no results yet, e.g. NVIDIA key 429):** " + ", ".join(missing), ""]
     L += ["## Honest caveats", "",
           "- Scripts are short (4-5 lines) and written by the team, so models see cleaner text than a real STT stream.",
           "- Test n is small; intervals are wide. A 5-point gap between engines is not a finding.",
           "- 'First hard ask' is located by the rules baseline, so delay is relative to that reference, not human labels.",
-          "- No audio, no real callers, no real PII anywhere."]
+          "- No audio, no real callers, no real PII anywhere.",
+          "- Cloud test is not scored (NVIDIA 429); rows with any model-failure window are excluded and counted as not scored."]
     return "\n".join(L) + "\n"
 
 

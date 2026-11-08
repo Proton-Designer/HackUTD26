@@ -20,5 +20,7 @@
     }
   },
   "git_sha": "20ca58a",
-  "frozen_at": "2026-11-08T01:29:14-0600"
+  "frozen_at": "2026-11-08T01:29:14-0600",
+  "test_run_sha_before": "20ca58a",
+  "test_run_sha_after": "1972d5d"
 }
