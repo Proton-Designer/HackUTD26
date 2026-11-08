@@ -62,3 +62,44 @@ Examples (decoy generated line | what the scammer just said, shortened):
 - super, card 4 (2): "Oh no, a new phone in Miami? I really need to get them out right away. Should I just type the code into my banking app now?"
 - canned, all cases (0): "Oh, hi, sorry about that, I think the line cut out for a second there, who did you say was calling?"
 Observations: both generated arms say "my banking app" on most cards (allowed by SYSTEM, but repetitive); bolt on the demo card used "Oh no, why can't I tell anyone at the branch?" (2). One generated super line was 2 sentences + a line break. Caveats: 9 cases, 1 sample each, one scorer, the pre-handoff story here is the card's clean text, not P2's noisy STT; a real handoff may arrive mid-sentence; the opener also plays at once from a pre-rendered cache, a generated first line costs about 0.5 s of LLM + TTS before the decoy first speaks (call sees silence for that time unless a filler plays).
+
+## Context / instructions audit and prompt-variant test (eng1, 08:2x CT; ALL HANDS decoy)
+Method: the decoy's own code (`decoy.core` SYSTEM / chat / guard / Persona, `decoy.playbooks` classify / note / PULLS) with the same message assembly as `decoy/app.py` `reply()` (`[SYSTEM] + history[-16:] + [trailing SYSTEM steering note]`, pre-handoff caller lines as the first `<caller>` turn, OPENER as the first assistant turn). Replies scored blind (shuffled ids) by one scorer, 0-4 = in-character/natural (0-2) + on-goal (0-2), invented facts, naming an app first, or broken text docked. **Small n (12 replies per arm), one scorer: differences under about 0.3 are noise.** Tools and raw replies: `detection/eval/decoy_ab/prompt_variants*.py` and `*_replies.json`.
+
+### Result
+| arm (bolt-e4b unless noted) | cards | mean /4 |
+|---|---|---|
+| A current SYSTEM + trailing note, T0.8 | 1,7 | 2.00 |
+| B note folded into the last user turn | 1,7 | 2.62 |
+| C short SYSTEM (goal, 1-2 sentences, placeholders), no note | 1,7 | 2.38 |
+| D P1 candidate SYSTEM (`docs/patches/decoy-system-candidate.txt`) + trailing note, T0.6 | 1,7 | 3.12 |
+| super-vl + current (A), T0.8 | 1,7 | 3.38 |
+| super-vl + candidate (D), T0.6 | 1,7 | 3.25 |
+| **confound test, cards 1,4,7:** bolt + candidate T0.6 | 1,4,7 | **3.08** |
+| bolt + candidate T0.8 | 1,4,7 | 2.67 |
+| bolt + candidate + my 4 fixes (E), T0.6 | 1,4,7 | 2.92 |
+| super-vl + current (A), T0.8 | 1,4,7 | 2.67 (2.91 without one empty timeout reply) |
+
+(The first table was first scored with card 3, now pulled from the bucket; the numbers above exclude it. Latency in that run: bolt median 460 ms, super-vl 601 ms, p90 1.0 s.)
+
+Reading: the current prompt is the weak part on bolt (2.0 vs 3.4 for super-vl on the same prompt). The candidate prompt at T0.6 lifts bolt to about 3.1, level with super-vl. Temperature 0.8 to 0.6 alone is worth about 0.4 on the candidate prompt. My four fixes (E) did not beat the unmodified candidate (2.92 vs 3.08, a tie), and once the model echoed the note text ("[Have: nothing yet."), so E is not recommended. A short system prompt (C) loses the goal and does not help.
+
+### Top defects, with evidence and fix
+1. **Steering note forces a payment question from turn 1 and names the app.** `playbooks.note()` always says "Still need (next): the exact payment app and the handle/email/phone to send to" and the bank label reads "bank fraud team / safe account / Zelle reversal", while SYSTEM says "Never name a payee, app (Zelle, Venmo...) ... before the caller does". Evidence: after "Did you make that purchase?" the reply is "...I need to know what payment app I should use."; "Is it Zelle?" before the caller said it. Fix: no app names in `PLAYBOOKS[...]["label"]`; emit "Still need" only after a caller line mentions paying, sending or moving money. Caveat: in my test this cut the app question from 12 of 12 replies to 7 of 12 but did not raise scores.
+2. **Rule 1 vs 2 conflict and "read it back with one small part wrong".** SYSTEM rule 1 says react to what they said, rule 2 says nudge toward payment in the same reply, and the read-back rule applies to every number. Evidence on bolt: "Eight hundred and eighty?" for $1,800, "Ninety four zero dollars" for $940, "Eleven?" for a six-digit code. Fix: wrong read-back only for handles, URLs and spellings; repeat amounts exactly (the candidate already says "repeat it back exactly as you heard it").
+3. **Verbatim PULLS get parroted.** The note quotes a full sentence as "one idea". Evidence: "which app do I use for that, and what do I put in the send-to box?" in 6 of 12 current-prompt replies, even when nothing had been said about paying. Fix: pass the target as an instruction ("ask where to send it"), not a quoted sentence.
+4. **Candidate over-pushes payment.** "Your one job: get the caller to tell you exactly how to pay" plus "move them one step toward the payment details" made bolt ask "what payment app" in 12 of 12 replies (10 of 12 at T0.8), against 2 of 12 for super-vl on the current prompt. Fix: "Move toward the payment details only when the caller's last sentence is about paying or moving money; otherwise just react."
+5. **Code paths that break the call regardless of the model** (read from code and tested with sample lines, not seen on a live call):
+   - `PB.SUSPICION` matches "recorded", "automated", "machine" (tested: "This call is being recorded", "automated verification system" and "a machine operator" all trigger a goodbye);
+   - `PB.REFUSAL` matches "It doesn't matter" and "I already told you", so two such lines give a "refused" hang-up;
+   - `PB.HOSTILE` ends the call on any insult;
+   - `core.guard()` `invented_number` (`\d[\d\s-]{3,}\d`) replaces any reply with a phone number or a 5-digit amount by "Hold on, I can't read this, my eyes aren't what they used to be", which SYSTEM itself forbids, and it lets spelled-out numbers ("eight hundred and eighty") through.
+   Fix: drop recorded/automated/machine from SUSPICION unless in an "are you / is this" form; require three refusals; ignore insults; reword the number fallback and apply the rule to digits the model was not given.
+
+### Minor
+- `[:260]` in `guard()` can cut a reply mid-word; the OPENER is appended to history after its TTS, so a fast caller line can land before it (two user turns in a row).
+- The trailing `system` message after the history: moving it into the last user turn (B) helped bolt (+0.6 on cards 1,7) and hurt super-vl (-0.9), so the effect is model-dependent and small-n.
+- Garbled STT reaches the model raw (`core.clean()` only strips tags); the candidate's "heard through speech recognition, so words can be slightly off" is the right cheap fix.
+
+### Not done
+Cards 2,5,6,8,10 and the trimmed demo card were not run by me (eng2 covers all 10 on current-vs-super); no real-call replay; one scorer; temperature below 0.6 untested; the candidate's 2.5 s fallback to bolt was not tested.
