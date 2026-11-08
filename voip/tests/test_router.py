@@ -807,3 +807,15 @@ def test_F2_low_score_long_after_the_window_does_not_make_a_scam_call_legit(monk
     ev = [e for e in bus.history if e["call_id"] == sid][-1]
     assert ev["type"] == "call.ended" and "legit" not in ev["data"]
     st2 = _state(); st2.update(handed_off=True, restored=True); assert R._legit(st2) == {"legit": True}   # a real restore still counts
+
+
+def test_F7_listen_mode_streams_even_normal_routed_calls(monkeypatch):
+    calls = _ring_setup(monkeypatch); monkeypatch.setattr(R, "_routing", lambda frm, att: {"decision": "NORMAL", "reason": "trusted"}); sid = "sess-F7-normal-12345"
+    async def go():
+        R.LOOP = asyncio.get_running_loop(); await R.on_initiated(_incoming(sid, "v3:f7normal1234567"))
+        assert await R.answer_call(sid) is True
+    asyncio.run(go())
+    assert [c[0] for c in calls] == ["answer"] and "stream_url" in calls[0][2]                     # streamed although routing said NORMAL
+    calls2 = _ring_setup(monkeypatch, mode="sip"); monkeypatch.setattr(R, "_routing", lambda frm, att: {"decision": "NORMAL", "reason": "trusted"})
+    asyncio.run(R.on_initiated(_incoming("sess-F7-sip-123456789", "v3:f7sip12345678901")))
+    assert "stream_url" not in (calls2[0][2] or {})                                                # SIP mode: NORMAL calls are untouched (Maria's leg is the call)

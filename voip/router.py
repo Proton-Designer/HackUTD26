@@ -137,7 +137,8 @@ async def on_initiated(p, base_ws=None, sim=False):
     body = {"client_state": _cs(sid=sid, role="caller")}
     out = {}
     ws_base = os.environ.get("PUBLIC_WS") or (base_ws if sim else None)
-    if d["decision"] == "LIVE_GUARD" and ws_base:
+    if listen_mode() and not ws_base: log.error("MARIA_LEG=%s but no PUBLIC_WS: the call cannot be streamed to the customer's page (dead line)", _maria_leg())
+    if (d["decision"] == "LIVE_GUARD" or listen_mode()) and ws_base:   # F7: listen/talk has no Maria leg, so even a NORMAL-routed call must be streamed or it is a dead line
         tok = secrets.token_urlsafe(16); CALLS[sid]["token"] = tok
         body.update(stream_url=f"{ws_base}/media/{sid}?t={tok}", stream_track="inbound_track", stream_codec="PCMU",
                     stream_bidirectional_mode="rtp", stream_bidirectional_codec="PCMU",
