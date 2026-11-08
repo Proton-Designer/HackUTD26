@@ -24,6 +24,9 @@ caller for her. Routing: `intel.store.is_blocked(number) -> (bool, reason)`. Pro
 `intel_api.protection_entries()` / `intel_api.undo_block(token)`. Key: NVIDIA_API_KEY from env or repo-root .env.
 Model: INTEL_MODEL (default nvidia/nemotron-3.5-super-vl-120b-a12b).
 
+Acceptance checklist against a running hub (exit 0 = all pass):
+    python -m intel.acceptance --hub http://127.0.0.1:8000 [--token $HUB_TOKEN] [--domain <demo domain>] [--wallet <demo BTC>]
+
 Endpoints: POST /intel/ingest · POST /intel/actions/{id}/approve · POST /intel/blocklist/{undo_token}/undo · GET /intel/blocked?number= · GET /intel/state
 
 Events: superset of contracts/events.md (required fields present; extras such as gate_status, n_baseline_added are
