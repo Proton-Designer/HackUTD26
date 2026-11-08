@@ -85,3 +85,9 @@ def test_trusted_number_not_auto_blocked():
     for t, d in [("call.incoming", {"from": "+15555550188", "attestation": "C"}), ("handoff.started", {}), ("call.ended", {})]:
         bus.publish(t, "k9", d)
     assert routing.decide("+15555550188", "A")["decision"] == "NORMAL"
+
+def test_emergency_never_blocked():
+    with pytest.raises(ValueError):
+        db.add_confirmed("911")
+    db.q("INSERT INTO confirmed_scammers VALUES('911','t','x',0)")  # even if forced in
+    assert routing.decide("911")["decision"] == "NORMAL"

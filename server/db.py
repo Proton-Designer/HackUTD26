@@ -1,4 +1,5 @@
 """SQLite routing store. Tables: confirmed_scammers, campaign_numbers, trusted, calls."""
+EMERGENCY = {"911", "+911", "988", "+988"}
 import os, sqlite3, threading, time, uuid
 DB_PATH = os.environ.get("HUB_DB", os.path.join(os.path.dirname(__file__), "hub.db"))
 _lock = threading.RLock()
@@ -40,7 +41,10 @@ def norm(n):
     return n
 
 def add_confirmed(number, reason="decoy session ended"):
-    number = norm(number); token = "undo_" + uuid.uuid4().hex[:10]
+    number = norm(number)
+    if number in EMERGENCY:
+        raise ValueError("emergency numbers cannot be blocked")
+    token = "undo_" + uuid.uuid4().hex[:10]
     q("INSERT OR REPLACE INTO confirmed_scammers VALUES(?,?,?,?)", (number, token, reason, time.time()))
     return token
 
@@ -49,6 +53,8 @@ def undo(token):
     return cur.rowcount > 0
 
 def add_campaign(number, campaign_id="camp"):
+    if norm(number) in EMERGENCY:
+        raise ValueError("emergency numbers cannot be blocked")
     q("INSERT OR REPLACE INTO campaign_numbers VALUES(?,?,?)", (norm(number), campaign_id, time.time()))
 
 def add_trusted(number, label=""):

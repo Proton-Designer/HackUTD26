@@ -96,7 +96,7 @@ def _observe(ev):
         DECOY_CALLS.discard(cid)
     elif t == "call.ended" and cid in DECOY_CALLS and CALLER_BY_CALL.get(cid):
         num = CALLER_BY_CALL[cid]
-        if db.has("trusted", num):  # a (possibly spoofed) trusted number must not poison her blocklist
+        if num in db.EMERGENCY or db.has("trusted", num):  # a (possibly spoofed) trusted number must not poison her blocklist
             DECOY_CALLS.discard(cid); return
         token = db.add_confirmed(num, "Decoy session ended")
         DECOY_CALLS.discard(cid)
