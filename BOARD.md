@@ -9,7 +9,7 @@
 | Evan | **P3 Decoy & voice** (`decoy/`): echo bot over Twilio `<Connect><Stream>` first, then persona card | `WSS /decoy/{call_id}` echoes audio on a test call (Twilio Media Streams protocol: connected/start/media/mark/stop, μ-law 8 kHz); persona card generator outputs fake values only | 22:55 (H10:55) | 90 min | In progress |
 | Ayman | **Machine A: P1 Network & call control** + contract; **Machine B: P2 Detection** | A: `contracts/events.md` + `mock/events.json` by 23:15, then server + tunnel + scam line with pre-ring `<Reject>` and caller-only `inbound_track` stream. B: model IDs pinned, `POST /detect` returns typed JSON on 3 scripts | 22:55 (H10:55) | 30 + 90 min | In progress |
 | Rayan | **P4b: T-Mobile command center** (`web/command-center/`) on `mock/events.json` (finish the Devpost initial submission first if it isn't in) | Command center plays the whole of `mock/events.json` as a timeline: caller transcript, risk + why chips, decoy turns, artifacts, lookups, agent trace, auto actions, Approve queue, campaign + immunity counter, denied log, Simulated / attested labels, cloud/local badge. A stranger gets it in 5 seconds | 23:05 (H11:05) | 150 min | In progress |
-| Kareem | Confirm event facts, then **10 judge script cards + 30 eval rows** (`data/`) | §6 filled; `data/script-cards.md` (10 cards, each with callback number, website, wallet as ____) + `data/eval/scripts.jsonl` (10 scam, 10 look-alike, 10 adversarial) in P2's enums | 22:45 (H10:45) | 15 + 75 min | In progress |
+| Kareem | **Script cards match the live intel** + fill CLAUDE.md §6 | Every ____ on the payment step of `data/script-cards.md` holds the callback / website / wallet from `intel/demo_config.py`; `python -m intel.seed_demo` then one card's values through `intel.acceptance` all hit (lookup + block); §6 has judging window, minutes per visit, final submit | 00:07 (H12:07) | 45 min | In progress |
 
 ## Up next
 - Ayman A (P1): Maria's call screen (`web/customer/`, Voice JS SDK, two local beeps, Continue / Scammer Get Scammed / Hang up) → handoff swap to `/decoy` → stub: decoy-ended caller → `confirmed_scammers` (callback rejected before ring).
@@ -17,7 +17,8 @@
 - Evan (P3): realtime decoy loop (speech-to-text → Nemotron Lightning persona → TTS), playbook to payment details, guardrails, voice clone (03:00 decision), extractor.
 - **P4 is split (23:05):** P4a Intel = Kareem (`intel/`), P4b Command center + story = Rayan (`web/command-center/`, pitch, Devpost).
 - Rayan (P4b): switch the command center from mock to live `WS /events` when Ayman's server is up → pitch v1 opening on the moment (P4 guide outcome 6) + T-Mobile booth questions (architecture §17) → claims audit → backup video at 09:00 → final Devpost 11:30.
-- Kareem (P4a, from ~00:30): (1) **real lookups, never cut**: RDAP domain age/registrar, public-blockchain inflows, verified-business allowlist seed → emit `intel.lookup`; (2) from 02:00 the intel agent as a **fixed chain** (lookups → Nemotron 3 Super summarizes + proposes actions; the guide's fixed-template option), not free tool-calling; (3) policy gate in plain code: auto / Approve queue / `injection.denied`, replacing P1's blocklist stub. Nemotron questions → Evan; server/contract questions → Ayman.
+- Ayman A (P1), 10 min, before 02:00: pull `finalized-idea-backfire` through 867ff7c and restart the running hub so the live intel (lookups, agent, gate) is what the 02:00 thin slice hits; run `intel.acceptance` against it once.
+- Kareem (after 00:52): reset drill for judging: write `data/RESET.md` (exact commands in order: hub reset + `python -m intel.seed_demo` + check), time it twice, under 60 s → then be the 02:00 thin-slice test caller reading a card. Stuck: Ayman, then Evan.
 
 ## Owned files and folders
 (Updated 22:55 per Ayman. One owner per folder. Plan: `Finalized-Idea/07_EXECUTION_PLAN.md`.)
@@ -37,6 +38,8 @@
 | Time | Person | Task | Verified (merged / on deployed URL) |
 |---|---|---|---|
 | 22:31 (H10:31) | Ayman | Backfire idea finalized, architecture v2, research | Pushed to `finalized-idea-backfire` (commit 7e4eea1) |
+| 00:07 (H12:07) | Kareem | Script cards (10) + eval set (`data/`) | Files in repo; not separately checked |
+| 00:07 (H12:07) | Kareem | P4a Tasks 1-3: real lookups (RDAP, BTC/ETH explorers, allowlist), Nemotron intel agent (fixed chain, live), policy gate (auto / Approve / denied; allowlist = poisoning), `intel.seed_demo` reset | Pushed through 867ff7c (git verified). Hub code imports intel (e641ec0, `server/routing.py`), but the **running** hub hasn't pulled it yet. P4 acceptance 7/7 locally, fail-open drill passed (reported) |
 
 ## Checkpoints (compressed: idea locked at H10:30)
 - **23:00** Devpost initial submission in (Rayan).
@@ -50,6 +53,8 @@
 - **11:30 (H23:30)** Final Devpost submitted (hard deadline 12:00).
 
 ## Decisions log
+- 00:07 (H12:07) | **Intel model = `nemotron-3.5-super-vl-120b-a12b`**: `3-super-120b` returns 404 on our keys (Kareem, tested live). Ayman-B records it in `contracts/models.md`. Fallback: fail-open stays in, so lookups and blocks still show if the model call fails.
+- 00:07 (H12:07) | **H0 mismatch:** board says 12:00, bot header says 13:00. Board stays at 12:00 (every timestamp uses it) until Rayan confirms; checkpoints use clock times, so they don't move.
 - 23:21 (H11:21) | **Evan has repo access** (`evan-olson31` is a collaborator on Proton-Designer/HackUTD26, verified via GitHub). Blocker cleared.
 - 23:15 (H11:15) | **No sleep shifts.** The whole team works through the night (Rayan). Sleep schedule removed from the board and from the delegator's rules.
 - 23:05 (H11:05) | **P4 split in two, one owner each:** Kareem = P4a Intel (`intel/`: real lookups, fixed-chain Nemotron agent, policy gate); Rayan = P4b command center + story. Not both on all of P4 (shared files, merge fights) and not one person alone (13 items incl. the pitch). Command center starts now on mock events instead of 02:00, because it's the screen judges watch. Intel agent uses a fixed chain, not free tool-calling, because it's more reliable in a live demo. Cost: Kareem's eval set stops at 30 rows (Ayman-B grows it with Claude if needed); Kareem is on backend logic, so he escalates fast (Evan for Nemotron, Ayman for the server). Fallback: if lookups aren't on screen by 03:00, Rayan pairs on them and the agent becomes proposals from a template. Ayman (Decider) can override.
