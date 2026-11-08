@@ -425,3 +425,15 @@ def test_f19_listener_survives_media_reconnect():
             await asyncio.sleep(0.8)
             assert relay.listener_count() == 0
     run(go())
+
+
+def test_f9_p2_tunnel_url_file_overrides_env_per_call(monkeypatch, tmp_path):
+    monkeypatch.setenv("LOGDIR", str(tmp_path)); monkeypatch.setenv("P2_STT_URL", "ws://127.0.0.1:1"); monkeypatch.delenv("P2_BASE", raising=False)
+    assert relay._url("P2_STT_URL", "/stt/x") == "ws://127.0.0.1:1/stt/x"                    # no file: env
+    f = tmp_path / "p2_tunnel_url.txt"
+    f.write_text("https://abc.trycloudflare.com\n"); assert relay._url("P2_STT_URL", "/stt/x") == "wss://abc.trycloudflare.com/stt/x"
+    f.write_text("https://def.trycloudflare.com/ignored/path?x=1\n"); assert relay._url("P2_STT_URL", "/stt/x") == "wss://def.trycloudflare.com/stt/x"   # re-read, origin only
+    for bad in ("file:///etc/passwd", "https://user:pw@h.example", "garbage", ""):
+        f.write_text(bad); assert relay._url("P2_STT_URL", "/stt/x") == "ws://127.0.0.1:1/stt/x", bad                                     # invalid: ignored, env wins
+    from server import ops
+    f.write_text("https://ghi.trycloudflare.com"); assert ops._remote_base("P2_BASE") == "https://ghi.trycloudflare.com/healthz"

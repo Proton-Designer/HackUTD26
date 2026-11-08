@@ -7,7 +7,7 @@ voip/ (eng2) owns the Telnyx WS and calls (all async, none ever raises, none blo
 Env: P2_STT_URL (e.g. ws://host:port -> WS /stt/{call_id}), P3_DECOY_URL (e.g. wss://host -> WSS /decoy/{call_id}; unset -> built-in
 stand-in persona /decoy-standin/{call_id} (voip/persona.py) on this hub, port HUB_PORT or 8000; DECOY_STANDIN=echo -> /decoy-echo/{call_id}). In-process P2 hook: relay.feed_audio_hook = fn(call_id, frame_dict).
 Fail open: connection errors are logged and dropped; queues are bounded (full -> drop frame)."""
-import asyncio, json, logging, os, time
+import asyncio, json, logging, os, pathlib, time
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 log = logging.getLogger("hub.relay")
@@ -68,9 +68,27 @@ def _put(q, item, s):
     except asyncio.QueueFull:
         s.dropped += 1
 
+def p2_tunnel_origin():
+    """F9: P2 behind a quick tunnel changes URL on every restart. If $LOGDIR/p2_tunnel_url.txt exists (first line: https://host or wss://host), it
+    overrides P2_STT_URL / P2_BASE, re-read on every connect attempt (no hub restart). Returns 'https://host[:port]' / 'http://...' or None.
+    Only scheme+host are kept (path/query/credentials in the file are ignored/rejected)."""
+    from urllib.parse import urlsplit
+    try:
+        f = pathlib.Path(os.environ.get("LOGDIR") or "logs") / "p2_tunnel_url.txt"
+        if not f.is_file():
+            return None
+        line = (f.read_text().strip().splitlines() or [""])[0].strip()
+        sp = urlsplit(line)
+        if sp.scheme not in ("https", "http", "wss", "ws") or not sp.hostname or sp.username or sp.password:
+            log.warning("p2_tunnel_url.txt ignored: not a plain http(s)/ws(s) host URL")
+            return None
+        return f"{'https' if sp.scheme in ('https', 'wss') else 'http'}://{sp.netloc}"
+    except Exception:
+        return None
+
 def _url(env, path, default=None):
     """<ENV> (ws URL) or fall back to the pipeline's P2_BASE/P3_BASE (http(s) -> ws(s)), same vars /demo/status probes."""
-    base = os.environ.get(env) or os.environ.get(env.replace("_STT_URL", "_BASE").replace("_DECOY_URL", "_BASE"))
+    base = (p2_tunnel_origin() if env == "P2_STT_URL" else None) or os.environ.get(env) or os.environ.get(env.replace("_STT_URL", "_BASE").replace("_DECOY_URL", "_BASE"))
     if base and base.startswith("http"):
         base = base.replace("http", "ws", 1)
     return f"{base.rstrip('/')}{path}" if base else default

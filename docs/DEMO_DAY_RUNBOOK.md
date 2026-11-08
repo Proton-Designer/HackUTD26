@@ -64,6 +64,7 @@ Hub = ONE process (hub + voip + relay + intel + `/app` + `/command-center`). Tel
 | Telnyx 401/10009, `telnyx_ok` false, no credit | stop; do not retry calls. Lead decides. Go to section 3 (SIM) or `--fallback` |
 | NVIDIA 429 / key dead | calls still connect; P2 falls back to rules, hub `FALLBACK_DETECT=1` adds regex+LLM backup (fails to regex), intel falls back to baseline rules. Keep one call at a time; avoid extra test runs |
 | Tunnel dead / URL changed | `scripts/restart_hub_safe --new-tunnel` (not while a call is live), lead runs `point_telnyx --apply`, reopen `/app/` on the phone (pairing survives) |
+| P2 tunnel URL changed | write the new origin (`https://<host>`) to `logs/p2_tunnel_url.txt`: the hub re-reads it on every P2 connect (retries every 2 s), no hub restart; `scripts/preflight` checks it. Remove the file to go back to `P2_STT_URL`/`P2_BASE` |
 | P2 down | calls connect, alerts lost: set `FALLBACK_DETECT=1` (needs restart) or switch to SIM/fallback replay |
 | P3 decoy down | `/demo/status` P3 not up; handoff returns false and Maria keeps the call. Restart decoy (window 1); `DECOY_STANDIN=persona` hub stand-in voice is used when `P3_DECOY_URL` is unset |
 | Maria's WebRTC leg rejected | switch to `MARIA_LEG=listen` or `talk` (no dial), safe restart |

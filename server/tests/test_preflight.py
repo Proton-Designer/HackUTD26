@@ -35,3 +35,13 @@ def test_preflight_p2_down_is_hard_fail_with_host_only(tmp_path):
 def test_preflight_p2_up_passes_that_check(tmp_path):
     r = _run("up", tmp_path)
     assert next(l for l in r.stdout.splitlines() if "P2 reachable" in l).startswith("PASS")
+
+
+def test_f9_preflight_checks_p2_tunnel_url_file(tmp_path):
+    (tmp_path / "p2_tunnel_url.txt").write_text("https://p2-dead.invalid\n")
+    r = _run("up", tmp_path)
+    line = next(l for l in r.stdout.splitlines() if "p2_tunnel_url.txt" in l and "reachable" in l)
+    assert line.startswith("FAIL") and "host=p2-dead.invalid" in line and "stale" in line
+    assert "host=p2-dead.invalid (logs/p2_tunnel_url.txt)" in next(l for l in r.stdout.splitlines() if "P2 reachable" in l)
+    (tmp_path / "p2_tunnel_url.txt").unlink()
+    assert not any("p2_tunnel_url" in l for l in _run("up", tmp_path).stdout.splitlines())

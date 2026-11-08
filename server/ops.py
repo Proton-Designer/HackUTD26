@@ -78,6 +78,13 @@ EXPECTED = {
 def _remote_base(env):
     """Remote pipeline base URL for the probe: <env> if set, else derive the http(s) host from the relay's ws URL
     (P2_STT_URL / P3_DECOY_URL, ws->http, path dropped) and probe /healthz there."""
+    if env == "P2_BASE":
+        try:
+            from . import relay
+            o = relay.p2_tunnel_origin()   # F9: logs/p2_tunnel_url.txt (current P2 tunnel) beats the env
+            if o: return o + "/healthz"
+        except Exception:
+            pass
     b = os.environ.get(env)
     if b:
         return b
