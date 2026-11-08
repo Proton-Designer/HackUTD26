@@ -99,6 +99,7 @@ def main():
     # voip's on_answered reads these with os.environ[...] (KeyError -> no call.answered in SIM_MODE if unset); dummies are harmless, sim never calls Telnyx
     env.setdefault("TELNYX_CRED_CONNECTION_ID", "sim"); env.setdefault("TELNYX_SIP_USER", "sim"); env.setdefault("INTEL_EXTRACT_GRACE", "1")  # intel blocks the caller this long after a decoy call ends (default 20s)
     for k in ("HUB_TOKEN", "PUBLIC_WS"): env.pop(k, None)
+    env.update(P3_DECOY_URL="", P3_BASE="", P3_VOICE_URL="", DECOY_STANDIN="echo")   # isolated: never the real decoy from .env; run_hub keeps these explicit values; hub echo stand-in answers the caller leg
     hub = subprocess.Popen([str(ROOT / "scripts" / "run_hub")], cwd=ROOT, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
     try:
         if not check("1", "hub up (run_hub, NO_TUNNEL SIM_MODE VOIP_OPEN_TOKEN)", wait_for(lambda: http("GET", "/healthz")[0] == 200, 20)): return

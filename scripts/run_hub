@@ -12,7 +12,7 @@ cd "$(dirname "$0")/.."
 # anything in this protected list (plus RUN_HUB_KEEP=VAR1,VAR2 for extras) that you set explicitly in the shell wins over .env,
 # so an isolated test copy (own HUB_PORT/HUB_DB/INTEL_DB/LOGDIR/DEVICE_PIN...) never inherits the live hub's values from .env.
 SHELL_PUBLIC_WS="${PUBLIC_WS:-}"   # an explicit shell PUBLIC_WS survives; a stale one from .env must not leak into NO_TUNNEL runs
-KEEP="HUB_PORT HUB_BIND HUB_DB INTEL_DB LOGDIR HUB_NO_PIN_FILE DEVICE_PIN HUB_TOKEN NO_TUNNEL SIM_MODE DEMO_MODE FALLBACK FALLBACK_DETECT MARIA_LEG ${RUN_HUB_KEEP//,/ }"
+KEEP="HUB_PORT HUB_BIND HUB_DB INTEL_DB LOGDIR HUB_NO_PIN_FILE DEVICE_PIN HUB_TOKEN NO_TUNNEL SIM_MODE DEMO_MODE FALLBACK FALLBACK_DETECT MARIA_LEG DECOY_STANDIN P3_DECOY_URL P3_BASE P3_VOICE_URL ${RUN_HUB_KEEP//,/ }"
 if [ -f .env ]; then
   saved=""; for v in $KEEP; do [ -n "${!v+x}" ] && saved+="export $v=$(printf '%q' "${!v}");"; done
   set -a; . ./.env; set +a
