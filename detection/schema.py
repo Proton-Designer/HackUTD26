@@ -61,6 +61,9 @@ def _words(text: str) -> set:
     return {w for w in re.findall(r"[a-z0-9$]+", text.lower()) if w not in _STOP}
 
 
+_NEG_CHIP = re.compile(r"^\W*(no|not|non|never|none|nobody|without|isn'?t|doesn'?t|don'?t|won'?t)\b", re.I)
+
+
 def build_chips(asks, impersonates, addresses_ai, extra=()):
     """At most 4 chips, severity order: impersonation, hard asks, AI, secrecy, then model extras."""
     chips = []
@@ -75,6 +78,8 @@ def build_chips(asks, impersonates, addresses_ai, extra=()):
     for c in extra:
         c = c.strip()[:40] if isinstance(c, str) else ""
         w = _words(c)
+        if _NEG_CHIP.match(c):  # chips describe risk signals only ("No pin ask" is not one)
+            continue
         if not w or any(w & x for x in seen):  # repeats a structured/earlier chip (case-insensitive, by content word)
             continue
         c = c[0].upper() + c[1:]

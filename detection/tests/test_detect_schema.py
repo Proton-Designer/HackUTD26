@@ -12,3 +12,8 @@ def test_normalize_garbage_never_raises():
 
 def test_bands():
     assert [schema.band(x) for x in (0.39, 0.4, 0.79, 0.8, 0.949, 0.95)] == ["low", "watch", "watch", "high", "high", "critical"]
+
+
+def test_negative_chips_filtered():
+    out = schema.normalize({"s": 0.1, "why_chips": ["No pin ask", "Not urgent", "Never asks for codes", "Urgent threat", "No"]})
+    assert out["why_chips"] == ["Urgent threat"]
