@@ -1306,7 +1306,7 @@
   function applyBrand(chapter) {
     const c1 = BRAND_URL || chapter === 'money';
     document.documentElement.classList.toggle('brand-c1', c1);
-    $('brand-title').textContent = c1 ? 'Fraud desk' : 'T-Mobile command center';
+    $('brand-title').textContent = c1 ? 'Fraud desk' : 'Command center';
     document.title = c1 ? 'Backfire × Capital One' : 'Backfire Command Center';
   }
   // A tab holds that chapter on screen; the live tab (or Esc, or "back to live") follows the call again.
