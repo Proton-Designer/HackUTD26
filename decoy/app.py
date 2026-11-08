@@ -545,22 +545,19 @@ class Session:
         return h[-16:]
 
     def steer(self) -> str:
-        """Per-turn note (#127 4): scam type, what we have, the next target, turns left. Not stored in history."""
+        """Per-turn note (#127 4, #131): what we have, the next target once they talk about paying, turns left."""
         arts = list(self.arts.values())
         need = [t for t in PB.missing(self.scam, arts) if t != "impersonated_org"]
-        pull = None
-        if need:
+        money = any(PB.MONEY_TALK.search(l) for l in self.pre_lines + self.scammer_lines)
+        if need and money:
             self.asks[need[0]] = self.asks.get(need[0], 0) + 1
             if self.asks[need[0]] == 2:
                 self.asked2 = (self.caller_turns, time.monotonic())
-            fresh = [p for p in PB.PULLS.get(need[0], []) if p not in self.used_pulls]
-            if fresh:
-                pull = random.choice(fresh); self.used_pulls.add(pull)
         if self.wrap_at is not None:
             left = max(1, self.wrap_at - self.turns)
         else:
             left = max(1, int((CAP_S - (time.time() - self.t0)) / 15))
-        return PB.note(self.scam, arts, left, pull)
+        return PB.note(self.scam, arts, left, money)
 
     def bail_check(self) -> str | None:
         """After each of our replies: which bail rule fires, if any (#127 5a-c; d is handled before the reply)."""
@@ -599,7 +596,9 @@ class Session:
                 if self.bail_now:   # suspicion / hostile / refused twice: don't argue, leave now (#127 5d)
                     await self.finish(PB.GOODBYES[self.bail_now], self.bail_now)
                     return
-                msgs = [{"role": "system", "content": core.SYSTEM}] + self.recent() + [{"role": "system", "content": self.steer()}]
+                hist = [dict(m) for m in self.recent()]
+                hist[-1]["content"] += "\n" + self.steer()   # note rides on the latest caller turn (#131), never stored
+                msgs = [{"role": "system", "content": core.SYSTEM}] + hist
                 task = asyncio.create_task(core.chat(msgs))
                 done, _ = await asyncio.wait({task}, timeout=FILLER_AFTER_S)
                 # never before the first real reply (#124): the handoff should sound like the rest of the call

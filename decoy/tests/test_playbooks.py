@@ -26,9 +26,12 @@ def test_reclassify_needs_clear_lead():
 def test_missing_and_note():
     arts = [{"kind": "callback_phone", "value": "+18885550123"}, {"kind": "domain", "value": "backfire-demo.example"}]
     assert PB.missing("bank", arts)[0] == "payment_handle"
-    n = PB.note("bank", arts, 4, "Wait, send it to who exactly?")
-    assert "callback_phone" in n and "payment app" in n and "Turns left: 4" in n
+    early = PB.note("bank", [], 6, money_talk=False)       # #131: nothing about payment before the caller brings it up
+    assert "payment" not in early.lower().replace("payment, apps", "") and "bank" not in early.lower()
+    n = PB.note("bank", arts, 4, money_talk=True)
+    assert "callback_phone" in n and "payment app" in n and "About 4 turns left" in n and '"' not in n   # no verbatim lines
     assert PB.missing("bank", arts + [{"kind": "payment_handle", "rail": "zelle", "id": "x@y.z"}]) == ["impersonated_org"]
+    assert PB.MONEY_TALK.search("Send the $1,800 by Zelle") and not PB.MONEY_TALK.search("Someone's draining your account right now.")
 
 
 def test_bail_signals():

@@ -123,20 +123,30 @@ def missing(scam: str, arts: list[dict]) -> list[str]:
     return [t for t in PLAYBOOKS.get(scam, PLAYBOOKS["generic"])["targets"] if t not in got]
 
 
-def note(scam: str, arts: list[dict], turns_left: int, pull: str | None) -> str:
-    """The short per-turn steering note for the model (kept out of the stored history)."""
+# The caller has started talking about money / how to pay (only then does the note point at a payment target).
+MONEY_TALK = re.compile(r"\b(pay|paid|send|sent|transfer|move|deposit|wire|zelle|venmo|cash ?app|paypal|gift ?cards?|bitcoin|"
+                        r"crypto|wallet|bail|fee|dollars?|\$\d|account number|routing|app|website|portal|link|download|"
+                        r"install|anydesk|teamviewer|call (me|us) back|direct line|number is)\b", re.I)
+
+
+def note(scam: str, arts: list[dict], turns_left: int, money_talk: bool) -> str:
+    """Short per-turn steering note, appended to the latest caller turn (not a system message, not stored).
+    #131 (P2 A/B): no scam label and no target before the caller talks about paying (the model asked "Is it Zelle?" on
+    turn 1); no verbatim example phrasings (they were parroted in 6 of 12 replies)."""
     pb = PLAYBOOKS.get(scam, PLAYBOOKS["generic"])
-    got = sorted(have(arts) & set(pb["targets"]) | ({"impersonated_org"} & have(arts)))
     need = [t for t in missing(scam, arts) if t != "impersonated_org"]
-    parts = [f"Scam type: {pb['label']}.", f"Have: {', '.join(got) or 'nothing yet'}."]
+    if not money_talk:
+        return ("(Private note, never read aloud: react to what they just said; don't bring up payment, apps or "
+                f"amounts until they do. About {turns_left} turns left.)")
+    got = sorted(have(arts) & set(pb["targets"]))
+    parts = [f"Already got: {', '.join(got) or 'nothing yet'}."]
     if need:
-        parts.append(f"Still need (next): {TARGET_HINT[need[0]]}.")
-        # P1 08:09: no verbatim pull phrase (the model parroted 'send-to box' in 6 of 12 replies); and no naming
-        # an app or payee before the caller does (SYSTEM already says so)
+        parts.append(f"When it fits what they just said, get them to tell you {TARGET_HINT[need[0]]}, in your own words, "
+                     "only naming things they already named.")
     else:
         parts.append("You have what you need: keep it short and friendly.")
-    parts.append(f"Turns left: {turns_left}.")
-    return "[steering note, private] " + " ".join(parts)
+    parts.append(f"About {turns_left} turns left.")
+    return "(Private note, never read aloud: " + " ".join(parts) + ")"
 
 
 # ---------------------------------------------------------------- bail signals (#127 5d)
