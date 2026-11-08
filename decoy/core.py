@@ -148,7 +148,7 @@ def guard(raw: str, persona: Persona, given: set, emit, caller_text: str = "") -
         if m:
             emit("guardrail.tripped", {"rule": rule})
             t = repl
-    t = " ".join(re.split(r"(?<=[.!?])\s+", t)[:3])[:260]
+    t = " ".join(re.split(r"(?<=[^\d\s][.!?])\s+", t)[:3])[:260]   # never split inside a digit read-back ('1888. 555. Zero 123'), P2 #141
 
     def fill(m):
         spoken, kind = persona.values[m.group(1)]
