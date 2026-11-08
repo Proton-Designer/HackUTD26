@@ -51,6 +51,11 @@ class Segmenter:
         self.cur = None
         self.sil = 0
         self.speech_frames = 0
+        self.rms_hist, self.voiced_total = [], 0        # diagnostics (TASK-032): per-frame RMS, bounded
+    def diag(self):
+        h = np.array(self.rms_hist[-30000:] or [0.0])
+        return {"frames": len(self.rms_hist), "p50": round(float(np.percentile(h, 50)), 1), "p90": round(float(np.percentile(h, 90)), 1),
+                "max": round(float(h.max()), 1), "voiced": self.voiced_total, "noise": round(self.noise, 1), "thr": round(max(300.0, self.noise * 3.5), 1)}
 
     def feed(self, pcm):
         out = []
@@ -61,6 +66,8 @@ class Segmenter:
             rms = float(np.sqrt(np.mean(f.astype(np.float64) ** 2)))
             thr = max(300.0, self.noise * 3.5)
             voiced = rms > thr
+            if len(self.rms_hist) < 60000: self.rms_hist.append(rms)
+            self.voiced_total += voiced
             if self.cur is None:
                 if voiced:
                     self.cur = list(self.pre) + [f]
@@ -123,6 +130,7 @@ async def stt_ws(ws: WebSocket, call_id: str):
     seg, ids, tasks = Segmenter(), [1, 0], set()   # ids: [next utterance number, last submitted]
     pstate = {"busy": False, "t": 0.0, "text": ""}
     counts = {}   # frame diagnostics per event type, logged at close (P1 #31)
+    dump = [] if os.environ.get("P2_DUMP_AUDIO") == "1" else None   # decoded inbound PCM, local debugging only (logs/ is gitignored)
     chain = asyncio.Queue()   # preserve utterance order
     async def worker():
         while True:
@@ -160,7 +168,9 @@ async def stt_ws(ws: WebSocket, call_id: str):
                 log.info("stt ws %s first frame: event=%s", call_id, ev)
             if ev == "media" and audio:
                 try:
-                    submit(seg.feed(stt.mulaw_decode(audio)))
+                    pcm = stt.mulaw_decode(audio)
+                    if dump is not None and len(dump) < 90000: dump.append(pcm.astype("<i2").tobytes())
+                    submit(seg.feed(pcm))
                     if PARTIALS and not pstate["busy"] and time.monotonic() - pstate["t"] >= (SLOW_PARTIAL_EVERY_S if _stt_slow() else PARTIAL_EVERY_S) \
                             and not (_stt_slow() and health.STATE.get("finals_pending", 0)):   # CPU whisper: finals first, partials are best-effort
                         snap = seg.snapshot()
@@ -169,6 +179,12 @@ async def stt_ws(ws: WebSocket, call_id: str):
                             tasks.add(asyncio.create_task(partial(ids[0], snap, time.time())))
                 except Exception:
                     log.warning("bad audio frame ignored")
+            elif ev == "start":
+                try:
+                    m = json.loads(raw); st = m.get("start") or {}
+                    log.info("stt ws %s start: media_format=%s start_keys=%s", call_id, st.get("media_format"), sorted(st.keys()))
+                except Exception:
+                    pass
             elif ev == "stop":
                 submit(seg.flush()); break
     except (WebSocketDisconnect, RuntimeError):
@@ -178,6 +194,16 @@ async def stt_ws(ws: WebSocket, call_id: str):
     finally:
         health.STATE["active"] = max(0, health.STATE["active"] - 1)
         log.info("stt ws %s closed: frames=%s utterances=%d", call_id, counts, ids[1])
+        try:
+            log.info("stt ws %s rms(per 20ms frame): %s", call_id, seg.diag())
+            if dump:
+                import wave
+                os.makedirs("logs/audio", exist_ok=True)
+                with wave.open(f"logs/audio/{call_id}.wav", "wb") as wf:
+                    wf.setnchannels(1); wf.setsampwidth(2); wf.setframerate(8000); wf.writeframes(b"".join(dump))
+                log.info("stt ws %s audio dumped to logs/audio/%s.wav (local only)", call_id, call_id)
+        except Exception:
+            log.exception("diag failed (ignored)")
         chain.put_nowait(None)
         try:
             await asyncio.wait_for(w, timeout=10)
