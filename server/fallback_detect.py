@@ -144,6 +144,7 @@ class _Call:
         self.alerted = False
         self.crit = False
         self.dipped = False
+        self.p2_s = 0.0          # last real P2 score: fallback never publishes lower than this
         self.p2_ts = 0.0         # last real (non-fallback) risk.update; fallback stays silent while fresh
 
 
@@ -177,6 +178,7 @@ def _merge(c: _Call) -> dict:
         if l["stage"] and STAGES.index(l["stage"]) > STAGES.index(r["stage"]):
             r["stage"] = l["stage"]
         r["addresses_ai_system"] = r["addresses_ai_system"] or l["addresses_ai_system"]
+    r["s"] = round(max(r["s"], c.p2_s), 3)      # floor at the last real P2 score (also after stale takeover expiry)
     r["why_chips"] = r["why_chips"][:MAX_CHIPS]
     r["band"] = band_for(r["s"])
     r["engine"] = "fallback"
@@ -276,7 +278,12 @@ def _observe(ev: dict):
     try:
         t, cid = ev.get("type"), ev.get("call_id")
         if t == "risk.update" and (ev.get("data") or {}).get("engine") != "fallback":
-            _calls.setdefault(cid, _Call()).p2_ts = time.time()
+            c = _calls.setdefault(cid, _Call())
+            c.p2_ts = time.time()
+            try:
+                c.p2_s = float(ev["data"]["s"])
+            except Exception:
+                pass
         elif t == "call.ended":
             _calls.pop(cid, None)
     except Exception:

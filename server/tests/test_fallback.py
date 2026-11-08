@@ -144,3 +144,13 @@ def test_call_end_cleans_state():
     assert "c1" in fd._calls
     bus.publish("call.ended", "c1", {"ended_by": "caller", "duration_s": 1.0})
     assert "c1" not in fd._calls
+
+
+def test_never_below_last_real_p2_score():
+    fd._install()
+    bus.publish("risk.update", "c1", {"s": .9, "band": "high", "asks": [], "scam_type": "x", "stage": "pressure",
+                                      "impersonates": None, "addresses_ai_system": False, "why_chips": [], "engine": "cloud"})
+    fd._calls["c1"].p2_ts -= fd.P2_STALE_S + 1       # takeover expired
+    run(fd.ingest("c1", "hello how are you today"))  # regex alone would say 0
+    last = [e for e in evs("risk.update") if e["data"]["engine"] == "fallback"][-1]["data"]
+    assert last["s"] >= 0.9 and last["engine"] == "fallback"
