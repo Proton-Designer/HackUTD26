@@ -3,7 +3,7 @@ import importlib, logging, os
 from fastapi import FastAPI
 from . import auth, health, stream, stt
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s.%(msecs)03d %(levelname)s %(name)s %(message)s", datefmt="%H:%M:%S")   # timestamps: scripts/call_report.py needs them
 log = logging.getLogger("p2.app")
 from . import alert
 alert.install()

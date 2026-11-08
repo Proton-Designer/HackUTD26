@@ -23,7 +23,7 @@ class Call:
         self.prev_band = "low"; self.known_hard = set()
         self.decoy = False; self.muted = False; self.normal_since = None
         self.last = None
-        self.llm = None; self.llm_t = 0.0; self.fail_n = 0; self.clean_n = 0; self.epoch = 0; self.cont_t = 0.0     # last LLM-backed result, its time, consecutive failed windows
+        self.llm = None; self.llm_t = 0.0; self.fail_n = 0; self.clean_n = 0; self.epoch = 0; self.cont_t = 0.0; self.src = "llm"     # last LLM-backed result, its time, consecutive failed windows
 
 class AlertMachine:
     def __init__(self, emit=None, detect=None, clock=time.time, engine=None):
@@ -49,6 +49,7 @@ class AlertMachine:
             now = self.clock()
             win = [t for ts, t in c.utts if now - ts <= WINDOW_S][-(WINDOW_N - 1):] + [str(utt.get("text", ""))]
             q = quick("\n".join(win), self.engine)
+            c.src = "fast-partial"
             if self._decide(c, q):
                 log.info("fast-path alert (partial) call=%s s=%.2f", call_id, q["s"])
                 await self._process(call_id, c, q)
@@ -71,6 +72,7 @@ class AlertMachine:
                 c.utts.popleft()
             c.dirty = True
             q = quick("\n".join(t for _, t in c.utts), self.engine)      # rules only, no I/O: alert before the LLM returns
+            c.src = "fast-final"
             if self._decide(c, q):
                 log.info("fast-path alert call=%s s=%.2f", call_id, q["s"])
                 await self._process(call_id, c, q)
@@ -89,8 +91,9 @@ class AlertMachine:
                         log.exception("detect failed (ignored)"); health.err("detect", __import__("sys").exc_info()[1])
                         continue
                     if ep != c.epoch:
+                        log.info("drop stale result: Continue arrived mid-flight call=%s", call_id)
                         continue             # Continue arrived mid-flight: this result scored the pre-Continue window, drop it
-                    r = self._floor(r, quick(text, self.engine))
+                    r = self._floor(r, quick(text, self.engine)); c.src = "llm"
                     await self._process(call_id, c, self._hold(call_id, c, r))
             finally:
                 c.busy = False
@@ -148,6 +151,7 @@ class AlertMachine:
         s, asks = float(r["s"]), set(r.get("asks") or [])
         hard = asks & schema.HARD_ASKS
         chips = [x for x in (r.get("why_chips") or []) if isinstance(x, str)][:4]
+        log.info("risk.update call=%s s=%.2f band=%s engine=%s src=%s asks=%s", cid, s, r.get("band") or schema.band(s), r.get("engine"), c.src, ",".join(sorted(asks)) or "-")
         await self.emit("risk.update", cid, r)
         now, bnd = self.clock(), r.get("band") or schema.band(s)
         # quiet switch-off
@@ -163,12 +167,14 @@ class AlertMachine:
                 if s >= ALERT_S or (hard and s >= HARD_ASK_S):
                     c.fired = True
                     c.known_hard = set(hard)
+                    log.info("alert.fired call=%s level=first src=%s s=%.2f", cid, c.src, s)
                     await self.emit("alert.fired", cid, {"level": "first", "why_chips": chips})
             elif c.continued:
                 if s < REARM_BELOW:
                     c.armed = True
                 elif c.armed and ((bnd == "critical" and c.prev_band != "critical") or (hard - c.known_hard)):
                     c.armed = False
+                    log.info("alert.fired call=%s level=realert src=%s s=%.2f", cid, c.src, s)
                     await self.emit("alert.fired", cid, {"level": "realert", "why_chips": chips})
                 c.known_hard |= hard
         c.prev_band, c.last = bnd, r
@@ -187,6 +193,7 @@ class AlertMachine:
             elif t == "handoff.started":
                 self._call(cid).decoy = True
             elif t == "handoff.restored":
+                log.info("handoff.restored seen call=%s", cid)
                 c = self._call(cid); c.decoy = False; c.fired = False; c.continued = False; c.armed = False
             elif t in ("call.ended",) or (t == "user.action" and d.get("action") == "hang_up"):
                 self.calls.pop(cid, None)

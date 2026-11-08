@@ -329,7 +329,8 @@ async def detect(call_id: str, window_text: str, metadata: dict | None, engine: 
             raw = await asyncio.wait_for(_engine_score(text, metadata, engine), cap)
         except Exception as e:  # fail open to rules only
             note = type(e).__name__
-            log.warning("detect %s engine=%s fell back to rules: %s", call_id, engine, note)
+            code = getattr(getattr(e, "response", None), "status_code", None)   # 429 shows up in call_report
+            log.warning("detect %s engine=%s fell back to rules: %s%s", call_id, engine, note, f" status={code}" if code else "")
         if raw is None and failover_ok:
             left = OVERALL_TIMEOUT_S - (time.monotonic() - t0)
             try:
