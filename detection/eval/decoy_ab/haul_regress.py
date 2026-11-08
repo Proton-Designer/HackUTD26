@@ -17,11 +17,23 @@ async def main():
     for line in path.read_text().splitlines():
         r = json.loads(line)
         while live() > 0: await asyncio.sleep(5)
-        arts = await core.extract(r["pre_lines"] + r["heard_lines"])
+        if r.get("mock_model"):   # replay a recorded extractor output through the real validate/backstop code
+            real_chat = core.chat
+            async def _fake(msgs, **k): return json.dumps(r["mock_model"])
+            core.chat = _fake
+            try: arts = await core.extract(r["pre_lines"] + r["heard_lines"])
+            finally: core.chat = real_chat
+        else:
+            arts = await core.extract(r["pre_lines"] + r["heard_lines"])
         na = normalize_artifacts(arts); hits = nessie.match_destinations(na)
         handles = [a["value"] for a in na if a["type"] == "payment_handle"]
         payee = "zelle:refunds.dept@backfire-demo.example"
-        if r["expect"]:   # positive: hit the payee and no stray handles
+        if r["expect"] == "CUSTOM":   # non-payee call: no handle matching must_not_handle, and every must_have (type, substring) present
+            vals = [(a["type"], str(a.get("value", "")).lower()) for a in na]
+            bad = [h for h in handles if re.search(r["must_not_handle"], h, re.I)]
+            miss = [m for m in r["must_have"] if not any(t == m[0] and m[1] in v for t, v in vals)]
+            hit = False; strays = bad + [f"missing {m}" for m in miss]; good = not bad and not miss
+        elif r["expect"]:   # positive: hit the payee and no stray handles
             hit = any(h["artifact"]["value"] == r["expect"] for h in hits); strays = [h for h in handles if h != r["expect"] and not re.fullmatch(r"zelle:\+1\d{10}", h)]; good = hit and not strays   # a valid E.164 US phone handle (P3 ba487bf backstop) is allowed, not a stray
         else:             # negative: must NOT be canonicalised to the payee, no hit
             hit = bool(hits) or payee in handles; strays = []; good = not hit
