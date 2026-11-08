@@ -75,3 +75,22 @@ Team actor, scripted, n=1. Live first alert +14.9 s (P1's number), IRS impersona
 | 0afc3446 | 99 s | 13 | none | 0.05 | 0 | team chatter, no scam content; `user.action hang_up` posted at +6.6 s (as the live Decline tap): all finals still scored (live run before the TASK-061 fix scored 0 of 14) |
 | 499a20d2 | 59 s | 10 | +14.2 s (IRS, OTP/SSN) | 0.95 | 0 | scam script; s falls to 0.05 on the last benign closing line after the alert |
 Caveat: n=3, team actors, scripts the team knows; shows the path works on real phone lines, not a detection rate.
+
+## Regression @ 1fbf6de (TASK-071, every saved real-audio dump replayed through the current trunk build; aggregates only)
+Private P2 :8104, local engine (nemotron-nano-4b), real time, HUB_URL dead, one run at a time with the live-socket guard (`--wait`). Expected = earlier replay/live result in this file. 11111111-* (synthetic) and b58cec24 (simulated) excluded.
+| call | length | expected | alert time / quiet | s and band at end | finals lag max | pass |
+|---|---|---|---|---|---|---|
+| adad65a0 | 44 s | alert +11.8 s (SSN) | first +11.63 s | 0.95 critical | 0.40 s | PASS (-0.2 s) |
+| 499a20d2 | 59 s | alert +14.2 s | first +14.17 s | 0.60 (F6 sticky floor, was 0.05 before F6) | 0.31 s | PASS (0.0 s) |
+| 0afc3446 | 99 s | quiet | quiet, 0 alerts | 0.05 low | 0.34 s | PASS |
+| 922262b2 | 24 s | quiet | quiet | 0.05 low | 0.57 s (was 0.31 s after TASK-047) | PASS, finals still far from the 6.5 s live lag |
+| a99a2060 | 15 s | quiet | quiet | 0.00 low | 0.50 s | PASS |
+| 37cbc8e2 | 14 s | quiet (no earlier row) | quiet | 0.00 low | 0.28 s | PASS (first replay) |
+| 8894eb46 | 33 s | quiet (no earlier row) | quiet | 0.00 low | 0.20 s | PASS (first replay) |
+| 4d8dd2f8 | 72 s | quiet | quiet | 0.05 low | 0.31 s | PASS |
+| 497ef1d4 | 62 s | quiet | quiet | 0.00 low | 0.36 s | PASS |
+| 6352e850 | 146 s | quiet in the live run (upstream digital-zero mute, not a detector miss) | quiet | 0.05 low | 0.32 s | SAME as before (known upstream miss) |
+| 93c95fd6 | 94 s | no earlier row | first +18.04 s | 0.60 critical-labelled in P2 log | 0.36 s | first replay: alerts, 1 alert, no repeat |
+| a9142648 | 40 s | no earlier row | first +13.13 s | 0.95 critical | 0.39 s | first replay: alerts |
+| ba80d152 | 78 s | no earlier row | first +13.49 s | 0.95 critical | 0.34 s | first replay: alerts |
+Result: no alert moved by more than 0.2 s versus the earlier numbers, 0 new false alarms (every benign dump stayed quiet), 1 alert per alerting call. Not verified: whether 93c95fd6, a9142648 and ba80d152 are scripted scam calls (no label in this file; they alert, so a false alarm is possible if they were benign). The 0.60 end-state in the P2 log carries the band label of the raw score; the hub-side band for 0.60 is "watch" (seen in TASK-066).
