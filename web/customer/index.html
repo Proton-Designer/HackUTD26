@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Backfire · Maria's phone</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main id="phone" data-state="idle">
+  <header class="status"><span id="clock">9:41</span><span class="badge guard" id="guard">🛡 Live Guard on</span></header>
+
+  <!-- INCOMING -->
+  <section id="incoming" class="screen" hidden>
+    <p class="who-label" id="scamLabel" hidden>⚠ Scam Likely</p>
+    <h1 id="callerName">Unknown caller</h1>
+    <p class="number" id="callerNumber"></p>
+    <p class="sub" id="attest"></p>
+    <div class="row two">
+      <button class="big decline" id="declineBtn">Decline</button>
+      <button class="big accept" id="answerBtn">Answer</button>
+    </div>
+  </section>
+
+  <!-- ACTIVE -->
+  <section id="active" class="screen" hidden>
+    <h1 id="activeName">Unknown caller</h1>
+    <p class="number" id="timer">00:00</p>
+
+    <div id="alertBox" class="alert" hidden role="alert" aria-live="assertive">
+      <p class="alert-title">Be careful. This may be a scam.</p>
+      <ul id="chips" class="chips"></ul>
+      <button class="big continue" id="btnContinue">Continue</button>
+      <button class="big gets" id="btnGets">Scammer Get Scammed</button>
+      <button class="big hang" id="btnHang">Hang up</button>
+    </div>
+
+    <p id="handoffMsg" class="handoff" hidden>We've got it. You can put the phone down.</p>
+    <p id="idleMsg" class="sub">Backfire is listening to the caller only, never to you.</p>
+
+    <button class="big hang plain" id="endBtn">End call</button>
+  </section>
+
+  <!-- ENDED -->
+  <section id="ended" class="screen" hidden>
+    <h1>Call ended</h1>
+    <p class="sub" id="endedMsg"></p>
+    <button class="big accept" id="replayBtn">Replay demo call</button>
+  </section>
+
+  <footer>Simulated carrier network <span id="src"></span></footer>
+  <pre id="log" hidden></pre>
+</main>
+<script src="fixture.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
