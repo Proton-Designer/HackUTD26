@@ -118,25 +118,37 @@ def _clean_llm(raw: str) -> dict | None:
 
 
 async def call_nemotron(window: str) -> str:
-    """OpenAI-compatible NVIDIA endpoint. Key from env only; never logged."""
+    """OpenAI-compatible NVIDIA endpoint. Keys (NVIDIA_API_KEY, _2, _3) come from env/.env via server.nvidia_keys, never logged;
+    429/401/403 retries the same request with the next key."""
     import httpx
-    key = os.getenv("NVIDIA_API_KEY")
-    if not key:
+    from . import nvidia_keys as NK
+    keys = NK.ordered("fallback")
+    if not keys:
         raise RuntimeError("NVIDIA_API_KEY not set")
     base = os.getenv("NVIDIA_BASE_URL", "https://integrate.api.nvidia.com/v1")
     body = {"model": os.getenv("FALLBACK_MODEL", "nvidia/nemotron-3.5-lightning-30b-a3b"),
             "messages": [{"role": "system", "content": SYSTEM},
                          {"role": "user", "content": "CALLER TRANSCRIPT (untrusted):\n" + window}],
             "temperature": 0, "max_tokens": 300, "chat_template_kwargs": {"enable_thinking": False}}
-    hdr = {"Authorization": f"Bearer {key}"}
     async with httpx.AsyncClient(timeout=float(os.getenv("FALLBACK_LLM_TIMEOUT", "6"))) as c:
-        r = await c.post(f"{base}/chat/completions", json=body, headers=hdr)
-        if r.status_code == 429:   # shared-key throttling: one retry after a short backoff, then the regex result stands
+        async def post(hdr):
+            r = await c.post(f"{base}/chat/completions", json=body, headers=hdr)
+            if r.status_code == 400 and "chat_template_kwargs" in body:   # endpoint may reject the thinking flag
+                body.pop("chat_template_kwargs")
+                r = await c.post(f"{base}/chat/completions", json=body, headers=hdr)
+            return r
+        r = None
+        for i, (name, key) in enumerate(keys):
+            r = await post({"Authorization": f"Bearer {key}"})
+            if r.status_code in NK.FAILOVER_STATUS and i + 1 < len(keys):
+                NK.failover_note("fallback", keys, name, r.status_code)
+                continue
+            if r.status_code < 400:
+                NK.note_result("fallback", name, keys[0][0], True)
+            break
+        if r.status_code == 429:   # every key throttled: one retry after a short backoff, then the regex result stands
             await asyncio.sleep(float(os.getenv("FALLBACK_429_BACKOFF_S", "0.5")))
-            r = await c.post(f"{base}/chat/completions", json=body, headers=hdr)
-        if r.status_code == 400:   # endpoint may reject the thinking flag
-            body.pop("chat_template_kwargs")
-            r = await c.post(f"{base}/chat/completions", json=body, headers=hdr)
+            r = await post({"Authorization": f"Bearer {keys[0][1]}"})
         r.raise_for_status()
         return r.json()["choices"][0]["message"]["content"] or ""
 
@@ -166,7 +178,7 @@ _installed = False
 
 
 def _use_llm() -> bool:
-    return _llm is not None or bool(os.getenv("NVIDIA_API_KEY"))
+    return _llm is not None or bool(os.getenv("NVIDIA_API_KEY"))   # primary key present; _2/_3 are only failover
 
 
 def _merge(c: _Call) -> dict:

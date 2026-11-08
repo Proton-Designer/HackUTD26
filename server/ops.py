@@ -124,6 +124,14 @@ def _nvidia_key_set():
     except Exception:
         return bool(os.environ.get("NVIDIA_API_KEY"))
 
+def _nvkey(name) -> bool:
+    """Booleans only, never values (failover keys, server/nvidia_keys.py)."""
+    try:
+        from . import nvidia_keys
+        return nvidia_keys.key_set(name)
+    except Exception:
+        return bool(os.environ.get(name))
+
 def _intel_engine():
     """What intel will use for its next investigation: nemotron model id (key present), template (no key / LLM off), or None if intel isn't mounted."""
     try:
@@ -170,7 +178,7 @@ def status(app):
     except Exception:
         _ids, _last = [], None
     return {"hub": "up", "pipelines": names, "active_calls_detail": active_calls_detail(), "active_call_ids": [i[:8] for i in _ids],
-            "flags": {"DEMO_MODE": os.environ.get("DEMO_MODE") == "1", "FALLBACK": os.environ.get("FALLBACK") == "1", "SIM_MODE": os.environ.get("SIM_MODE") == "1", "FALLBACK_DETECT": os.environ.get("FALLBACK_DETECT") == "1", "NVIDIA_API_KEY_set": _nvidia_key_set(), "telnyx_ok": telnyx_state["ok"], "telnyx_last_error": telnyx_state["kind"], "intel_engine": _intel_engine(), "HUB_TOKEN_set": bool(os.environ.get("HUB_TOKEN")), "MARIA_LEG": os.environ.get("MARIA_LEG") or "sip", "CUSTOMER_NAME": customer_name(), "VOICE_LOCK": os.environ.get("VOICE_LOCK") == "1", "active_calls": len(_ids), "last_call_activity_ts": _last},
+            "flags": {"DEMO_MODE": os.environ.get("DEMO_MODE") == "1", "FALLBACK": os.environ.get("FALLBACK") == "1", "SIM_MODE": os.environ.get("SIM_MODE") == "1", "FALLBACK_DETECT": os.environ.get("FALLBACK_DETECT") == "1", "NVIDIA_API_KEY_set": _nvidia_key_set(), "NVIDIA_API_KEY_2_set": _nvkey("NVIDIA_API_KEY_2"), "NVIDIA_API_KEY_3_set": _nvkey("NVIDIA_API_KEY_3"), "telnyx_ok": telnyx_state["ok"], "telnyx_last_error": telnyx_state["kind"], "intel_engine": _intel_engine(), "HUB_TOKEN_set": bool(os.environ.get("HUB_TOKEN")), "MARIA_LEG": os.environ.get("MARIA_LEG") or "sip", "CUSTOMER_NAME": customer_name(), "VOICE_LOCK": os.environ.get("VOICE_LOCK") == "1", "active_calls": len(_ids), "last_call_activity_ts": _last},
             "db": counts, "latency": latency_summary()["metrics"]}
 
 def status_html(s):

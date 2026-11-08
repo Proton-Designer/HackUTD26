@@ -46,17 +46,30 @@ def _api_key() -> str | None:
 
 
 def call_nemotron(messages: list[dict], client: httpx.Client | None = None) -> str:
-    key_ = _api_key()
-    if not key_:
+    try:   # failover keyring (server/nvidia_keys.py): INTEL_NVIDIA_API_KEY, NVIDIA_API_KEY, _2, _3; 429/401/403 -> next key
+        from server import nvidia_keys as NK
+        keys = NK.ordered("intel", extra_first=("INTEL_NVIDIA_API_KEY",))
+    except Exception:
+        NK, keys = None, ([("NVIDIA_API_KEY", _api_key())] if _api_key() else [])
+    if not keys:
         raise RuntimeError("NVIDIA_API_KEY not set")
     c = client or httpx.Client(timeout=float(os.getenv("INTEL_LLM_TIMEOUT", "40")))
     body = {"model": MODEL, "messages": messages, "temperature": 0.2, "max_tokens": 1200}
     if os.getenv("INTEL_DISABLE_THINKING", "1") == "1":
         body["chat_template_kwargs"] = {"enable_thinking": False}
-    r = c.post(f"{BASE}/chat/completions", json=body, headers={"Authorization": f"Bearer {key_}"})
-    if r.status_code == 400 and "chat_template_kwargs" in body:   # endpoint may not accept the flag
-        body.pop("chat_template_kwargs")
-        r = c.post(f"{BASE}/chat/completions", json=body, headers={"Authorization": f"Bearer {key_}"})
+    r = None
+    for i, (name, key_) in enumerate(keys):
+        hdr = {"Authorization": f"Bearer {key_}"}
+        r = c.post(f"{BASE}/chat/completions", json=body, headers=hdr)
+        if r.status_code == 400 and "chat_template_kwargs" in body:   # endpoint may not accept the flag
+            body.pop("chat_template_kwargs")
+            r = c.post(f"{BASE}/chat/completions", json=body, headers=hdr)
+        if NK and r.status_code in NK.FAILOVER_STATUS and i + 1 < len(keys):
+            NK.failover_note("intel", keys, name, r.status_code)
+            continue
+        if NK and r.status_code < 400:
+            NK.note_result("intel", name, keys[0][0], True)
+        break
     r.raise_for_status()
     return r.json()["choices"][0]["message"]["content"] or ""
 
