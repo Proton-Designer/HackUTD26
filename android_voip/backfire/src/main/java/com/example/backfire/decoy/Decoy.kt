@@ -77,15 +77,18 @@ class Decoy(
     @Volatile var active = false
         private set
     private val startedAt = System.currentTimeMillis()
-    private val fillers = ArrayList<Pair<ByteArray, Int>>()
+    private val fillers = java.util.concurrent.CopyOnWriteArrayList<Pair<ByteArray, Int>>()
     private val given = HashSet<String>()
 
     fun start() {
         active = true
+        voice.cloneFailed = false
+        Log.i(TAG, "decoy voice: ${voice.kind}")
         exec.execute {
             say("Hello? Sorry dear, I lost you there for a second. Who did you say was calling?", record = true)
-            listOf("Mm-hmm.", "Oh my.", "Let me see.", "Oh dear.", "Okay, okay.").forEach { f -> voice.synth(f)?.let { fillers.add(it) } }
         }
+        // Fillers on their own thread: with the clone each one is a ~1-2 s network call, and replies must not queue behind them.
+        Thread({ listOf("Mm-hmm.", "Oh my.", "Let me see.", "Oh dear.", "Okay, okay.").forEach { f -> if (active) voice.synth(f)?.let { fillers.add(it) } } }, "decoy-fillers").start()
     }
 
     /** The scammer started talking: stop our voice (barge-in). */

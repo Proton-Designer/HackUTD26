@@ -8,6 +8,7 @@ class BackfireApp : Application() {
         Settings.init(this)
         Alerts.channels(this)
         Models.init(this)
+        com.example.backfire.decoy.VoiceProfile.init(this)
         Guard.init(this)
     }
 }

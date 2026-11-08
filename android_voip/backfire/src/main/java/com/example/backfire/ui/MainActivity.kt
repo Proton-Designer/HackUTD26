@@ -340,6 +340,8 @@ private fun ProtectionTab() {
         }
     }
 
+    VoiceSection()
+
     Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("What we keep", style = MaterialTheme.typography.titleMedium)
@@ -347,6 +349,49 @@ private fun ProtectionTab() {
             Text("• The caller's words: turned into text on this phone, used for the score, not saved.")
             Text("• Sent to the network: risk scores and alerts only.")
             Text("• Scammer numbers: kept so they can be stopped.")
+            Text("• Your voice profile: 8 seconds, only on this phone, until you delete it.")
         }
+    }
+}
+
+// ---------------------------------------------------------------- voice profile (consented clone, on this phone)
+
+@Composable
+private fun VoiceSection() {
+    val vs by com.example.backfire.decoy.VoiceProfile.state.collectAsStateWithLifecycle()
+    val cfg by Settings.config.collectAsStateWithLifecycle()
+    var consent by remember { mutableStateOf(false) }
+    val mic = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { ok -> if (ok) com.example.backfire.decoy.VoiceProfile.record(consent) else Guard.say("Microphone permission is needed to record your voice") }
+    val ctx = LocalContext.current
+    Section("Your voice (optional)") {
+        if (vs.enrolled && !vs.recording) {
+            Small("✓ Your voice is set up. If you press Scammer Get Scammed, Backfire's decoy talks to the scammer in your voice" +
+                if (cfg.nvidiaKey.isBlank()) " once an NVIDIA key is set (Engine tab)." else ".", Teal)
+            OutlinedButton(onClick = { com.example.backfire.decoy.VoiceProfile.delete() }) { Text("Delete my voice") }
+        } else {
+            Text("Backfire can talk to scammers in your voice, so they waste their time and not yours.")
+            Row(Modifier.fillMaxWidth().selectable(consent) { consent = !consent }, verticalAlignment = Alignment.CenterVertically) {
+                androidx.compose.material3.Checkbox(consent, { consent = it })
+                Small("I agree that Backfire may make a voice profile from my recording. It is used only when I press " +
+                    "Scammer Get Scammed, stays on this phone (sent to NVIDIA only to speak each sentence), and I can delete it at any time.",
+                    Color.Unspecified)
+            }
+            if (consent) {
+                Small("Press Record and read this out loud:")
+                Text(com.example.backfire.decoy.VoiceProfile.PARAGRAPH, style = MaterialTheme.typography.bodyLarge)
+                if (vs.recording) {
+                    LinearProgressIndicator(progress = { vs.level }, modifier = Modifier.fillMaxWidth())
+                    Small("Recording… %.0f s".format(vs.seconds), Color.Unspecified)
+                    OutlinedButton(onClick = { com.example.backfire.decoy.VoiceProfile.stopRecording() }) { Text("Stop") }
+                } else OutlinedButton(onClick = {
+                    if (ContextCompat.checkSelfPermission(ctx, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)
+                        com.example.backfire.decoy.VoiceProfile.record(consent)
+                    else mic.launch(Manifest.permission.RECORD_AUDIO)
+                }) { Text("● Record") }
+            }
+        }
+        vs.message?.let { Small(it, Color.Unspecified) }
     }
 }

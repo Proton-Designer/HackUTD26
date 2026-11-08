@@ -13,8 +13,9 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 /**
- * The decoy's voice: Android's on-device text-to-speech, slowed down and pitched like an older woman.
- * Labeled synthetic. (A consented clone of Maria's voice would plug in here later.)
+ * The decoy's voice. Maria's consented clone (VoiceProfile + NVIDIA Magpie zero-shot, called from this phone) when she has
+ * enrolled and a key is set; otherwise Android's on-device text-to-speech, slowed and pitched like an older woman (labeled
+ * synthetic). If the clone fails mid-call, the rest of the call uses the on-device voice.
  */
 class Voice(context: Context) {
     private val ctx = context.applicationContext
@@ -42,8 +43,32 @@ class Voice(context: Context) {
             ?: us.firstOrNull()
     }.getOrNull()
 
-    /** Text -> 16-bit mono PCM and its sample rate. Blocking (~100-400 ms for a sentence). */
+    @Volatile var cloneFailed = false
+    private var magpie: MagpieClone? = null
+    private var magpieKey: String? = null
+
+    /** "clone" or "synthetic": what the next sentence will use. */
+    val kind: String get() = if (!cloneFailed && VoiceProfile.promptWav() != null && com.example.backfire.Settings.now.nvidiaKey.isNotBlank()) "clone" else "synthetic"
+
+    /** Text -> 16-bit mono PCM and its sample rate. Blocking. Clone first, on-device voice as the fallback. */
     fun synth(text: String): Pair<ByteArray, Int>? {
+        val key = com.example.backfire.Settings.now.nvidiaKey
+        val prompt = VoiceProfile.promptWav()
+        if (!cloneFailed && prompt != null && key.isNotBlank()) {
+            if (magpie == null || magpieKey != key) { magpie?.close(); magpie = MagpieClone(key); magpieKey = key }
+            val t0 = System.currentTimeMillis()
+            val pcm = magpie!!.synth(text, prompt)
+            if (pcm != null && pcm.size > 1000) {
+                Log.i(TAG, "clone: ${pcm.size / 2 * 1000 / MagpieClone.RATE} ms of audio in ${System.currentTimeMillis() - t0} ms")
+                return pcm to MagpieClone.RATE
+            }
+            cloneFailed = true   // don't keep paying the timeout on every sentence
+            Log.w(TAG, "clone unavailable; on-device voice for the rest of the call")
+        }
+        return localSynth(text)
+    }
+
+    private fun localSynth(text: String): Pair<ByteArray, Int>? {
         if (!ready.await(5, TimeUnit.SECONDS) || !ok) return null
         val f = File(ctx.cacheDir, "tts-${UUID.randomUUID()}.wav")
         val done = CountDownLatch(1)
@@ -58,7 +83,7 @@ class Voice(context: Context) {
         return try { readWav(f) } catch (e: Exception) { Log.e(TAG, "bad wav", e); null } finally { f.delete() }
     }
 
-    fun close() = tts.shutdown()
+    fun close() { tts.shutdown(); magpie?.close() }
 
     /** Minimal RIFF reader: finds fmt + data chunks; returns mono PCM16 (first channel). */
     private fun readWav(f: File): Pair<ByteArray, Int>? {
