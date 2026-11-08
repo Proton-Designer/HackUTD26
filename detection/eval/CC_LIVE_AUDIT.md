@@ -15,6 +15,19 @@ Files: `web/command-center/app.js` (A), `fixture.js` (F), `index.html` (H). Part
 3. `pollChain()`: if `MODE.kind` is `live` or `reconnecting`, never assign `BACKFIRE_CHAIN`; keep the last live data marked stale, or show "waiting for the hub". Snapshot only when `MODE.kind === 'replay'`.
 4. `TEAM_HUB`: read it from `?server=` or `location.origin` only; keep the constant for a replay-from-file case, not for live.
 
+## 1b. Verification of P4b's b0b4e3d (#112), ~06:40 CT (code + jsdom, `index.html` + real `fixture.js`/`app.js`, URL `https://hub.example/command-center/`, mock WebSocket)
+| scenario | result |
+|---|---|
+| hub-served page, WS handshake always fails (checked +1.5 s and +21 s) | badge `RECONNECTING to the hub…`, mode `reconnecting`, 0 events, **no replay started** (old build: replay after ~12 s) |
+| hub-served, WS opens | badge hidden, mode `live` |
+| socket drops after live | badge `RECONNECTING to the hub…` (screen content kept) |
+| `?src=fixture` while a WS would open | badge `REPLAY · recorded test call`, mode `replay`, fixture events (headline "Ringing the customer...") |
+| `?src=mock` | same replay badge |
+- Badge cannot show "live" on a replay: it is hidden only when `MODE.kind` is `live`; `startReplay()` sets `kind:'replay'` and calls `renderAll()` (A:1522-1524). A replay page never opens a socket (`boot()` returns before `serverCandidates()` for `mock`/`fixture`).
+- Money trail: the snapshot is assigned only when `MODE.kind === 'replay'` (A:1245-ish). Live failure leaves `CHAIN.data` null / stale-labelled.
+- **Still not clean (all low, P4b):** (a) `TEAM_HUB` (A:1449) is still in `serverCandidates()` after the same origin, and `pollChain` falls back to it (`MODE.base || CFG.server || TEAM_HUB`, A:1238) before the first connect: after a tunnel restart a stale host could be attached or polled; also `http://localhost:8000` is a candidate, so a dev hub on the viewing laptop could be attached and shown as live. When `FROM_HUB`, use `[location.origin]` only. (b) "Live stays clean" means no positive LIVE badge: a judge cannot tell "live and idle" from "frozen" except the footer `N events · wss://host`; consider a small green LIVE dot. (c) Static text "The scammer is now talking to Nemotron" (A:487) is not read from an event (true for the demo). (d) Whether the tunnel viewer gets unredacted `transcript.caller` depends on the hub's `EVENTS_REDACT`; check during the call.
+- Nothing else hard-coded remains on the live path: `BACKFIRE_FIXTURE` and `BACKFIRE_CHAIN` are reachable only in replay; amounts, victim names, counts and the immunity number come from events or `GET /intel/chain`.
+
 ## 2. Hard-coded or fixture-only content that can reach the screen on a live path
 | file:line | what | live field / action | owner |
 |---|---|---|---|
