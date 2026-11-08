@@ -531,3 +531,49 @@ def test_status_customer_name_flag(monkeypatch):
     monkeypatch.setenv("CUSTOMER_NAME", '<b>Ev"e</b>' + "x" * 80)
     n = c.get("/demo/status").json()["flags"]["CUSTOMER_NAME"]
     assert "<" not in n and '"' not in n and len(n) <= 40
+
+
+def _dev_risk(**kw):
+    d = {"s": 0.91, "band": "high", "asks": ["gift_card", "secrecy"], "scam_type": "gift_card_scam", "stage": "payment",
+         "impersonates": "IRS", "addresses_ai_system": False, "why_chips": ["Asks for gift cards"], "engine": "device"}
+    d.update(kw); return d
+
+
+def test_paired_device_may_post_only_device_risk_and_transcript(monkeypatch):
+    monkeypatch.setenv("PIPELINE_TOKEN", "pt-secret")
+    bus.publish("call.incoming", "DV1", {"from": "+15555550123", "to": "+15555550100", "attestation": "C", "scam_id_score": 0.8})
+    anon, dev = TestClient(app), paired()
+    ev = lambda t, d, c=dev, cid="DV1": c.post("/events", json={"type": t, "call_id": cid, "data": d})
+    assert ev("risk.update", _dev_risk(), anon).status_code == 401                   # no token at all
+    n0 = len(bus.history)
+    r = ev("risk.update", _dev_risk(evil="x", extra={"a": 1}))
+    assert r.status_code == 200
+    got = [e for e in bus.history[n0:] if e["type"] == "risk.update"][-1]["data"]
+    assert got["engine"] == "device" and got["s"] == 0.91 and "evil" not in got and "extra" not in got   # rebuilt from validated fields
+    assert ev("transcript.caller", {"text": "hello there", "is_final": True, "engine": "device", "utterance_id": "u1"}).status_code == 200
+    assert bus.history[-1]["type"] == "transcript.caller" and bus.history[-1]["data"]["engine"] == "device"
+    # nothing else, and never another engine
+    for t, d in (("alert.fired", {"level": "first", "why_chips": [], "engine": "device"}), ("artifacts.extracted", {"engine": "device"}),
+                 ("blocklist.updated", {"engine": "device"}), ("intel.agent", {"engine": "device"}), ("risk.update", _dev_risk(engine="cloud")),
+                 ("risk.update", {k: v for k, v in _dev_risk().items() if k != "engine"})):
+        assert ev(t, d).status_code == 403, (t, d.get("engine"))
+    assert ev("call.ended", {"engine": "device"}).status_code == 403                  # reserved types stay hub-only
+    # validation
+    for bad in (_dev_risk(s=1.5), _dev_risk(s=True), _dev_risk(band="meh"), _dev_risk(stage="x"), _dev_risk(asks=["nope"]),
+                _dev_risk(why_chips=["a"] * 5), _dev_risk(impersonates=5)):
+        assert ev("risk.update", bad).status_code == 422, bad
+    assert ev("transcript.caller", {"text": 5, "is_final": True, "engine": "device"}).status_code == 422
+    assert ev("risk.update", _dev_risk(), cid="never-seen").status_code == 404        # only for calls the hub saw
+    # the pipeline token still works for P2 exactly as before
+    assert anon.post("/events", json={"type": "risk.update", "call_id": "DV1", "data": {"engine": "cloud", "s": 0.1}},
+                     headers={"x-pipeline-token": "pt-secret"}).status_code == 200
+
+
+def test_device_event_rate_limited(monkeypatch):
+    from server import main as m
+    monkeypatch.setenv("PIPELINE_TOKEN", "pt-secret"); m._dev_hits.clear()
+    bus.publish("call.incoming", "DV2", {"from": "+15555550123", "to": "+15555550100", "attestation": "C", "scam_id_score": 0.8})
+    dev = paired(); codes = [dev.post("/events", json={"type": "risk.update", "call_id": "DV2", "data": _dev_risk()}).status_code for _ in range(45)]
+    assert codes[:40] == [200] * 40 and set(codes[40:]) == {429}
+    other = paired()                                                                 # a different device has its own budget
+    assert other.post("/events", json={"type": "risk.update", "call_id": "DV2", "data": _dev_risk()}).status_code == 200

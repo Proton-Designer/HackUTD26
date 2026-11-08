@@ -53,9 +53,13 @@ async def ws_events(ws: WebSocket, call_id: str | None = None, token: str | None
 @app.post("/events")
 def post_event(request: Request, body: dict = Body(...)):
     pt = os.environ.get("PIPELINE_TOKEN")   # P2/P3/P4 present x-pipeline-token; when set it is required (fail closed) and separate from HUB_TOKEN
+    dev_only = False
     if pt:
         if not secrets.compare_digest(request.headers.get("x-pipeline-token", ""), pt):
-            raise HTTPException(401, "bad or missing pipeline token")
+            if device._valid(request.headers.get("x-device-token")):
+                dev_only = True    # a paired device (second client acting as the customer) may post ONLY on-device detection events
+            else:
+                raise HTTPException(401, "bad or missing pipeline token")
     else:
         _auth(request.headers.get("x-hub-token"))
     t, cid = body.get("type"), body.get("call_id")
@@ -63,8 +67,51 @@ def post_event(request: Request, body: dict = Body(...)):
         return {"ok": False, "error": "type and call_id required"}
     if t in RESERVED:
         raise HTTPException(403, f"{t} is hub-only")
-    bus.publish(t, cid, body.get("data") or {}, body.get("ts"))
+    data = body.get("data") or {}
+    if dev_only:
+        data = _device_event(request.headers.get("x-device-token"), t, cid, data)
+    bus.publish(t, cid, data, None if dev_only else body.get("ts"))
     return {"ok": True}
+
+# ---- paired-device events: engine "device" risk.update / transcript.caller from a second client (e.g. native Android on-device detection) ----
+_BANDS = {"low", "watch", "high", "critical"}
+_STAGES = {"opening", "pretext", "pressure", "payment", "closing"}
+_ASKS = {"otp", "card", "ssn", "gift_card", "crypto", "wire", "p2p", "remote_app", "secrecy"}
+DEVICE_EVENT_LIMIT = (40, 10.0)    # at most 40 device events per 10 s per paired device
+_dev_hits: dict = {}
+
+def _device_event(token, t, cid, d):
+    """Strictly validate and REBUILD the event (unknown fields dropped). Only risk.update / transcript.caller with engine == "device", only for a call
+    the hub has seen, rate-limited per device. Anything else is refused: a paired device is not a pipeline."""
+    import hashlib
+    if t not in ("risk.update", "transcript.caller") or not isinstance(d, dict) or d.get("engine") != "device":
+        raise HTTPException(403, "a paired device may post only risk.update / transcript.caller with engine 'device'")
+    if cid not in CALLER_BY_CALL:
+        raise HTTPException(404, "unknown call_id")
+    key, now = hashlib.sha256(token.encode()).hexdigest(), time.time()
+    hits = [x for x in _dev_hits.get(key, []) if now - x < DEVICE_EVENT_LIMIT[1]]
+    if len(hits) >= DEVICE_EVENT_LIMIT[0]:
+        _dev_hits[key] = hits
+        raise HTTPException(429, "too many device events; slow down")
+    hits.append(now); _dev_hits[key] = hits
+    def bad(msg): raise HTTPException(422, msg)
+    def txt(v, n): return "".join(c for c in str(v) if c.isprintable())[:n]
+    if t == "transcript.caller":
+        if not isinstance(d.get("text"), str) or not isinstance(d.get("is_final"), bool): bad("text (str) and is_final (bool) required")
+        return {"utterance_id": txt(d.get("utterance_id", ""), 40), "text": txt(d["text"], 500), "is_final": d["is_final"], "engine": "device"}
+    s = d.get("s")
+    if isinstance(s, bool) or not isinstance(s, (int, float)) or not 0 <= s <= 1: bad("s must be a number 0-1")
+    if d.get("band") not in _BANDS: bad("band must be one of %s" % sorted(_BANDS))
+    if d.get("stage") not in _STAGES: bad("stage must be one of %s" % sorted(_STAGES))
+    asks = d.get("asks", [])
+    if not isinstance(asks, list) or any(a not in _ASKS for a in asks): bad("asks must be a list of known asks")
+    chips = d.get("why_chips", [])
+    if not isinstance(chips, list) or len(chips) > 4 or any(not isinstance(c, str) for c in chips): bad("why_chips: up to 4 strings")
+    imp = d.get("impersonates")
+    if imp is not None and not isinstance(imp, str): bad("impersonates must be a string or null")
+    return {"s": round(float(s), 3), "band": d["band"], "asks": list(dict.fromkeys(asks)), "scam_type": txt(d.get("scam_type", "none"), 40) or "none",
+            "stage": d["stage"], "impersonates": txt(imp, 30) if imp else None, "addresses_ai_system": bool(d.get("addresses_ai_system")),
+            "why_chips": [txt(c, 60) for c in chips], "engine": "device"}
 
 @app.get("/routing/lookup")
 def lookup(request: Request, from_: str = Query("", alias="from"), attestation: str = "none"):

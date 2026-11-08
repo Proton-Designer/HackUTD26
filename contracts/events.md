@@ -14,7 +14,7 @@ Every event is JSON on the P1 event bus and `WS /events`:
 - `band`: `"low" | "watch" | "high" | "critical"` (low s<0.40, watch 0.40-0.80, high >=0.80, critical >=0.95)
 - `asks[]` items, exactly: `otp, card, ssn, gift_card, crypto, wire, p2p, remote_app, secrecy`
 - `stage`: `"opening" | "pretext" | "pressure" | "payment" | "closing"`
-- `engine`: `"cloud" | "local" | "fallback"` (`fallback` = hub-side insurance detector, regex + hosted Nemotron on Telnyx caller transcripts, only when `FALLBACK_DETECT=1`; UIs must label it "fallback detector")
+- `engine`: `"cloud" | "local" | "fallback" | "device"` (`device` = a paired second client (e.g. native Android) posting its own on-device `risk.update` / `transcript.caller` to `POST /events` with `x-device-token`; validated and rate-limited by the hub, never other types; UIs label it "on-device detector"). (`fallback` = hub-side insurance detector, regex + hosted Nemotron on Telnyx caller transcripts, only when `FALLBACK_DETECT=1`; UIs must label it "fallback detector")
 - `action` (user.action): `"continue" | "scammer_get_scammed" | "hang_up"`
 - `ended_by` (call.ended): `"caller" | "maria" | "decoy" | "system"`
 
