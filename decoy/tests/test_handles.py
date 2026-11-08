@@ -15,6 +15,7 @@ def test_dept_forms():
     assert ph("refunds.department@backfire-demo.example") == H
     assert ph("Refunds.Department@Backfire-Demo.Example.") == H
     assert ph("refunds dot dept at backfire dash demo dot example") == H
+    assert ph("refunds department@backfire-demo.example") == H   # P2 edge: model emits a spaced local part
     assert fix_zelle("by Zelle to refunds department at backfire dash demo dot example") == \
         "by Zelle to refunds dot dept at backfire dash demo dot example"
     assert fix_zelle("by sell to Refunds dot department at backfire dash demo dot example").startswith("by Zelle to Refunds dot dept at")

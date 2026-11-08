@@ -309,7 +309,11 @@ STT_EXPANSIONS = {"department": "dept", "departments": "dept", "customer service
 
 
 def norm_email(e: str) -> str:
-    e = re.sub(r"\s+", "", e.lower().strip().strip(".,;:!?"))
+    e = e.lower().strip().strip(".,;:!?")
+    if "@" in e:   # a space inside the local part is a spoken dot ('refunds department@...' -> 'refunds.department@...')
+        loc, dom = e.split("@", 1)
+        e = re.sub(r"\s+", ".", loc.strip()) + "@" + dom
+    e = re.sub(r"\s+", "", e)
     if "@" not in e:
         return norm_local(e) if "." in e else e
     local, dom = e.split("@", 1)
