@@ -318,3 +318,53 @@ def test_legit_call_ended_is_not_blocked_by_intel_or_stub(monkeypatch):
     bus.publish("handoff.started", "g2", {"restore_deadline": 1.0})
     bus.publish("call.ended", "g2", {"ended_by": "decoy", "duration_s": 40.0, "legit": True})
     assert routing.decide(n)["decision"] == "LIVE_GUARD"
+
+
+def test_telnyx_ok_flag_tracks_last_rest_result(monkeypatch):
+    from server import ops
+    monkeypatch.setattr(ops, "telnyx_state", {"ok": None, "kind": None, "ts": None})
+    c = TestClient(app, client=("127.0.0.1", 5000))
+    fl = lambda: c.get("/demo/status").json()["flags"]
+    assert fl()["telnyx_ok"] is None                                     # never called
+    ops.telnyx_result(True); assert fl()["telnyx_ok"] is True
+    ops.telnyx_result(False, '/calls -> 401 {"errors":[{"code":"10009","title":"user marked as blocked"}]}')
+    assert fl()["telnyx_ok"] is False and fl()["telnyx_last_error"] == "auth"
+    ops.telnyx_result(False, "ConnectTimeout"); f = fl()                 # blip: still false (last auth failure stands), kind updates
+    assert f["telnyx_ok"] is False and f["telnyx_last_error"] == "unreachable"
+    ops.telnyx_result(True); assert fl()["telnyx_ok"] is True and fl()["telnyx_last_error"] is None
+    ops.telnyx_result(False, "boom" * 100000)                            # never raises on junk
+    assert c.post("/demo/reset").status_code == 200 and fl()["telnyx_ok"] is True   # reset does not touch account health
+
+def test_hub_routing_intel_relay_work_with_telnyx_unreachable(monkeypatch):
+    """Telnyx 401/10009 or unreachable must not affect the hub: routing, events, intel blocklist, status, relay to P2, and voip's _safe all fail open."""
+    import asyncio, httpx, websockets, json as _j
+    monkeypatch.setenv("TELNYX_API_KEY", "dummy")
+    class Dead:
+        def __init__(self, *a, **k): pass
+        async def __aenter__(self): raise httpx.ConnectError("telnyx unreachable (test)")
+        async def __aexit__(self, *a): return False
+    monkeypatch.setattr(httpx, "AsyncClient", Dead)
+    c = paired()
+    assert c.get("/routing/lookup", params={"from": "+15555550123"}).json()["decision"] == "LIVE_GUARD"
+    assert c.get("/healthz").json()["ok"] and c.get("/demo/status").status_code == 200
+    assert c.post("/events", json={"type": "risk.update", "call_id": "tz", "data": {"s": .5, "band": "med", "engine": "cloud"}}).status_code in (200, 202, 204)
+    assert c.post("/demo/reset").json()["ok"]
+    # voip's REST wrapper swallows the failure (returns None) instead of raising into the call path
+    from voip import router as R, telnyx
+    assert asyncio.run(R._safe(telnyx.hangup("v3:abc"), "hangup")) is None
+    # P2 relay unaffected
+    from server import relay
+    async def go():
+        got = []
+        async def h2(ws):
+            async for m in ws: got.append(_j.loads(m))
+        srv = await websockets.serve(h2, "127.0.0.1", 0); port = srv.sockets[0].getsockname()[1]
+        monkeypatch.setenv("P2_STT_URL", f"ws://127.0.0.1:{port}"); monkeypatch.delenv("PIPELINE_TOKEN", raising=False)
+        async def back(f): pass
+        await relay.open("tz1", back)
+        await relay.caller_frame("tz1", {"event": "connected"})
+        await relay.caller_frame("tz1", {"event": "start", "stream_id": "S", "start": {}})
+        await relay.caller_frame("tz1", {"event": "media", "media": {"track": "inbound", "chunk": "1", "payload": "AAAA"}})
+        await asyncio.sleep(0.2); await relay.close("tz1"); srv.close()
+        return [m["event"] for m in got]
+    assert asyncio.run(go()) == ["connected", "start", "media"]

@@ -39,7 +39,7 @@ def observe(ev):
 bus.add_observer(observe)
 
 def reset():
-    _t.clear(); stats.clear()
+    _t.clear(); stats.clear()   # telnyx_state is account health, not demo state: reset leaves it
 
 def latency_summary():
     out = {}
@@ -47,6 +47,25 @@ def latency_summary():
         sv = sorted(v)
         out[m] = {"n": len(v), "last_ms": v[-1], "p50_ms": sv[len(sv) // 2], "max_ms": sv[-1]}
     return {"metrics": out, "log": str(LATENCY_LOG)}
+
+# Telnyx REST health, reported by voip (in-process: `from server import ops; ops.telnyx_result(ok, detail)`). Never raises; never stores bodies/keys.
+telnyx_state: dict = {"ok": None, "kind": None, "ts": None}
+
+def telnyx_result(ok: bool, detail: str = "") -> None:
+    """Record the outcome of the latest Telnyx REST call. ok=True -> telnyx_ok true. On failure `detail` is the error text (e.g.
+    'POST /calls -> 401 {...10009 user marked as blocked}'): 401/403/10009 -> telnyx_ok false (kind 'auth'); network/5xx/other -> telnyx_ok
+    unchanged-but-flagged (kind 'unreachable'/'error') so one blip doesn't claim the account is blocked."""
+    try:
+        d = str(detail or "")
+        if ok:
+            telnyx_state.update(ok=True, kind=None)
+        elif "10009" in d or " 401" in d or " 403" in d or "-> 401" in d or "-> 403" in d:
+            telnyx_state.update(ok=False, kind="auth")
+        else:
+            telnyx_state.update(kind="unreachable" if any(w in d.lower() for w in ("connect", "timeout", "timed out", "unreachable", "dns")) else "error")
+        telnyx_state["ts"] = time.time()
+    except Exception:
+        pass
 
 # name -> (path prefix that proves the router is mounted, env var for remote base URL)
 EXPECTED = {
@@ -122,7 +141,7 @@ def status(app):
     except Exception:
         counts = {"error": "db unavailable"}
     return {"hub": "up", "pipelines": names,
-            "flags": {"DEMO_MODE": os.environ.get("DEMO_MODE") == "1", "FALLBACK": os.environ.get("FALLBACK") == "1", "SIM_MODE": os.environ.get("SIM_MODE") == "1", "FALLBACK_DETECT": os.environ.get("FALLBACK_DETECT") == "1", "NVIDIA_API_KEY_set": _nvidia_key_set(), "intel_engine": _intel_engine(), "HUB_TOKEN_set": bool(os.environ.get("HUB_TOKEN"))},
+            "flags": {"DEMO_MODE": os.environ.get("DEMO_MODE") == "1", "FALLBACK": os.environ.get("FALLBACK") == "1", "SIM_MODE": os.environ.get("SIM_MODE") == "1", "FALLBACK_DETECT": os.environ.get("FALLBACK_DETECT") == "1", "NVIDIA_API_KEY_set": _nvidia_key_set(), "telnyx_ok": telnyx_state["ok"], "telnyx_last_error": telnyx_state["kind"], "intel_engine": _intel_engine(), "HUB_TOKEN_set": bool(os.environ.get("HUB_TOKEN"))},
             "db": counts, "latency": latency_summary()["metrics"]}
 
 def status_html(s):
