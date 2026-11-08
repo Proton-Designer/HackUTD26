@@ -46,6 +46,12 @@ Notes
 - Ayman's Windows machine: P2 detection on :8100 -> **Ayman's key (A)**.
 - Rayan's key (D): P2 eval + spare. Ayman is collecting Evan's and Rayan's keys by DM; P1 sets per-process env.
 
+## Update 02:42 (P2)
+- Live P2 (:8100) now runs the **local Nemotron Nano 4B as the primary detector** (`P2_ENGINE=local`). On P2's frozen
+  evals it's their best engine: test recall 33/33, FPR 2/27, p50 1.7 s. That removes P2's LLM load from NVIDIA cloud.
+  Only P2's Riva STT still uses NVIDIA (Whisper fallback on 429). So the biggest load is now the **P3 decoy**, and
+  Evan's key (B) on the decoy process is the split that matters most.
+
 ## To verify after the split
 1. On the hub: `/demo/status` -> `NVIDIA_API_KEY_set: true`, `intel_engine: nemotron:...`.
 2. One live call, then `python detection/scripts/call_report.py` -> 429 count should be 0.
