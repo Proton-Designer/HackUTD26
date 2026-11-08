@@ -12,7 +12,7 @@ ASK_RULES = {
     "gift_card": r"gift ?cards?|itunes card|google play card|steam card",
     "otp": r"(read|tell|give|send|share|repeat)\b[^.?!]{0,25}\b(code|otp|passcode|pin)\b|one[- ]time (code|passcode|password)|verification code|six[- ]digit code",
     "wire": r"wire (the |some )?(money|funds|transfer)|wire transfer|safe account|protected account|move (your |the )?(money|funds)|transfer (your |the )?(money|funds)",
-    "crypto": r"bitcoin|crypto|\bbtc\b|ethereum|wallet address|bitcoin atm",
+    "crypto": r"bitcoin|crypto|\bbtc\b|ethereum|wallet address|bitcoin atm|(safe|secure|new|cold|digital|different) wallet",
     "p2p": r"\bzelle\b|venmo|cash ?app|paypal me",
     "remote_app": r"any ?desk|team ?viewer|ultra ?viewer|remote (access|control|desktop)|screen ?shar",
     "ssn": r"social security|\bssn\b|last four of your social",

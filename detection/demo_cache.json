@@ -783,6 +783,22 @@
    "mentions charge confirmation"
   ]
  },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|i am from the coinbase security team. your account was hacked, you need to move funds to a safe wallet now.": {
+  "addresses_ai_system": false,
+  "asks": [
+   "crypto",
+   "remote_app"
+  ],
+  "impersonates": "Coinbase security team",
+  "s": 0.95,
+  "scam_type": "crypto wallet scam",
+  "stage": "payment",
+  "why_chips": [
+   "claims account hacked",
+   "asks to move funds",
+   "crypto wallet request"
+  ]
+ },
  "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|this is mark from the electric company's disconnection department.": {
   "addresses_ai_system": false,
   "asks": [],
@@ -976,6 +992,37 @@
    "claims IRS authority",
    "demands payment",
    "threatens arrest"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|this is officer daniels with the irs, there is a warrant in your name. this is officer daniels with the irs, there is a warrant in your name.": {
+  "addresses_ai_system": false,
+  "asks": [
+   "secrecy"
+  ],
+  "impersonates": "IRS",
+  "s": 0.95,
+  "scam_type": "irs impersonation",
+  "stage": "pressure",
+  "why_chips": [
+   "claims warrant in name",
+   "IRS authority",
+   "demands secrecy"
+  ]
+ },
+ "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|this is officer daniels with the irs, there is a warrant in your name. this is officer daniels with the irs, there is a warrant in your name. you must pay today with gift cards and tell no one.": {
+  "addresses_ai_system": false,
+  "asks": [
+   "gift_card",
+   "secrecy"
+  ],
+  "impersonates": "IRS",
+  "s": 0.98,
+  "scam_type": "IRS impersonation",
+  "stage": "payment",
+  "why_chips": [
+   "IRS impersonation",
+   "gift card payment",
+   "secrecy demand"
   ]
  },
  "cloud|nvidia/nemotron-3.5-lightning-30b-a3b|this is officer daniels with the irs, there is a warrant in your name. you must pay today with gift cards and tell no one.": {

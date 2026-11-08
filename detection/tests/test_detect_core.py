@@ -189,3 +189,9 @@ def test_demo_fuzzy_hit_and_new_ask_rejected(monkeypatch):
     monkeypatch.delenv("DEMO_MODE")
     with pytest.raises(RuntimeError):
         asyncio.run(D._engine_score("Hello, this is Michael with Apex Digital about your account and a client that referred you!", {}, "cloud"))
+
+
+def test_safe_wallet_is_crypto_ask():
+    r = D.rule_scan("Your account was hacked, you need to move funds to a safe wallet now.")
+    assert "crypto" in r["asks"] and r["floor"] >= 0.82
+    assert "crypto" not in D.rule_scan("I lost my wallet at the mall yesterday.")["asks"]

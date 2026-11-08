@@ -30,7 +30,7 @@ def mock_windows():
     d = json.load(open(ROOT / "mock/events.json"))
     for c in d["calls"]:
         yield from roll([e["data"]["text"] for e in c["events"]
-                         if e["type"] == "transcript.caller" and e["data"].get("is_final", True)])
+                         if e["type"] == "transcript.caller"])   # partials too: the mock crypto line is is_final=false
 
 
 async def main():
