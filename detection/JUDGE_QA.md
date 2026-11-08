@@ -97,3 +97,41 @@ Shower (drives the screen): Kareem when Ayman answers, and the reverse.
 - Show: `detection/eval/PSTN_CARDS.md` (rows per card) and `detection/eval/STT_FALLBACK.md` section 3 (real recordings).
 - Follow-up: "Why Riva, and what if it fails?" -> Riva Parakeet is about 4x faster than the CPU Whisper fallback on real voices (about 0.25 s vs 1.0-1.2 s). Whisper is the tested fallback: in 6 injected Riva failures no utterance was lost, it takes over after 2 failures, and it still caught the real scam call, about 3.6 s later. If Riva is throttled at judging time we set `P2_STT=whisper` and restart.
 - Don't say: "works on any phone line", "validated on real calls", "audio never leaves the device" (it goes to NVIDIA unless `P2_STT=whisper`).
+
+## Cards for the final product (TASK-067, 2026-11-08 ~05:45 CT: Telnyx phone call + Backfire mobile web app, talk mode, no persona; live build p2-known-good-0535)
+Same rules as above: n is small, all scam scripts are team-written, real calls are team actors with a script the team knows.
+
+**13. "What if the customer hangs up mid-call, or the scammer does?"** (Owner: Ayman)
+- Answer: P2 scores the caller's audio until the hub says `call.ended`; a "hang up" tap by the customer does not stop it (fixed in eff9462, test in `tests/test_alert.py`), and a result that lands after `call.ended` is dropped, so no late alert. On real call adad65a0 the scammer hung up at +46 s and the hub's intel block was out at +75 s (P1's journal, n=1).
+- Show: `detection/eval/REAL_CALLS.md` (adad65a0), `git show eff9462`.
+- Don't say: "the whole chain is proven on many calls". Say one real chain and one more alert.
+
+**14. "The decoy took over. When does the customer come back, and why does a scam that asked for my SSN or PIN never auto-restore?"** (Owner: Ayman)
+- Answer: The hub brings the customer back automatically only if every score stays under 0.50 for 10 s. After an alert that heard a hard ask (SSN, PIN, OTP, gift card, wire), P2 holds `s` at 0.60 or more and keeps the band it had at the alert (F6, 1c52469 + 3589532), so one polite closing line cannot look legit; Continue or `handoff.restored` releases it. A soft alert (no hard ask) has no floor, so a real false alarm can still restore (3 tests in `tests/test_alert.py`).
+- Show: `pytest -q detection/tests/test_alert.py -k f6`; real call 499a20d2 is why we added it (a benign line near the end). Restore on a real call is not proven yet (PRODUCT_MAP row L).
+- Don't say: "it never restores a real scam" as a guarantee; say it holds the floor after a hard ask until the user acts.
+
+**15. "A long, friendly call that turns bad at minute 5?"** (Owner: Ayman)
+- Answer: After 180 s of clearly normal talk with no alert, detection switches itself off to save the model, and any rules-only hit (a hard ask, or rules score 0.5 or more) turns it back on at once (F22, ac10be3). So a scam that starts late is caught at the first ask, not after the model warms up; benign talk stays muted.
+- Show: `tests/test_alert.py` "muted call re-arms" tests (final and partial). This is unit-tested; we did not run a 5-minute real call.
+- Don't say: "we tested long calls live".
+
+**16. "Two calls at once?"** (Owner: Ayman)
+- Answer: The product is built and run one call at a time: the local model has one slot, and P2 state is keyed by call id but two simultaneous calls are not verified end to end. eng2 is measuring this now; until that number is in `RESULTS.md`/`DEMO_DAY.md`, say "one call at a time, by design" and do not claim concurrency.
+- Show: `docs/DEMO_DAY_RUNBOOK.md` ("keep one call at a time").
+- Don't say: "scales", "handles many calls".
+
+**17. "What about Spanish?"** (Owner: Ayman)
+- Answer: The speech-to-text is English-only (Parakeet via Riva), so a Spanish caller is transcribed badly and we do not claim Spanish detection on a phone call. The text rules and model were tested on written Spanish and Spanglish lines (held-out v2: 4 Spanish scams, local caught all 4, production rules 1 of 4; hardneg_v3: 5 Spanglish look-alikes, one false alarm, hn-22), which says nothing about Spanish audio.
+- Show: RESULTS.md "Held-out v2" by-type rows, `eval/data/hardneg_v3.jsonl` (hn-22).
+- Don't say: "bilingual", "supports Spanish calls".
+
+**18. "What if NVIDIA, the local model or the hub dies during the call?"** (Owner: Ayman)
+- Answer: We ran six drills on a private stack, once each, with a synthetic scam call (`detection/eval/DRILLS.md`): llama down -> cloud alerted (gap -1.72 s, i.e. before the ask line ended); llama and cloud both dead -> rules-only alert (-0.65 s); Riva and cloud refused -> Whisper plus local alerted (-0.05 s); hub down 8.5 s across the alert -> the alert is retried up to 20 s and delivered once (before the fix it was lost); P2 killed mid-call -> that call gets no alert but the next one does. Not tested: real 429s, tunnel URL change live, hub restart under a real phone call.
+- Show: `detection/eval/DRILLS.md`; `/healthz` fields named in the table.
+- Don't say: "no single point of failure". P2 itself is one process.
+
+**19. "Have you tested it on real phone calls?"** (Owner: Ayman)
+- Answer: Yes, a small number: 7-8 real Telnyx phone calls from teammates, 2 with scripted scams (SSN and IRS+OTP). Both alerted, at +12 s (adad65a0) and +14.9 s (499a20d2), during the ask, and the benign calls had 0 false alerts. n=2 scams with a script the team knows, so this is a smoke test, not recall.
+- Show: `detection/eval/REAL_CALLS.md`; `detection/PITCH_NUMBERS.md` row 12.
+- Don't say: "validated on real calls", "alerts in 5 seconds". Say "about 8 to 15 seconds on real calls".
