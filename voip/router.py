@@ -416,6 +416,7 @@ async def webrtc_token(req: Request):
 RESTORE_WINDOW_S = int(os.environ.get("VOIP_RESTORE_S", "30"))
 RESTORE_LOW_S = float(os.environ.get("RESTORE_LOW_S", "30"))   # demo: 10
 RESTORE_BELOW = 0.50   # risk s below this = "looks legitimate"
+LAST_RISK_MAX_AGE_S = float(os.environ.get("RESTORE_LAST_MAX_AGE_S", "30"))   # a last score older than this does not start the low clock at handoff
 LOOP = None   # event loop, captured from the webhook so sync bus observers can schedule work
 
 async def _stop_decoy(sid):
@@ -433,6 +434,9 @@ async def handoff(sid):
     if not await _maybe_await(hub.start_decoy(sid)):
         log.warning("handoff aborted for %s: decoy not available (Maria stays)", sid); return False
     st["handed_off"] = True
+    lr = st.get("last_risk")   # restore speed-up: the last known score is low (and not stale) -> the low clock starts NOW, no waiting for a fresh update
+    if lr and lr[0] < RESTORE_BELOW and time.time() - lr[1] <= LAST_RISK_MAX_AGE_S:
+        st["low_since"] = time.time(); log.warning("handoff %s: last risk %.2f (%.0fs old) is low, restore clock started now", sid[:8], lr[0], time.time() - lr[1])
     if st.get("conf_id") and st.get("maria_ccid"):
         await _safe(telnyx.leave_conference(st["conf_id"], st["maria_ccid"]), "leave maria", sim)
     deadline = time.time() + RESTORE_WINDOW_S; st["restore_deadline"] = deadline
@@ -531,9 +535,11 @@ def _legit(st) -> dict:
     return {"legit": True} if st.get("handed_off") and ls and time.time() - ls >= RESTORE_LOW_S else {}
 
 def _note_risk(sid, score):
-    """Runs on the loop. Tracks continuous low risk AFTER handoff."""
+    """Runs on the loop. Remembers the last real (non-fallback) risk score at all times; after handoff it tracks continuous low risk."""
     st = CALLS.get(sid)
-    if not st or not st.get("handed_off") or st.get("restored"): return
+    if not st: return
+    st["last_risk"] = (score, time.time())
+    if not st.get("handed_off") or st.get("restored"): return
     if score < RESTORE_BELOW:
         if st.get("low_since") is None: st["low_since"] = time.time()
     else:

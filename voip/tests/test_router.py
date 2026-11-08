@@ -662,3 +662,40 @@ def test_inrms_logged_even_if_answered_webhook_not_processed_yet(monkeypatch):
     with TestClient(app).websocket_connect(f"/media/{sid}?t=tok") as ws:
         ws.send_text(json.dumps({"event": "start"})); time.sleep(0.1)
     assert made == []                                            # switch off works
+
+
+def test_restore_clock_starts_at_handoff_from_last_low_score_without_new_updates(monkeypatch):
+    fr = FakeRelay(); monkeypatch.setattr(R, "_hub_relay", lambda: fr); monkeypatch.setattr(R, "RESTORE_LOW_S", 1.0); monkeypatch.setattr(R, "DEMO_HAUL_DELAY_S", 99)
+    sid = "sess-fastrestore-1"; R.CALLS[sid] = _state(); t = {}
+    async def go():
+        R.LOOP = asyncio.get_running_loop()
+        R._note_risk(sid, 0.05)                                   # last known score, BEFORE the tap
+        t0 = time.time(); assert await R.handoff(sid); assert R.CALLS[sid]["low_since"] is not None
+        while not R.CALLS[sid].get("restored") and time.time() - t0 < 4: await asyncio.sleep(0.1)
+        t["dt"] = time.time() - t0
+    asyncio.run(go())                                              # no risk.update after the handoff at all
+    assert R.CALLS[sid].get("restored") and 0.9 <= t["dt"] <= 2.2, t
+    assert "handoff.restored" in [e["type"] for e in bus.history if e["call_id"] == sid]
+
+def test_restore_clock_not_started_when_last_score_high_stale_or_unknown(monkeypatch):
+    fr = FakeRelay(); monkeypatch.setattr(R, "_hub_relay", lambda: fr); monkeypatch.setattr(R, "RESTORE_LOW_S", 99)
+    async def one(sid, last):
+        R.CALLS[sid] = _state()
+        if last is not None: R.CALLS[sid]["last_risk"] = last
+        await R.handoff(sid); return R.CALLS[sid].get("low_since")
+    async def go():
+        R.LOOP = asyncio.get_running_loop()
+        assert await one("sess-fr-high-1234", (0.9, time.time())) is None
+        assert await one("sess-fr-stale-123", (0.05, time.time() - 120)) is None
+        assert await one("sess-fr-none-1234", None) is None
+    asyncio.run(go())
+
+def test_high_score_after_handoff_resets_clock_and_blocks_restore(monkeypatch):
+    fr = FakeRelay(); monkeypatch.setattr(R, "_hub_relay", lambda: fr); monkeypatch.setattr(R, "RESTORE_LOW_S", 0.8); monkeypatch.setattr(R, "DEMO_HAUL_DELAY_S", 99)
+    sid = "sess-fr-reset-1234"; R.CALLS[sid] = _state()
+    async def go():
+        R.LOOP = asyncio.get_running_loop(); R._note_risk(sid, 0.1); await R.handoff(sid)
+        await asyncio.sleep(0.4); R._note_risk(sid, 0.9); assert R.CALLS[sid]["low_since"] is None   # any high score resets
+        await asyncio.sleep(1.2); assert not R.CALLS[sid].get("restored")
+        R._note_risk(sid, 0.1); await asyncio.sleep(1.4); assert R.CALLS[sid].get("restored")         # low again, held 0.8 s -> restore
+    asyncio.run(go())
