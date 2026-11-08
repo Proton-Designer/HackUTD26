@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Start the Backfire hub (+ mounted routers) and a cloudflared quick tunnel; print the public URL.
 # Usage: scripts/run_hub            env: HUB_PORT=8000 DEMO_MODE=1 HUB_TOKEN=... NO_TUNNEL=1 P2_BASE/P3_BASE/P4_BASE/VOIP_BASE
+# Binds 127.0.0.1 (cloudflared connects locally); HUB_BIND=0.0.0.0 only for LAN testing.
 # The tunnel URL is EPHEMERAL (changes each run). A stable URL needs a cloudflared named tunnel (`cloudflared tunnel login`
 # + a Cloudflare domain/account) -> NEEDS LEAD. This script never changes Telnyx config; it only prints the command for the lead.
 set -u
@@ -15,7 +16,7 @@ trap cleanup EXIT INT TERM
 if curl -fsS -m 1 "http://127.0.0.1:$PORT/healthz" >/dev/null 2>&1; then
   echo "port $PORT already serves a hub; not starting another (stop it or set HUB_PORT)"; exit 1
 fi
-"$PY" -m uvicorn server.main:app --host 0.0.0.0 --port "$PORT" >"$LOGDIR/hub.log" 2>&1 &
+"$PY" -m uvicorn server.main:app --host "${HUB_BIND:-127.0.0.1}" --port "$PORT" >"$LOGDIR/hub.log" 2>&1 &
 pids+=($!)
 for _ in $(seq 1 30); do curl -fsS -m 1 "http://127.0.0.1:$PORT/healthz" >/dev/null 2>&1 && break; sleep 0.5; done
 curl -fsS -m 1 "http://127.0.0.1:$PORT/healthz" >/dev/null 2>&1 || { echo "hub failed to start; see $LOGDIR/hub.log"; tail -5 "$LOGDIR/hub.log"; exit 1; }
@@ -34,6 +35,7 @@ if [ "${NO_TUNNEL:-}" != "1" ]; then
   fi
 fi
 if [ -n "$PUBLIC" ]; then
+  [ -z "${HUB_TOKEN:-}" ] && echo "WARNING: HUB_TOKEN is unset; /events POST, /routing/lookup and /demo/* are open on the public URL. Export HUB_TOKEN before run_hub for the real demo."
   echo "public URL:  $PUBLIC   (ephemeral; changes every run)"
   echo "Maria's app: $PUBLIC/app/"
   echo "Telnyx webhook (LEAD runs; replace <APP_ID> with the Call Control app id, webhook path per voip/):"
