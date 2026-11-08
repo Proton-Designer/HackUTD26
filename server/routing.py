@@ -2,21 +2,21 @@
 import logging
 from . import db
 log = logging.getLogger("hub.routing")
-EXEMPT = {"911", "+911", "988", "+988"}
+EXEMPT = {"911", "+911", "988", "+988"}  # explicit set only; unverified short codes go to LIVE_GUARD
 
 def decide(from_number, attestation="none"):
     try:
         n = db.norm(from_number)
-        if n in EXEMPT or (n and len(n.lstrip("+")) <= 6 and n.lstrip("+").isdigit()):
-            return {"decision": "NORMAL", "reason": "Exempt (emergency / short code)", "attestation": attestation}
+        # blocklist first: an exemption must never bypass a confirmed/campaign block
         if db.has("confirmed_scammers", n):
             return {"decision": "BLOCKED_BACKFIRE", "reason": "Confirmed scammer for her", "attestation": attestation}
         if db.has("campaign_numbers", n):
             return {"decision": "BLOCKED_BACKFIRE", "reason": "Linked to a confirmed scam campaign", "attestation": attestation}
+        if n in EXEMPT:
+            return {"decision": "NORMAL", "reason": "Exempt (emergency number)", "attestation": attestation}
         if db.has("trusted", n) and attestation == "A":
             return {"decision": "NORMAL", "reason": "Trusted contact, caller ID verified", "attestation": attestation}
-        label = "Trusted number but caller ID not verified" if db.has("trusted", n) else (
-            "Caller ID not verified" if attestation in ("none", "C") else "Not in her trusted list")
+        label = "Caller ID not verified" if attestation in ("none", "C") else "Not in her trusted list"
         return {"decision": "LIVE_GUARD", "reason": label, "attestation": attestation}
     except Exception:
         log.exception("routing failed; failing open")

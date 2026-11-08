@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 # Reset demo state (< 30 s). Usage: scripts/reset_demo [hub_base_url]
 BASE="${1:-http://127.0.0.1:8000}"
-curl -fsS -m 10 -X POST "$BASE/demo/reset" && echo
+curl -fsS -m 10 -H "x-hub-token: ${HUB_TOKEN:-}" -X POST "$BASE/demo/reset" && echo

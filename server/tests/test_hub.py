@@ -17,6 +17,8 @@ def test_routing_decisions():
     db.add_campaign("+15555550123")
     assert routing.decide("+15555550123", "A")["decision"] == "BLOCKED_BACKFIRE"
     assert routing.decide("911")["decision"] == "NORMAL"
+    assert routing.decide("12345")["decision"] == "LIVE_GUARD"  # unverified short code not exempt
+    db.add_confirmed("12345"); assert routing.decide("12345")["decision"] == "BLOCKED_BACKFIRE"
 
 def test_undo_unblocks():
     t = db.add_confirmed("+15555550999"); assert db.undo(t)
@@ -34,14 +36,17 @@ def test_fail_open(monkeypatch):
 def test_ws_events_and_post():
     c = TestClient(app)
     with c.websocket_connect("/events") as ws:
-        assert c.post("/events", json={"type": "call.routed", "call_id": "x", "data": {"decision": "NORMAL", "reason": "r"}}).json()["ok"]
-        ev = ws.receive_json(); assert ev["type"] == "call.routed" and ev["call_id"] == "x" and "ts" in ev
+        assert c.post("/events", json={"type": "risk.update", "call_id": "x", "data": {"s": 0.1}}).json()["ok"]
+        ev = ws.receive_json(); assert ev["type"] == "risk.update" and ev["call_id"] == "x" and "ts" in ev
+        bus.publish("call.incoming", "x", {"from": "+15555550001"}); ws.receive_json()
         c.post("/user/action", json={"call_id": "x", "action": "hang_up"})
         assert ws.receive_json()["data"]["action"] == "hang_up"
 
 def test_bad_action_and_ingest_stub():
     c = TestClient(app)
     assert not c.post("/user/action", json={"call_id": "x", "action": "nope"}).json()["ok"]
+    assert c.post("/user/action", json={"call_id": "zzz", "action": "hang_up"}).status_code == 404
+    assert c.post("/events", json={"type": "user.action", "call_id": "x", "data": {}}).status_code == 403
     assert c.post("/intel/ingest", json={"call_id": "x", "artifacts": []}).json()["stub"]
 
 def test_decoy_end_blocks_caller_and_callback_rejected():
@@ -51,7 +56,7 @@ def test_decoy_end_blocks_caller_and_callback_rejected():
                      ("call.routed", {"decision": "LIVE_GUARD", "reason": "x"}),
                      ("handoff.started", {"restore_deadline": 1.0}),
                      ("call.ended", {"ended_by": "caller", "duration_s": 5.0})]:
-            c.post("/events", json={"type": t, "call_id": "k1", "data": d})
+            bus.publish(t, "k1", d)
         types = [ws.receive_json()["type"] for _ in range(5)]
         assert types[-1] == "blocklist.updated"
     assert c.get("/routing/lookup", params={"from": "+15555550142"}).json()["decision"] == "BLOCKED_BACKFIRE"
@@ -67,3 +72,16 @@ def test_reset_and_replay():
     from server import replay
     asyncio.run(replay.run("c_demo_bank", speed=1000))
     assert any(e["type"] == "call.ended" for e in bus.history)
+
+def test_token_required(monkeypatch):
+    import server.main as m
+    monkeypatch.setattr(m, "HUB_TOKEN", "s3")
+    c = TestClient(app)
+    assert c.get("/routing/lookup", params={"from": "+1"}).status_code == 401
+    assert c.get("/routing/lookup", params={"from": "+1"}, headers={"x-hub-token": "s3"}).status_code == 200
+    assert c.post("/events", json={"type": "risk.update", "call_id": "x"}).status_code == 401
+
+def test_trusted_number_not_auto_blocked():
+    for t, d in [("call.incoming", {"from": "+15555550188", "attestation": "C"}), ("handoff.started", {}), ("call.ended", {})]:
+        bus.publish(t, "k9", d)
+    assert routing.decide("+15555550188", "A")["decision"] == "NORMAL"
