@@ -134,3 +134,35 @@ def test_partial_fast_path_fires_once_and_final_does_not_double():
 
 def test_partial_never_raises():
     r = Rig([]); asyncio.run(r.m.on_partial("c1", {})); asyncio.run(r.m.on_partial("c1", {"text": None}))
+
+def test_alert_retried_when_hub_down_then_delivered(monkeypatch):
+    """TASK-055 drill 3b: hub POST fails (returns False) around alert.fired -> retried until delivered, exactly one delivered."""
+    monkeypatch.setattr(alert, "ALERT_RETRY_EVERY_S", 0.05)
+    got, fails = [], [3]
+    async def emit(t, c, d):
+        if t == "alert.fired":
+            if fails[0] > 0: fails[0] -= 1; return False
+            got.append(d["level"])
+        return True
+    async def det(cid, text, meta, engine): return R(0.9)
+    async def go():
+        m = alert.AlertMachine(emit=emit, detect=det)
+        await m.on_final("c1", {"text": "x"}); await asyncio.sleep(0.5)
+        return m
+    asyncio.run(go())
+    assert got == ["first"]
+
+def test_alert_retry_stops_after_call_ended(monkeypatch):
+    monkeypatch.setattr(alert, "ALERT_RETRY_EVERY_S", 0.05)
+    got = []
+    async def emit(t, c, d):
+        if t == "alert.fired": got.append(1); return False
+        return True
+    async def det(cid, text, meta, engine): return R(0.9)
+    async def go():
+        m = alert.AlertMachine(emit=emit, detect=det)
+        await m.on_final("c1", {"text": "x"}); await asyncio.sleep(0.12)
+        await m.on_event({"type": "call.ended", "call_id": "c1", "data": {}}); n = len(got); await asyncio.sleep(0.3)
+        return n, len(got)
+    a, b = asyncio.run(go())
+    assert a == b

@@ -58,3 +58,4 @@ Smoke: `curl $LOCAL_LLM_URL/health`; `POST /detect` with `"engine":"local"`. If 
 
 Eval: `.venv/bin/python -m detection.eval.run_eval --engine {rules,cloud,local} --split dev`, then `--freeze` (tunes thresholds on dev only, writes FROZEN.json), then `--engine all --split test`, then `--report` (writes RESULTS.md). Rows: `data/eval/scripts.jsonl` + `detection/eval/extra_rows.jsonl` (regenerate with `python -m detection.eval.gen_extra_rows`). Scores are cached in `detection/eval/.cache` (gitignored); cloud is throttled to 20 rpm.
 Tests: `.venv/bin/python -m pytest -q detection/tests/test_local.py detection/tests/test_eval.py` (HTTP mocked).
+- eval/DRILLS.md (TASK-055): failure drills; scripts/drills.py reproduces.

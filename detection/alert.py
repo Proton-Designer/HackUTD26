@@ -13,6 +13,7 @@ HARD_ASK_S = float(os.environ.get("HARD_ASK_S", "0.60"))   # decision: a hard as
 REARM_BELOW = 0.80
 QUIET_S = float(os.environ.get("QUIET_S", "180"))
 WINDOW_N, WINDOW_S = 6, 60.0
+ALERT_RETRY_S = float(os.environ.get("P2_ALERT_RETRY_S", "20")); ALERT_RETRY_EVERY_S = float(os.environ.get("P2_ALERT_RETRY_EVERY_S", "1.0"))
 HOLD_S, HOLD_N = 10.0, 3     # engine-failed (rules-only) window: hold last LLM-backed s for <=10 s / 3 windows, then decay
 
 class Call:
@@ -163,6 +164,25 @@ class AlertMachine:
             return "realert"
         return None
 
+    async def _emit_alert(self, cid, level, chips):
+        """alert.fired is the one event that must not be lost: if the hub POST fails (hub restarting, TASK-055 drill 3b), retry in the background
+        for up to ALERT_RETRY_S while the call is live. hub.emit returns False on failure; other emit callables return None and are not retried."""
+        data = {"level": level, "why_chips": chips}
+        if await self.emit("alert.fired", cid, data) is not False:
+            return
+        async def retry():
+            t_end = self.clock() + ALERT_RETRY_S
+            while self.clock() < t_end and cid not in self.ended:
+                await asyncio.sleep(ALERT_RETRY_EVERY_S)
+                if cid in self.ended: break
+                try:
+                    if await self.emit("alert.fired", cid, data) is not False:
+                        log.info("alert.fired %s delivered on retry call=%s", level, cid); return
+                except Exception:
+                    log.exception("alert retry failed (ignored)")
+            log.warning("alert.fired %s NOT delivered call=%s", level, cid)
+        t = asyncio.get_running_loop().create_task(retry()); stream._bg.add(t); t.add_done_callback(stream._bg.discard)
+
     async def _process(self, cid, c, r, seq=None):
         """seq = window seq of the scored text (final-based scorings only; interim partials pass None and are neither checked nor recorded)."""
         if cid in self.ended:
@@ -193,14 +213,14 @@ class AlertMachine:
                     c.fired = True
                     c.known_hard = set(hard)
                     log.info("alert.fired call=%s level=first src=%s s=%.2f", cid, c.src, s)
-                    await self.emit("alert.fired", cid, {"level": "first", "why_chips": chips})
+                    await self._emit_alert(cid, "first", chips)
             elif c.continued:
                 if s < REARM_BELOW:
                     c.armed = True
                 elif c.armed and ((bnd == "critical" and c.prev_band != "critical") or (hard - c.known_hard)):
                     c.armed = False
                     log.info("alert.fired call=%s level=realert src=%s s=%.2f", cid, c.src, s)
-                    await self.emit("alert.fired", cid, {"level": "realert", "why_chips": chips})
+                    await self._emit_alert(cid, "realert", chips)
                 c.known_hard |= hard
         c.prev_band, c.last = bnd, r
 

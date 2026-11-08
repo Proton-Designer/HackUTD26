@@ -28,6 +28,13 @@ Then: `curl -s <tunnel url>/healthz` -> 200. Then one test call; `python3 detect
 | No transcripts on a real call | `grep 'rms(per 20ms' logs/p2.log \| tail -1`: p90 < ~40 and thr 60 means very quiet line, set `P2_VAD_FLOOR=40` and restart; no `/stt` line at all means the relay never connected (tunnel URL / P1 side) | P1 (relay / URL) |
 | False alarm on stage (legit call alerts) | press **Continue** in the UI (restores calm, window is cleared); do not restart anything | lead after the demo, with call id |
 | Alert did not fire on a scam | hard asks (gift card / OTP / wire) fire in <1 s from partials; check `risk.update` s in logs, then engine failover lines | lead |
+### If X breaks during judging (drilled, see eval/DRILLS.md)
+- **llama down:** alert still fires (cloud, or rules floor if cloud is down too), 0.7-1.7 s early. Do nothing; watchdog restarts llama in ~2 min.
+- **NVIDIA key rate-limited (Riva + cloud):** whisper STT + local llama keep the alert (about 1 s later). Do nothing.
+- **Hub restarts mid-call:** P2 reconnects within ~15 s; alert.fired is retried for 20 s so it is not lost. Do nothing; do not restart P2.
+- **P2 dies mid-call:** that call is not detected; watchdog brings P2 back in <1 min (restart itself is <1 s). Tell P1 to reopen the relay; next call is fine.
+- **Tunnel dies:** ~3 min to notice; read `logs/p2_tunnel_url.txt`, lead tells P1 `P2_STT_URL=wss://<host>`, repoint between calls.
+
 Offline insurance: `OFFLINE=1 bash detection/scripts/demo_local.sh` (hub+P2+decoy+simulated caller, no internet).
 
 ## 4. Freeze rules
