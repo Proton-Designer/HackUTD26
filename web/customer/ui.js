@@ -54,7 +54,7 @@
     });
     $("blockedEmpty").hidden = state.blocked.length > 0;
     $("callsCount").textContent = state.calls;
-    $("guardState").textContent = state.guardOn ? "On. Backfire is watching the caller's side of calls from numbers it doesn't know." : "Off. Calls are not being checked.";
+    $("guardState").textContent = state.guardOn ? "On. Backfire is watching the caller's side of calls from numbers it doesn't know." + (state.voiceId ? " Turning it off also deletes your voice." : "") : "Off. Calls are not being checked.";
     $("guardToggle").textContent = state.guardOn ? "Turn Live Guard off" : "Turn Live Guard on";
     $("voiceState").textContent = state.voiceId ? "Saved. Used only if you press Scammer Get Scammed." + (HUB ? "" : " (Simulated)") : "No voice profile.";
     $("voiceDelete").hidden = !state.voiceId; $("voiceSetup").hidden = !!state.voiceId;
@@ -65,7 +65,11 @@
     catch (e) { console.log("[backfire] undo failed", String(e)); return; }   // keep the row if the hub refused
     state.blocked = state.blocked.filter(x => x !== b); renderProtection();
   }
-  $("guardToggle").onclick = () => { state.guardOn = !state.guardOn; store.set("on", state.guardOn ? "1" : "0"); renderProtection(); };
+  // Consent promises the voice is deleted if she turns Backfire off, so turning it off deletes it (stays on if the delete fails).
+  $("guardToggle").onclick = async () => {
+    if (state.guardOn && state.voiceId && !(await deleteVoice())) return;
+    state.guardOn = !state.guardOn; store.set("on", state.guardOn ? "1" : "0"); renderProtection();
+  };
 
   // events from the hub / replay
   BF.onEvent = ev => {
@@ -80,8 +84,8 @@
   // ---- voice delete ----
   async function deleteVoice() {
     try { if (HUB && state.voiceId) await hub("DELETE", "/voice/" + encodeURIComponent(state.voiceId)); }
-    catch (e) { console.log("[backfire] voice delete failed", String(e)); $("voiceState").textContent = "Could not delete right now. Try again."; return; }
-    state.voiceId = null; store.set("voice", null); renderProtection();
+    catch (e) { console.log("[backfire] voice delete failed", String(e)); $("voiceState").textContent = "Could not delete your voice right now. Try again."; return false; }
+    state.voiceId = null; store.set("voice", null); renderProtection(); return true;
   }
   $("voiceDelete").onclick = deleteVoice;
   $("voiceSetup").onclick = () => { setup(2); };
@@ -102,7 +106,10 @@
     const digits = Array.from({ length: 4 }, () => Math.floor(Math.random() * 10)).join(" ");
     return pick.join(" ") + " Today's code word is " + digits + ".";
   }
+  let discard = false;
   $("consent").onchange = e => {
+    if (!e.target.checked && rec) { discard = true; rec.stop(); }   // consent withdrawn mid-recording: throw the recording away
+    if (!e.target.checked) $("recStatus").textContent = "";
     $("recordBox").hidden = !e.target.checked;
     if (e.target.checked) $("paragraph").textContent = newParagraph();
   };
@@ -113,7 +120,7 @@
     $("recStatus").textContent = "Saving…";
     try {
       let voice_id;
-      if (HUB) voice_id = (await hub("POST", "/voice/enroll", { recording: await b64(blob), consent_version: CONSENT_VERSION })).voice_id;
+      if (HUB) voice_id = (await hub("POST", "/voice/enroll", { recording: await b64(blob), mime: (blob.type || "audio/webm").split(";")[0], consent_version: CONSENT_VERSION })).voice_id;
       else voice_id = "v_simulated_" + Math.random().toString(36).slice(2, 8);   // no hub configured: simulated
       state.voiceId = voice_id; store.set("voice", voice_id);
       finish("Your voice is saved" + (HUB ? "" : " (simulated)") + ". Backfire is on. You can delete your voice any time in Protection.");
@@ -127,7 +134,7 @@
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       chunks = []; rec = new MediaRecorder(stream);
       rec.ondataavailable = e => chunks.push(e.data);
-      rec.onstop = () => { stream.getTracks().forEach(t => t.stop()); const blob = new Blob(chunks, { type: rec.mimeType || "audio/webm" }); rec = null; $("recBtn").textContent = "● Start recording"; enroll(blob); };
+      rec.onstop = () => { stream.getTracks().forEach(t => t.stop()); if (discard) { discard = false; rec = null; chunks = []; $("recBtn").textContent = "● Start recording"; return; } const blob = new Blob(chunks, { type: rec.mimeType || "audio/webm" }); rec = null; $("recBtn").textContent = "● Start recording"; enroll(blob); };
       rec.start(); $("recBtn").textContent = "■ Stop when finished"; $("recStatus").textContent = "Recording… read the words above.";
     } catch (e) {
       $("recStatus").textContent = "We couldn't use the microphone. Allow it in your browser and try again.";

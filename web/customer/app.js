@@ -3,7 +3,8 @@
   const $ = id => document.getElementById(id);
   const qs = new URLSearchParams(location.search);
   // ?server=<hub base URL> (http://host:8000, or ws://host:8000/events) -> live; absent -> replay of mock/events.json
-  const SERVER_RAW = qs.get("server");
+  // Served by the hub at /app -> live against that hub by default (same-origin); elsewhere -> mock replay.
+  const SERVER_RAW = qs.get("server") || (location.pathname.startsWith("/app") ? location.origin : null);
   // Security: the hub URL comes from the query string, and voice recordings go to it, so only trust same-origin or localhost hubs.
   function trustedHub(raw) {
     try {
