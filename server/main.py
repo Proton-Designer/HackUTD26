@@ -190,6 +190,10 @@ def demo_latency():
 def demo_status(request: Request, format: str = ""):
     """Integration readiness: routers mounted, remote P2/P3/P4 probes, flags (never values), DB counts."""
     s = ops.status(app)
+    try:
+        device.require_device(request)
+    except HTTPException:   # public/tunnel viewers get the count only: call ids and activity times stay local/paired
+        s.pop("active_call_ids", None); s["flags"].pop("last_call_activity_ts", None)
     if format == "html" or (format != "json" and "text/html" in request.headers.get("accept", "")):
         return HTMLResponse(ops.status_html(s))
     return s

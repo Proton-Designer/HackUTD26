@@ -489,3 +489,19 @@ def test_status_active_calls_flag():
         s = await asyncio.to_thread(lambda: c.get("/demo/status").json())
         assert s["flags"]["active_calls"] == 0
     asyncio.run(go())
+
+
+def test_status_hides_call_ids_and_activity_from_remote():
+    import asyncio
+    from server import relay
+    async def go():
+        async def back(x): pass
+        await relay.open("REMOTE-HIDE-1", back)
+        await relay.caller_frame("REMOTE-HIDE-1", {"event": "media", "media": {"track": "inbound", "payload": "AA=="}})
+        remote = await asyncio.to_thread(lambda: TestClient(app).get("/demo/status").json())
+        local = await asyncio.to_thread(lambda: TestClient(app, client=("127.0.0.1", 5000)).get("/demo/status").json())
+        await relay.close("REMOTE-HIDE-1")
+        return remote, local
+    remote, local = asyncio.run(go())
+    assert remote["flags"]["active_calls"] == 1 and "active_call_ids" not in remote and "last_call_activity_ts" not in remote["flags"]
+    assert local["active_call_ids"] == ["REMOTE-H"] and local["flags"]["last_call_activity_ts"] > 0
