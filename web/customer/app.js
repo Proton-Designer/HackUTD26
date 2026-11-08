@@ -131,7 +131,8 @@
         break; }
       case "handoff.started": clearTimeout(st.handT); showHandoff(); break;
       case "handoff.failed": failHandoff(d.reason); break;   // F3: the hub could not hand the call to Backfire: she is still on the call
-      case "handoff.restored": setBadge("watching"); $("handoffMsg").textContent = "You're back on the call. Backfire stepped aside."; $("handoffMsg").hidden = false; $("alertBox").hidden = true; $("idleMsg").hidden = true; break;
+      case "handoff.restored": st.alerted = false; clearTimeout(st.handT); twoBeeps(); setBadge("watching");   // F5: a later alert must fire again; F20: she hears/feels that she is back on the call
+        $("handoffMsg").textContent = "You're back on the call. Backfire stepped aside."; $("handoffMsg").hidden = false; $("alertBox").hidden = true; $("idleMsg").hidden = true; break;
       default: break;
     }
   }
