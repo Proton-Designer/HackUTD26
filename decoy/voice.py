@@ -199,18 +199,30 @@ class Voice:
         key = os.environ.get("NVIDIA_API_KEY", "")
         self.prompt = prompt if prompt is not None else active_voice()
         self.cloned = self.prompt is not None
+        self.locked = False   # True once this call has spoken in the clone voice: never switch after that
         md = lambda fn: [["function-id", fn], ["authorization", "Bearer " + key]]  # noqa: E731
         self.zs = rc.SpeechSynthesisService(rc.Auth(uri=GRPC, use_ssl=True, metadata_args=md(ZEROSHOT_FN)))
         self.multi = rc.SpeechSynthesisService(rc.Auth(uri=GRPC, use_ssl=True, metadata_args=md(MULTI_FN)))
 
     def _synth(self, text: str) -> bytes:
+        """One voice per call (#100: a mid-call switch is a giveaway). The call locks to the clone at its first clone
+        success; after that a clone failure gets one retry and then raises (the decoy plays a cached clone-voice line).
+        Only if the clone fails before ANY clone audio was made does the whole call use the synthetic voice."""
         if self.cloned:
-            try:
-                return self.zs.synthesize(text, language_code="en-US", sample_rate_hz=TTS_RATE,
-                                          zero_shot_audio_prompt_file=self.prompt, zero_shot_quality=20).audio
-            except Exception as e:
-                log.warning("clone TTS failed (%s); synthetic voice for the rest of the call", type(e).__name__)
-                self.cloned = False
+            for attempt in (1, 2):
+                try:
+                    a = self.zs.synthesize(text, language_code="en-US", sample_rate_hz=TTS_RATE,
+                                           zero_shot_audio_prompt_file=self.prompt, zero_shot_quality=20).audio
+                    self.locked = True
+                    return a
+                except Exception as e:
+                    log.warning("clone TTS failed (%s), attempt %d", type(e).__name__, attempt)
+                    if attempt == 1:
+                        time.sleep(0.35)
+            if self.locked:
+                raise RuntimeError("clone TTS unavailable; keep the clone voice (cached line)")
+            log.warning("clone unavailable before the first sentence: synthetic voice for this whole call")
+            self.cloned = False
         return self.multi.synthesize(text, voice_name=SYNTH_VOICE, language_code="en-US", sample_rate_hz=TTS_RATE).audio
 
     async def frames(self, text: str) -> list[bytes]:

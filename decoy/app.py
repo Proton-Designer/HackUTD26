@@ -250,7 +250,14 @@ class Session:
             if not self.active:
                 return first_ms
             self.said = (self.said + [sentence])[-6:]
-            self.play(await self.voice.frames(sentence))
+            fr = await self.voice.frames(sentence)
+            if not fr and self.voice.cloned and (self.stalls or self.fillers):
+                # clone TTS failed mid-call: a pre-rendered line in the SAME clone voice, never the synthetic one (#100)
+                fr = random.choice(self.stalls or self.fillers)
+                log.info("decoy %s: clone TTS failed, cached clone line instead", self.call_id)
+                self.play(fr)
+                break
+            self.play(fr)
             first_ms = first_ms or int((time.monotonic() - t0) * 1000)
         self.ev("decoy.turn", {"speaker": "decoy", "text": text, "latency_ms": latency_ms})
         if record:
@@ -402,13 +409,20 @@ class Session:
 
     async def run(self):
         send_task = asyncio.create_task(self.sender())
+        async def warm_stt():   # first real utterance shouldn't pay the STT cold start (~0.85 s seen)
+            try:
+                await asyncio.wait_for(self.stt.transcribe(np.zeros(4000, dtype=np.int16)), 5)
+            except Exception:
+                pass
+        asyncio.create_task(warm_stt())
+
         async def warm():
             await self.say(core.OPENER, record=True)
             for f in core.FILLERS:
                 fr = await self.voice.frames(f)
                 if fr:
                     self.fillers.append(fr)
-            for t in STALLS:
+            for t in STALLS[:4]:   # only a few pre-rendered: every one is a clone request at call start (429 risk)
                 fr = await self.voice.frames(t)
                 if fr:
                     self.stalls.append(fr)
