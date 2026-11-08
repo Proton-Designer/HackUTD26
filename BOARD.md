@@ -1,5 +1,5 @@
 # Team Board
-> Maintained by hackutd-delegator. H0 = Sat Nov 7, 12:00 CT. Decider: Ayman.
+> Maintained by hackutd-delegator. H0 = Sat Nov 7, 13:00 CT (Rayan confirmed at 00:12. Entries before 00:12 used H0 = 12:00, so their H-hours are 1 h too high). Decider: Ayman.
 > Product: **Backfire**. Source of truth: `Finalized-Idea/BACKFIRE_MASTER_CONTEXT.md` (Part 1), then `01_ARCHITECTURE.md` §15 for demo stand-ins.
 > Key times (from zeroday.hackutd.co, per our research; Kareem confirms): initial Devpost submission Sat ~23:00 · final submission Sun 12:00 · judging Sun 13:00-16:00.
 
@@ -31,7 +31,7 @@
 ## Blocked
 | What | Who is stuck | Waiting on | Since |
 |---|---|---|---|
-| Command center build | Rayan | Ayman's `mock/events.json` + `contracts/events.md` (due 23:15; Rayan sketches the layout until then) | 22:45 |
+| ~~Command center build~~ CLEARED 00:12 (H11:12): `contracts/events.md` + `mock/events.json` are in git (1572539), and command center commit d248634 is in too | Rayan | (none) | 22:45 |
 | P4a acceptance on the shared hub (not his current task) | Kareem | Ayman: pull 867ff7c + `NVIDIA_API_KEY` in hub `.env` + restart, by 01:00. Table question answered: `/routing/lookup` reads hub SQLite `confirmed_scammers` → `campaign_numbers` → `intel.store.is_blocked()` (trusted overrides intel only) → `trusted` (`server/routing.py`). Evan #16 / Rayan #17 are demo moments, not blockers for the acceptance run | 00:07 |
 | Eval row format must match detector output | Kareem | Uses the enums in master context §5 (`asks[]`: otp, card, ssn, gift_card, crypto, wire, p2p, remote_app, secrecy); Evan confirms at next check-in | 22:45 |
 
@@ -54,6 +54,7 @@
 - **11:30 (H23:30)** Final Devpost submitted (hard deadline 12:00).
 
 ## Decisions log
+- 00:12 (H11:12) | **H0 = 13:00 (Rayan confirmed).** This settles the 00:07 mismatch. No checkpoint moves because they are all clock times. Old entries keep their labels so history isn't rewritten. New entries use H0 = 13:00.
 - 00:08 (H12:08) | **Kareem keeps building while the shared-hub acceptance waits.** It needs only Ayman's 10-min pull + key + restart (moved up to 01:00), not Evan's `instruction_to_ai` (#16) or Rayan's agent-trace panel (#17); those two land with their own lanes and get checked in the 02:00 thin slice. Evan stays on the P3 echo bot, Rayan on the command center. Cost: shared-hub acceptance slips to ~01:00. Fallback: if the hub isn't restarted by 01:15, Kareem's local 7/7 counts for now and Ayman restarts it as step 1 of the 02:00 slice.
 - 00:07 (H12:07) | **Intel model = `nemotron-3.5-super-vl-120b-a12b`**: `3-super-120b` returns 404 on our keys (Kareem, tested live). Ayman-B records it in `contracts/models.md`. Fallback: fail-open stays in, so lookups and blocks still show if the model call fails.
 - 00:07 (H12:07) | **H0 mismatch:** board says 12:00, bot header says 13:00. Board stays at 12:00 (every timestamp uses it) until Rayan confirms; checkpoints use clock times, so they don't move.
