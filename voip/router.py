@@ -128,11 +128,17 @@ async def on_hangup(p):
 async def webhook(req: Request):
     raw = await req.body()
     sim = is_sim(None, req.headers)
+    hub_token = os.environ.get("HUB_TOKEN")   # simulator traffic must also present the hub token when one is set
+    if sim and hub_token and not secrets.compare_digest(req.headers.get("x-hub-token", ""), hub_token): raise HTTPException(401, "bad token")
     if not sim and not verify_signature(raw, req.headers.get("telnyx-signature-ed25519"), req.headers.get("telnyx-timestamp")):
         raise HTTPException(403, "bad signature")
     try:
         ev = json.loads(raw)["data"]; et, p = ev["event_type"], ev["payload"]
         sim = sim or is_sim(p.get("call_control_id"))
+        if et != "call.initiated":   # sim and real events may never act on each other's calls
+            cs_sid = _cs_load(p.get("client_state")).get("sid") or p.get("call_session_id")
+            known = CALLS.get(cs_sid)
+            if known is not None and bool(known.get("sim")) != sim: return {"ok": True}
         if et == "call.initiated" and p.get("direction") == "incoming":
             return {"ok": True, **(await on_initiated(p, base_ws=str(req.base_url).replace("http", "ws", 1).rstrip("/"), sim=sim))}
         elif et == "call.answered": await on_answered(p)
@@ -189,8 +195,10 @@ async def _maybe_await(x):
 
 @router.get("/voip/webrtc-token")
 async def webrtc_token(req: Request):
+    # Fail closed: this mints a credential that can place calls. Needs HUB_TOKEN match, or explicit dev opt-out VOIP_OPEN_TOKEN=1.
     hub_token = os.environ.get("HUB_TOKEN")
-    if hub_token and req.headers.get("x-hub-token") != hub_token: raise HTTPException(401, "bad or missing token")
+    if os.environ.get("VOIP_OPEN_TOKEN") != "1" and not (hub_token and secrets.compare_digest(req.headers.get("x-hub-token", ""), hub_token)):
+        raise HTTPException(401, "bad or missing token")
     try: tok = await telnyx.webrtc_token(os.environ["TELNYX_TELEPHONY_CREDENTIAL_ID"])
     except Exception as e:
         log.warning("webrtc token failed: %s", e); raise HTTPException(502, "token unavailable")

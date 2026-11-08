@@ -87,3 +87,20 @@ def test_voip_app_mounts_on_hub():
     from voip.app import app
     paths = set(app.openapi()['paths']) | {getattr(r, 'path', '') for r in app.routes}
     assert "/telnyx/webhook" in paths and "/voip/webrtc-token" in paths and "/healthz" in paths
+
+
+def test_webrtc_token_fails_closed(monkeypatch, client):
+    async def tok(cid): return "jwt.abc"
+    monkeypatch.setattr(telnyx, "webrtc_token", tok); monkeypatch.setenv("TELNYX_TELEPHONY_CREDENTIAL_ID", "x")
+    monkeypatch.delenv("HUB_TOKEN", raising=False); monkeypatch.delenv("VOIP_OPEN_TOKEN", raising=False)
+    assert client.get("/voip/webrtc-token").status_code == 401
+    monkeypatch.setenv("HUB_TOKEN", "s3"); assert client.get("/voip/webrtc-token").status_code == 401
+    assert client.get("/voip/webrtc-token", headers={"x-hub-token": "s3"}).json() == {"token": "jwt.abc"}
+    monkeypatch.delenv("HUB_TOKEN"); monkeypatch.setenv("VOIP_OPEN_TOKEN", "1")
+    assert client.get("/voip/webrtc-token").json() == {"token": "jwt.abc"}
+
+def test_sim_event_cannot_end_real_call(monkeypatch, client):
+    R.CALLS["sess-real-1234567"] = {"caller_ccid": "v3:real_abcdef1234", "from": "+1", "decision": "LIVE_GUARD", "t0": 0, "ended": False, "sim": False}
+    b = wh("call.hangup", call_session_id="sess-real-1234567")
+    client.post("/telnyx/webhook", content=b, headers={"x-sim-call": "1"})
+    assert R.CALLS["sess-real-1234567"]["ended"] is False
