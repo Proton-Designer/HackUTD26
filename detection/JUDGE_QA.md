@@ -118,9 +118,9 @@ Same rules as above: n is small, all scam scripts are team-written, real calls a
 - Don't say: "we tested long calls live".
 
 **16. "Two calls at once?"** (Owner: Ayman)
-- Answer: eng2 replayed two overlapping calls from real-call audio on the llama server as it runs today (TASK-065): scam+scam alerted at +11.7 s and +14.9 s, scam+benign alerted at +15.1 s with the benign call quiet; 0 failovers, 0 false alarms, under 1 s extra delay versus a solo call. Not tried: 3 or more calls, and live phone lines (replayed audio only). We still run one call at a time for judging.
+- Answer: eng2 replayed two overlapping calls from real-call audio on the llama server as it runs today (TASK-065): scam+scam alerted at +11.7 s and +14.9 s, scam+benign alerted at +15.1 s with the benign call quiet; 0 failovers, 0 false alarms, under 1 s extra delay versus a solo call. Three overlapping calls (2 scam + 1 chatter, starts 2.5 s apart, TASK-080) also held: scam alerts at +11.8 s and +14.2 s from their own starts (solo 11.8 / 14.2), the chatter call stayed at 0.05 with no alert, all scores from the local model, 0 failovers. Not tried: 4 or more calls, and live phone lines (replayed audio only). We still run one call at a time for judging.
 - Show: eng2's TASK-065 result (board note); `docs/DEMO_DAY_RUNBOOK.md` ("keep one call at a time").
-- Don't say: "scales", "handles many calls". Say "two overlapping calls tested on replayed audio, n=2 runs".
+- Don't say: "scales", "handles many calls". Say "up to three overlapping calls tested on replayed audio, 1 run of three, 2 runs of two".
 
 **17. "What about Spanish?"** (Owner: Ayman)
 - Answer: The speech-to-text is English-only (Parakeet via Riva), so a Spanish caller is transcribed badly and we do not claim Spanish detection on a phone call. The text rules and model were tested on written Spanish and Spanglish lines (held-out v2: 4 Spanish scams, local caught all 4, production rules 1 of 4; hardneg_v3: 5 Spanglish look-alikes, one false alarm, hn-22), which says nothing about Spanish audio.
