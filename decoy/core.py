@@ -410,6 +410,13 @@ async def extract(lines: list[str]) -> list[dict]:
             full = next((e for e in emails if e.split("@")[0].endswith(frag) or frag.endswith(e.split("@")[0])), None)
             if full:
                 a["id"] = full
+        elif a["kind"] == "payment_handle" and "@" in a["id"].lstrip("@"):
+            # #137 (P2, card 6): a truncated local part on the same domain ('dept@x' when they said 'refunds.dept@x')
+            loc, dom = a["id"].split("@", 1)
+            full = next((e for e in emails if e.endswith("@" + dom) and e.split("@")[0] != loc
+                         and e.split("@")[0].endswith("." + loc)), None)
+            if full:
+                a["id"] = full
     # Backstop (#127): remote-access apps are the tech-support playbook's top target; STT splits them ("Any Desk").
     have_remote = {a["value"].lower().replace(" ", "") for a in out if a["kind"] == "remote_app"}
     for pat, name in REMOTE_APPS:

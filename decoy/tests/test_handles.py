@@ -31,3 +31,16 @@ def test_malformed_and_non_email():
     assert ph("zelle disputes@your bank") is None
     assert ph("@jake-smith", "venmo") == "@jake-smith"
     assert ph("555-201-3344") == "555-201-3344"
+
+
+def test_truncated_local_part_repaired(monkeypatch):   # #137 card 6: model returned 'dept@...' next to the full handle
+    import asyncio, json
+    import decoy.core as C
+
+    async def fake_chat(*a, **k):
+        return json.dumps({"artifacts": [{"kind": "payment_handle", "rail": "zelle", "id": "dept@backfire-demo.example"},
+                                          {"kind": "payment_handle", "rail": "zelle", "id": H},
+                                          {"kind": "payment_handle", "rail": "zelle", "id": "ops@other-site.example"}]})
+    monkeypatch.setattr(C, "chat", fake_chat)
+    ids = [a["id"] for a in asyncio.run(C.extract(["Send it by Zelle to refunds dot dept at backfire dash demo dot example."]))]
+    assert ids == [H, "ops@other-site.example"]
