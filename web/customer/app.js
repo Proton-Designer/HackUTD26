@@ -20,6 +20,14 @@
   const MOCK_CALL = qs.get("call") || "irs";   // substring of the mock call_id: irs | bank | crypto
   const DEBUG = qs.has("debug");
   window.BF = window.BF || {}; BF.hub = HUB; BF.onEventRef = null;
+  // Device pairing (TASK-014): the hub issues a per-device token after the PIN is entered once. Every hub call goes through hubFetch.
+  BF.deviceToken = () => { try { return localStorage.getItem("bf.device"); } catch (e) { return null; } };
+  BF.hubFetch = async (path, opts) => {
+    opts = opts || {}; const h = { ...(opts.headers || {}) }; const t = BF.deviceToken(); if (t) h["x-device-token"] = t;
+    const r = await fetch(HUB + path, { ...opts, headers: h });
+    if (r.status === 401 && BF.onUnauthorized) BF.onUnauthorized();
+    return r;
+  };
   window.__userActions = [];                  // test hook: every user.action emitted
 
   const st = { callId: null, answered: false, alerted: false, ctx: null, timer: null, t0: 0, replay: [], tos: [], badge: "watching" };
@@ -54,7 +62,7 @@
     const msg = { type: "user.action", call_id: st.callId, ts: new Date().toISOString(), data: { action } };
     window.__userActions.push(msg);
     log("user.action", msg);
-    if (HUB) fetch(HUB + "/user/action", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ call_id: st.callId, action }) })
+    if (HUB) BF.hubFetch("/user/action", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ call_id: st.callId, action }) })
       .catch(e => log("POST /user/action failed (fail open, screen keeps working)", String(e)));
     return msg;
   }

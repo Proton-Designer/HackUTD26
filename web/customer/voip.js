@@ -15,7 +15,7 @@
 
   async function getToken() {
     if (dev) return dev;
-    const r = await fetch(HUB + "/voip/webrtc-token"); if (!r.ok) throw new Error("token " + r.status);
+    const r = await BF.hubFetch("/voip/webrtc-token"); if (!r.ok) throw new Error("token " + r.status);
     return (await r.json()).token;
   }
   function loadSdk() {

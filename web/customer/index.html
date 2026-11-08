@@ -110,10 +110,20 @@
     <button data-v="protView">Protection</button>
   </nav>
 
+  <!-- PAIRING (TASK-014): shown only when the hub answers 401 -->
+  <section id="pairView" class="screen left" hidden>
+    <h1>Pair this phone</h1>
+    <p class="body">Enter the code shown on the demo screen.</p>
+    <input id="pairPin" inputmode="numeric" autocomplete="one-time-code" maxlength="12" aria-label="Pairing code" placeholder="000000">
+    <button class="big accept" id="pairBtn">Pair</button>
+    <p class="sub" id="pairMsg" role="status"></p>
+  </section>
+
   <footer>Simulated carrier network <span id="src"></span></footer>
   <pre id="log" hidden></pre>
 </main>
 <script src="app.js"></script>
+<script src="pair.js"></script>
 <script src="ui.js"></script>
 <script src="voip.js"></script>
 </body>

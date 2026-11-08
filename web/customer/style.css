@@ -49,3 +49,7 @@ nav#tabs button.on{background:#fff;color:#000;border-color:#fff}
 .status{gap:6px}#clock{margin-right:auto}
 .status .badge{white-space:nowrap;font-size:.7rem;padding:6px 10px;line-height:1.2}
 .badge.sound{margin-left:0}
+
+/* pairing (TASK-014) */
+#pairView input{font-size:2.2rem;letter-spacing:.35em;text-align:center;width:100%;padding:.6rem;margin:.8rem 0;border-radius:14px;border:2px solid #8aa;background:#111;color:#fff}
+#pairView:not([hidden]){position:absolute;inset:0;z-index:20;background:#0b0f14;overflow:auto;padding:1.2rem}

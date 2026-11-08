@@ -29,7 +29,7 @@
 
   // ---- hub helpers (fail soft: the screen never breaks if the hub is down) ----
   async function hub(method, path, body) {
-    const r = await fetch(HUB + path, { method, headers: { "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
+    const r = await BF.hubFetch(path, { method, headers: { "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
     if (!r.ok) throw new Error(method + " " + path + " " + r.status);
     return r.json();
   }
