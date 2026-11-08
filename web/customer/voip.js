@@ -8,7 +8,7 @@
   const qs = new URLSearchParams(location.search);
   const HUB = BF.hub, dev = ["localhost", "127.0.0.1"].includes(location.hostname) ? qs.get("devtoken") : null;   // a link must not be able to swap in someone else's SIP account
   const status = t => { const s = document.getElementById("src"); if (s) s.dataset.voip = t; console.log("[backfire] voip:", t); BF.voipStatus = t; };
-  let client = null, call = null, wantAnswer = false;   // wantAnswer: user tapped Answer before the SIP leg arrived (hub call.incoming can beat the INVITE by ~1 s)
+  let client = null, call = null, wantAnswer = 0;   // wantAnswer (timestamp, honoured for 4 s only): user tapped Answer before the SIP leg arrived (hub call.incoming can beat the INVITE by ~1 s)
   if (!dev && !(HUB && !qs.has("novoip") && location.pathname.startsWith("/app")) && !qs.has("webrtc")) { status("off"); return; }
 
   const audio = document.createElement("audio"); audio.autoplay = true; audio.setAttribute("playsinline", ""); document.body.append(audio);
@@ -29,19 +29,19 @@
     (BF.voipEvents = BF.voipEvents || []).push(Date.now() + " " + st + " " + (c.direction || "") + " rs=" + !!c.remoteStream + (c.cause ? " cause=" + c.cause : "") + (c.causeCode ? " code=" + c.causeCode : "") + (c.sipCode ? " sip=" + c.sipCode : "") + (c.sipReason ? " reason=" + c.sipReason : ""));   // debug trail for call-state transitions
     if (st === "ringing" && c.direction === "inbound") {
       call = c;
-      if (wantAnswer) { wantAnswer = false; try { c.answer(); } catch (e) { status("answer failed: " + e); } }
+      if (wantAnswer && Date.now() - wantAnswer < 4000) { wantAnswer = 0; try { c.answer(); } catch (e) { status("answer failed: " + e); } }
       // normally the hub's call.incoming drives the ring screen; if it hasn't arrived shortly, ring from the SIP call itself
       setTimeout(() => { if (call === c && !["ringing", "active"].includes(BF.ui())) BF.deliver({ type: "call.incoming", call_id: "sip_" + c.id, ts: new Date().toISOString(), data: { from: c.remoteCallerNumber || "Unknown caller", scam_id_score: 0, attestation: "C" } }); }, 1500);
     } else if (st === "active" && c.remoteStream) {
       audio.srcObject = c.remoteStream; audio.play().catch(e => { (BF.voipEvents = BF.voipEvents || []).push(Date.now() + " play() rejected: " + e); });
     } else if (["hangup", "destroy"].includes(st) && call === c) {
-      call = null; audio.srcObject = null;
+      call = null; wantAnswer = 0; audio.srcObject = null;
       if (["ringing", "active"].includes(BF.ui())) BF.endUI("Call ended.");
     }
   }
   BF.voip = {
-    answer() { if (call) { try { call.answer(); } catch (e) { status("answer failed: " + e); } } else wantAnswer = true; },
-    hangup() { wantAnswer = false; if (call) { try { call.hangup(); } catch (e) {} call = null; } }
+    answer() { if (call) { try { call.answer(); } catch (e) { status("answer failed: " + e); } } else wantAnswer = Date.now(); },
+    hangup() { wantAnswer = 0; if (call) { try { call.hangup(); } catch (e) {} call = null; } }
   };
   (async () => {
     try {
