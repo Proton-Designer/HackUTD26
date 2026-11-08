@@ -40,6 +40,19 @@ class AlertMachine:
     def _call(self, cid):
         return self.calls.setdefault(cid, Call())
 
+    async def on_partial(self, call_id, utt):
+        """Interim text: rules-only fast path on window + partial. Never calls the LLM, never changes window state."""
+        try:
+            c = self._call(call_id)
+            now = self.clock()
+            win = [t for ts, t in c.utts if now - ts <= WINDOW_S][-(WINDOW_N - 1):] + [str(utt.get("text", ""))]
+            q = quick("\n".join(win), self.engine)
+            if self._decide(c, q):
+                log.info("fast-path alert (partial) call=%s s=%.2f", call_id, q["s"])
+                await self._process(call_id, c, q)
+        except Exception:
+            log.exception("on_partial crashed (ignored)")
+
     async def on_final(self, call_id, utt):
         try:
             c = self._call(call_id)
@@ -150,6 +163,7 @@ def install(app=None):
     global machine
     machine = AlertMachine()
     stream.set_on_final(machine.on_final)
+    stream.set_on_partial(machine.on_partial)
 
 from contextlib import asynccontextmanager
 

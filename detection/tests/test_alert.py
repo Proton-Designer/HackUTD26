@@ -124,3 +124,13 @@ def test_s_can_fall_after_fast_path():
     r.say("goodbye", dt=100)
     s_vals = [d["s"] for t, d in r.events if t == "risk.update"]
     assert s_vals[-1] == 0.1 and max(s_vals) >= 0.8
+
+def test_partial_fast_path_fires_once_and_final_does_not_double():
+    r = Rig([R(0.3)])
+    asyncio.run(r.m.on_partial("c1", {"text": "you must pay with gift cards"}))
+    assert r.alerts() == ["first"] and r.calls == 0
+    r.say("you must pay with gift cards")
+    assert r.alerts() == ["first"]
+
+def test_partial_never_raises():
+    r = Rig([]); asyncio.run(r.m.on_partial("c1", {})); asyncio.run(r.m.on_partial("c1", {"text": None}))

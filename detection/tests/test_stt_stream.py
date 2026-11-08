@@ -48,7 +48,7 @@ def test_ws_end_to_end_fail_open_and_on_final(monkeypatch):
     async def fake_emit(t, c, d): emitted.append((t, c, d)); return True
     async def fake_final(c, u): finals.append((c, u))
     monkeypatch.setattr(stream.hub, "emit", fake_emit); monkeypatch.setattr(stream, "on_final", fake_final)
-    stt.set_stt(FakeSTT())
+    stt.set_stt(FakeSTT()); monkeypatch.setattr(stream, "PARTIALS", False)
     pcm = np.concatenate([np.zeros(4000, np.int16), tone(1.0), np.zeros(8000, np.int16)])
     mu = bytes(mulaw_enc(v) for v in pcm)
     c = TestClient(appmod.app)
@@ -74,3 +74,20 @@ def test_on_final_exception_does_not_break(monkeypatch):
 
 def test_healthz():
     assert TestClient(appmod.app).get("/healthz").json()["ok"] is True
+
+def test_ws_emits_partials_then_final(monkeypatch):
+    emitted = []
+    async def fake_emit(t, c, d): emitted.append(d); return True
+    async def fake_final(c, u): pass
+    monkeypatch.setattr(stream.hub, "emit", fake_emit); monkeypatch.setattr(stream, "on_final", fake_final)
+    monkeypatch.setattr(stream, "PARTIAL_EVERY_S", 0.0)
+    stt.set_stt(FakeSTT())
+    mu = bytes(mulaw_enc(v) for v in np.concatenate([tone(1.5), np.zeros(8000, np.int16)]))
+    with TestClient(appmod.app).websocket_connect("/stt/c2") as ws:
+        for i in range(0, len(mu), 160):
+            ws.send_text(media(mu[i:i+160]))
+        ws.send_text(json.dumps({"event": "stop"}))
+    assert emitted[-1]["is_final"] is True
+    parts = [e for e in emitted if not e["is_final"]]
+    assert all(p["utterance_id"] == emitted[-1]["utterance_id"] for p in parts)
+    assert emitted.index(emitted[-1]) == len(emitted) - 1   # no partial after the final

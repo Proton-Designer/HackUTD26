@@ -12,9 +12,17 @@ FRAME = 160                      # 20 ms @ 8 kHz
 ENDPOINT_MS = int(os.environ.get("P2_ENDPOINT_MS", "450"))
 MIN_SPEECH_MS = 250
 MAX_UTT_S = 15.0
+PARTIALS = os.environ.get("P2_PARTIALS", "1") != "0"
+PARTIAL_EVERY_S = float(os.environ.get("P2_PARTIAL_EVERY_S", "0.5"))
+PARTIAL_MIN_MS = 400
 PREROLL_FRAMES = 10              # 200 ms kept before speech onset
 
+on_partial = None                # async callable(call_id, utt) for interim text (fast-path rules only)
 on_final = None                  # async callable(call_id, utt: dict) set by detection.alert (TASK-004)
+def set_on_partial(fn):
+    global on_partial
+    on_partial = fn
+
 def set_on_final(fn):
     global on_final
     on_final = fn
@@ -71,6 +79,9 @@ class Segmenter:
         self.buf = self.buf[n * FRAME:]
         return out
 
+    def snapshot(self):
+        return np.concatenate(self.cur) if self.cur and self.speech_frames * 20 >= PARTIAL_MIN_MS else None
+
     def flush(self):
         return self._close() if self.cur is not None else []
 
@@ -102,7 +113,8 @@ async def stt_ws(ws: WebSocket, call_id: str):
     if not auth.valid_call_id(call_id) or not auth.check_token(ws.headers, ws.query_params):
         await ws.close(code=1008); return      # before accept: rejected handshake
     await ws.accept()
-    seg, counter, tasks = Segmenter(), itertools.count(1), set()
+    seg, ids, tasks = Segmenter(), [1, 0], set()   # ids: [next utterance number, last submitted]
+    pstate = {"busy": False, "t": 0.0, "text": ""}
     chain = asyncio.Queue()   # preserve utterance order
     async def worker():
         while True:
@@ -113,7 +125,20 @@ async def stt_ws(ws: WebSocket, call_id: str):
     w = asyncio.create_task(worker())
     def submit(arrs):
         for a in arrs:
-            chain.put_nowait((f"{call_id}-u{next(counter)}", a, time.time()))
+            chain.put_nowait((f"{call_id}-u{ids[0]}", a, time.time())); ids[1] = ids[0]; ids[0] += 1; pstate["text"] = ""
+    async def partial(n, pcm):
+        try:
+            text = (await stt.get_stt().transcribe(pcm)).strip()
+            if text and text != pstate["text"] and ids[1] < n:      # drop if this utterance already finalized
+                pstate["text"] = text
+                utt = {"utterance_id": f"{call_id}-u{n}", "text": text, "is_final": False}
+                await hub.emit("transcript.caller", call_id, utt)
+                if on_partial:
+                    await on_partial(call_id, utt)
+        except Exception as e:
+            log.debug("partial failed: %s", type(e).__name__)
+        finally:
+            pstate["busy"] = False
     try:
         while True:
             raw = await ws.receive_text()
@@ -121,6 +146,11 @@ async def stt_ws(ws: WebSocket, call_id: str):
             if ev == "media" and audio:
                 try:
                     submit(seg.feed(stt.mulaw_decode(audio)))
+                    if PARTIALS and not pstate["busy"] and time.monotonic() - pstate["t"] >= PARTIAL_EVERY_S:
+                        snap = seg.snapshot()
+                        if snap is not None:
+                            pstate["busy"], pstate["t"] = True, time.monotonic()
+                            tasks.add(asyncio.create_task(partial(ids[0], snap)))
                 except Exception:
                     log.warning("bad audio frame ignored")
             elif ev == "stop":
