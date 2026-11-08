@@ -55,6 +55,9 @@ REDO_MAX = 2               # re-think at most twice per turn when the caller add
 # play along for a few more turns, then say goodbye and close; the hub hangs up the caller (ended_by=decoy).
 STRONG_KINDS = {"payment_handle", "domain", "url", "wallet"}
 WRAP_TURNS = int(__import__("os").environ.get("DECOY_WRAP_TURNS", "3"))
+# #138: with the pre-handoff context the payment details can be in hand at Fire Back, and the wrap-up ended a live call
+# 13 s after handoff. Keep the decoy on at least this long before a got_payment_details goodbye (other bails unaffected).
+WRAP_MIN_S = float(__import__("os").environ.get("DECOY_WRAP_MIN_S", "45"))
 WRAP_LINE = "Okay, I've got all of that written down. I'm going to go take care of it right now. Bye bye."
 FILLER_AFTER_S = 0.6       # play a filler only if Nemotron hasn't answered by then
 STALLS = ["Oh, sorry, the line went funny. Say that again?",
@@ -486,7 +489,7 @@ class Session:
     async def finish(self, line: str, why: str):
         """Say goodbye, let it play out, then end: the WS closes and the hub hangs up the caller (ended_by=decoy)."""
         await self.hold_floor()
-        await self.say(line)
+        await self.say(line, int((time.monotonic() - self.last_heard) * 1000))   # #138: real ms, not 0
         while self.active and time.monotonic() < self.speaking_until + 0.6:
             await asyncio.sleep(0.05)
         log.info("decoy %s wrapping up: %s", self.call_id, why)
@@ -578,7 +581,7 @@ class Session:
 
     def bail_check(self) -> str | None:
         """After each of our replies: which bail rule fires, if any (#127 5a-c; d is handled before the reply)."""
-        if self.wrap_at is not None and self.turns >= self.wrap_at:
+        if self.wrap_at is not None and self.turns >= self.wrap_at and time.time() - self.t0 >= WRAP_MIN_S:
             return "got_payment_details"
         if time.time() - self.t0 > CAP_S:
             return "time_cap"

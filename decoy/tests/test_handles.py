@@ -30,7 +30,7 @@ def test_no_false_rewrites():
 def test_malformed_and_non_email():
     assert ph("zelle disputes@your bank") is None
     assert ph("@jake-smith", "venmo") == "@jake-smith"
-    assert ph("555-201-3344") == "555-201-3344"
+    assert ph("555-201-3344") == "+15552013344"   # Zelle phone ids are normalised (#138)
 
 
 def test_truncated_local_part_repaired(monkeypatch):   # #137 card 6: model returned 'dept@...' next to the full handle
@@ -44,3 +44,25 @@ def test_truncated_local_part_repaired(monkeypatch):   # #137 card 6: model retu
     monkeypatch.setattr(C, "chat", fake_chat)
     ids = [a["id"] for a in asyncio.run(C.extract(["Send it by Zelle to refunds dot dept at backfire dash demo dot example."]))]
     assert ids == [H, "ops@other-site.example"]
+
+
+def test_zelle_id_must_be_email_or_phone():   # #138 live: zelle id '920.7856782'
+    assert ph("920.7856782") == "+19207856782"   # live 1b838cd2: a real 10-digit Zelle phone, keep it
+    assert ph("785.6782") is None and ph("120-555-0199") is None   # too short / not a valid area code
+    assert ph("(214) 555-0199") == "+12145550199"
+    assert ph("1-214-555-0199") == "+12145550199"
+    assert ph("jake-smith", "venmo") == "jake-smith"
+
+
+def test_live_1b838cd2_sell_it_to(monkeypatch):   # #138: 'Can you Sell it to the refunds.department ...' + a garbled phone
+    import asyncio, json
+    import decoy.core as C
+
+    async def fake_chat(*a, **k):
+        return json.dumps({"artifacts": [{"kind": "payment_handle", "rail": "zelle", "id": "920.7856782"},
+                                          {"kind": "domain", "value": "backfire-demo.example"}]})
+    monkeypatch.setattr(C, "chat", fake_chat)
+    arts = asyncio.run(C.extract(["Buy the gift cards first.",
+                                  "Can you Sell it to the refunds.department at backfire dash demo dot example?"]))
+    ids = [a["id"] for a in arts if a["kind"] == "payment_handle"]
+    assert ids == ["+19207856782", H]   # the spoken Zelle phone and the refunds address (the one Nessie matches)

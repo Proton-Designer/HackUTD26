@@ -347,6 +347,12 @@ def validate(a: dict) -> dict | None:
             hid = norm_email(hid)
             if not EMAIL.fullmatch(hid):
                 return None
+        elif rail == "zelle":   # #138: a Zelle id is an email or a US phone; '920.7856782' (garbled digits) is dropped
+            d = re.sub(r"\D", "", hid)
+            d = d[1:] if len(d) == 11 and d.startswith("1") else d
+            if len(d) != 10 or d[0] not in "23456789":
+                return None
+            hid = "+1" + d
         return {"kind": k, "rail": rail, "id": hid} if rail and hid else None
     if k in ("gift_card_brand", "remote_app", "impersonated_org"):
         return {"kind": k, "value": s("value")} if 2 <= len(s("value")) <= 60 else None
@@ -368,7 +374,9 @@ REMOTE_APPS = [(r"\bany\s?desk\b", "AnyDesk"), (r"\bteam\s?viewer\b", "TeamViewe
 # Phone STT often mishears "Zelle" ("by sell to ...", "via zel", "on cell"). Only rewritten after a payment verb/preposition
 # or before "to <handle>", so ordinary uses of "sell"/"cell" elsewhere stay as they are.
 ZELLE_HEARD = re.compile(r"\b(by|via|through|with|using|on|in|send it|sent it)\s+(?:sell|sel|zel|zell|zele|zela|zelda|zeal|zayle)\b"
-                         r"|\b(?:sell|zel|zell|zele|zela|zayle)\b(?=\s+(?:to|at)\s+\S+\s+(?:dot|at)\b)", re.I)
+                         r"|\b(?:sell|zel|zell|zele|zela|zayle)\b(?=\s+(?:to|at)\s+\S+\s+(?:dot|at)\b)"
+                         # #138 live: 'Can you Sell it to the refunds...' / 'cell them to' / 'sell the money to'
+                         r"|\b(?:sell|cell|zel|zell)\b(?=\s+(?:it|them|the money|that|this|the \$?[\d,]+)\s+to\b)", re.I)
 
 
 DEPT_HEARD = re.compile(r"\b([a-z0-9]+)(?:\s+dot)?\s+department(?=\s+at\s+\S+\s+(?:dot|dash)\b)", re.I)   # only in an address
