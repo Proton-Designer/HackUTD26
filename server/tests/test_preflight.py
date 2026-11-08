@@ -69,3 +69,24 @@ def test_ready_check_summarizes_and_fails_on_live_call_without_leaking_env(tmp_p
     assert any(l.startswith("FAIL") and l.split("  ")[1].startswith("P2 /healthz") for l in out.splitlines())
     assert any(l.startswith("PASS") and "telnyx_ok" in l for l in out.splitlines())
     assert "SEKRET" not in out + r.stderr
+
+
+def test_ready_check_fails_on_non_seed_trusted_numbers(tmp_path):
+    def run(trusted):
+        status = json.dumps({"flags": {"active_calls": 0, "MARIA_LEG": "sip", "telnyx_ok": True}, "pipelines": {}}).encode()
+        tr = json.dumps({"trusted": trusted}).encode()
+        class H(http.server.BaseHTTPRequestHandler):
+            def do_GET(s):
+                b = status if s.path.startswith("/demo/status") else tr if s.path == "/trusted" else b"{}"
+                s.send_response(200); s.send_header("content-type", "application/json"); s.end_headers(); s.wfile.write(b)
+            def log_message(*a): pass
+        srv = http.server.HTTPServer(("127.0.0.1", 0), H); threading.Thread(target=srv.serve_forever, daemon=True).start()
+        try:
+            env = dict(os.environ, LOGDIR=str(tmp_path)); env.pop("HUB_TOKEN", None)
+            return subprocess.run([sys.executable, str(ROOT / "scripts" / "ready_check"), "--local", f"http://127.0.0.1:{srv.server_port}", "--no-tunnel"], env=env, capture_output=True, text=True, timeout=120).stdout
+        finally:
+            srv.shutdown()
+    line = lambda o: next(l for l in o.splitlines() if "trusted list holds only" in l)
+    assert line(run([{"number": "+15555550188", "label": "Her bank (synthetic)"}])).startswith("PASS")
+    bad = line(run([{"number": "+15555550188", "label": "x"}, {"number": "+14695551234", "label": "mom"}]))
+    assert bad.startswith("FAIL") and "1 extra" in bad and "+1469***34" in bad and "4695551234" not in bad

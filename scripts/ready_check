@@ -108,6 +108,12 @@ def main():
     stp, pl = jget(local + "/protection-log")
     rec(stp == 200 and pl.get("blocked") == [], "demo reset state: protection log empty", f"HTTP {stp}, " + (("0 blocked" if not pl.get("blocked") else f"{len(pl['blocked'])} blocked; run scripts/reset_demo") if stp == 200 else "unreadable (run on the hub machine)"))
 
+    SEED = {"+15555550188"}   # server/db.py seed: "Her bank (synthetic)"
+    stt, tr = jget(local + "/trusted")
+    extra = sorted(t.get("number", "?") for t in tr.get("trusted", []) if t.get("number") not in SEED) if stt == 200 else None
+    rec(stt == 200 and not extra, "trusted list holds only the synthetic seed (no real numbers left from testing)",
+        f"HTTP {stt}" + (f"; {len(extra)} extra: " + ", ".join(n[:5] + "***" + n[-2:] for n in extra[:5]) + "; run scripts/reset_demo" if extra else "" if stt == 200 else " (run on the hub machine: loopback only)"))
+
     print("\n-- repo")
     g = subprocess.run(["git", "status", "--porcelain"], cwd=ROOT, capture_output=True, text=True)
     rows = [l for l in g.stdout.splitlines() if l.strip()]

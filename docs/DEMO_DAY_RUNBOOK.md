@@ -18,6 +18,10 @@ Hub = ONE process (hub + voip + relay + intel + `/app` + `/command-center`). Tel
 - [ ] Maria's phone: open `<public URL>/app/`, pair with the PIN (once; pairing survives resets and restarts), Live Guard on, voice enroll or skip, allow sound.
 - [ ] `scripts/reset_demo` (clean blocklist/intel, seeds the judge number).
 
+## Rehearsal checklist (before judges)
+- [ ] One **talk-mode** call (`MARIA_LEG=talk`): the customer speaks ~15 s while the caller stays quiet. Then `grep inrms logs/hub.log | tail`: each line is `inrms <id> t=<s> rms=<n> zero=<pct>% in=<n> maria_out=<n>`. **Flag it if `zero` is above 50% on lines where `maria_out` > 0** (the customer's audio is arriving as silence: check the page mic permission/earphones, then repeat).
+- [ ] `scripts/ready_check` READY right after the rehearsal (the rehearsal call must not leave real numbers in the trusted list; `scripts/reset_demo` first).
+
 ## Judge call rules
 - [ ] **English only** on the call (detection and the decoy are tuned for English).
 - [ ] **Caller ID on**: no withheld/blocked numbers (the hub routes on the caller number; a withheld number cannot be scored or blocklisted).
