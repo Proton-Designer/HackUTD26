@@ -234,11 +234,22 @@ def validate(a: dict) -> dict | None:
     return None
 
 
+# Phone STT often mishears "Zelle" ("by sell to ...", "via zel", "on cell"). Only rewritten after a payment verb/preposition
+# or before "to <handle>", so ordinary uses of "sell"/"cell" elsewhere stay as they are.
+ZELLE_HEARD = re.compile(r"\b(by|via|through|with|using|on|in|send it|sent it)\s+(?:sell|sel|zel|zell|zele|zela|zelda|zeal|zayle)\b"
+                         r"|\b(?:sell|zel|zell|zele|zela|zayle)\b(?=\s+(?:to|at)\s+\S+\s+(?:dot|at)\b)", re.I)
+
+
+def fix_zelle(t: str) -> str:
+    return ZELLE_HEARD.sub(lambda m: (m.group(1) + " Zelle") if m.group(1) else "Zelle", t)
+
+
 async def extract(lines: list[str]) -> list[dict]:
     if not lines:
         return []
+    joined = fix_zelle(clean(" ".join(lines)))
     txt = await chat([{"role": "system", "content": EXTRACT_PROMPT},
-                      {"role": "user", "content": "<caller>" + clean(" ".join(lines))[-6000:] + "</caller>"}],
+                      {"role": "user", "content": "<caller>" + joined[-6000:] + "</caller>"}],
                      max_tokens=600, temperature=0.0)
     if not txt:
         raise RuntimeError("extractor: no model response")   # caller retries; an empty haul must not look like success
@@ -251,7 +262,7 @@ async def extract(lines: list[str]) -> list[dict]:
     out = [v for v in (validate(a) for a in arr if isinstance(a, dict)) if v]
     # The model sometimes splits a spoken email ("refunds dot dept at backfire dash demo dot example") into a handle
     # without its domain plus a separate domain. Rebuild the full address from the transcript so intel can match it.
-    t = " " + clean(" ".join(lines)).lower() + " "
+    t = " " + joined.lower() + " "
     for word, sym in ((r"\s+dot\s+", "."), (r"\s+at\s+", "@"), (r"\s+(?:dash|hyphen)\s+", "-"), (r"\s+underscore\s+", "_")):
         t = re.sub(word, sym, t)   # spoken separators only; real sentence punctuation keeps its space
     emails = re.findall(r"[a-z0-9._%+-]+@[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}(?![a-z0-9-])", t)
@@ -260,5 +271,13 @@ async def extract(lines: list[str]) -> list[dict]:
             full = next((e for e in emails if e.split("@")[0].endswith(a["id"].lower())), None)
             if full:
                 a["id"] = full
+    # Backstop: an email said within a few words after "Zelle" is a Zelle handle, even if the model missed or mislabeled it.
+    for m in re.finditer(r"zelle\W+(?:\w+\W+){0,4}?([a-z0-9._%+-]+@[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,})(?![a-z0-9-])", t):
+        e = m.group(1)
+        same = [a for a in out if a["kind"] == "payment_handle" and (a["id"] == e or a["id"].endswith(e.split("@")[0]))]
+        for a in same:
+            a["rail"], a["id"] = "zelle", e
+        if not same:
+            out.append({"kind": "payment_handle", "rail": "zelle", "id": e})
     log.info("extractor: %d of %d artifacts valid", len(out), len(arr))
     return out
