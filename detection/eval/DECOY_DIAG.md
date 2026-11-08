@@ -34,9 +34,9 @@ Method: each P2 final after the opener is matched to the decoy-heard line (speak
 | call | P2 finals after handoff | heard by decoy as own line | MERGED into one decoy line | DROPPED (no decoy line) |
 |---|---|---|---|---|
 | 3d5a7970 | 11 | 9 | +61.3 and +64.3 -> one line at +64.7 (one ASK, the other a 2-word fragment) | 0 |
-| e3e343de | 10 | 4 | +74.2 and +76.0 -> +77.3 (no ask); +98.5 (ASK, "send $1800 by Zelle to refund") and +101.2 ("dot ...") -> +103.6 | 3: +90.1 (3 w), +102.5 (1 w), +105.3 (4 w) |
-| ba80d152 | 13 | 4 | FIVE finals +59.9, +63.9, +65.9, +67.3, +68.4 (9 s, 1 ASK at +68.4) -> one line at +69.0 | 6: +25.7 (5 w), +47.4 (1 w), +55.0 (3 w), +57.5 (2 w), +76.0 (5 w), plus one fragment; first ASK at +46.3 did reach the decoy |
-| 5921f090 | 8 | 4 | none | 3: +16.0 (5 w; the decoy heard only a 1-word tail of it), +23.1 and +93.4 (1-9 w) |
+| e3e343de | 10 | 3 | +74.2 and +76.0 -> +77.3 (no ask); +98.5 (ASK, "send $1800 by Zelle to refund") and +101.2 ("dot ...") -> +103.6 | 3: +90.1 (3 w), +102.5 (1 w), +105.3 (4 w) |
+| ba80d152 | 13 | 3 | FIVE finals +59.9, +63.9, +65.9, +67.3, +68.4 (9 s, 1 ASK at +68.4) -> one line at +69.0 | 6: +25.7 (5 w), +47.4 (1 w), +55.0 (3 w), +57.5 (2 w), +76.0 (5 w); first ASK at +46.3 did reach the decoy |
+| 5921f090 | 8 | 6 | none | 3: +16.0 (5 w; the decoy heard only a 1-word tail of it), +23.1 and +93.4 (1-9 w) |
 | 8ee2b3da | 2 | 2 | none | 0 |
 Facts:
 - Two scammer ASKS in one decoy line: 0 cases found. Merges join an ask with its continuation (e3e343de +98.5 and +101.2 are the Zelle sentence split by STT at "refund" / "dot", the decoy gets it whole at +103.6, which is an improvement).
