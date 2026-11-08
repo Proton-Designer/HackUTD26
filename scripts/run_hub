@@ -16,12 +16,6 @@ trap cleanup EXIT INT TERM
 if curl -fsS -m 1 "http://127.0.0.1:$PORT/healthz" >/dev/null 2>&1; then
   echo "port $PORT already serves a hub; not starting another (stop it or set HUB_PORT)"; exit 1
 fi
-"$PY" -m uvicorn server.main:app --host "${HUB_BIND:-127.0.0.1}" --port "$PORT" >"$LOGDIR/hub.log" 2>&1 &
-pids+=($!)
-for _ in $(seq 1 30); do curl -fsS -m 1 "http://127.0.0.1:$PORT/healthz" >/dev/null 2>&1 && break; sleep 0.5; done
-curl -fsS -m 1 "http://127.0.0.1:$PORT/healthz" >/dev/null 2>&1 || { echo "hub failed to start; see $LOGDIR/hub.log"; tail -5 "$LOGDIR/hub.log"; exit 1; }
-echo "hub up:      http://127.0.0.1:$PORT   (status: /demo/status, latency: /demo/latency, Maria's app: /app/)"
-
 PUBLIC=""
 if [ "${NO_TUNNEL:-}" != "1" ]; then
   if command -v cloudflared >/dev/null; then
@@ -34,6 +28,14 @@ if [ "${NO_TUNNEL:-}" != "1" ]; then
     echo "cloudflared not installed (brew install cloudflared); hub is local only"
   fi
 fi
+[ -n "$PUBLIC" ] && export PUBLIC_WS="wss://${PUBLIC#https://}"   # voip builds the Telnyx stream_url from this
+[ "${SIM_MODE:-}" = "1" ] && [ -n "$PUBLIC" ] && echo "WARNING: SIM_MODE=1 with a public tunnel lets anyone with the URL post simulated webhooks (x-sim-call). Do not use for the real demo."
+"$PY" -m uvicorn server.main:app --host "${HUB_BIND:-127.0.0.1}" --port "$PORT" >"$LOGDIR/hub.log" 2>&1 &
+pids+=($!)
+for _ in $(seq 1 30); do curl -fsS -m 1 "http://127.0.0.1:$PORT/healthz" >/dev/null 2>&1 && break; sleep 0.5; done
+curl -fsS -m 1 "http://127.0.0.1:$PORT/healthz" >/dev/null 2>&1 || { echo "hub failed to start; see $LOGDIR/hub.log"; tail -5 "$LOGDIR/hub.log"; exit 1; }
+echo "hub up:      http://127.0.0.1:$PORT   (status: /demo/status, latency: /demo/latency, Maria's app: /app/)"
+
 if [ -n "$PUBLIC" ]; then
   [ -z "${HUB_TOKEN:-}" ] && echo "WARNING: HUB_TOKEN is unset; /events POST, /routing/lookup and /demo/* are open on the public URL. Export HUB_TOKEN before run_hub for the real demo."
   echo "public URL:  $PUBLIC   (ephemeral; changes every run)"

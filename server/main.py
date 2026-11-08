@@ -149,6 +149,13 @@ if os.environ.get("DEMO_MODE") == "1":
     async def _auto_replay():
         asyncio.create_task(replay.run(None, 1.0, loop=True))
 
+# voip (Telnyx scam line: /telnyx/webhook, /media/{call_id}, /voip/webrtc-token) mounted in this one process. Fail open: hub still starts without it.
+try:
+    from voip.router import router as _voip_router
+    mount_router(_voip_router)
+except Exception:
+    log.exception("voip router not mounted")
+
 # Maria's app, same-origin with the hub (phone via tunnel). Mounted last so API routes win.
 _WEB = pathlib.Path(__file__).resolve().parent.parent / "web" / "customer"
 if _WEB.is_dir():

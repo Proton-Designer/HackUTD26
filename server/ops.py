@@ -52,7 +52,7 @@ def latency_summary():
 EXPECTED = {
     "voip":   ("/telnyx", "VOIP_BASE"),
     "P2 /detect": ("/detect", "P2_BASE"),
-    "P3 /decoy":  ("/decoy", "P3_BASE"),
+    "P3 /decoy":  ("/decoy/", "P3_BASE"),
     "P4 /intel":  ("/intel/actions", "P4_BASE"),
 }
 
@@ -67,8 +67,17 @@ def _probe(base):
     except Exception:
         return "unreachable"
 
+def _paths(routes, prefix=""):
+    out = []
+    for r in routes:
+        if hasattr(r, "original_router"):  # newer FastAPI wraps include_router results
+            out += _paths(r.original_router.routes, prefix + getattr(r.original_router, "prefix", ""))
+        elif hasattr(r, "path"):
+            out.append(prefix + r.path)
+    return out
+
 def status(app):
-    paths = [getattr(r, "path", "") for r in app.routes]
+    paths = _paths(app.routes)
     names = {}
     with ThreadPoolExecutor(4) as ex:
         futs = {n: ex.submit(_probe, os.environ.get(env)) for n, (_, env) in EXPECTED.items()}

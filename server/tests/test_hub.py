@@ -133,3 +133,11 @@ def test_sim_call_helpers():
     assert m.lin2ulaw(0) == 0xFF and len(m.pcmu_tone(secs=1)) == 8000
     w = m.webhook("call.initiated", {"from": "+1"})["data"]
     assert w["event_type"] == "call.initiated" and w["payload"]["from"] == "+1"
+
+
+def test_voip_mounted_in_single_process():
+    from server import ops
+    s = ops.status(app)["pipelines"]
+    assert s["voip"]["mounted"] is True and s["P3 /decoy"]["mounted"] is False   # /decoy-echo is not P3
+    paths = [getattr(r, "path", "") for r in app.routes]
+    assert paths[-2:] == ["/command-center", "/app"] or set(paths[-2:]) == {"/command-center", "/app"}   # static mounts stay last

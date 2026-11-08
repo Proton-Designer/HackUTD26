@@ -32,7 +32,7 @@ def webhook(event_type, p):
             "meta": {"attempt": 1, "delivered_to": "simulator"}}
 
 def post(url, body):
-    req = urllib.request.Request(url, json.dumps(body).encode(), {"content-type": "application/json", "x-sim-call": "1"})
+    req = urllib.request.Request(url, json.dumps(body).encode(), {"content-type": "application/json", "x-sim-call": "1", "x-hub-token": __import__("os").environ.get("HUB_TOKEN", "")})
     try:
         with urllib.request.urlopen(req, timeout=5) as r:
             raw = r.read().decode() or "{}"

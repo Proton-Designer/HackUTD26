@@ -39,7 +39,10 @@ def _put(q, item, s):
         s.dropped += 1
 
 def _url(env, path, default=None):
-    base = os.environ.get(env)
+    """<ENV> (ws URL) or fall back to the pipeline's P2_BASE/P3_BASE (http(s) -> ws(s)), same vars /demo/status probes."""
+    base = os.environ.get(env) or os.environ.get(env.replace("_STT_URL", "_BASE").replace("_DECOY_URL", "_BASE"))
+    if base and base.startswith("http"):
+        base = base.replace("http", "ws", 1)
     return f"{base.rstrip('/')}{path}" if base else default
 
 async def open(call_id, send_to_caller, on_decoy_lost=None):
@@ -67,7 +70,7 @@ async def caller_frame(call_id, frame):
         if feed_audio_hook:
             try: feed_audio_hook(call_id, frame)
             except Exception: log.exception("feed_audio_hook failed")
-        if os.environ.get("P2_STT_URL"):
+        if os.environ.get("P2_STT_URL") or os.environ.get("P2_BASE"):
             _put(s.p2_q, frame, s)
         if s.decoy_active and ev in ("media", "stop"):
             if ev == "media":

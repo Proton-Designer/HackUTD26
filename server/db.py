@@ -19,6 +19,8 @@ def conn():
             _conn = sqlite3.connect(DB_PATH, check_same_thread=False)
             _conn.row_factory = sqlite3.Row
             _conn.executescript(SCHEMA)
+            if _conn.execute("SELECT COUNT(*) FROM trusted").fetchone()[0] == 0 and _conn.execute("SELECT COUNT(*) FROM calls").fetchone()[0] == 0:
+                _conn.execute("INSERT OR REPLACE INTO trusted VALUES(?,?)", ("+15555550188", "Her bank (synthetic)")); _conn.commit()  # fresh DB: same seed as reset_all
         return _conn
 
 def configure(path):

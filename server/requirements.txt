@@ -1,4 +1,6 @@
+cryptography
 fastapi
-uvicorn[standard]
-pytest
 httpx
+pytest
+uvicorn[standard]
+websockets
