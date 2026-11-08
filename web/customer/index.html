@@ -68,6 +68,9 @@
         <li>The caller's words: kept only if an alert fired, deleted after 72 hours.</li>
         <li>Scammer numbers and websites: kept so they can be stopped.</li>
         <li>Your voice profile: kept until you delete it.</li></ul></div>
+    <div class="card"><h2>Numbers to never screen</h2>
+      <p class="sub">Family, your doctor, your bank.</p>
+      <button class="big continue" id="dnsOpen">Manage this list</button></div>
     <div class="card"><h2>Your voice profile</h2>
       <p id="voiceState" class="sub"></p>
       <button class="big hang" id="voiceDelete" hidden>Delete my voice</button>
@@ -89,15 +92,38 @@
       <h1>Your voice (optional)</h1>
       <p class="body">If you press <b>Scammer Get Scammed</b>, Backfire can talk to the scammer in <b>your voice</b>, so they waste their time and not yours.</p>
       <div class="card"><h2>Voice permission</h2>
-        <p class="body small">I agree that Backfire may make a <b>voice profile</b> from my recording. It will be used <b>only</b> when I press Scammer Get Scammed. It is kept securely, never sold, and never used for anything else. I can delete it at any time, and it is deleted if I turn Live Guard off.</p>
-        <label class="check"><input type="checkbox" id="consent"><span>Yes, I agree</span></label></div>
-      <div id="recordBox" hidden>
-        <p class="body">Press the red button and read this out loud:</p>
-        <blockquote id="paragraph"></blockquote>
-        <button class="big hang" id="recBtn">● Start recording</button>
-        <p class="sub" id="recStatus"></p>
+        <p class="body small">A voice profile is <b>biometric data</b>. If you agree, Backfire makes one from a short recording of you reading a paragraph.</p>
+        <ul class="plainlist small">
+          <li>Used <b>only</b> when you press Scammer Get Scammed.</li>
+          <li>Every use is <b>watermarked</b> so it can be told apart from you.</li>
+          <li>Kept securely, never sold, never used for anything else.</li>
+          <li>You can <b>delete it any time</b>. It is also deleted if you turn Live Guard off.</li></ul>
+        <p class="body small">This is separate from turning on Backfire. You can say no and still be protected.</p></div>
+      <button class="big accept" id="s2agree">I agree</button>
+      <button class="big continue" id="s2skip">Skip, use a synthetic voice</button>
+    </div>
+    <div id="stepRec" class="step" hidden>
+      <h1>Read this out loud</h1>
+      <p class="body">Press the red button, then read the paragraph below at a normal pace. Keep going until the timer reaches <b>30 seconds</b>.</p>
+      <blockquote id="paragraph"></blockquote>
+      <div class="meter" aria-hidden="true"><i id="recLevel"></i></div>
+      <p class="timer-line"><span id="recTime">0:00</span> / 1:00</p>
+      <button class="big hang" id="recBtn">● Start recording</button>
+      <div id="recReview" hidden>
+        <button class="big accept" id="recSave">Save my voice</button>
+        <button class="big continue" id="recAgain">Record again</button>
       </div>
-      <button class="big continue" id="s2skip">Skip for now</button>
+      <p class="sub" id="recStatus" role="status"></p>
+      <button class="big continue" id="recSkip">Skip, use a synthetic voice</button>
+    </div>
+    <div id="stepDns" class="step" hidden>
+      <h1>Numbers to never screen (optional)</h1>
+      <p class="body">Add family, your doctor or your bank. Backfire will never screen or block these numbers.</p>
+      <ul id="dnsList" class="rows"></ul>
+      <input id="dnsNumber" inputmode="tel" autocomplete="off" aria-label="Phone number" placeholder="Phone number">
+      <input id="dnsLabel" autocomplete="off" aria-label="Name" placeholder="Name (for example: Dr. Lee)">
+      <button class="big continue" id="dnsAdd">Add number</button>
+      <button class="big accept" id="dnsDone">Continue</button>
     </div>
     <div id="step3" class="step" hidden>
       <h1>You're protected</h1>

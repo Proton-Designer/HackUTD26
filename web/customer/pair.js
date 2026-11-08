@@ -5,7 +5,8 @@
   const $ = id => document.getElementById(id), HUB = BF.hub; if (!HUB) return;
   const busy = () => ["ringing", "active"].includes($("phone").dataset.state);
   let want = false;
-  function show() { want = false; $("pairView").hidden = false; $("tabs").hidden = true; $("pairMsg").textContent = ""; setTimeout(() => $("pairPin").focus(), 50); }
+  // pairing comes first on a fresh phone; onboarding follows after the reload
+  function show() { want = false; ["callView", "protView", "setupView"].forEach(v => $(v).hidden = true); $("pairView").hidden = false; $("tabs").hidden = true; $("pairMsg").textContent = ""; setTimeout(() => $("pairPin").focus(), 50); }
   function request() { want = true; if (!busy()) show(); }          // never interrupt a live call
   BF.onUnauthorized = () => { try { localStorage.removeItem("bf.device"); } catch (e) {} request(); };
   new MutationObserver(() => { if (want && !busy()) show(); }).observe($("phone"), { attributes: true, attributeFilter: ["data-state"] });

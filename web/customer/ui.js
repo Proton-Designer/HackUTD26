@@ -91,55 +91,103 @@
   $("voiceDelete").onclick = deleteVoice;
   $("voiceSetup").onclick = () => { setup(2); };
 
-  // ---- onboarding ----
+  // ---- onboarding: 1 turn on -> 2 voice consent (separate, optional) -> rec read-aloud -> dns Do Not Screen (optional) -> 3 done ----
+  const STEPS = ["step1", "step2", "stepRec", "stepDns", "step3"], STEP_NO = { 1: 0, 2: 1, rec: 2, dns: 3, 3: 4 };
   function setup(step) {
     VIEWS.forEach(x => $(x).hidden = x !== "setupView"); $("tabs").hidden = true;
-    ["step1", "step2", "step3"].forEach((s, i) => $(s).hidden = i + 1 !== step);
+    STEPS.forEach((s, i) => $(s).hidden = i !== STEP_NO[step]);
+    if (step === "dns") renderDns();
+    window.scrollTo(0, 0);
   }
   function finish(msg) { $("doneMsg").textContent = msg; setup(3); }
+  function toDns(msg) { state.doneMsg = msg; if (state.fromSettings) { state.fromSettings = false; view("protView"); } else setup("dns"); }
   $("s1on").onclick = () => { store.set("on", "1"); state.guardOn = true; store.set("done", "1"); setup(2); };
-  $("s2skip").onclick = () => finish("Backfire is on. You can set up your voice later in Protection.");
+  $("s2skip").onclick = () => toDns("Backfire is on. Scammers will hear a synthetic voice. You can set up your voice later in Protection.");
+  $("s2agree").onclick = () => { $("paragraph").textContent = newParagraph(); resetRec(); setup("rec"); };
+  $("recSkip").onclick = () => { stopMeter(); if (rec) { discard = true; rec.stop(); } toDns("Backfire is on. Scammers will hear a synthetic voice. You can set up your voice later in Protection."); };
   $("s3done").onclick = () => { view("callView"); applyGuard(); if (BF.pendingStart) { const f = BF.pendingStart; BF.pendingStart = null; f(); } };
+  $("voiceSetup").onclick = () => setup(2);
+  $("dnsOpen").onclick = () => { state.fromSettings = true; setup("dns"); };
+  $("dnsDone").onclick = () => { if (state.fromSettings) { state.fromSettings = false; view("protView"); } else finish(state.doneMsg || "Backfire is on."); };
 
-  const SENTENCES = ["The little blue boat drifted past the old stone bridge.", "My neighbor grows tomatoes and sweet peas by the garden gate.", "On Sunday we walked to the market and bought warm bread.", "The clock in the hall strikes every hour, loud and clear.", "A gentle rain fell on the quiet street all morning."];
-  function newParagraph() {
-    const pick = [...SENTENCES].sort(() => Math.random() - 0.5).slice(0, 3);
-    const digits = Array.from({ length: 4 }, () => Math.floor(Math.random() * 10)).join(" ");
-    return pick.join(" ") + " Today's code word is " + digits + ".";
+  // Do Not Screen list: kept on the phone; sent to the hub's trusted list when it has one (POST /trusted, fail soft).
+  const dns = () => { try { return JSON.parse(store.get("dns") || "[]"); } catch (e) { return []; } };
+  const saveDns = l => store.set("dns", JSON.stringify(l));
+  function renderDns() {
+    const l = dns();
+    $("dnsList").replaceChildren(...l.map((x, i) => { const li = document.createElement("li"), s = document.createElement("span"), r = document.createElement("button"); s.textContent = (x.label ? x.label + " · " : "") + x.number; r.className = "undo"; r.textContent = "Remove"; r.setAttribute("aria-label", "Remove " + x.number); r.onclick = () => { const n = dns(); n.splice(i, 1); saveDns(n); HUB && hub("DELETE", "/trusted/" + encodeURIComponent(x.number)).catch(() => {}); renderDns(); }; li.append(s, r); return li; }));
   }
-  let discard = false;
-  $("consent").onchange = e => {
-    if (!e.target.checked && rec) { discard = true; rec.stop(); }   // consent withdrawn mid-recording: throw the recording away
-    if (!e.target.checked) $("recStatus").textContent = "";
-    $("recordBox").hidden = !e.target.checked;
-    if (e.target.checked) $("paragraph").textContent = newParagraph();
+  $("dnsAdd").onclick = () => {
+    const number = $("dnsNumber").value.replace(/[^\d+]/g, ""), label = $("dnsLabel").value.trim().slice(0, 40);
+    if (number.replace(/\D/g, "").length < 7) { $("dnsNumber").focus(); return; }
+    const l = dns(); if (!l.some(x => x.number === number)) { l.push({ number, label }); saveDns(l); HUB && hub("POST", "/trusted", { number, label }).catch(() => {}); }
+    $("dnsNumber").value = ""; $("dnsLabel").value = ""; renderDns();
   };
 
-  let rec = null, chunks = [];
+  // A random paragraph from a pool of 8, plus a random code word, so a recording can't simply be replayed. Each takes about 35-50 s at an easy pace.
+  const PARAS = [
+    "The little blue boat drifted slowly past the old stone bridge while the morning mist lifted off the water. A man on the bank waved to us, and we waved back. By noon the sun was warm, the bells in the village rang twelve times, and we shared bread, cheese, and sweet red grapes on the grass.",
+    "My neighbor grows tomatoes and sweet peas by the garden gate. Every summer she leaves a basket on my porch with a note that says to enjoy them while they are fresh. In return, I bring her lemon cake on Sundays, and we sit together and talk about the weather and our grandchildren.",
+    "On Saturday we walked to the market and bought warm bread, a jar of honey, and a bunch of yellow flowers. The baker knows my name and always adds one extra roll. We carried everything home slowly, stopping to rest on the bench by the fountain and watch the pigeons.",
+    "The clock in the hall strikes every hour, loud and clear. When I was a girl, it woke me for school, and now it keeps me company in the evenings while I knit by the window. Outside, the streetlights come on one by one, and the whole neighborhood grows quiet and calm.",
+    "A gentle rain fell on the quiet street all morning. I made a pot of tea, opened the book my sister gave me, and sat in the big green chair by the window. Later the clouds broke, a bright rainbow stretched over the rooftops, and the children ran outside to splash in the puddles.",
+    "Last spring we planted a small apple tree in the back yard. It has grown taller than the fence, and this year it is full of white blossoms. My grandson says he will climb it when he is older, and I told him that apples taste best when you pick them yourself in the autumn.",
+    "Every Thursday afternoon the library holds a story hour for the neighborhood. I sit near the back, and the librarian reads in a soft, steady voice. Afterward there are oatmeal cookies and warm cider, and we all trade recommendations for the next good book to borrow and enjoy.",
+    "When the weather is fine, we drive out to the lake and have a picnic beside the water. I pack sandwiches, sliced pears, and a thermos of coffee. We watch the sailboats drift by, listen to the birds in the tall pines, and stay until the sky turns pink and gold."
+  ];
+  const CODE_WORDS = ["maple", "river", "lantern", "orchard", "copper", "meadow", "harbor", "violet"];
+  function newParagraph() {
+    const p = PARAS[Math.floor(Math.random() * PARAS.length)], w = CODE_WORDS[Math.floor(Math.random() * CODE_WORDS.length)];
+    const digits = Array.from({ length: 4 }, () => Math.floor(Math.random() * 10)).join(" ");
+    return p + " Today's code words are " + w + " " + digits + ".";
+  }
+
+  // ---- recording: MediaRecorder, 30-60 s, live level meter, review + re-record ----
+  const MIN_S = qs.has("fakemic") ? 3 : 30, MAX_S = 60;
+  let rec = null, chunks = [], discard = false, blob = null, t0 = 0, tick = null, actx = null, raf = 0;
+  const mmss = s => Math.floor(s / 60) + ":" + String(Math.floor(s % 60)).padStart(2, "0");
+  function stopMeter() { clearInterval(tick); cancelAnimationFrame(raf); $("recLevel").style.width = "0%"; try { actx && actx.close(); } catch (e) {} actx = null; }
+  function resetRec() { stopMeter(); blob = null; chunks = []; $("recTime").textContent = "0:00"; $("recBtn").hidden = false; $("recBtn").textContent = "● Start recording"; $("recReview").hidden = true; $("recStatus").textContent = ""; $("recSkip").hidden = false; }
   const b64 = blob => new Promise(res => { const r = new FileReader(); r.onload = () => res(String(r.result).split(",")[1] || ""); r.readAsDataURL(blob); });
-  async function enroll(blob) {
-    $("recStatus").textContent = "Saving…";
+  async function enroll(b) {
+    $("recStatus").textContent = "Saving…"; $("recSave").disabled = true;
     try {
       let voice_id;
-      if (HUB) voice_id = (await hub("POST", "/voice/enroll", { recording: await b64(blob), mime: (blob.type || "audio/webm").split(";")[0], consent_version: CONSENT_VERSION })).voice_id;
+      if (HUB) voice_id = (await hub("POST", "/voice/enroll", { recording: await b64(b), mime: (b.type || "audio/webm").split(";")[0], consent_version: CONSENT_VERSION })).voice_id;
       else voice_id = "v_simulated_" + Math.random().toString(36).slice(2, 8);   // no hub configured: simulated
+      if (!voice_id) throw new Error("no voice_id");
       state.voiceId = voice_id; store.set("voice", voice_id);
-      finish("Your voice is saved" + (HUB ? "" : " (simulated)") + ". Backfire is on. You can delete your voice any time in Protection.");
-    } catch (e) { console.log("[backfire] enroll failed", String(e)); $("recStatus").textContent = "That didn't save. Press the red button to try again."; $("recBtn").textContent = "● Start recording"; rec = null; }
+      toDns("Your voice is saved" + (HUB ? "" : " (simulated)") + ". Backfire is on. You can delete your voice any time in Protection.");
+    } catch (e) { console.log("[backfire] enroll failed", String(e)); $("recStatus").textContent = "That didn't save. Press Save again, or record again."; $("recSave").disabled = false; }
   }
+  $("recSave").onclick = () => { if (blob) enroll(blob); };
+  $("recAgain").onclick = () => { $("paragraph").textContent = newParagraph(); resetRec(); };   // a fresh paragraph each time
   $("recBtn").onclick = async () => {
-    if (rec) { rec.stop(); return; }                       // second press = stop
-    if (!$("consent").checked) return;
+    if (rec) {                                              // second press = stop (only once long enough)
+      const s = (Date.now() - t0) / 1000;
+      if (s < MIN_S) { $("recStatus").textContent = "Keep reading. " + Math.ceil(MIN_S - s) + " more seconds, please."; return; }
+      rec.stop(); return;
+    }
     try {
       if (!navigator.mediaDevices) throw new Error("no mic API");
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      chunks = []; rec = new MediaRecorder(stream);
+      chunks = []; blob = null; rec = new MediaRecorder(stream);
       rec.ondataavailable = e => chunks.push(e.data);
-      rec.onstop = () => { stream.getTracks().forEach(t => t.stop()); if (discard) { discard = false; rec = null; chunks = []; $("recBtn").textContent = "● Start recording"; return; } const blob = new Blob(chunks, { type: rec.mimeType || "audio/webm" }); rec = null; $("recBtn").textContent = "● Start recording"; enroll(blob); };
-      rec.start(); $("recBtn").textContent = "■ Stop when finished"; $("recStatus").textContent = "Recording… read the words above.";
+      rec.onstop = () => {
+        stream.getTracks().forEach(t => t.stop()); stopMeter(); const r = rec; rec = null;
+        if (discard) { discard = false; chunks = []; resetRec(); return; }
+        blob = new Blob(chunks, { type: r.mimeType || "audio/webm" });
+        $("recBtn").hidden = true; $("recReview").hidden = false; $("recSave").disabled = false; $("recSkip").hidden = true;
+        $("recStatus").textContent = "Recorded " + mmss((Date.now() - t0) / 1000) + ". Save it, or record again.";
+      };
+      // level meter (fail soft: recording still works without it)
+      try { actx = new (window.AudioContext || window.webkitAudioContext)(); const an = actx.createAnalyser(); an.fftSize = 512; actx.createMediaStreamSource(stream).connect(an); const buf = new Uint8Array(512);
+        const loop = () => { an.getByteTimeDomainData(buf); let m = 0; for (const v of buf) m = Math.max(m, Math.abs(v - 128)); $("recLevel").style.width = Math.min(100, m / 80 * 100) + "%"; raf = requestAnimationFrame(loop); }; loop(); } catch (e) {}
+      rec.start(); t0 = Date.now(); $("recBtn").textContent = "■ Stop"; $("recSkip").hidden = true; $("recStatus").textContent = "Recording… read the words above.";
+      tick = setInterval(() => { const s = (Date.now() - t0) / 1000; $("recTime").textContent = mmss(s); if (s >= MIN_S) $("recBtn").textContent = "■ Stop (you can stop now)"; if (s >= MAX_S && rec) rec.stop(); }, 250);
     } catch (e) {
-      $("recStatus").textContent = "We couldn't use the microphone. Allow it in your browser and try again.";
-      if (qs.has("fakemic")) enroll(new Blob(["x"], { type: "audio/webm" }));   // test hook only
+      $("recStatus").textContent = "We couldn't use the microphone. Allow it in your browser and try again, or skip.";
+      if (qs.has("fakemic")) { blob = new Blob(["x"], { type: "audio/webm" }); enroll(blob); }   // test hook only
     }
   };
 

@@ -16,7 +16,17 @@ def check(step, name, ok, detail="", gap=None):
     results.append((step, name, tag, detail, gap)); print(f"[{tag}] {step} {name}" + (f" - {detail}" if detail and not ok else "") + (f"  (owner: {gap})" if tag == "GAP" else ""), flush=True)
     return ok
 
+def _env_token(name):   # the hub (run_hub) loads .env after the shell, so POST /events needs the same PIPELINE_TOKEN; read it quietly, never print it
+    v = os.environ.get(name)
+    if v: return v
+    try:
+        for ln in (ROOT / ".env").read_text().splitlines():
+            if ln.startswith(name + "="): return ln.split("=", 1)[1].strip().strip("\"'")
+    except Exception: pass
+    return None
+PIPE = _env_token("PIPELINE_TOKEN")
 def http(method, path, body=None, headers=None):
+    if PIPE and path == "/events" and method == "POST": headers = {"x-pipeline-token": PIPE, **(headers or {})}
     req = urllib.request.Request(BASE + path, None if body is None else json.dumps(body).encode(), {"content-type": "application/json", **(headers or {})}, method=method)
     try:
         with urllib.request.urlopen(req, timeout=5) as r: raw = r.read().decode(); return r.status, (json.loads(raw) if raw[:1] in "{[" else raw)
