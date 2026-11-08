@@ -60,6 +60,7 @@ async def _safe(coro, what, sim=False):
 async def on_initiated(p, base_ws=None, sim=False):
     ccid, sid, frm = p.get("call_control_id"), p.get("call_session_id"), p.get("from", "")
     if not (ccid and sid and ID_RE.match(ccid) and ID_RE.match(sid)): return {}
+    if sid in CALLS: return {}   # duplicate/replayed initiated for a known session: never overwrite state (sim or real)
     att = attestation_of(p)
     emit("call.incoming", sid, {"from": frm, "to": p.get("to", ""), "attestation": att, "scam_id_score": 0.8 if att in ("C", "none") else 0.1})
     d = _routing(frm, att)

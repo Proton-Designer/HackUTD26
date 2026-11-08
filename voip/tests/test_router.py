@@ -104,3 +104,9 @@ def test_sim_event_cannot_end_real_call(monkeypatch, client):
     b = wh("call.hangup", call_session_id="sess-real-1234567")
     client.post("/telnyx/webhook", content=b, headers={"x-sim-call": "1"})
     assert R.CALLS["sess-real-1234567"]["ended"] is False
+
+
+def test_duplicate_initiated_does_not_overwrite(client):
+    R.CALLS["sess-1234567890"] = {"caller_ccid": "v3:real_abcdef1234", "from": "+1", "decision": "LIVE_GUARD", "t0": 0, "ended": False, "sim": False}
+    client.post("/telnyx/webhook", content=wh("call.initiated"), headers={"x-sim-call": "1"})
+    assert R.CALLS["sess-1234567890"]["caller_ccid"] == "v3:real_abcdef1234" and R.CALLS["sess-1234567890"]["sim"] is False
