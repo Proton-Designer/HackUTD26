@@ -33,13 +33,13 @@ Owner: Kareem. Pipeline id: P4a. Folder: `intel/` only. Branch: `finalized-idea-
 
 ## Capital One Nessie (added 2026-11-08)
 - Seed once: `python -m intel.seed_nessie` (idempotent; ids in intel/nessie_ids.json, committed). Needs NESSIE_API_KEY in the repo-root .env on the HUB machine too.
-- Each rehearsal: `POST /demo/reset` (P1) also starts Maria's pending $1,800 "Zelle to refunds.dept@backfire-demo.example" (scripted stand-in for her banking app).
+- Each rehearsal: `POST /demo/reset` (P1) also starts the customer's pending $1,800 "Zelle to refunds.dept@backfire-demo.example" (scripted stand-in for her banking app).
 - Demo: Card 2 ends with the Zelle ask -> decoy captures payment_handle {rail:"zelle", id} -> intel.lookup (source nessie) -> hold_transfer auto-applied (transfer cancelled in Nessie, undo restores pending) + flag_payee_bankwide queued for Approve.
-- Simulated: the bank is Capital One's Nessie SANDBOX with mock data. The hold really changes the sandbox transfer, but no real money or bank exists. The bank-wide flag is a simulated payload. Maria's transfer is scripted by the reset.
+- Simulated: the bank is Capital One's Nessie SANDBOX with mock data. The hold really changes the sandbox transfer, but no real money or bank exists. The bank-wide flag is a simulated payload. The customer's transfer is scripted by the reset.
 - Check: `python -m intel.acceptance --hub http://127.0.0.1:8000 --require-nemotron --nessie` (12/12 locally, 2026-11-08).
 
 ## Network map (added 2026-11-08)
 - Open http://localhost:8000/intel/map on the hub machine (or any paired device). It shows 7 synthetic victims -> the
-  SIMULATED mule -> the SIMULATED cash-out, with Maria's $1,800 edge PENDING after /demo/reset and CUT ("✂ HELD $1,800")
+  SIMULATED mule -> the SIMULATED cash-out, with the customer's $1,800 edge PENDING after /demo/reset and CUT ("✂ HELD $1,800")
   within 3 s of the hold firing. Data: GET /intel/chain. Over the public tunnel it needs P1 to allow these two GETs.
 - If the hub isn't reachable, open intel/chain_map.html directly and paste the /intel/chain JSON into the box.

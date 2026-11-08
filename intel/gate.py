@@ -70,11 +70,11 @@ def decide(proposals: list[dict], ctx: Context) -> list[dict]:
         elif dest_allow and dest_allow in hits:
             d("not_actioned", "attempted_poisoning: payout destination is a verified business (allowlist match)")
         elif kind in TRUST_INCREASING:
-            d("denied", "trust change requested by untrusted input; only the customer can do this in her app")
+            d("denied", "trust change requested by untrusted input; only the customer can do this in their app")
         elif kind in BANK_AUTO:
-            d("auto", "customer-scoped: holds only her own pending transfer to the scammer's captured destination", "her") \
+            d("auto", "customer-scoped: holds only the customer's own pending transfer to the scammer's captured destination", "her") \
                 if p.get("target_source") == "nessie:pending_transfer" and str(raw) in ctx.bank_transfer_ids \
-                else d("denied", "bank holds only on transfers code found in her own account (never on supplied ids)")
+                else d("denied", "bank holds only on transfers code found in the customer's own account (never on supplied ids)")
         elif kind in BANK_QUEUE:
             d("queued", "bank-wide payee flag: one-click analyst approval (simulated)", "network") \
                 if p.get("target_source") == "nessie:payee" and str(raw).strip().lower() in ctx.bank_payees \
@@ -84,8 +84,8 @@ def decide(proposals: list[dict], ctx: Context) -> list[dict]:
         elif not in_evidence:
             d("denied", "target not in evidence (not the calling number or an extracted value)")
         elif kind == "block_caller_for_customer":
-            d("auto", "customer-scoped: blocks only the number that called her; undo in her log") if trusted \
-                else d("denied", "she can only auto-block the number that called her")
+            d("auto", "customer-scoped: blocks only the number that called the customer; undo in their protection log") if trusted \
+                else d("denied", "only the number that called the customer can be auto-blocked")
         elif kind == "link_campaign":
             d("auto", "data link only; pre-ring campaign blocking applies once the campaign is confirmed", "campaign")
         elif kind == "callback_protection_warning":
@@ -154,7 +154,7 @@ def apply(decisions: list[dict], store, call_id: str, ctx: Context, emit=default
             if kind == "block_caller_for_customer":
                 tok, new = store.add_block(tgt, "her", campaign_id=ctx.campaign_id)
                 emit("blocklist.updated", call_id, {"number": norm_phone(tgt), "scope": "her", "undo_token": tok,
-                                                    "reason": "Confirmed scammer (blocked for her)"})
+                                                    "reason": "Confirmed scammer (blocked for this customer)"})
                 simulated = False  # real effect in our demo routing
             elif kind == "link_campaign":
                 if ctx.campaign_status == "confirmed" and ctx.campaign_id:

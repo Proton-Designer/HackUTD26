@@ -52,7 +52,7 @@ def _checking(cid: str, nickname: str, balance: int) -> tuple[str, str]:
 
 
 def resolves(ids: dict | None) -> bool | None:
-    """True if Maria's and the payee's accounts still exist; None if Nessie is unreachable."""
+    """True if the customer's and the payee's accounts still exist; None if Nessie is unreachable."""
     if not ids:
         return False
     for acc in (ids.get("maria", {}).get("account_id"), ids.get("payee", {}).get("account_id")):
@@ -98,7 +98,7 @@ def seed_chain(ids: dict, say=print) -> dict:
     for days, amt in CASHOUT_HOPS:
         edges.append(_transfer(mule, co_a, days, amt, "cash-out hop"))
 
-    nodes = [{"id": "maria", "role": "target", "label": "Maria (protected by Backfire)",
+    nodes = [{"id": "maria", "role": "target", "label": "The customer (protected by Backfire)",
               "account_id": ids["maria"]["account_id"]}]
     nodes += [{"id": f"v{i + 1}", "role": "victim", "label": o["name"], "account_id": o["account_id"]}
               for i, o in enumerate(ids["others"])]
@@ -107,7 +107,7 @@ def seed_chain(ids: dict, say=print) -> dict:
     by_acct = {n["account_id"]: n["id"] for n in nodes}
     for e in edges:
         e["src"], e["dst"] = by_acct[e["src_account"]], by_acct[e["dst_account"]]
-    # Maria's edge is the one Backfire cuts. Its transfer is created at every /demo/reset, so it's resolved live.
+    # the customer's edge is the one Backfire cuts. Its transfer is created at every /demo/reset, so it's resolved live.
     edges.insert(0, {"src": "maria", "dst": "mule", "src_account": ids["maria"]["account_id"], "dst_account": mule,
                      "transfer_id": None, "dynamic": "maria_pending_demo_transfer",
                      "amount": int(json.loads(CONFIG.read_text()).get("payout_destination", {})
@@ -117,7 +117,7 @@ def seed_chain(ids: dict, say=print) -> dict:
     N.save_ids(ids)
     n_in = sum(e["amount"] for e in edges if e["dst"] == "mule" and e["src"] != "maria")
     say(f"  chain: {len(ids['others'])} victims -> mule (${n_in:,}) -> cash-out "
-        f"(${sum(a for _, a in CASHOUT_HOPS):,} in {len(CASHOUT_HOPS)} hops); Maria's edge resolved live")
+        f"(${sum(a for _, a in CASHOUT_HOPS):,} in {len(CASHOUT_HOPS)} hops); the customer's edge resolved live")
     return ids
 
 
@@ -146,8 +146,8 @@ def seed(force: bool = False, quiet: bool = False) -> dict:
     today = date.today()
     d = lambda n: (today - timedelta(days=n)).isoformat()
 
-    maria_c = _customer("Maria", "Sandbox")
-    maria_a, _ = _checking(maria_c, "Maria checking (synthetic)", 4200)
+    maria_c = _customer("Demo", "Customer")
+    maria_a, _ = _checking(maria_c, "Customer checking (synthetic)", 4200)
     merchants = []
     for name, cat in MERCHANTS:
         merchants.append(_ok(N.post("/merchants", {"name": name, "category": cat, "address": ADDR,
@@ -186,7 +186,7 @@ def seed(force: bool = False, quiet: bool = False) -> dict:
 
     ids = {"_note": "Synthetic Nessie sandbox objects for the Backfire demo (python -m intel.seed_nessie). No real people.",
            "created": time.strftime("%Y-%m-%dT%H:%M:%S"), "base": N.BASE,
-           "maria": {"name": "Maria Sandbox", "customer_id": maria_c, "account_id": maria_a},
+           "maria": {"name": "Demo Customer", "customer_id": maria_c, "account_id": maria_a},
            "others": others,
            "payee": {"label": "SIMULATED scammer destination", "customer_id": payee_c, "account_id": payee_a},
            "merchants": merchants, "evidence_transfer_ids": evidence}

@@ -28,7 +28,7 @@ Capital One Nessie (mock bank sandbox; all data synthetic):
     NESSIE_API_KEY in repo-root .env (or env). Base NESSIE_BASE (default https://api.nessieisreal.com; port 80 is closed).
     python -m intel.seed_nessie        # one-time, idempotent: Maria + history, 3 other customers, SIMULATED scammer payee,
                                        #   3 completed transfers to it; ids -> intel/nessie_ids.json (committed)
-    /demo/reset (or python -m intel.seed_demo) then starts ONE pending $1,800 "Zelle to <handle>" from Maria (scripted).
+    /demo/reset (or python -m intel.seed_demo) then starts ONE pending $1,800 "Zelle to <handle>" from the customer (scripted).
     When the decoy captures payment_handle zelle:refunds.dept@backfire-demo.example (Card 2) or the payee's bank
     hash/last4, intel looks it up in Nessie (intel.lookup source "nessie"), the gate auto-applies hold_transfer
     (her scope; PUT status cancelled; undo token "hold-..." puts it back to pending) and queues flag_payee_bankwide
@@ -38,7 +38,7 @@ Capital One Nessie (mock bank sandbox; all data synthetic):
 Laundering chain + network map (Nessie mock bank, synthetic):
     python -m intel.seed_nessie        # also adds the chain (additive): 7 victims -> mule ($18,100) -> cash-out ($17,300)
     GET /intel/chain                   # read-only graph {nodes, edges, mule_total_in/out, held_count, simulated}
-    GET /intel/map                     # standalone page: victims -> mule -> cash-out; Maria's edge shows CUT when held
+    GET /intel/map                     # standalone page: victims -> mule -> cash-out; the customer's edge shows CUT when held
     On the hub machine: http://localhost:8000/intel/map (polls every 3 s; paste-JSON fallback if the hub is unreachable)
 
 Rehearsal reset (idempotent, ~5 ms, no network): `python -m intel.seed_demo` clears the intel DB and seeds one

@@ -124,10 +124,10 @@ def bank_proposals(bank: list[tuple]) -> list[dict]:
         for t in transfers:
             out.append({"kind": "hold_transfer", "target": t["id"], "target_source": "nessie:pending_transfer",
                         "amount": t["amount"], "destination": dest, "destination_allow_key": allow,
-                        "evidence": [f"Maria's pending transfer '{t['description']}' (${t['amount']:,}) goes to the "
+                        "evidence": [f"The customer's pending transfer '{t['description']}' (${t['amount']:,}) goes to the "
                                      f"payout destination the scammer gave the decoy",
                                      f"{n} other customers sent money to this payee (Nessie enterprise read)"],
-                        "rationale": "stop her money before it leaves", "proposer": "code (Nessie match)"})
+                        "rationale": "stop the customer's money before it leaves", "proposer": "code (Nessie match)"})
         out.append({"kind": "flag_payee_bankwide", "target": dest, "target_source": "nessie:payee",
                     "payee_account_id": d.get("nessie_payee_account_id"), "rail": d.get("rail"),
                     "destination": dest, "destination_allow_key": allow,

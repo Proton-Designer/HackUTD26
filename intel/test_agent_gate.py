@@ -63,7 +63,7 @@ def test_network_block_queued_then_approved(store, events):
 def test_caller_blocked_before_ring_via_gate(store, events):
     run_judge(store, events)
     blocked, reason = store.is_blocked("(214) 555-0199")
-    assert blocked and "her" in reason
+    assert blocked and "this customer" in reason
     upd = [e["data"] for e in events if e["type"] == "blocklist.updated" and e["data"]["scope"] == "her"]
     tok = upd[0]["undo_token"]
     assert store.undo(tok) and not store.is_blocked(JUDGE_NUMBER)[0]
@@ -205,7 +205,7 @@ def test_bus_observer_runs_chain_and_grace_fallback(tmp_path, monkeypatch):
     api.observe({"type": "handoff.started", "call_id": "o1", "data": {}})
     api.observe({"type": "artifacts.extracted", "call_id": "o1",
                  "data": {"artifacts": [{"kind": "wallet", "chain": "BTC", "addr": WALLET}]}})
-    # call 2: decoy call ends, extractor never reports -> caller still blocked for her
+    # call 2: decoy call ends, extractor never reports -> caller still blocked for the customer
     api.observe({"type": "call.incoming", "call_id": "o2", "data": {"from": "+1 972 555 0177"}})
     api.observe({"type": "handoff.started", "call_id": "o2", "data": {}})
     api.observe({"type": "call.ended", "call_id": "o2", "data": {"ended_by": "decoy"}})
@@ -254,7 +254,7 @@ def test_seed_demo_idempotent_and_judge_confirms_live(store, events):
     again = store.state()
     assert info["status"] == "observed" and info["sightings"] == 1
     assert len(first["campaigns"]) == len(again["campaigns"]) == 1 and again["immunity"] == 0
-    assert not store.is_blocked(SEED_NUMBER)[0]        # seed is a sighting, not a block on Maria's list
+    assert not store.is_blocked(SEED_NUMBER)[0]        # seed is a sighting, not a block on the customer's list
     events.clear()
     r = agent.run("judge", judge_haul(), store, calling_number=JUDGE_NUMBER, carrier="y", tools=fixture_tools(),
                   llm=mock_llm, emit=cap(events))

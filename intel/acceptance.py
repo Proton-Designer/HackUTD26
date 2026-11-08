@@ -27,7 +27,7 @@ def main(argv=None) -> int:
     ap.add_argument("--require-nemotron", action="store_true",
                     help="demo readiness: fail 2a unless the agent ran on Nemotron (not the template fallback)")
     ap.add_argument("--nessie", action="store_true",
-                    help="Capital One Nessie check: POST /demo/reset first (starts Maria's pending transfer), then expect "
+                    help="Capital One Nessie check: POST /demo/reset first (starts the customer's pending transfer), then expect "
                          "hold_transfer applied and the transfer cancelled in Nessie. Run on the hub machine.")
     ap.add_argument("--drill", action="store_true",
                     help="fail-open drill: hub runs with INTEL_*_BASE pointed at a dead host; expect 'unavailable' lookups")
@@ -58,7 +58,7 @@ def main(argv=None) -> int:
             print(f"FAIL  /demo/reset: {type(e).__name__}: {e}")
             return 2
         pend = N.pending_transfers(maria, description_contains=str(dest.get("id"))) if maria else {"transfers": []}
-        check(len(pend.get("transfers", [])) >= 1, "N2 /demo/reset started Maria's pending Zelle transfer (Nessie)",
+        check(len(pend.get("transfers", [])) >= 1, "N2 /demo/reset started the customer's pending Zelle transfer (Nessie)",
               ", ".join(f"${t['amount']:,} '{t['description']}'" for t in pend.get("transfers", [])))
     try:
         before = c.get("/routing/lookup", params={"from": JUDGE_NUMBER}).json()
@@ -102,11 +102,11 @@ def main(argv=None) -> int:
     else:
         check(False, "2c network-wide block queued", "no queued network_number_block")
     rt = c.get("/routing/lookup", params={"from": JUDGE_NUMBER}).json()
-    check(rt.get("decision") == "BLOCKED_BACKFIRE" and "blocked for her" in str(rt.get("reason", "")),
+    check(rt.get("decision") == "BLOCKED_BACKFIRE" and "blocked for this customer" in str(rt.get("reason", "")),
           "3 callback rejected before ring via intel gate", str(rt))
     den = [x for x in acts if x.get("status") == "denied"]
     kinds = {x["kind"] for x in den}
-    check({"mark_number_safe", "add_trusted_contact"} <= kinds, "4 'mark safe / add as her bank' -> denied",
+    check({"mark_number_safe", "add_trusted_contact"} <= kinds, "4 'mark safe / add as a trusted bank' -> denied",
           ", ".join(sorted(kinds)))
     pois = [x for x in den if "".join(ch for ch in str(x.get("target")) if ch.isdigit())[-7:]
             == "".join(ch for ch in CFG["real_bank_callback"] if ch.isdigit())[-7:]
@@ -116,7 +116,7 @@ def main(argv=None) -> int:
         from . import nessie as N
         hold = [x for x in acts if x.get("kind") == "hold_transfer"]
         applied = [x for x in hold if x.get("status") == "applied"]
-        check(bool(applied), "N3 hold_transfer applied (auto, her scope, simulated)",
+        check(bool(applied), "N3 hold_transfer applied (auto, customer scope, simulated)",
               applied[0].get("reason", "") if applied else f"hold actions: {[x.get('gate_status') for x in hold]}")
         st = []
         for x in applied:  # one retry: a None is either "not found" or Nessie unreachable; say which

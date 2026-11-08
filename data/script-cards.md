@@ -1,6 +1,6 @@
 # Backfire: Judge Script Cards
 
-**How to use (read this once):** You are the scammer. Call the scam line, wait for "hello," then read your card out loud, one line at a time. Pause after each line and let "Maria" answer. When you reach the payment step, give the callback number, website and wallet exactly as written. Blanks (____) are filled in by the team before judging.
+**How to use (read this once):** You are the scammer. Call the scam line, wait for "hello," then read your card out loud, one line at a time. Pause after each line and let the customer answer. When you reach the payment step, give the callback number, website and wallet exactly as written. Blanks (____) are filled in by the team before judging.
 
 All scripts are synthetic. No real people.
 
@@ -25,7 +25,7 @@ All scripts are synthetic. No real people.
 
 # Card 2: Bank Fraud Department
 
-## You are: "Jessica," Fraud Prevention at her bank
+## You are: "Jessica," Fraud Prevention at the customer's bank
 
 1. **"Hi, this is Jessica from the fraud prevention team at your bank. We noticed suspicious charges on your account."**
 2. **"Someone tried to spend $1,250 at an electronics store in Miami. Was that you?"**
@@ -75,7 +75,7 @@ All scripts are synthetic. No real people.
 
 # Card 5: Grandchild Emergency
 
-## You are: her grandson "Tyler" (then "Officer Ramirez")
+## You are: the customer's grandson "Tyler" (then "Officer Ramirez")
 
 1. **"Grandma? It's me, Tyler. I'm in trouble and I really need your help."**
 2. **"I was in a car accident and they arrested me. Please don't tell Mom and Dad."**
@@ -150,7 +150,7 @@ All scripts are synthetic. No real people.
 
 # Card 10: Romance Crypto
 
-## You are: "David," an engineer working overseas she met online
+## You are: "David," an engineer working overseas the customer met online
 
 1. **"Hi sweetheart, it's David. I've missed talking to you so much."**
 2. **"I'm still stuck on the oil rig, and my bank account here has been frozen."**

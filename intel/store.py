@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS holds(undo_token TEXT PRIMARY KEY, action_id TEXT, ca
   amount INTEGER, destination TEXT, active INTEGER, created REAL);
 """
 
-BLOCK_REASON = {"her": "Confirmed scammer (blocked for her)",
+BLOCK_REASON = {"her": "Confirmed scammer (blocked for this customer)",
                 "campaign": "Linked to a confirmed scam campaign",
                 "network": "Network-wide block (analyst approved, simulated)"}
 

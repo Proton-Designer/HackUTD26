@@ -110,7 +110,7 @@ def save_ids(ids: dict) -> None:
 # ---------- helpers used by the agent and the gate ----------
 def pending_transfers(account_id: str, description_contains: str | None = None, timeout: float | None = None) -> dict:
     """Pending transfers paid by account_id. Nessie returns no payee on transfers, so the destination is matched
-    on the description Maria's banking app wrote ("Zelle to <handle>")."""
+    on the description the customer's banking app wrote ("Zelle to <handle>")."""
     if not valid_id(account_id):
         return {"status": "unavailable", "transfers": [], "error": "invalid id"}
     r = request("GET", f"/accounts/{account_id}/transfers", params={"type": "payer"}, timeout=timeout)
@@ -218,7 +218,7 @@ def match_destinations(arts: list[dict]) -> list[dict]:
 
 
 def lookup_destination(hit: dict, call_id: str | None = None, emit=None) -> tuple[dict, list[dict]]:
-    """intel.lookup (source "nessie"): Maria's pending transfers to this payee + bank-wide activity.
+    """intel.lookup (source "nessie"): the customer's pending transfers to this payee + bank-wide activity.
     Returns (public result, pending transfers). Transfer ids never go into the event or to the LLM."""
     from . import lookups as L
     d = hit["dest"]
@@ -240,7 +240,7 @@ def lookup_destination(hit: dict, call_id: str | None = None, emit=None) -> tupl
     tr = pend["transfers"]
     res.update(status="ok", pending_count=len(tr), pending_total=sum(t["amount"] or 0 for t in tr),
                activity_count=act["count"], activity_total=act["total"],
-               summary=f"{len(tr)} pending transfer(s) from Maria to this payee; {act['count']} other customers sent money to it")
+               summary=f"{len(tr)} pending transfer(s) from the customer to this payee; {act['count']} other customers sent money to it")
     L._emit_lookup(call_id, res)
     return res, tr
 
@@ -274,7 +274,7 @@ def _confirm_edges(edges: list[dict]) -> tuple[list[dict], str]:
 
 def chain(active_holds: list[dict] | None = None) -> dict:
     """Graph for the map. Built from the RECORDED chain in nessie_ids.json (Nessie can't be queried for it).
-    Maria's edge is held when one of this reset's holds (intel store) reads cancelled in Nessie."""
+    the customer's edge is held when one of this reset's holds (intel store) reads cancelled in Nessie."""
     ids = load_ids() or {}
     c = ids.get("chain")
     if not c:
@@ -301,7 +301,7 @@ def chain(active_holds: list[dict] | None = None) -> dict:
         if e["held"]:
             continue  # a cut edge moves no money
         totals[e["src"]]["out"] += e["amount"]
-        if not e.get("dynamic"):  # Maria's pending transfer hasn't reached the mule (yet, or ever if Backfire holds it)
+        if not e.get("dynamic"):  # the customer's pending transfer hasn't reached the mule (yet, or ever if Backfire holds it)
             totals[e["dst"]]["in"] += e["amount"]
     nodes = [{"id": n["id"], "label": n["label"], "role": n["role"],
               "total_in": totals[n["id"]]["in"], "total_out": totals[n["id"]]["out"]} for n in c["nodes"]]

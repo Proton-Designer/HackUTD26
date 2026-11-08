@@ -9,7 +9,7 @@ different calling number, carrier and day. So the judge's call is sighting #2: t
 campaign block, Callback Protection and immunity counter all fire on stage.
 
 Idempotent and fast (no network, no LLM): it clears rows instead of deleting the file, so a running hub keeps its
-SQLite connection. It writes nothing to Maria's block list. The seed is a sighting only, not an action.
+SQLite connection. It writes nothing to the customer's block list. The seed is a sighting only, not an action.
 """
 from __future__ import annotations
 
@@ -95,7 +95,7 @@ def seed(store: Store | None = None, quiet: bool = False) -> dict:
         print(f"  shared indicators: {', '.join(info['indicators'])}")
         print("  next: the judge's call with this wallet or callback = sighting #2 -> campaign confirms live")
         pt = info["nessie_pending_transfer"]
-        print(f"  Nessie: pending ${pt['amount']:,} '{pt['description']}' from Maria (scripted, mock bank)" if pt
+        print(f"  Nessie: pending ${pt['amount']:,} '{pt['description']}' from the customer (scripted, mock bank)" if pt
               else "  Nessie: skipped (no key, not seeded, or unreachable)")
     return info
 

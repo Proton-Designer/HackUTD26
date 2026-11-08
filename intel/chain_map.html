@@ -62,7 +62,7 @@
   </header>
   <div class="legend" aria-hidden="true">
     <span style="--c: var(--victim)">Victims</span>
-    <span style="--c: var(--accent)">Maria (Backfire customer)</span>
+    <span style="--c: var(--accent)">The customer (on Backfire)</span>
     <span style="--c: var(--magenta)">Mule account</span>
     <span style="--c: var(--cash)">Cash-out account</span>
     <span style="--c: transparent">Money flows left → right · dot size = money through it</span>
@@ -112,8 +112,8 @@
     const maria = (g.edges || []).find((e) => e.kind === "target");
     h.append("Mule account collected ", span(money(g.mule_total_in)), " from ", span(String(g.victim_count ?? "?")),
              " victims, moving it to a cash-out account. ");
-    if (maria && maria.held) h.append("Backfire held Maria's ", span(money(maria.amount)), " before it joined the pile.");
-    else if (maria) h.append("Maria's ", span(money(maria.amount)), " transfer is pending; Backfire is listening.");
+    if (maria && maria.held) h.append("Backfire held the customer's ", span(money(maria.amount)), " before it joined the pile.");
+    else if (maria) h.append("The customer's ", span(money(maria.amount)), " transfer is pending; Backfire is listening.");
   }
 
   function layout(g) {
@@ -143,8 +143,8 @@
     const maria = g.edges.find((e) => e.kind === "target");
     svg.append(el("desc", { id: "map-desc" },
       `${g.victim_count} victims sent ${money(g.mule_total_in)} to a mule account, which moved ${money(g.mule_total_out)} ` +
-      `to a cash-out account.` + (maria ? (maria.held ? ` Maria's ${money(maria.amount)} transfer was held by Backfire.`
-                                                       : ` Maria's ${money(maria.amount)} transfer is pending.`) : "")));
+      `to a cash-out account.` + (maria ? (maria.held ? ` The customer's ${money(maria.amount)} transfer was held by Backfire.`
+                                                       : ` The customer's ${money(maria.amount)} transfer is pending.`) : "")));
     const defs = el("defs");
     for (const [id, c] of [["arrow", "#8a8a9a"], ["arrow-m", "#e20074"], ["arrow-c", "#ffb347"]]) {
       const m = el("marker", { id, viewBox: "0 0 10 10", refX: 9, refY: 5, markerWidth: 16, markerHeight: 16,
@@ -231,7 +231,7 @@
   function shortName(n) {
     if (n.role === "mule") return "Mule account (SIMULATED)";
     if (n.role === "cashout") return "Cash-out (SIMULATED)";
-    if (n.role === "target") return "Maria";
+    if (n.role === "target") return "The customer";
     return String(n.label).replace(/ Sandbox$/, "");
   }
   function srTable(g) {
