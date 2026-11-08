@@ -5,7 +5,7 @@
 Starts the real hub via `scripts/run_hub` (NO_TUNNEL=1 SIM_MODE=1 VOIP_OPEN_TOKEN=1, port 8011, throwaway DB), opens Maria's app at 390x844
 in headless Chromium, and plays the demo: unlisted number rings -> Answer -> fake P2 `risk.update`+`alert.fired` (beeps counted via an
 AudioContext hook, chips, 3 buttons) -> Scammer Get Scammed -> `user.action`, `handoff.started`, echo decoy -> hang up -> `blocklist.updated`
--> same number again is `BLOCKED_BACKFIRE` and the app never rings. Screenshots go to `logs/e2e/` (gitignored). Exit 0 only if all pass.
+-> same number again is `BLOCKED_BACKFIRE` and the app never rings. Screenshots go to a temp dir (or $E2E_SHOTS); the hub gets its own LOGDIR and HUB_NO_PIN_FILE=1 so it never touches a live hub's logs or PIN. Exit 0 only if all pass.
 Each step prints PASS / FAIL / GAP (GAP = a known missing piece in another lane, with the owner named).
 
 Everything is SIMULATED: simulated caller (reuses `scripts/sim_call.py` webhook builders; the call is held open by the test), no Telnyx, no real audio.

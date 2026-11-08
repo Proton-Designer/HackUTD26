@@ -6,7 +6,7 @@ from playwright.sync_api import sync_playwright
 
 ROOT = pathlib.Path(__file__).resolve().parents[3]
 PORT = os.environ.get("E2E_PORT", "8011"); BASE = f"http://127.0.0.1:{PORT}"
-SHOTS = ROOT / "logs" / "e2e"; SHOTS.mkdir(parents=True, exist_ok=True)
+SHOTS = pathlib.Path(os.environ.get("E2E_SHOTS") or tempfile.mkdtemp(prefix="backfire-e2e-shots-")); SHOTS.mkdir(parents=True, exist_ok=True)   # temp dir by default; never the live logs/
 PIN = os.environ.get("DEVICE_PIN", "424242")
 SCAMMER = "+15555550199"          # synthetic 555 number, unlisted
 results = []
@@ -85,7 +85,7 @@ def chromium_path():
     return None
 
 def main():
-    env = dict(os.environ, NO_TUNNEL="1", SIM_MODE="1", VOIP_OPEN_TOKEN="1", HUB_PORT=PORT, DEVICE_PIN=PIN, HUB_DB=tempfile.mkdtemp() + "/e2e.db", INTEL_DB=tempfile.mkdtemp() + "/intel.db")
+    env = dict(os.environ, NO_TUNNEL="1", SIM_MODE="1", VOIP_OPEN_TOKEN="1", HUB_PORT=PORT, DEVICE_PIN=PIN, HUB_DB=tempfile.mkdtemp() + "/e2e.db", INTEL_DB=tempfile.mkdtemp() + "/intel.db", LOGDIR=tempfile.mkdtemp(prefix="backfire-e2e-logs-"), HUB_NO_PIN_FILE="1")
     # voip's on_answered reads these with os.environ[...] (KeyError -> no call.answered in SIM_MODE if unset); dummies are harmless, sim never calls Telnyx
     env.setdefault("TELNYX_CRED_CONNECTION_ID", "sim"); env.setdefault("TELNYX_SIP_USER", "sim"); env.setdefault("INTEL_EXTRACT_GRACE", "1")  # intel blocks the caller this long after a decoy call ends (default 20s)
     for k in ("HUB_TOKEN", "PUBLIC_WS"): env.pop(k, None)
