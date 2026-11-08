@@ -1,6 +1,6 @@
 """Backfire hub: event bus, WS /events, routing store, stubs. Run: uvicorn server.main:app --port 8000"""
 import asyncio, logging, os, re, secrets, time
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
 from fastapi import Depends, HTTPException, Request, FastAPI, WebSocket, WebSocketDisconnect, Body, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -205,6 +205,17 @@ def demo_reset(request: Request, seed: bool = Query(True)):
             out["seed_error"] = type(e).__name__
     out["seconds"] = round(time.time() - t0, 3)
     return out
+
+@app.get("/demo/caller.wav")
+def demo_caller_wav():
+    """Phone-free demo: the synthetic scammer audio (scripts/make_scam_wav.sh -> logs/sim_scam.wav), same file scripts/sim_call.py --wav streams.
+    Path is env DEMO_CALLER_WAV or $LOGDIR/sim_scam.wav, fixed server-side (never from the request). Audio only, no auth. Range supported."""
+    root = pathlib.Path(__file__).resolve().parent.parent
+    p = pathlib.Path(os.environ.get("DEMO_CALLER_WAV") or (pathlib.Path(os.environ.get("LOGDIR") or "logs") / "sim_scam.wav"))
+    p = p if p.is_absolute() else root / p
+    if not p.is_file():
+        raise HTTPException(404, "no caller WAV yet: run scripts/make_scam_wav.sh (or set DEMO_CALLER_WAV)")
+    return FileResponse(p, media_type="audio/wav", filename="caller.wav", content_disposition_type="inline")
 
 @app.post("/demo/replay", dependencies=[Depends(device.require_device)])
 async def demo_replay(request: Request, body: dict = Body(default={})):

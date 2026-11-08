@@ -368,3 +368,22 @@ def test_hub_routing_intel_relay_work_with_telnyx_unreachable(monkeypatch):
         await asyncio.sleep(0.2); await relay.close("tz1"); srv.close()
         return [m["event"] for m in got]
     assert asyncio.run(go()) == ["connected", "start", "media"]
+
+
+def test_demo_caller_wav_serves_range_and_404(monkeypatch, tmp_path):
+    import wave
+    c = TestClient(app)                                        # remote client: no auth needed
+    monkeypatch.setenv("DEMO_CALLER_WAV", str(tmp_path / "missing.wav"))
+    assert c.get("/demo/caller.wav").status_code == 404
+    f = tmp_path / "c.wav"
+    with wave.open(str(f), "wb") as w:
+        w.setnchannels(1); w.setsampwidth(2); w.setframerate(8000); w.writeframes(b"\x01\x02" * 4000)
+    monkeypatch.setenv("DEMO_CALLER_WAV", str(f))
+    r = c.get("/demo/caller.wav")
+    assert r.status_code == 200 and r.headers["content-type"] == "audio/wav" and r.content == f.read_bytes()
+    r = c.get("/demo/caller.wav", headers={"Range": "bytes=0-99"})
+    assert r.status_code == 206 and len(r.content) == 100 and r.headers["content-range"].startswith("bytes 0-99/")
+    assert c.get("/demo/caller.wav?path=/etc/passwd").content == f.read_bytes()   # query can't change the path
+    monkeypatch.delenv("DEMO_CALLER_WAV")
+    monkeypatch.setenv("LOGDIR", str(tmp_path)); (tmp_path / "sim_scam.wav").write_bytes(f.read_bytes())
+    assert c.get("/demo/caller.wav").status_code == 200       # default: $LOGDIR/sim_scam.wav
