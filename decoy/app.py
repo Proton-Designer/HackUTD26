@@ -16,6 +16,7 @@ import base64
 import json
 import logging
 import random
+import os
 import time
 
 import numpy as np
@@ -125,11 +126,44 @@ async def voice_delete(voice_id: str):
 _STT = None
 
 
+class KeyFailoverSTT:
+    """P2's Riva STT, one client per NVIDIA key (#123): a rate-limited/rejected key moves on to the next key before the
+    whisper fallback is used. Built here so P2's detection/stt.py is unchanged."""
+
+    def __init__(self, keys: list[str]):
+        from detection.stt import RivaSTT
+        self.by_key = {k: RivaSTT(k) for k in keys}
+        self.name, self.slow = RivaSTT.name, False
+
+    async def transcribe(self, pcm):
+        from decoy.core import is_key_error, key_failed, keys_in_order
+        keys = [k for k in keys_in_order() if k in self.by_key]
+        for i, key in enumerate(keys):
+            try:
+                return await self.by_key[key].transcribe(pcm)
+            except Exception as e:
+                if is_key_error(e) and i + 1 < len(keys):
+                    key_failed(key, "STT " + e.code().name)
+                    continue
+                raise
+
+
 def _shared_stt(make):
-    """One STT client for the process (P2's get_stt logs its fallback probe once, not per call)."""
+    """One STT client for the process (P2's get_stt logs its fallback probe once, not per call). With backup NVIDIA keys
+    set, Riva fails over across keys, then to P2's whisper fallback."""
     global _STT
     if _STT is None:
-        _STT = make()
+        from decoy.core import nvidia_keys
+        keys = nvidia_keys()
+        if len(keys) > 1 and os.environ.get("P2_STT", "riva") != "whisper":
+            try:
+                from detection.stt import FallbackSTT
+                _STT = FallbackSTT(KeyFailoverSTT(keys))
+                log.info("decoy STT: Riva with %d NVIDIA keys (failover), whisper fallback", len(keys))
+            except Exception as e:
+                log.warning("decoy STT key failover init failed (%s); using P2 default", type(e).__name__)
+        if _STT is None:
+            _STT = make()
     return _STT
 
 

@@ -144,25 +144,73 @@ def speakable(t: str) -> str:
 _http: httpx.AsyncClient | None = None
 
 
+# ---------------------------------------------------------------- NVIDIA key failover (#123)
+# NVIDIA_API_KEY, then NVIDIA_API_KEY_2, NVIDIA_API_KEY_3. On a 429/401/403 (gRPC RESOURCE_EXHAUSTED / UNAUTHENTICATED /
+# PERMISSION_DENIED) the call is retried with the next key, and later calls start from that key. Keys are never logged:
+# only their position (#1, #2, #3).
+_key_start = 0
+KEY_HTTP = {401, 403, 429}
+
+
+def nvidia_keys() -> list[str]:
+    out = []
+    for name in ("NVIDIA_API_KEY", "NVIDIA_API_KEY_2", "NVIDIA_API_KEY_3"):
+        k = os.environ.get(name, "").strip()
+        if k and k not in out:
+            out.append(k)
+    return out
+
+
+def keys_in_order() -> list[str]:
+    ks = nvidia_keys()
+    return [ks[(i + _key_start) % len(ks)] for i in range(len(ks))] if ks else []
+
+
+def key_failed(key: str, why: str) -> None:
+    """Move the starting key past `key` (only if it is still the current one, so concurrent failures advance once)."""
+    global _key_start
+    ks = nvidia_keys()
+    if key in ks and ks[_key_start % len(ks)] == key and len(ks) > 1:
+        i = ks.index(key)
+        _key_start = (i + 1) % len(ks)
+        log.warning("NVIDIA key #%d %s; switching to key #%d", i + 1, why, _key_start + 1)
+
+
+def is_key_error(e: Exception) -> bool:
+    """True for gRPC errors a different key can fix (rate limit, bad/expired key)."""
+    code = getattr(e, "code", None)
+    try:
+        name = code().name if callable(code) else ""
+    except Exception:
+        name = ""
+    return name in ("RESOURCE_EXHAUSTED", "UNAUTHENTICATED", "PERMISSION_DENIED")
+
+
 async def chat(messages: list, max_tokens: int = 90, temperature: float = 0.8, model: str | None = None) -> str | None:
-    """One NVIDIA chat completion, thinking off (contracts/models.md). None on failure (fail open)."""
+    """One NVIDIA chat completion, thinking off (contracts/models.md). None on failure (fail open). Key failover on 429/401/403."""
     global _http
-    key = os.environ.get("NVIDIA_API_KEY")
-    if not key:
+    keys = keys_in_order()
+    if not keys:
         return None
     _http = _http or httpx.AsyncClient(timeout=8.0)
     body = {"model": model or MODEL, "messages": messages, "max_tokens": max_tokens, "temperature": temperature,
             "chat_template_kwargs": {"enable_thinking": False}}
-    try:
-        r = await _http.post(NVIDIA_BASE + "/chat/completions", json=body, headers={"Authorization": "Bearer " + key})
-        if r.status_code != 200:
-            log.warning("chat HTTP %s", r.status_code)
+    for key in keys:
+        try:
+            r = await _http.post(NVIDIA_BASE + "/chat/completions", json=body, headers={"Authorization": "Bearer " + key})
+            if r.status_code in KEY_HTTP:
+                key_failed(key, f"chat HTTP {r.status_code}")
+                continue
+            if r.status_code != 200:
+                log.warning("chat HTTP %s", r.status_code)
+                return None
+            content = r.json()["choices"][0]["message"].get("content") or ""
+            return content.split("</think>")[-1].strip()
+        except Exception as e:
+            log.warning("chat failed: %s", type(e).__name__)
             return None
-        content = r.json()["choices"][0]["message"].get("content") or ""
-        return content.split("</think>")[-1].strip()
-    except Exception as e:
-        log.warning("chat failed: %s", type(e).__name__)
-        return None
+    log.warning("chat: every NVIDIA key was rate-limited or rejected")
+    return None
 
 
 # ---------------------------------------------------------------- extractor (contracts/events.md + instruction_to_ai, #16)

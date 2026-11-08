@@ -225,13 +225,30 @@ class Voice:
     def __init__(self, prompt: pathlib.Path | None = None):
         import riva.client as rc
         self.rc = rc
-        key = os.environ.get("NVIDIA_API_KEY", "")
         self.prompt = prompt if prompt is not None else active_voice()
         self.cloned = self.prompt is not None
         self.locked = False   # True once this call has spoken in the clone voice: never switch after that
-        md = lambda fn: [["function-id", fn], ["authorization", "Bearer " + key]]  # noqa: E731
-        self.zs = rc.SpeechSynthesisService(rc.Auth(uri=GRPC, use_ssl=True, metadata_args=md(ZEROSHOT_FN)))
-        self.multi = rc.SpeechSynthesisService(rc.Auth(uri=GRPC, use_ssl=True, metadata_args=md(MULTI_FN)))
+        self._svc: dict[tuple[str, str], object] = {}   # (key, function id) -> Riva TTS client, made on first use
+
+    def _client(self, key: str, fn: str):
+        if (key, fn) not in self._svc:
+            md = [["function-id", fn], ["authorization", "Bearer " + key]]
+            self._svc[(key, fn)] = self.rc.SpeechSynthesisService(self.rc.Auth(uri=GRPC, use_ssl=True, metadata_args=md))
+        return self._svc[(key, fn)]
+
+    def _tts(self, fn: str, **kw) -> bytes:
+        """One TTS request with key failover (#123): a rate-limited/rejected key moves on to the next. The clone prompt
+        is the same for every key, so a call keeps one voice whichever key serves it."""
+        from decoy.core import is_key_error, key_failed, keys_in_order
+        keys = keys_in_order() or [""]
+        for i, key in enumerate(keys):
+            try:
+                return self._client(key, fn).synthesize(**kw).audio
+            except Exception as e:
+                if is_key_error(e) and i + 1 < len(keys):
+                    key_failed(key, "TTS " + e.code().name)
+                    continue
+                raise
 
     def _synth(self, text: str) -> bytes:
         """One voice per call (#100: a mid-call switch is a giveaway). The call locks to the clone at its first clone
@@ -240,8 +257,8 @@ class Voice:
         if self.cloned:
             for attempt in (1, 2):
                 try:
-                    a = self.zs.synthesize(text, language_code="en-US", sample_rate_hz=TTS_RATE,
-                                           zero_shot_audio_prompt_file=self.prompt, zero_shot_quality=20).audio
+                    a = self._tts(ZEROSHOT_FN, text=text, language_code="en-US", sample_rate_hz=TTS_RATE,
+                                  zero_shot_audio_prompt_file=self.prompt, zero_shot_quality=20)
                     self.locked = True
                     return a
                 except Exception as e:
@@ -252,7 +269,7 @@ class Voice:
                 raise RuntimeError("clone TTS unavailable; keep the clone voice (cached line)")
             log.warning("clone unavailable before the first sentence: synthetic voice for this whole call")
             self.cloned = False
-        return self.multi.synthesize(text, voice_name=SYNTH_VOICE, language_code="en-US", sample_rate_hz=TTS_RATE).audio
+        return self._tts(MULTI_FN, text=text, voice_name=SYNTH_VOICE, language_code="en-US", sample_rate_hz=TTS_RATE)
 
     async def frames(self, text: str) -> list[bytes]:
         """Text -> PCMU 20 ms frames. [] on failure."""
