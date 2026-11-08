@@ -50,7 +50,7 @@ STRONG_KINDS = {"payment_handle", "domain", "url", "wallet"}
 WRAP_TURNS = int(__import__("os").environ.get("DECOY_WRAP_TURNS", "3"))
 WRAP_LINE = "Okay, I've got all of that written down. I'm going to go take care of it right now. Bye bye."
 FILLER_AFTER_S = 0.6       # play a filler only if Nemotron hasn't answered by then
-STALLS = ["Hold on, let me find my glasses.", "Oh, sorry, the line went funny. Say that again?",
+STALLS = ["Oh, sorry, the line went funny. Say that again?",
           "Sorry, can you repeat that? I was writing.", "Wait, wait, slow down a little for me.",
           "Hmm, hang on, I dropped my pen.", "Sorry, it's a bit noisy here. What was that last part?",
           "One second, let me get a piece of paper.", "Okay, okay. And then what do I do?"]
