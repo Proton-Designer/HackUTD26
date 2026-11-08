@@ -37,7 +37,8 @@ SILENCE_S = float(os.environ.get("DECOY_SILENCE_S", "15"))
 # Counted from the later of: last new artifact, or the 2nd time we went after the current target (a 5-line card plus its
 # payment step must not trip it; 90 s, not 75, leaves room for the payment step at ~15 s per line).
 NO_PROGRESS_TURNS, NO_PROGRESS_S = 5, 90.0
-PLAYBOOKS_ON = os.environ.get("DECOY_PLAYBOOKS", "0") == "1"   # stage B: classify + per-type targets (else generic)
+PLAYBOOKS_ON = os.environ.get("DECOY_PLAYBOOKS", "1") == "1"   # classify + per-type targets (0 = generic targets only)
+LOG_TEXT = os.environ.get("DECOY_LOG_TEXT") == "1"               # tests only: log what the decoy says
 # Barge-in (Ayman's real call 93c95fd6: 21 self-clears in 17 s, our own voice echoing back on the PSTN leg).
 BARGE_IN_MS = 500          # sustained loud caller audio needed to cut the decoy off
 BARGE_GRACE_S = 0.4        # ignore inbound right after we start speaking (echo onset)
@@ -373,7 +374,7 @@ class Session:
         if PLAYBOOKS_ON:
             new = PB.classify(self.scammer_lines, self.scam)
             if new != self.scam:
-                log.info("decoy %s: scam type %s -> %s", self.call_id, self.scam, new)
+                log.info("decoy %s: scam type %s -> %s at caller line %d", self.call_id, self.scam, new, self.caller_turns)
                 self.scam = new
         if not self.bail_now:
             if PB.SUSPICION.search(text):
@@ -556,8 +557,10 @@ class Session:
                 tts_ms = await self.say(spoken, llm_ms)
                 self.turns += 1
                 # Caller stopped talking -> first decoy audio queued = stt + llm + tts (the segmenter's end-of-speech wait is extra).
-                log.info("turn %s: stt=%dms llm=%dms tts_first=%dms total=%dms voice=%s chars=%d", self.call_id, self.stt_ms,
-                         llm_ms, tts_ms, self.stt_ms + llm_ms + tts_ms, "clone" if self.voice.cloned else "synthetic", len(spoken))
+                log.info("turn %s: stt=%dms llm=%dms tts_first=%dms total=%dms voice=%s chars=%d scam=%s", self.call_id, self.stt_ms,
+                         llm_ms, tts_ms, self.stt_ms + llm_ms + tts_ms, "clone" if self.voice.cloned else "synthetic", len(spoken), self.scam)
+                if LOG_TEXT:
+                    log.info("said %s: %s", self.call_id, spoken)
                 why = self.bail_check()
                 if why:
                     await self.finish(PB.GOODBYES[why], why)

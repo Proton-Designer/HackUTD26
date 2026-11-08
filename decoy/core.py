@@ -297,6 +297,10 @@ def validate(a: dict) -> dict | None:
     return None
 
 
+REMOTE_APPS = [(r"\bany\s?desk\b", "AnyDesk"), (r"\bteam\s?viewer\b", "TeamViewer"), (r"\bultra\s?viewer\b", "UltraViewer"),
+               (r"\blog\s?me\s?in\b", "LogMeIn"), (r"\bquick\s?assist\b", "Quick Assist"), (r"\bsupremo\b", "Supremo"),
+               (r"\bscreen\s?connect\b", "ScreenConnect"), (r"\brust\s?desk\b", "RustDesk")]
+
 # Phone STT often mishears "Zelle" ("by sell to ...", "via zel", "on cell"). Only rewritten after a payment verb/preposition
 # or before "to <handle>", so ordinary uses of "sell"/"cell" elsewhere stay as they are.
 ZELLE_HEARD = re.compile(r"\b(by|via|through|with|using|on|in|send it|sent it)\s+(?:sell|sel|zel|zell|zele|zela|zelda|zeal|zayle)\b"
@@ -334,6 +338,11 @@ async def extract(lines: list[str]) -> list[dict]:
             full = next((e for e in emails if e.split("@")[0].endswith(a["id"].lower())), None)
             if full:
                 a["id"] = full
+    # Backstop (#127): remote-access apps are the tech-support playbook's top target; STT splits them ("Any Desk").
+    have_remote = {a["value"].lower().replace(" ", "") for a in out if a["kind"] == "remote_app"}
+    for pat, name in REMOTE_APPS:
+        if re.search(pat, t) and name.lower().replace(" ", "") not in have_remote:
+            out.append({"kind": "remote_app", "value": name}); have_remote.add(name.lower().replace(" ", ""))
     # Backstop: an email said within a few words after "Zelle" is a Zelle handle, even if the model missed or mislabeled it.
     for m in re.finditer(r"zelle\W+(?:\w+\W+){0,4}?([a-z0-9._%+-]+@[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,})(?![a-z0-9-])", t):
         e = m.group(1)
