@@ -17,6 +17,15 @@ One line each: chose X because Y.
 - **Config is URL params only** (`server`, `src`, `speed`, `gap`, `mock`, `voice`). No settings UI, per the brief.
 - **Rendering uses requestAnimationFrame plus a 250 ms timer fallback,** because rAF pauses in hidden windows and we may screen-capture a background window for the backup video.
 
+## Views (less on screen at once)
+- **Three views instead of one dense console: Story (default), Agent, Everything.** The kit says make the first screen a judge sees spacious and allow density only in the one analytic view a technical judge explores (`12-visual-design.md`, "density vs white space"); the critic scored our 9-element console Design 3/5.
+- **Story shows one chapter of the call at a time, two panels, bigger type:** during the call = conversation + risk; after = what the decoy extracted + agent trace; then = done automatically + Approve + denied. It follows the call by itself, and each chapter stays up at least 8 s before moving on, so the real-lookup payoff can't flash past.
+- **Click a rail step to hold that chapter while you talk;** "Holding · back to live" (or Esc) follows the call again. Keys 1 / 2 / 3 switch views; the view is kept in the URL hash (`#story`, `#agent`, `#all`).
+- **Agent view is for NVIDIA judges:** the full trace large, with the evidence and the gate's denials beside it.
+- **A new call Maria answers restarts the rail and the Story view.** "Clear for next judge" (footer, or C) wipes this screen's state between judges without dropping the live connection; it does not touch the hub (P1's `scripts/reset_demo` does that).
+- **Panels are moved, not duplicated:** one set of panel elements; each view's layout in `app.js` places them in columns. Renderers find them by id, wherever they sit.
+- **CSS and JS load with a timestamp query** so a cached copy on the demo laptop can't hide a fix pushed during the night.
+
 ## Layout and visual design (judge gets it in 5 seconds)
 Sources: `HackUTD-2026-Kit/domains/11-ux-interaction.md`, `12-visual-design.md`, `15-ai-app-design-eval.md`, `20-demo-delivery.md`, `decisions/pitch-demo.md` (template C), the HackUTD-2026-Research winner analysis, and the judge-critic review of our plan.
 - **Top: one plain-English sentence + a 5-step rail grouped "During the call / After the call / Before the next ring"** (Detect, Hand off, Verify, Block, Immune). The kit caps a demo path at five steps, and the grouping uses T-Mobile's brief word for word ("before, during and after a threat"). Extract is folded into Verify ("5 artifacts · 5 lookups").

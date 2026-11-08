@@ -5,16 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Backfire Command Center</title>
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="styles.css">
+  <script>
+    // Always load the newest files: fixes land all night, and a cached copy on the demo laptop would hide them.
+    window.__v = Date.now();
+    document.write('<link rel="stylesheet" href="styles.css?v=' + window.__v + '">');
+  </script>
+  <noscript><link rel="stylesheet" href="styles.css"></noscript>
 </head>
 <body>
-  <div class="app">
+  <div class="app" data-view="story">
     <header class="top">
       <div class="brand">
         <span class="logo">BACKFIRE</span>
         <span class="title">T-Mobile command center</span>
       </div>
+      <nav class="views" role="tablist" aria-label="View">
+        <button role="tab" data-view="story" title="Only what's happening now, big (key 1)">Story</button>
+        <button role="tab" data-view="agent" title="The intel agent's full trace (key 2)">Agent</button>
+        <button role="tab" data-view="all" title="Every panel at once (key 3)">Everything</button>
+      </nav>
       <div class="top-right">
+        <button id="follow" class="follow" hidden>Pinned · back to live</button>
         <span class="pill sim">Simulated carrier network</span>
         <span id="engine" class="engine"></span>
         <span id="source" class="source"></span>
@@ -26,49 +37,13 @@
       <div class="hero-main">
         <h1 id="headline" class="headline">Waiting for a call</h1>
         <p id="subline" class="subline"></p>
-        <div id="rail" class="rail" role="list" aria-label="Progress"></div>
+        <div id="rail" class="rail" role="group" aria-label="Progress: click a step to show that part"></div>
       </div>
       <div id="campaign" class="campaign"></div>
     </section>
 
-    <main class="grid">
-      <div class="col">
-        <section class="panel" id="p-risk">
-          <h2><span>Risk</span><small id="risk-meta">scores the caller's words only</small></h2>
-          <div class="body"></div>
-        </section>
-        <section class="panel grow" id="p-feed">
-          <h2><span>Call · caller side only</span><small id="feed-meta"></small></h2>
-          <div class="body"></div>
-        </section>
-      </div>
-
-      <div class="col">
-        <section class="panel grow-2" id="p-artifacts">
-          <h2><span>What the decoy extracted</span><small>checked against public records</small></h2>
-          <div class="body"></div>
-        </section>
-        <section class="panel grow" id="p-trace">
-          <h2><span>Agent trace</span><small id="trace-meta">Nemotron · typed artifacts only, never transcripts</small></h2>
-          <div class="body mono"></div>
-        </section>
-      </div>
-
-      <div class="col">
-        <section class="panel" id="p-queue">
-          <h2><span>Approve network-wide</span><small id="queue-meta"></small></h2>
-          <div class="body"></div>
-        </section>
-        <section class="panel grow" id="p-auto">
-          <h2><span>Done automatically</span><small>affects only Maria, or only warns</small></h2>
-          <div class="body"></div>
-        </section>
-        <section class="panel grow" id="p-denied">
-          <h2><span>Denied by the gate</span><small>injection, poisoning, no corroboration</small></h2>
-          <div class="body"></div>
-        </section>
-      </div>
-    </main>
+    <!-- app.js moves the panels for the current view into this grid -->
+    <main id="grid" class="grid"></main>
 
     <footer class="foot">
       <div id="p-attest" class="privacy" aria-label="Privacy">
@@ -84,7 +59,41 @@
     </footer>
   </div>
 
-  <script src="fixture.js"></script>
-  <script src="app.js"></script>
+  <!-- Every panel lives here until the current view places it in the grid -->
+  <div id="parking" hidden>
+    <section class="panel" id="p-risk">
+      <h2><span>Risk</span><small id="risk-meta">scores the caller's words only</small></h2>
+      <div class="body"></div>
+    </section>
+    <section class="panel" id="p-feed">
+      <h2><span>Call · caller side only</span><small id="feed-meta"></small></h2>
+      <div class="body"></div>
+    </section>
+    <section class="panel" id="p-artifacts">
+      <h2><span>What the decoy extracted</span><small>checked against public records</small></h2>
+      <div class="body"></div>
+    </section>
+    <section class="panel" id="p-trace">
+      <h2><span>Agent trace</span><small id="trace-meta">Nemotron · typed artifacts only, never transcripts</small></h2>
+      <div class="body mono"></div>
+    </section>
+    <section class="panel" id="p-queue">
+      <h2><span>Approve network-wide</span><small id="queue-meta"></small></h2>
+      <div class="body"></div>
+    </section>
+    <section class="panel" id="p-auto">
+      <h2><span>Done automatically</span><small>affects only Maria, or only warns</small></h2>
+      <div class="body"></div>
+    </section>
+    <section class="panel" id="p-denied">
+      <h2><span>Denied by the gate</span><small>injection, poisoning, no corroboration</small></h2>
+      <div class="body"></div>
+    </section>
+  </div>
+
+  <script>
+    document.write('<script src="fixture.js?v=' + window.__v + '"><\/script>');
+    document.write('<script src="app.js?v=' + window.__v + '"><\/script>');
+  </script>
 </body>
 </html>

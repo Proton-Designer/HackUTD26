@@ -24,7 +24,17 @@ http://localhost:5180/web/command-center/?server=http://192.168.1.20:8000
 | `gap=6` | Replay: squeeze silences longer than this many seconds |
 | `voice=clone\|synthetic` | Decoy-voice wording if `voice.enrolled` happened before the page opened |
 
-Replay keys: **Space** pause/play · **R** restart · click the bar to jump.
+## Views and keys
+
+| View | Key | For |
+|---|---|---|
+| **Story** (default) | 1 | The table. One chapter of the call at a time, big: during the call → what the decoy got → what we did. Follows the call; click a rail step to hold a chapter, Esc to follow again |
+| **Agent** | 2 | NVIDIA judges: the intel agent's full trace, with the evidence and denials beside it |
+| **Everything** | 3 | A technical judge who wants every panel at once |
+
+Live: **Clear for next judge** (footer button, or C) wipes this screen between judges; the live connection stays on. It does not reset the hub.
+Replay: **Space** pause/play · **R** restart · click the bar to jump.
+Open a view directly: `.../command-center/#agent`. After pulling an update, reload once with Ctrl+F5.
 
 ## Test live mode without P1
 

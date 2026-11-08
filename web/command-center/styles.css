@@ -71,6 +71,15 @@ h1, h2, p { margin: 0; }
 .logo { font-weight: 700; letter-spacing: 0.14em; font-size: var(--f20); color: var(--text); }
 .title { color: var(--text-2); font-size: var(--f14); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .top-right { display: flex; align-items: center; gap: var(--s2); flex-shrink: 0; }
+
+/* view switcher: Story / Agent / Everything */
+.views { display: inline-flex; background: var(--surface); border-radius: 10px; padding: 3px; gap: 2px; flex-shrink: 0; }
+.views button { border: 0; background: transparent; color: var(--text-2); font-size: var(--f14); font-weight: 700; padding: 6px 14px; border-radius: 8px; cursor: pointer; min-height: 32px; }
+.views button:hover { color: var(--text); }
+.views button[aria-selected="true"] { background: var(--text); color: var(--bg); }
+.views button:focus-visible, .follow:focus-visible, .rail .step:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.follow { border: 1px solid var(--text-2); background: transparent; color: var(--text); border-radius: 8px; padding: 4px 10px; font-size: var(--f12); font-weight: 700; cursor: pointer; white-space: nowrap; }
+.follow:hover { background: var(--surface-2); }
 .clock { color: var(--text-3); font-size: var(--f14); }
 
 .pill {
@@ -118,7 +127,10 @@ h1, h2, p { margin: 0; }
 /* 5 steps under the brief's own words: during the call / after the call / before the next ring */
 .rail { margin: var(--s1) 0 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2px var(--s1); }
 .rail .phase { grid-row: 1; font-size: var(--f12); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-3); border-bottom: 1px solid var(--line); padding: 0 2px 2px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.rail .step { grid-row: 2; min-width: 0; padding: 6px 10px 5px; border-radius: 8px; background: var(--surface-2); color: var(--text-3); }
+.rail .step { grid-row: 2; min-width: 0; padding: 6px 10px 5px; border-radius: 8px; background: var(--surface-2); color: var(--text-3); border: 0; font: inherit; text-align: left; cursor: pointer; }
+.rail .step:hover { box-shadow: inset 0 0 0 1px var(--text-3); }
+.app[data-view="story"] .rail .step.showing { box-shadow: inset 0 0 0 2px var(--text-2); }
+.app[data-view="story"] .rail .step.now.showing { box-shadow: inset 0 0 0 2px #fff; }
 .rail .step b { display: block; font-size: var(--f14); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rail .step span { display: block; font-size: var(--f12); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-height: 1.35em; }
 .rail .step b::before { content: attr(data-n) "  "; }
@@ -145,13 +157,38 @@ h1, h2, p { margin: 0; }
 .grid { display: grid; gap: var(--s3); min-height: 0; grid-template-columns: minmax(270px, 1fr) minmax(340px, 1.25fr) minmax(300px, 1.05fr); }
 .col { display: flex; flex-direction: column; gap: var(--s3); min-height: 0; min-width: 0; }
 .panel { background: var(--surface); border-radius: var(--radius); display: flex; flex-direction: column; min-height: 0; min-width: 0; }
-.panel.grow { flex: 1 1 0; }
-.panel.grow-2 { flex: 1.7 1 0; }
-#p-queue { flex: 0 1 auto; max-height: 46%; } /* a long queue scrolls instead of squeezing the panels below */
-/* Risk + call read as one card: fewer boxes for the eye to stop on */
-.grid > .col:first-child { gap: 0; }
-#p-risk { border-radius: var(--radius) var(--radius) 0 0; }
-#p-feed { border-radius: 0 0 var(--radius) var(--radius); border-top: 1px solid var(--line); }
+/* Panel sizes come from the view's layout in app.js (inline flex); these are per-view adjustments */
+.app[data-view="all"] #p-queue { max-height: 46%; } /* a long queue scrolls instead of squeezing the panels below */
+.app[data-view="story"] #p-queue { max-height: 62%; }
+/* Everything view: risk + call read as one card */
+.app[data-view="all"] .grid > .col:first-child { gap: 0; }
+.app[data-view="all"] #p-risk { border-radius: var(--radius) var(--radius) 0 0; }
+.app[data-view="all"] #p-feed { border-radius: 0 0 var(--radius) var(--radius); border-top: 1px solid var(--line); }
+/* switching chapter or view: a short fade, not a jump */
+.grid.enter { animation: viewin 0.25s ease-out; }
+@keyframes viewin { from { opacity: 0.25; } }
+
+/* Story view: two panels at a time, so everything can be bigger (readable across the table) */
+.app[data-view="story"] .grid { --f12: 14px; --f14: 17px; --f16: 21px; --f20: 24px; --f24: 30px; --f32: 52px; gap: var(--s4); }
+.app[data-view="story"] .panel h2 { padding: var(--s4) var(--s5) var(--s2); }
+.app[data-view="story"] .panel .body { padding: var(--s2) var(--s5) var(--s4); }
+.app[data-view="story"] .feed { gap: var(--s3); }
+.app[data-view="story"] .line { max-width: 82%; }
+.app[data-view="story"] .chips { margin-top: var(--s4); }
+.app[data-view="story"] .risk { flex-direction: column; gap: var(--s3); }
+.app[data-view="story"] .meter { height: 12px; }
+.app[data-view="story"] .arts { grid-template-columns: repeat(auto-fill, minmax(max(200px, 15vw), 1fr)); gap: var(--s3); }
+.app[data-view="story"] .art { padding: var(--s3) var(--s4); }
+.app[data-view="story"] .trace { gap: var(--s1); }
+.app[data-view="story"] .tr { grid-template-columns: 26px 100px minmax(0, 1fr); }
+.app[data-view="story"] .list { gap: var(--s4); }
+.app[data-view="story"] .act { grid-template-columns: 26px minmax(0, 1fr) auto; }
+.app[data-view="story"] .btn-approve { min-height: 52px; }
+.app[data-view="story"] .q { padding: var(--s3) 0; }
+
+/* Agent view: the trace is the whole point, so it gets the space and a bigger type step */
+.app[data-view="agent"] .trace { font-size: var(--f14); gap: var(--s1); }
+.app[data-view="agent"] .tr { grid-template-columns: 28px 100px minmax(0, 1fr); }
 .panel h2 {
   padding: var(--s3) var(--s4) var(--s1); display: flex; align-items: baseline; justify-content: space-between; gap: var(--s3);
   font-size: var(--f12); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-2);
@@ -300,6 +337,7 @@ h1, h2, p { margin: 0; }
 /* ---------- replay timeline (footer, right) ---------- */
 .timeline { display: flex; align-items: center; gap: var(--s2); flex: 0 1 520px; min-width: 260px; height: 26px; color: var(--text-3); font-size: var(--f12); }
 .tl-btn { background: var(--surface); color: var(--text-2); border: 0; border-radius: 6px; width: 30px; height: 24px; cursor: pointer; line-height: 1; }
+.tl-btn.wide { width: auto; padding: 0 10px; font-size: var(--f12); font-weight: 700; white-space: nowrap; }
 .tl-btn:hover { color: var(--text); }
 .tl-btn:focus-visible { outline: 2px solid var(--text); }
 .tl-btn[hidden] { display: none; }
@@ -318,7 +356,7 @@ h1, h2, p { margin: 0; }
 @keyframes flash { 50% { background-color: rgba(226, 0, 116, 0.35); } }
 @keyframes blink { 50% { opacity: 0.35; } }
 @media (prefers-reduced-motion: reduce) {
-  .fresh, .hero.flash .hero-main, .source .dot { animation: none !important; }
+  .fresh, .hero.flash .hero-main, .source .dot, .grid.enter { animation: none !important; }
   .meter i { transition: none; }
 }
 
@@ -326,6 +364,7 @@ h1, h2, p { margin: 0; }
 @media (min-width: 1700px) {
   :root { --f12: 14px; --f14: 16px; --f16: 18px; --f20: 22px; --f24: 28px; --f32: 36px; }
   .tr { grid-template-columns: 26px 90px minmax(0, 1fr); }
+  .app[data-view="story"] .grid { --f12: 16px; --f14: 19px; --f16: 24px; --f20: 28px; --f24: 34px; --f32: 60px; }
 }
 
 /* ---------- narrower screens (browser zoom at the table, small laptops) ---------- */
@@ -333,11 +372,16 @@ h1, h2, p { margin: 0; }
   .hero { grid-template-columns: minmax(0, 1fr) 260px; }
   .grid { grid-template-columns: minmax(250px, 0.95fr) minmax(320px, 1.2fr) minmax(280px, 1fr); }
   .title, .clock { display: none; }
+  .brand { flex-shrink: 0; }
+  .engine span, .source span { display: none; } /* keep CLOUD / REPLAY / LIVE, drop the detail */
+  .views button { padding: 6px 10px; }
 }
 @media (max-width: 960px) {
   body { overflow: auto; }
   .app { height: auto; min-height: 100vh; }
-  .hero, .grid { grid-template-columns: 1fr; }
+  .hero { grid-template-columns: 1fr; }
+  .grid { grid-template-columns: 1fr !important; } /* overrides the view's inline columns */
+  .views { order: 3; }
   .panel .body { max-height: 420px; }
   .rail .phase { display: none; }
   .rail .step { grid-row: auto; }

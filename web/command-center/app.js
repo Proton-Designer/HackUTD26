@@ -363,6 +363,9 @@
     'call.answered'(e, d, c) {
       c.answered = true; focusOn(c);
       if (String(d.by || 'maria').toLowerCase() === 'decoy') return; // the handoff events tell this part
+      // A new call Maria answers starts the story over (the rail and the Story view follow the latest call)
+      if (S.storyCall && S.storyCall !== c.id) { S.stage = {}; VIEW.pinned = null; }
+      S.storyCall = c.id;
       head('Maria answered. Live Guard hears <em>the caller only</em>.', 'Her voice is never processed', '');
       dirty('feed');
     },
@@ -682,7 +685,7 @@
     if (!S.rejects.length && (auto.length || queued.length)) {
       const qn = `${queued.length} waiting for one click`;
       const text = auto.length
-        ? `Burned: <em>${auto.length} action${auto.length === 1 ? '' : 's'} applied</em>${queued.length ? `, <em>${qn}</em>` : ''}`
+        ? `<em>${auto.length} protection${auto.length === 1 ? '' : 's'}</em> applied automatically${queued.length ? `, <em>${qn}</em>` : ''}`
         : `<em>${queued.length} network action${queued.length === 1 ? '' : 's'}</em> waiting for one click`;
       head(text, (auto.length ? auto : queued).map(a => a.label).join(' · '), 'alert');
     }
@@ -802,12 +805,15 @@
       let now = -1;
       STAGES.forEach(([k], i) => { if (stOf(k)) now = i; });
       const phases = PHASES.map(([label, a, b]) => `<div class="phase" style="grid-column:${a} / ${b}">${label}</div>`).join('');
+      layout(); // first, so the rail outlines the chapter actually on screen
+      const showing = VIEW.name === 'story' ? VIEW.shown : '';
       const steps = STAGES.map(([k, label], i) => {
         const st = stOf(k);
         const sub = k === 'verify' && S.stage.extract && S.stage.verify ? `${S.stage.extract.sub} · ${S.stage.verify.sub}` : st ? st.sub : '';
-        const cls = !st ? '' : i === now ? 'now' : 'done';
+        const cls = (!st ? '' : i === now ? 'now' : 'done') + (STEP_CHAPTER[k] === showing ? ' showing' : '');
         const state = !st ? 'not yet' : i === now ? 'current step' : 'done';
-        return `<div class="step ${cls}" role="listitem" data-n="${i + 1}" aria-label="${esc(`${label}: ${state}`)}"><b>${label}</b><span>${esc(sub)}</span></div>`;
+        return `<button type="button" class="step ${cls}" data-chapter="${STEP_CHAPTER[k]}" data-n="${i + 1}" aria-pressed="${STEP_CHAPTER[k] === showing}" `
+          + `aria-label="${esc(`${label}: ${state}. Show this part`)}" title="Show this part of the story"><b>${label}</b><span>${esc(sub)}</span></button>`;
       }).join('');
       $('rail').innerHTML = phases + steps;
     },
@@ -1069,6 +1075,102 @@
     el.innerHTML = `<span class="dot"></span><b>${m[1]}</b><span>${esc(m[2])}</span>`;
   }
 
+  // ---------- views ----------
+  // Story (default at the table): only the chapter of the call that's happening now, in big type.
+  // Agent: the intel agent's full trace. Everything: the full console.
+  // Panels move between #grid and the hidden #parking area; renderers find them by id wherever they are.
+  const STEP_CHAPTER = { detect: 'call', handoff: 'call', verify: 'evidence', burn: 'act', immune: 'act' };
+  const CHAPTER_NAME = { call: 'the call', evidence: 'what the decoy got', act: 'what we did' };
+  const LAYOUTS = {
+    all: { cols: [1, 1.25, 1.05], stacks: [[['p-risk', 0], ['p-feed', 1]], [['p-artifacts', 1.7], ['p-trace', 1]], [['p-queue', 0], ['p-auto', 1], ['p-denied', 1]]] },
+    agent: { cols: [1.25, 1], stacks: [[['p-trace', 1]], [['p-artifacts', 1.3], ['p-denied', 1]]] },
+    'story:call': { cols: [1.6, 1], stacks: [[['p-feed', 1]], [['p-risk', 1]]] },
+    'story:evidence': { cols: [1.45, 1], stacks: [[['p-artifacts', 1]], [['p-trace', 1]]] },
+    'story:act': { cols: [1.1, 1], stacks: [[['p-auto', 1]], [['p-queue', 0], ['p-denied', 1]]] },
+  };
+  const VIEW = { name: 'story', pinned: null, key: '', shown: '', shownAt: 0 };
+  const ORDER = { call: 0, evidence: 1, act: 2 };
+  const DWELL_MS = 8000; // each chapter stays up long enough to point at before the story moves on
+  let dwellTimer = 0;
+  function chapterNow() {
+    if (VIEW.pinned) return VIEW.pinned;
+    const st = S.stage;
+    if (st.burn || st.immune) return 'act';
+    if (st.verify || st.extract) return 'evidence';
+    return 'call';
+  }
+  function layout() {
+    let chapter = VIEW.name === 'story' ? chapterNow() : '';
+    // Following live: moving forward waits until the current chapter has been up DWELL_MS (scaled by replay speed)
+    if (chapter && !VIEW.pinned && VIEW.shown && ORDER[chapter] > ORDER[VIEW.shown]) {
+      const wait = DWELL_MS / (MODE.kind === 'replay' ? CFG.speed : 1) - (Date.now() - VIEW.shownAt);
+      if (wait > 0) {
+        clearTimeout(dwellTimer);
+        dwellTimer = setTimeout(() => { layout(); }, wait);
+        chapter = VIEW.shown;
+      }
+    }
+    VIEW.shown = chapter;
+    const app = document.querySelector('.app');
+    app.dataset.view = VIEW.name;
+    app.dataset.chapter = chapter;
+    document.querySelectorAll('.views [data-view]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.view === VIEW.name)));
+    const follow = $('follow');
+    follow.hidden = !(VIEW.name === 'story' && VIEW.pinned);
+    if (!follow.hidden) { follow.textContent = 'Holding · back to live'; follow.title = `Holding ${CHAPTER_NAME[VIEW.pinned]} on screen. Click (or Esc) to follow the call again.`; }
+    const key = chapter ? `story:${chapter}` : VIEW.name;
+    if (key === VIEW.key) return;
+    VIEW.key = key;
+    VIEW.shownAt = Date.now();
+    const L = LAYOUTS[key];
+    const grid = $('grid'), park = $('parking');
+    for (const el of [...grid.querySelectorAll('.panel')]) park.appendChild(el);
+    grid.innerHTML = '';
+    grid.style.gridTemplateColumns = L.cols.map(f => `minmax(0, ${f}fr)`).join(' ');
+    for (const stack of L.stacks) {
+      const col = document.createElement('div');
+      col.className = 'col';
+      for (const [id, grow] of stack) {
+        const el = $(id);
+        el.style.flex = grow ? `${grow} 1 0` : '0 1 auto';
+        col.appendChild(el);
+      }
+      grid.appendChild(col);
+    }
+    grid.classList.remove('enter'); void grid.offsetWidth; grid.classList.add('enter');
+    dirty('feed', 'trace', 'hero'); // moved panels lose their scroll position; re-render scrolls them to the newest line
+  }
+  function setView(name) {
+    if (name !== 'story' && !LAYOUTS[name]) name = 'story';
+    VIEW.name = name;
+    VIEW.pinned = null;
+    try { history.replaceState(null, '', `#${name}`); } catch (err) { /* file:// */ }
+    layout();
+  }
+  document.querySelector('.views').addEventListener('click', ev => {
+    const b = ev.target.closest('[data-view]');
+    if (b) setView(b.dataset.view);
+  });
+  // Click a rail step to hold that chapter on screen while you talk; click it again (or "back to live") to follow the call
+  $('rail').addEventListener('click', ev => {
+    const step = ev.target.closest('[data-chapter]');
+    if (!step) return;
+    const ch = step.dataset.chapter;
+    VIEW.pinned = VIEW.name === 'story' && VIEW.pinned === ch ? null : ch;
+    if (VIEW.name !== 'story') { VIEW.name = 'story'; try { history.replaceState(null, '', '#story'); } catch (err) { /* file:// */ } }
+    layout();
+  });
+  $('follow').addEventListener('click', () => { VIEW.pinned = null; layout(); });
+  // Between judges: wipe this screen's state (not the hub's) without dropping the live connection
+  function clearScreen() {
+    resetState();
+    clearTimeout(dwellTimer);
+    VIEW.pinned = null; VIEW.key = ''; VIEW.shown = '';
+    renderAll();
+    layout();
+    renderTimeline();
+  }
+
   // ---------- replay ----------
   const R = { events: [], offsets: [], total: 0, idx: 0, timer: 0, playing: false };
 
@@ -1123,7 +1225,11 @@
     const tl = document.querySelector('.timeline');
     const live = MODE.kind !== 'replay';
     tl.classList.toggle('live', live);
-    $('tl-play').hidden = live; $('tl-restart').hidden = live;
+    $('tl-play').hidden = live;
+    const rs = $('tl-restart');
+    rs.classList.toggle('wide', live);
+    rs.innerHTML = live ? '&#8634; Clear for next judge' : '&#8634;';
+    rs.title = live ? 'Clear this screen for the next judge (C). The live connection stays on.' : 'Restart (R)';
     if (live) {
       $('tl-fill').style.width = '0';
       $('tl-text').textContent = `${S.count} events${MODE.kind === 'connecting' ? '' : ` · ${MODE.url}`}`;
@@ -1136,15 +1242,23 @@
     $('tl-text').textContent = `${R.idx}/${R.events.length} events${done ? ' · done' : R.playing ? '' : ' · paused'} · space pause · R restart · click bar to jump`;
   }
   $('tl-play').addEventListener('click', () => (R.playing ? pause() : play()));
-  $('tl-restart').addEventListener('click', restart);
+  $('tl-restart').addEventListener('click', () => (MODE.kind === 'replay' ? restart() : clearScreen()));
   $('tl-bar').addEventListener('click', ev => {
     if (MODE.kind !== 'replay') return;
     const rect = ev.currentTarget.getBoundingClientRect();
     seek(Math.max(0, Math.min(1, (ev.clientX - rect.left) / rect.width)));
   });
   document.addEventListener('keydown', ev => {
-    if (ev.target.closest && ev.target.closest('button, input, textarea')) return;
-    if (MODE.kind !== 'replay') return;
+    if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
+    if (ev.target.closest && ev.target.closest('input, textarea')) return;
+    const view = { 1: 'story', 2: 'agent', 3: 'all' }[ev.key];
+    if (view) { setView(view); return; }
+    if (ev.key === 'Escape' && VIEW.pinned) { VIEW.pinned = null; layout(); return; }
+    if (ev.target.closest && ev.target.closest('button')) return; // Space/Enter on a focused button presses it
+    if (MODE.kind !== 'replay') {
+      if (ev.key === 'c' || ev.key === 'C') clearScreen();
+      return;
+    }
     if (ev.code === 'Space') { ev.preventDefault(); R.playing ? pause() : play(); }
     else if (ev.key === 'r' || ev.key === 'R') restart();
   });
@@ -1227,6 +1341,7 @@
   }
 
   function boot() {
+    setView((location.hash.slice(1) || qs.get('view') || 'story').toLowerCase());
     renderAll();
     setInterval(() => { $('clock').textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }); }, 1000);
     if (CFG.src === 'mock' || CFG.src === 'fixture') { startReplay(); return; }
