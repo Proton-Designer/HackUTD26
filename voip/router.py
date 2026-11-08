@@ -327,8 +327,9 @@ async def media(ws: WebSocket, call_id: str, t: str = ""):
     # the media WS can connect BEFORE the call.answered webhook sets st["listen"] (race seen on call 497ef1d4): decide from the mode, not the flag
     hello = asyncio.create_task(_listen_hello(call_id, send_to_caller)) if (listen_mode() and not talk_mode()) else None   # talk mode: Maria says hello herself
     if listen_mode() and talk_mode(): log.warning("hello skipped for %s: MARIA_LEG=talk (Maria greets herself)", call_id[:8])
+    sess = None   # F19: the relay session this socket opened; close() ignores it if a reconnect already replaced it
     try:
-        if hub: await _maybe_await(hub.open(call_id, send_to_caller, on_decoy_lost=_decoy_lost))
+        if hub: sess = await _maybe_await(hub.open(call_id, send_to_caller, on_decoy_lost=_decoy_lost))
         else:
             local = RELAYS[call_id] = Relay()
             s = await make_p2_sink(call_id)
@@ -353,10 +354,13 @@ async def media(ws: WebSocket, call_id: str, t: str = ""):
     except (WebSocketDisconnect, RuntimeError): pass
     finally:
         if hello: hello.cancel()
-        if st.get("talk_task"): st["talk_task"].cancel(); st.pop("talk_task", None)
-        st.pop("talk_q", None); st.pop("send_to_caller", None); log.warning("media WS closed %s frames_in=%s frames_to_caller=%s talk_frames=%s talk_dropped=%s", call_id[:8], stats, sent, st.get("talk_frames", 0), st.get("talk_dropped", 0))
+        mine = st.get("send_to_caller") is send_to_caller   # F19: a late cleanup of an OLD socket must not remove the NEW socket's sender / pacer
+        if mine:
+            if st.get("talk_task"): st["talk_task"].cancel(); st.pop("talk_task", None)
+            st.pop("talk_q", None); st.pop("send_to_caller", None)
+        log.warning("media WS closed %s frames_in=%s frames_to_caller=%s talk_frames=%s talk_dropped=%s", call_id[:8], stats, sent, st.get("talk_frames", 0), st.get("talk_dropped", 0))
         try:
-            if hub: await _maybe_await(hub.close(call_id))
+            if hub: await _maybe_await(hub.close(call_id, sess))
             elif local: await local.close()
         except Exception: pass
         RELAYS.pop(call_id, None)

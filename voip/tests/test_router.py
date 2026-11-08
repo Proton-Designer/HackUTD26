@@ -123,11 +123,12 @@ def test_duplicate_initiated_does_not_overwrite(client):
 
 class FakeRelay:
     def __init__(s, ok=True): s.ok, s.calls = ok, []
-    async def open(s, cid, send, on_decoy_lost=None): s.calls.append(("open", cid))
+    async def open(s, cid, send, on_decoy_lost=None):
+        s.calls.append(("open", cid)); s.n = getattr(s, "n", 0) + 1; return f"session-{s.n}"
     async def caller_frame(s, cid, f): s.calls.append(("frame", f.get("event")))
     async def start_decoy(s, cid): s.calls.append(("start_decoy", cid)); return s.ok
     async def stop_decoy(s, cid): s.calls.append(("stop_decoy", cid))
-    async def close(s, cid): s.calls.append(("close", cid))
+    async def close(s, cid, session=None): s.calls.append(("close", cid)); s.closed = getattr(s, "closed", []) + [session]
 
 import asyncio
 def _state(sim=True, conf=True):
@@ -882,3 +883,21 @@ def test_F13_security_high_or_unknown_risk_is_never_restored_after_a_decoy_crash
     async def go():
         t = asyncio.create_task(R._decoy_lost(sid)); await asyncio.sleep(0.05); st["haul_seen"] = True; await t
     asyncio.run(go()); assert st["ended"] is True and not st.get("restored")
+
+
+def test_F19_old_socket_cleanup_does_not_remove_the_new_sockets_sender(monkeypatch):
+    import contextlib
+    fr = FakeRelay(); monkeypatch.setattr(R, "_hub_relay", lambda: fr); monkeypatch.setenv("MARIA_LEG", "talk")
+    sid = "sess-F19-reconnect-12"; st = _state(sim=False); st["token"] = "tok"; R.CALLS[sid] = st
+    app = FastAPI(); app.include_router(R.router); tc = TestClient(app)
+    with contextlib.ExitStack() as es:
+        ws1 = es.enter_context(tc.websocket_connect(f"/media/{sid}?t=tok")); ws1.send_text(json.dumps({"event": "start"})); time.sleep(0.2)
+        s1 = st["send_to_caller"]
+        ws2 = es.enter_context(tc.websocket_connect(f"/media/{sid}?t=tok")); ws2.send_text(json.dumps({"event": "start"})); time.sleep(0.2)
+        s2 = st["send_to_caller"]; assert s2 is not s1
+        st["talk_q"] = __import__("collections").deque(["f"])
+        ws1.close(); time.sleep(0.3)                                  # the OLD socket cleans up late
+        assert st.get("send_to_caller") is s2 and st.get("talk_q")   # the new socket's sender + queue survived
+        assert fr.closed == ["session-1"]                             # close() got the OLD session object, so the relay can ignore it
+        ws2.close(); time.sleep(0.3)
+    assert "send_to_caller" not in st and fr.closed == ["session-1", "session-2"]
