@@ -60,6 +60,9 @@ and then blocks them network-wide.
 6. **Decoy: one brain.** Prompt, guardrails, fake-value filler and extractor live in one shared module used by both the server decoy and the phone decoy, so behaviour and fixes are identical; where it runs is a deploy choice.
 7. **Turn-taking fix (from Ayman's call):** the decoy sometimes speaks out of turn: tune end-of-speech wait + barge-in for PSTN (P3).
 
+## Decisions so far
+Evan's answers (04:58, via P3): D1 = Telnyx primary (judge dials the real number), Android VoIP = offline fallback. D2 = web app on a phone for the customer (talk mode). D3 = keep the paths separate; present Android as the on-device variant (same hub, bus and command center). D4 = separate voice stores per client (web -> hub /voice/enroll -> P3 server store; Android keeps its on-phone enrollment). Ayman asked (04:51) to integrate both into one; D3/D4 pending Ayman's confirmation.
+
 ## Open decisions (Ayman + Evan)
 - D1: Primary judged path: Telnyx number (recommended: judge uses their own phone) or Android VoIP.
 - D2: Customer device in the demo: native Android app (needs D3 work) or the web app on a phone.
