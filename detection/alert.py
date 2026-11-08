@@ -144,6 +144,7 @@ class AlertMachine:
             if not cid:
                 return
             if t == "user.action" and d.get("action") == "continue":
+                log.info("user.action continue seen call=%s", cid)
                 c = self._call(cid)
                 c.continued, c.armed = True, True   # prev_band stays: critical must be a NEW transition after Continue
                 c.known_hard = set(c.last.get("asks", [])) & schema.HARD_ASKS if c.last else set()
