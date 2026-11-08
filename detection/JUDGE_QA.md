@@ -142,3 +142,13 @@ Same rules as above: n is small, all scam scripts are team-written, real calls a
 - Show: `detection/eval/REAL_CALLS.md` ("Caller-track mute"); `detection/PITCH_NUMBERS.md` row 14.
 - Don't say: "fixed" or "can't happen again". Say "not seen in the 5 calls since 04:45, being verified". It is n=1 and the cause is not proven.
 
+
+**21. "How fast does it alert on the judge cards?"** (Owner: Ayman)
+- Answer: On the 8 bucket cards we use (1, 2, 4, 5, 6, 7, 8, 10) the alert came **10.6 to 21.9 s after the first word**, median ~16 s, read verbatim at phone quality (synthetic voice): card 1 15.1 s, card 2 14.5, card 4 14.1, card 5 21.5, card 6 10.6, card 7 21.9, card 8 17.9, card 10 16.8. Cards 5 and 7 are slowest (~21-22 s): they ask for the money move or the payment without a code or app ask first. The trimmed demo card alerts at 7-9 s (line 1).
+- Show: `detection/eval/DRILLS.md` "Card 2 judge variants" (v3 table); `PITCH_NUMBERS.md` row 16.
+- Don't say: "within 10 seconds" for every card, or "real judges": one run per card, one synthetic voice, alert times move with how fast the card is read; a judge who stops after 2 lines gets no alert.
+
+**22. "What does the decoy do after Fire Back, and how fast?"** (Owner: Ayman)
+- Answer: It picks up in the customer's place and plays a worried, cooperative person whose only job is to get the scammer to say how to pay (app, exact handle, callback number, website). It knows what the caller said before the tap (the hub's transcript is passed in). In our local end-to-end runs (demo card + cards 2 and 6, 1 run each, synthetic caller) the first decoy words came **1.4-2.2 s** after the handoff and replies **0.6-1.1 s** after the caller stopped (one 2.9-3.4 s outlier on a long read-back); the decoy read back the payment handle exactly and the haul had the Zelle handle `refunds.dept@backfire-demo.example` on the demo card and card 2. In those 12+ decoy lines: 0 stalls, 0 early hang-ups, 0 leaks of its own notes or of a real value. Before the fixes the same test scored lower (line fit 1.0 vs ~1.7 of 2, a canned opener that asked "who did you say was calling?" and a "banking app" tic in 6 of 9 lines).
+- Show: `detection/eval/DECOY_DIAG.md` ("End-to-end decoy test"); the command center haul and `decoy.turn` lines.
+- Don't say: "it always gets the handle" (card 6 still adds a stray partial handle) or "tested on real scammers" (synthetic caller voice, 3 of 10 cards, local instance, one scorer).
