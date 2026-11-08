@@ -26,7 +26,7 @@
   }
   function onCall(c) {
     const st = c.state;
-    (BF.voipEvents = BF.voipEvents || []).push(Date.now() + " " + st + " " + (c.direction || "") + " rs=" + !!c.remoteStream);   // debug trail for call-state transitions
+    (BF.voipEvents = BF.voipEvents || []).push(Date.now() + " " + st + " " + (c.direction || "") + " rs=" + !!c.remoteStream + (c.cause ? " cause=" + c.cause : "") + (c.causeCode ? " code=" + c.causeCode : "") + (c.sipCode ? " sip=" + c.sipCode : "") + (c.sipReason ? " reason=" + c.sipReason : ""));   // debug trail for call-state transitions
     if (st === "ringing" && c.direction === "inbound") {
       call = c;
       // normally the hub's call.incoming drives the ring screen; if it hasn't arrived shortly, ring from the SIP call itself
@@ -49,7 +49,7 @@
       client.on("telnyx.ready", () => status("ready"));
       client.on("telnyx.error", e => status("error: " + (e && (e.message || (e.error && (e.error.message || e.error.code)) || JSON.stringify(e)) || e)));
       client.on("telnyx.socket.close", () => status("closed"));
-      client.on("telnyx.notification", n => { if (n.type === "callUpdate" && n.call) onCall(n.call); });
+      client.on("telnyx.notification", n => { (BF.voipEvents = BF.voipEvents || []).push(Date.now() + " notif " + n.type + (n.error ? " err=" + JSON.stringify(n.error).slice(0, 120) : "")); if (n.type === "callUpdate" && n.call) onCall(n.call); });
       client.connect(); status("connecting");
     } catch (e) { status("unavailable: " + e.message); }   // fail open: the rest of the app is unaffected
   })();
