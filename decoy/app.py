@@ -31,7 +31,14 @@ if not _p3.handlers:
     _p3.addHandler(_h); _p3.setLevel(logging.INFO); _p3.propagate = False
 app = FastAPI(title="Backfire P3 decoy")
 CAP_S = 20 * 60
-BARGE_IN_MS = 300
+# Barge-in (Ayman's real call 93c95fd6: 21 self-clears in 17 s, our own voice echoing back on the PSTN leg).
+BARGE_IN_MS = 500          # sustained loud caller audio needed to cut the decoy off
+BARGE_GRACE_S = 0.4        # ignore inbound right after we start speaking (echo onset)
+ECHO_MARGIN = 3.0          # inbound must be ~10 dB over the estimated echo of our own voice
+OUT_RATIO = 0.3            # ...and within ~10 dB of our own outbound level (real echo is far quieter)
+STT_TIMEOUT_S, LLM_TIMEOUT_S = 6.0, 7.0
+FILLER_AFTER_S = 0.6       # play a filler only if Nemotron hasn't answered by then
+STALLS = ["Hold on dear, let me find my glasses.", "Oh, sorry, the line went funny. Say that again?"]
 
 
 PROXY_HEADERS = ("cf-connecting-ip", "cf-ray", "x-forwarded-for", "x-forwarded-host", "forwarded", "x-real-ip")
@@ -119,6 +126,14 @@ class Session:
         from detection.stt import get_stt, mulaw_decode
         self.seg, self.stt, self.decode = Segmenter(), _shared_stt(get_stt), mulaw_decode
         self.stt_ms = 0
+        self.speak_start = 0.0         # when the current stretch of our speech started
+        self.out_rms = 0.0             # peak-hold level of what we're sending
+        self.coupling = 0.1            # echo level / our outbound level, learned from the quietest frames
+        self.said: list[str] = []      # our recent sentences, to recognise our own words coming back
+        self.loud_ms = 0
+        self.last_barge = 0.0
+        self.spoke: list[tuple[float, float]] = []   # recent (start, end) of our speech, for echo-utterance filtering
+        self.stalls: list[list[bytes]] = []
         self.stream_id = None
 
     def ev(self, type_, data):
@@ -132,6 +147,8 @@ class Session:
             if f is None:
                 return
             next_t = max(next_t, time.monotonic() - 0.04) + 0.02
+            pcm = self.decode(f).astype(np.float32)
+            self.out_rms = max(float(np.sqrt(np.mean(pcm * pcm))), self.out_rms * 0.9)
             msg = {"event": "media", "media": {"payload": base64.b64encode(f).decode()}}
             if self.stream_id:
                 msg["stream_id"] = self.stream_id
@@ -141,14 +158,52 @@ class Session:
                 await asyncio.sleep(delay)
 
     def play(self, frames: list[bytes]):
+        if not frames:
+            return
+        now = time.monotonic()
+        if now >= self.speaking_until:          # starting to speak after silence: echo grace period starts
+            self.speak_start = now
+            self.spoke.append((now, now))
+            self.spoke = self.spoke[-20:]
         for f in frames:
             self.out.put_nowait(f)
-        self.speaking_until = max(time.monotonic(), self.speaking_until) + len(frames) * 0.02
+        self.speaking_until = max(now, self.speaking_until) + len(frames) * 0.02
+        self.spoke[-1] = (self.spoke[-1][0], self.speaking_until)
+
+    def speaking(self) -> bool:
+        return time.monotonic() < self.speaking_until
+
+    def caller_loud(self, pcm: np.ndarray) -> bool:
+        """Echo gate for one 20 ms inbound frame while we're speaking."""
+        x = pcm.astype(np.float32)
+        rms = float(np.sqrt(np.mean(x * x)))
+        if self.out_rms > 200:   # echo coupling: falls fast, rises slowly, so the caller's speech can't inflate it
+            r = min(0.5, max(0.02, rms / self.out_rms))
+            self.coupling += (0.3 if r < self.coupling else 0.003) * (r - self.coupling)
+        return rms > max(ECHO_MARGIN * self.coupling * self.out_rms, OUT_RATIO * self.out_rms, 2 * self.seg.noise)
+
+    def overlapped_us(self, utt: np.ndarray) -> bool:
+        """Heard mostly while we were talking, with no barge-in: it may be our own voice coming back."""
+        end = time.monotonic(); start = end - len(utt) / 8000 - 0.45   # + segmenter endpoint wait
+        if self.last_barge >= start:
+            return False
+        overlap = sum(max(0.0, min(e, end) - max(s0, start)) for s0, e in self.spoke)
+        return overlap > 0.5 * (end - start)
+
+    def is_our_words(self, text: str) -> bool:
+        """The transcript is mostly words we just said (echo), not the caller."""
+        import re
+        heard = re.findall(r"[a-z']+", text.lower())
+        ours = set(re.findall(r"[a-z']+", " ".join(self.said[-4:]).lower()))
+        return len(heard) > 0 and sum(w in ours for w in heard) >= 0.6 * len(heard)
 
     async def barge_in(self):
         while not self.out.empty():
             self.out.get_nowait()
         self.speaking_until = 0
+        self.last_barge = time.monotonic()
+        if self.spoke:
+            self.spoke[-1] = (self.spoke[-1][0], self.last_barge)
         try:
             await self.ws.send_text(json.dumps({"event": "clear", **({"stream_id": self.stream_id} if self.stream_id else {})}))
         except Exception:
@@ -160,6 +215,7 @@ class Session:
         for sentence in [s for s in __import__("re").split(r"(?<=[.!?])\s+", text) if s.strip()]:
             if not self.active:
                 return first_ms
+            self.said = (self.said + [sentence])[-6:]
             self.play(await self.voice.frames(sentence))
             first_ms = first_ms or int((time.monotonic() - t0) * 1000)
         self.ev("decoy.turn", {"speaker": "decoy", "text": text, "latency_ms": latency_ms})
@@ -168,15 +224,20 @@ class Session:
         return first_ms
 
     # -------------------------------------------------- turns
-    async def on_utterance(self, pcm: np.ndarray):
+    async def on_utterance(self, pcm: np.ndarray, maybe_echo: bool = False):
         try:
             t_stt = time.monotonic()
-            text = (await self.stt.transcribe(pcm)).strip()
+            text = (await asyncio.wait_for(self.stt.transcribe(pcm), STT_TIMEOUT_S)).strip()
             self.stt_ms = int((time.monotonic() - t_stt) * 1000)
         except Exception as e:
             log.warning("STT failed: %s", type(e).__name__)
+            if self.active and not self.speaking() and self.stalls:
+                self.play(random.choice(self.stalls))   # never dead air
             return
         if not text or not self.active:
+            return
+        if maybe_echo and self.is_our_words(text):
+            log.info("drop %s: echo of our own words (%r)", self.call_id, text[:60])
             return
         self.scammer_lines.append(text)
         self.ev("decoy.turn", {"speaker": "scammer", "text": text, "latency_ms": 0})
@@ -190,12 +251,18 @@ class Session:
             while self.active and self.pending:
                 heard, self.pending = " ".join(self.pending), []
                 t0 = time.monotonic()
-                if self.fillers and random.random() < 0.6:
-                    self.play(random.choice(self.fillers))
                 self.history.append({"role": "user", "content": f"<caller>{core.clean(heard)}</caller>"})
-                out = await core.chat([{"role": "system", "content": core.SYSTEM}] + self.history[-16:])
+                task = asyncio.create_task(core.chat([{"role": "system", "content": core.SYSTEM}] + self.history[-16:]))
+                done, _ = await asyncio.wait({task}, timeout=FILLER_AFTER_S)
+                if not done and self.fillers and not self.speaking():
+                    self.play(random.choice(self.fillers))     # mask the thinking time
+                try:
+                    out = await asyncio.wait_for(task, LLM_TIMEOUT_S - FILLER_AFTER_S)
+                except Exception as e:
+                    log.warning("LLM failed: %s", type(e).__name__)
+                    out = None
                 llm_ms = int((time.monotonic() - t0) * 1000)
-                out = out or "I'm sorry, could you say that again? The line is terrible."
+                out = out or random.choice(STALLS)
                 hist, spoken = core.guard(out, self.persona, self.given, self.ev)
                 self.history.append({"role": "assistant", "content": hist})
                 tts_ms = await self.say(spoken, llm_ms)
@@ -205,6 +272,8 @@ class Session:
                 if time.time() - self.t0 > CAP_S:
                     await self.say(core.GOODBYE)
                     self.active = False
+        except Exception:
+            log.exception("turn failed (decoy keeps listening)")
         finally:
             self.busy = False
 
@@ -216,8 +285,11 @@ class Session:
                 fr = await self.voice.frames(f)
                 if fr:
                     self.fillers.append(fr)
+            for t in STALLS:
+                fr = await self.voice.frames(t)
+                if fr:
+                    self.stalls.append(fr)
         asyncio.create_task(warm())
-        speech_ms = 0
         try:
             while self.active:
                 m = json.loads(await self.ws.receive_text())
@@ -227,11 +299,17 @@ class Session:
                 elif ev == "media" and (m.get("media") or {}).get("track") in (None, "inbound"):
                     pcm = self.decode(base64.b64decode(m["media"]["payload"]))
                     for utt in self.seg.feed(pcm):
-                        asyncio.create_task(self.on_utterance(utt))
-                    # barge-in: the caller has been talking for a moment while we're still speaking
-                    speech_ms = speech_ms + 20 if self.seg.cur is not None else 0
-                    if speech_ms >= BARGE_IN_MS and time.monotonic() < self.speaking_until:
-                        await self.barge_in()
+                        asyncio.create_task(self.on_utterance(utt, self.overlapped_us(utt)))
+                    # barge-in: sustained caller speech clearly above our echo, after the onset grace period
+                    if self.speaking() and time.monotonic() - self.speak_start > BARGE_GRACE_S:
+                        self.loud_ms = self.loud_ms + 20 if self.caller_loud(pcm) else max(0, self.loud_ms - 10)   # tolerate syllable gaps
+                        if self.loud_ms >= BARGE_IN_MS:
+                            self.loud_ms = 0
+                            log.info("barge-in %s (in=%.0f coupling=%.2f out=%.0f)", self.call_id,
+                                     float(np.sqrt(np.mean(pcm.astype(np.float32) ** 2))), self.coupling, self.out_rms)
+                            await self.barge_in()
+                    else:
+                        self.loud_ms = 0
                 elif ev == "stop":
                     break
         except (WebSocketDisconnect, RuntimeError):
