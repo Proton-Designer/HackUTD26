@@ -77,8 +77,6 @@ def main():
     sim = bool(fl.get("SIM_MODE"))
     if a.live: rec(not sim, "SIM_MODE is OFF (live phone demo)", f"SIM_MODE={sim}")
     else:      rec(sim, "SIM_MODE is ON (phone-free demo)", f"SIM_MODE={sim}")
-    if sim and tunnel and not a.live:
-        print("WARN  SIM_MODE with a public tunnel lets anyone with the URL post simulated webhooks; fine for a closed rehearsal, not for the real demo")
     eng = str(fl.get("intel_engine"))
     rec(eng.startswith("nemotron"), "intel_engine is nemotron", eng)
     rec(fl.get("NVIDIA_API_KEY_set") is True, "NVIDIA_API_KEY set on hub", str(fl.get("NVIDIA_API_KEY_set")))
@@ -86,6 +84,16 @@ def main():
     rec(p2.get("remote") == "up", "P2 reachable (P2_STT_URL/P2_BASE healthz)", f"remote={p2.get('remote')}, mounted={p2.get('mounted')}")
     t_ok = fl.get("telnyx_ok")
     rec(t_ok is not False, "telnyx_ok is not false", {None: "no REST call reported yet", True: "true", False: "false: last Telnyx REST call was 401/10009"}[t_ok if t_ok in (None, True, False) else None])
+
+    # simulated webhooks must be loopback-only: via the tunnel they have to be refused (403), never processed
+    if tunnel:
+        try:
+            req = urllib.request.Request(tunnel + "/telnyx/webhook", data=b"{}", method="POST", headers={"x-sim-call": "1", "content-type": "application/json"})
+            try: code = urllib.request.urlopen(req, timeout=8).status
+            except urllib.error.HTTPError as e: code = e.code
+        except Exception as e:
+            code = 0
+        rec(code == 403, "tunnel refuses x-sim-call webhook (403)", f"HTTP {code}")
 
     # 3. caller audio
     st, body = get(local + "/demo/caller.wav", timeout=15)
@@ -98,6 +106,8 @@ def main():
 
     # 4. pages (Maria's app is mounted at /app/, the judge page at /app/judge.html)
     for base, label in [(tunnel, "tunnel")] if tunnel else [(local, "local")]:
+        st, _ = get(base + "/")            # bare URL: urllib follows the redirect, so a 200 means / -> /app/ works
+        rec(st == 200, f"bare / redirects to the app ({label})", f"HTTP {st}")
         for path in ("/app/", "/app/judge.html"):
             st, body = get(base + path); rec(st == 200 and b"<" in body, f"{path} loads ({label})", f"HTTP {st}")
 

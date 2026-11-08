@@ -387,3 +387,11 @@ def test_demo_caller_wav_serves_range_and_404(monkeypatch, tmp_path):
     monkeypatch.delenv("DEMO_CALLER_WAV")
     monkeypatch.setenv("LOGDIR", str(tmp_path)); (tmp_path / "sim_scam.wav").write_bytes(f.read_bytes())
     assert c.get("/demo/caller.wav").status_code == 200       # default: $LOGDIR/sim_scam.wav
+
+
+def test_bare_root_redirects_to_app():
+    c = TestClient(app)
+    r = c.get("/", follow_redirects=False)
+    assert r.status_code == 307 and r.headers["location"] == "/app/"
+    assert c.get("/?sim=1", follow_redirects=False).headers["location"] == "/app/?sim=1"
+    assert c.get("/").status_code == 200 and c.get("/app/").status_code == 200

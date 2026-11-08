@@ -1,6 +1,6 @@
 """Backfire hub: event bus, WS /events, routing store, stubs. Run: uvicorn server.main:app --port 8000"""
 import asyncio, logging, os, re, secrets, time
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
 from fastapi import Depends, HTTPException, Request, FastAPI, WebSocket, WebSocketDisconnect, Body, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -234,6 +234,12 @@ try:
     mount_router(_voip_router)
 except Exception:
     log.exception("voip router not mounted")
+
+@app.get("/", include_in_schema=False)
+def root(request: Request):
+    """Judges type the bare URL: send them to Maria's app (keeps any ?query such as ?sim=1)."""
+    q = request.url.query
+    return RedirectResponse("/app/" + ("?" + q if q else ""), status_code=307)
 
 # Maria's app, same-origin with the hub (phone via tunnel). Mounted last so API routes win.
 _WEB = pathlib.Path(__file__).resolve().parent.parent / "web" / "customer"
