@@ -408,11 +408,11 @@ async def talk(ws: WebSocket, call_id: str):
         if old[0] != ident:
             log.warning("talk %s refused: another device is already talking", call_id[:8])
             await ws.close(code=1013); return        # one talker per call, and it is not you
-        _TALKERS.pop(call_id, None)                  # same device reconnecting: its old socket is replaced
+    _TALKERS[call_id] = (ident, ws)                  # claim the slot BEFORE any await (no window for another device to slip in)
+    if old is not None:                              # same device reconnecting: its old socket is replaced
         try: await old[1].close(1000)
         except Exception: pass
         log.warning("talk %s: replaced the old socket from the same device", call_id[:8])
-    _TALKERS[call_id] = (ident, ws)
     sent = dropped = 0
     reason = "client closed"
     try:
