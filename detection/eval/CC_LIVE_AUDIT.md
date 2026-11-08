@@ -45,8 +45,21 @@ Files: `web/command-center/app.js` (A), `fixture.js` (F), `index.html` (H). Part
 | P2 via risk.update | band and s come from `detection` (`schema.band`), `engine`/`model` from the event | verified in jsdom (TASK-078) | none |
 | customer app (web/customer/*) | no detection numbers, accuracy or model names; voice text is static consent copy | fine | none |
 
-## 3. During a real call
-(pending: record which events arrived and which panels updated, including whether the tunnel viewer gets `transcript.caller` text unredacted: `EVENTS_REDACT` must be off for the command center on the tunnel.)
+## 3. During a real call (judge's-seat QA, eng1, read-only mirror, 08:19-08:21 CT)
+Method: a read-only websocket (never posts) on the hub tunnel `wss://reg-subjects-curriculum-whenever.trycloudflare.com/events`, every event fed to the REAL `web/command-center/app.js` in jsdom; one line per panel change with the wall clock (`$S/jd/mirror2.js`, scratch). jsdom shows DOM text and logic, not pixels or animation timing.
+- **Redaction: OFF for the tunnel viewer.** `transcript.caller` arrived with its text through the tunnel. The tunnel request carries Cloudflare proxy headers, which `server/device.py:37` treats as NOT direct-local, so this was a remote viewer, and it still got the words. (If `EVENTS_REDACT=1` were on the text would be empty.)
+- **A screen that joins mid-call shows nothing for that call** (P4b #119: events for a call it never saw ring are ignored). Call 5921f090 (08:50 joined late): 100+ events counted, no panel moved. This is by design but a judge who opens the page during a call sees the idle state until the next call rings.
+- **Call 6853b298 (rang 08:19:29; full path seen from the ring), panel by panel:**
+| time (wall) | event | what the screen did | lag |
+|---|---|---|---|
+| 08:19:29 | call.incoming, call.routed | headline "Ringing the customer with Live Guard on", sub "+1 512-... · Caller ID not verified" | <1 s |
+| 08:19:37 | user.action (answer), call.answered | "The customer answered. Live Guard hears the caller only." | <1 s |
+| 08:19:46 | first risk.update | "Live Guard is listening · low risk", risk 0.05 | |
+| 08:19:48 | alert.fired | headline "Likely scam: he's asking for gift cards", hero alert class, risk 0.90 "Two beeps sent", rail step 1 lit | 0.4 s after the event |
+| 08:19:50 | user.action + handoff.started | "The decoy took over in the decoy voice", rail step 2, risk 0.95 stage payment, "impersonates extended warranty" | <1 s |
+| 08:19:52 onward | decoy.turn | "The scammer is talking to the decoy in decoy voice", sub "Reply in N ms" per turn (684-808 ms) | |
+- **Odd/wrong, judge-visible:** (1) the first decoy line shows "Reply in 0 ms" (08:19:52): the generated first line reports `latency_ms` 0. (2) A call answered and ended 1.7 s later (58e9ec64) left no stuck state. (3) Between calls the page returns to the idle headline "T-Mobile customers hand a scam call to an AI decoy..." (good).
+- **Not seen yet in this window:** artifacts/haul panel, Money trail (`/intel/chain`), blocklist/campaign panels, restored. Events for the post-call intel chain did arrive on the wire for the earlier call 5921f090 (intel.plan, campaign.updated, intel.agent, intel.proposals, blocklist.updated, 4 intel.action at +107-109 s) but were ignored by the screen because that call never rang here, so the panels they drive are unverified live.
 
 ## Event matrix (TASK-094, eng2, read-only, trunk as of ~06:35 CT; checklist for the Card 2 call)
 Method: grepped every emit/publish site (`server/ voip/ decoy/ detection/ intel/`), the hub bus + WS code (`server/bus.py:35-59`, `server/main.py:61-80`), and the handler table in `web/command-center/app.js:403-708` (dispatch `app.js:805-818`). Not verified on the live hub host (it is not on this machine): the live env flags. **Forwarding rule:** every `bus.publish` goes to every `WS /events` subscriber (`bus.py:43-48`; filter is only `?call_id=`). With `EVENTS_REDACT=1` a remote viewer that is not loopback/paired gets `transcript.caller.text=""` and `artifacts.extracted.artifacts=[]` plus masked phone numbers (`main.py:53-59`, `docs/P1_RUNBOOK.md:81`). Check this is OFF for the command-center tunnel viewer, or the feed shows no caller words and the artifacts panel is empty.
