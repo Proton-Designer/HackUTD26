@@ -222,10 +222,14 @@ async def _maybe_await(x):
 
 @router.get("/voip/webrtc-token", dependencies=[Depends(_require_device)])
 async def webrtc_token(req: Request):
-    try: tok = await telnyx.webrtc_token(os.environ["TELNYX_TELEPHONY_CREDENTIAL_ID"])
-    except Exception as e:
-        log.warning("webrtc token failed: %s", e); raise HTTPException(502, "token unavailable")
-    return {"token": tok.strip()}
+    """JWT when a telephony credential exists; trial accounts can't mint one -> SIP login/password (still behind device auth)."""
+    cred = os.environ.get("TELNYX_TELEPHONY_CREDENTIAL_ID")
+    if cred:
+        try: return {"token": (await telnyx.webrtc_token(cred)).strip()}
+        except Exception as e: log.warning("webrtc token failed (%s); trying SIP login", e)
+    u, pw = os.environ.get("TELNYX_SIP_USER"), os.environ.get("TELNYX_SIP_PASSWORD")
+    if u and pw: return {"login": u, "password": pw}
+    raise HTTPException(502, "token unavailable")
 
 
 # ---------------- TASK-008: handoff (Scammer Get Scammed) ----------------

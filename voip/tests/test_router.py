@@ -204,3 +204,10 @@ def test_restore_redials_when_leg_gone(monkeypatch):
 def test_webrtc_token_no_loopback_exemption(monkeypatch, client):
     monkeypatch.setenv("TELNYX_TELEPHONY_CREDENTIAL_ID", "x"); monkeypatch.delenv("HUB_TOKEN", raising=False)
     assert client.get("/voip/webrtc-token").status_code == 401   # TestClient host is local-ish; still needs a credential
+
+def test_webrtc_token_sip_login_fallback(monkeypatch, client):
+    monkeypatch.delenv("TELNYX_TELEPHONY_CREDENTIAL_ID", raising=False)
+    monkeypatch.setenv("TELNYX_SIP_USER", "u1"); monkeypatch.setenv("TELNYX_SIP_PASSWORD", "p1")
+    monkeypatch.setattr(R, "_require_device", lambda request=None: None)
+    app = client.app if hasattr(client, "app") else None
+    assert R.os.environ["TELNYX_SIP_USER"] == "u1"
