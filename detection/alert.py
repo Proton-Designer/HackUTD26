@@ -12,6 +12,7 @@ ALERT_S = float(os.environ.get("ALERT_S", "0.80"))
 HARD_ASK_S = float(os.environ.get("HARD_ASK_S", "0.60"))   # decision: a hard ask plus moderate risk alerts early (hard asks are rarely innocent)
 REARM_BELOW = 0.80
 QUIET_S = float(os.environ.get("QUIET_S", "180"))
+STICKY_FLOOR = 0.60
 WINDOW_N, WINDOW_S = 6, 60.0
 ALERT_RETRY_S = float(os.environ.get("P2_ALERT_RETRY_S", "20")); ALERT_RETRY_EVERY_S = float(os.environ.get("P2_ALERT_RETRY_EVERY_S", "1.0"))
 HOLD_S, HOLD_N = 10.0, 3     # engine-failed (rules-only) window: hold last LLM-backed s for <=10 s / 3 windows, then decay
@@ -20,7 +21,7 @@ class Call:
     def __init__(self):
         self.utts = deque()          # (t, text)
         self.busy = False; self.dirty = False
-        self.fired = False; self.continued = False; self.armed = False
+        self.fired = False; self.continued = False; self.armed = False; self.sticky = set()   # sticky: hard asks heard since the alert (TASK-062 F6 floor)
         self.prev_band = "low"; self.known_hard = set()
         self.decoy = False; self.muted = False; self.normal_since = None
         self.last = None
@@ -206,6 +207,13 @@ class AlertMachine:
             if seq < c.emit_seq:
                 log.info("drop stale result: older window call=%s seq=%d<%d", cid, seq, c.emit_seq); return
             c.emit_seq = seq
+        if c.sticky and c.fired and not c.continued:
+            # TASK-062 F6: after an alert that heard a HARD ask, later windows may not fall below STICKY_FLOOR: one benign closing line must not look like "legit"
+            # (the hub restores the customer when every score is <0.50 for 10 s). Released by Continue / handoff.restored.
+            r = dict(r)
+            if float(r["s"]) < STICKY_FLOOR:
+                r["s"] = STICKY_FLOOR; r["band"] = schema.band(STICKY_FLOOR)
+            r["asks"] = [a for a in schema.ASKS if a in set(r.get("asks") or []) | c.sticky]
         s, asks = float(r["s"]), set(r.get("asks") or [])
         hard = asks & schema.HARD_ASKS
         chips = [x for x in (r.get("why_chips") or []) if isinstance(x, str)][:4]
@@ -224,10 +232,13 @@ class AlertMachine:
             if not c.fired:
                 if s >= ALERT_S or (hard and s >= HARD_ASK_S):
                     c.fired = True
-                    c.known_hard = set(hard)
+                    c.known_hard = set(hard); c.sticky = set(hard)
                     log.info("alert.fired call=%s level=first src=%s s=%.2f", cid, c.src, s)
                     await self._emit_alert(cid, c, "first", chips)
-            elif c.continued:
+            else:
+                if not c.continued and hard:
+                    c.sticky |= hard          # a soft alert that later hears a hard ask becomes sticky too
+            if c.fired and c.continued:
                 if s < REARM_BELOW:
                     c.armed = True
                 elif c.armed and ((bnd == "critical" and c.prev_band != "critical") or (hard - c.known_hard)):
@@ -245,14 +256,17 @@ class AlertMachine:
             if t == "user.action" and d.get("action") == "continue":
                 log.info("user.action continue seen call=%s", cid)
                 c = self._call(cid)
-                c.continued, c.armed = True, True   # prev_band stays: critical must be a NEW transition after Continue
+                c.continued, c.armed, c.sticky = True, True, set()   # prev_band stays: critical must be a NEW transition after Continue
                 c.known_hard = set(c.last.get("asks", [])) & schema.HARD_ASKS if c.last else set()
                 c.utts.clear(); c.epoch += 1; c.dirty = False; c.cont_t = self.clock(); c.llm, c.llm_t, c.fail_n, c.clean_n = None, 0.0, 0, 0   # also drop the held pre-Continue score (TASK-046 L3); the user saw the alert and chose Continue: score only what is said from now on, so benign talk restores s within a line or two (a new hard ask still fires on its own)
             elif t == "handoff.started":
-                self._call(cid).decoy = True
+                c = self._call(cid); c.decoy = True
+                if c.fired and not c.sticky:
+                    # TASK-062 F6: a SOFT alert (no hard ask heard) clears the pre-handoff lines so a real false alarm can restore; a hard-ask alert keeps them
+                    c.utts.clear(); c.llm, c.llm_t = None, 0.0
             elif t == "handoff.restored":
                 log.info("handoff.restored seen call=%s", cid)
-                c = self._call(cid); c.decoy = False; c.fired = False; c.continued = False; c.armed = False
+                c = self._call(cid); c.decoy = False; c.fired = False; c.continued = False; c.armed = False; c.sticky = set()
                 # restored = judged legit and handed back: like Continue, score only what is said from now on (old scam text must not re-fire 'first'); in-flight results drop (TASK-046 M1)
                 c.utts.clear(); c.epoch += 1; c.dirty = False; c.cont_t = self.clock(); c.llm, c.llm_t, c.fail_n, c.clean_n = None, 0.0, 0, 0; c.prev_band = "low"; c.known_hard = set()
             elif t == "call.ended":

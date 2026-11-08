@@ -123,7 +123,8 @@ def test_s_can_fall_after_fast_path():
     r.say("pay with gift cards now")             # fast path fires, llm 0.2 floored to quick s
     r.say("goodbye", dt=100)
     s_vals = [d["s"] for t, d in r.events if t == "risk.update"]
-    assert s_vals[-1] == 0.1 and max(s_vals) >= 0.8
+    # TASK-062 F6: a hard ask (gift_card) was heard, so later windows keep the 0.60 floor until Continue/restored (used to fall to 0.1)
+    assert s_vals[-1] == 0.60 and max(s_vals) >= 0.8
 
 def test_partial_fast_path_fires_once_and_final_does_not_double():
     r = Rig([R(0.3)])
@@ -209,3 +210,31 @@ def test_muted_call_rearms_on_a_partial_rules_hit():
     assert r.m._call("c1").muted
     r.t += 5; asyncio.run(r.m.on_partial("c1", {"text": "please read me your social security number"}))
     assert r.alerts() == ["first"] and not r.m._call("c1").muted
+
+def _scores(r): return [d["s"] for t, d in r.events if t == "risk.update"]
+
+def test_f6_hard_ask_alert_keeps_a_floor_after_a_benign_closing_line():
+    """TASK-062 F6 (A, real call 499a20d2): after a hard-ask alert one benign line must not drop s below 0.60, also during the decoy handoff."""
+    r = Rig([R(0.95, ["ssn"]), R(0.05), R(0.05), R(0.05)])
+    r.say("read me your social security number"); assert r.alerts() == ["first"]
+    r.say("thanks, goodbye", dt=100); r.ev("handoff.started"); r.say("ok", dt=100); r.say("hello?", dt=100)   # dt=100: the ask has left the 60 s window
+    sc = _scores(r); assert sc[0] >= 0.82 and min(sc[1:]) >= 0.60 and 0.60 in sc
+    last = [d for t, d in r.events if t == "risk.update"][-1]
+    assert last["band"] != "low" and "ssn" in last["asks"]
+
+def test_f6_soft_alert_clears_window_on_handoff_so_restore_is_possible():
+    """(B) a soft alert (no hard ask) is not sticky: handoff.started clears the window and benign lines score low."""
+    r = Rig([R(0.85), R(0.05), R(0.05)])
+    r.say("this is your bank, we noticed odd activity"); assert r.alerts() == ["first"]
+    r.ev("handoff.started"); assert not r.m._call("c1").utts
+    r.say("ok"); r.say("hello?")
+    assert max(_scores(r)[1:]) < 0.50
+
+def test_f6_floor_releases_after_continue_and_restored():
+    """(C) Continue and handoff.restored reset the floor."""
+    r = Rig([R(0.95, ["ssn"]), R(0.05), R(0.05)])
+    r.say("read me your ssn"); r.ev("user.action", action="continue"); r.say("thanks")
+    assert _scores(r)[-1] == 0.05
+    r2 = Rig([R(0.95, ["ssn"]), R(0.05)])
+    r2.say("read me your ssn"); r2.ev("handoff.started"); r2.ev("handoff.restored"); r2.say("thanks")
+    assert _scores(r2)[-1] == 0.05
