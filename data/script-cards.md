@@ -1,8 +1,18 @@
 # Backfire: Judge Script Cards
 
-**How to use (read this once):** You are the scammer. Call the scam line, wait for "hello," then read your card out loud, one line at a time. Pause after each line and let the customer answer. When you reach the payment step, give the callback number, website and wallet exactly as written. Blanks (____) are filled in by the team before judging.
+**How to use (read this once):** You are the scammer. Call the scam line, wait for "hello," then read your card out loud, one line at a time. Pause after each line and let the customer answer. **Read the whole card, at least through the one-time-code request (line 3).** When you reach the payment step, give the callback number, website and wallet exactly as written. Blanks (____) are filled in by the team before judging.
 
 All scripts are synthetic. No real people.
+
+<div style="page-break-after: always;"></div>
+
+# Judge card (use this one)
+
+## You are: the fraud team at the customer's bank (trimmed Card 2, 3 lines)
+
+1. **"Hi, this is the fraud team at your bank. Someone's draining your account right now. To protect your savings, you need to move them to a safe account. And don't tell anyone at the branch."**
+2. **"Our secure line is 1-888-555-0123, and the transfer portal is backfire-demo dot example."**
+3. **"Open your banking app and send the $1,800 by Zelle to refunds dot dept at backfire dash demo dot example. That's the safe account."** (Say it last: it triggers the bank ending.)
 
 <div style="page-break-after: always;"></div>
 
