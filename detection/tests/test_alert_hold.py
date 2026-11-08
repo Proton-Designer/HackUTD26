@@ -92,3 +92,14 @@ def test_continue_mid_flight_drops_stale_result():
         await t
     asyncio.run(scenario())
     assert len(r.ev) == n_before
+
+
+def test_late_final_of_pre_continue_audio_is_dropped():
+    r = Rig([("ok", R(0.95, asks=["gift_cards"])), ("ok", R(0.95, asks=["gift_cards", "otp"]))])
+    r.say()
+    n = len(r.ev); r.t += 1; t_audio = r.t
+    r.user("continue"); r.t += 6                      # STT lagged: the pre-Continue utterance finalizes 6 s later
+    asyncio.run(r.m.on_final("c1", {"text": "pay with gift cards", "_t_end": t_audio - 0.5}))
+    assert len(r.ev) == n and not r.m.calls["c1"].utts
+    asyncio.run(r.m.on_final("c1", {"text": "new line", "_t_end": r.t}))   # audio after Continue still counts
+    assert len(r.ev) > n

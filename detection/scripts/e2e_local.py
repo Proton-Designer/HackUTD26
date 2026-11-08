@@ -31,8 +31,8 @@ async def main():
     env.update(HUB_DB=f"{tmp}/hub.db", HUB_URL=f"http://localhost:{HUB}", P2_ENGINE=os.environ.get("P2_ENGINE", "cloud"))
     py = str(ROOT / ".venv/bin/python")
     logf = open(f"{tmp}/p2.log", "w")
-    procs = [subprocess.Popen([py, "-c", HUB_BOOT], cwd=ROOT, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL),
-             subprocess.Popen([py, "-m", "uvicorn", "detection.app:app", "--port", str(P2)], cwd=ROOT, env=env, stdout=logf, stderr=subprocess.STDOUT)]
+    procs = [subprocess.Popen([py, "-c", HUB_BOOT], cwd=ROOT, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True),
+             subprocess.Popen([py, "-m", "uvicorn", "detection.app:app", "--port", str(P2)], cwd=ROOT, env=env, stdout=logf, stderr=subprocess.STDOUT, start_new_session=True)]
     ok = False
     try:
         async with httpx.AsyncClient() as h:
@@ -70,6 +70,6 @@ async def main():
         ok = not missing and saw and alert is not None
         print("PASS" if ok else f"FAIL missing={missing} saw={saw}")
     finally:
-        for p in procs: p.terminate()
+        from detection.scripts.acceptance import kill_procs; kill_procs(procs)
     sys.exit(0 if ok else 1)
 asyncio.run(main())

@@ -63,6 +63,19 @@ def hub_boot(ids):
     pubs = "".join(f"bus.publish('call.incoming', '{c}', {{'from': '+15555550123', 'to': '+15555550100', 'attestation': 'none', 'scam_id_score': 0.5}})\n" for c in ids)
     return f"import uvicorn\nfrom server.main import app\nfrom server import bus\n{pubs}uvicorn.run(app, port={HUB}, log_level='warning')\n"
 
+def kill_procs(procs):
+    """terminate each child's whole process group (they run in their own session), then SIGKILL stragglers."""
+    import signal
+    for p in procs:
+        try: os.killpg(p.pid, signal.SIGTERM)
+        except Exception: pass
+    for p in procs:
+        try: p.wait(timeout=3)
+        except Exception:
+            try: os.killpg(p.pid, signal.SIGKILL)
+            except Exception: pass
+
+
 class Loop:
     """hub + P2 + event recorder for one engine."""
     def __init__(self, engine, ids):
@@ -76,8 +89,9 @@ class Loop:
         env.update(HUB_DB=f"{self.tmp}/hub.db", HUB_URL=f"http://localhost:{HUB}", P2_ENGINE=self.engine)
         self.env = env
         self.log = open(f"{self.tmp}/p2.log", "w")
-        self.procs = [subprocess.Popen([PY, "-c", hub_boot(self.ids)], cwd=ROOT, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL),
-                      subprocess.Popen([PY, "-m", "uvicorn", "detection.app:app", "--port", str(P2)], cwd=ROOT, env=env, stdout=self.log, stderr=subprocess.STDOUT)]
+        self.procs = [subprocess.Popen([PY, "-c", hub_boot(self.ids)], cwd=ROOT, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True),
+                      subprocess.Popen([PY, "-m", "uvicorn", "detection.app:app", "--port", str(P2)], cwd=ROOT, env=env, stdout=self.log, stderr=subprocess.STDOUT, start_new_session=True)]
+        import atexit; atexit.register(kill_procs, self.procs)   # leak guard even on crash/SystemExit
         self.h = httpx.AsyncClient()
         for _ in range(60):
             try:
@@ -93,7 +107,7 @@ class Loop:
         self.lt = asyncio.create_task(listen()); await asyncio.sleep(0.5)
     async def stop(self):
         self.lt.cancel(); await self.h.aclose()
-        for p in self.procs: p.terminate()
+        kill_procs(self.procs)
     def ev(self, cid, typ=None): return [e for e in self.events if e["call_id"] == cid and (typ is None or e["type"] == typ)]
     async def run_call(self, cid, wav, post_continue_after=None):
         """Stream the WAV in real time; returns t0. post_continue_after = seconds into the WAV for POST /user/action continue."""

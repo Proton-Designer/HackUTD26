@@ -23,7 +23,7 @@ class Call:
         self.prev_band = "low"; self.known_hard = set()
         self.decoy = False; self.muted = False; self.normal_since = None
         self.last = None
-        self.llm = None; self.llm_t = 0.0; self.fail_n = 0; self.clean_n = 0; self.epoch = 0     # last LLM-backed result, its time, consecutive failed windows
+        self.llm = None; self.llm_t = 0.0; self.fail_n = 0; self.clean_n = 0; self.epoch = 0; self.cont_t = 0.0     # last LLM-backed result, its time, consecutive failed windows
 
 class AlertMachine:
     def __init__(self, emit=None, detect=None, clock=time.time, engine=None):
@@ -62,6 +62,9 @@ class AlertMachine:
             c = self._call(call_id)
             if c.muted:
                 return
+            te = utt.get("_t_end")
+            if te and c.cont_t and te < c.cont_t:
+                log.info("drop late final: audio ended before Continue call=%s", call_id); return   # STT lag: a pre-Continue utterance must not re-enter the cleared window
             now = self.clock()
             c.utts.append((now, str(utt.get("text", ""))))
             while len(c.utts) > WINDOW_N or (c.utts and now - c.utts[0][0] > WINDOW_S):
@@ -180,7 +183,7 @@ class AlertMachine:
                 c = self._call(cid)
                 c.continued, c.armed = True, True   # prev_band stays: critical must be a NEW transition after Continue
                 c.known_hard = set(c.last.get("asks", [])) & schema.HARD_ASKS if c.last else set()
-                c.utts.clear(); c.epoch += 1; c.dirty = False   # the user saw the alert and chose Continue: score only what is said from now on, so benign talk restores s within a line or two (a new hard ask still fires on its own)
+                c.utts.clear(); c.epoch += 1; c.dirty = False; c.cont_t = self.clock()   # the user saw the alert and chose Continue: score only what is said from now on, so benign talk restores s within a line or two (a new hard ask still fires on its own)
             elif t == "handoff.started":
                 self._call(cid).decoy = True
             elif t == "handoff.restored":

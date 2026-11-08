@@ -105,7 +105,7 @@ async def handle_utterance(call_id, uid, pcm, t_end=None):
     await hub.emit("transcript.caller", call_id, utt)
     if on_final:
         try:
-            await on_final(call_id, utt)
+            await on_final(call_id, dict(utt, _t_end=t_end) if t_end else utt)   # _t_end (wall clock of endpoint) is internal, never emitted to the hub
         except Exception:
             log.exception("on_final failed (ignored, fail-open)")
 
