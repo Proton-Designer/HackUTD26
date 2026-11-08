@@ -6,3 +6,6 @@ __pycache__/
 
 # Backfire agent comms: per-machine identity (P1|P2|P3|P4)
 .backfire-pipeline
+
+# hub latency log
+logs/

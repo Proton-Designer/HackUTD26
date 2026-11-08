@@ -98,3 +98,22 @@ def test_app_mounted_same_origin():
     c = TestClient(app)
     assert c.get("/app/").status_code == 200
     assert c.get("/healthz").json()["ok"]
+
+
+def test_latency_and_status(tmp_path, monkeypatch):
+    from server import ops
+    monkeypatch.setattr(ops, "LATENCY_LOG", tmp_path / "lat.jsonl")
+    ops.reset()
+    bus.publish("call.incoming", "L1", {"from": "+15555550123"})
+    bus.publish("call.routed", "L1", {"decision": "LIVE_GUARD", "reason": "x"})
+    bus.publish("alert.fired", "L1", {})
+    bus.publish("user.action", "L1", {"action": "scammer_get_scammed"})
+    bus.publish("handoff.started", "L1", {})
+    c = TestClient(app)
+    m = c.get("/demo/latency").json()["metrics"]
+    assert {"route_ms", "alert_ms", "handoff_ms"} <= set(m)
+    assert len((tmp_path / "lat.jsonl").read_text().splitlines()) == 3
+    s = c.get("/demo/status").json()
+    assert s["hub"] == "up" and "P2 /detect" in s["pipelines"] and "HUB_TOKEN_set" in s["flags"]
+    assert "HUB_TOKEN" not in str(s.get("flags", {}).values())
+    assert "<table>" in c.get("/demo/status?format=html").text

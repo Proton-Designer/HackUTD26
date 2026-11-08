@@ -1,10 +1,11 @@
 """Backfire hub: event bus, WS /events, routing store, stubs. Run: uvicorn server.main:app --port 8000"""
 import asyncio, logging, os, time
+from fastapi.responses import HTMLResponse
 from fastapi import HTTPException, Request, FastAPI, WebSocket, WebSocketDisconnect, Body, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import pathlib
-from . import bus, db, routing, replay
+from . import bus, db, routing, replay, ops
 
 log = logging.getLogger("hub")
 app = FastAPI(title="Backfire hub (Simulated carrier network)")
@@ -115,11 +116,23 @@ def protection_log():
 def protection_undo(body: dict = Body(...)):
     return {"ok": db.undo(body.get("undo_token", ""))}
 
+@app.get("/demo/latency")
+def demo_latency():
+    return ops.latency_summary()
+
+@app.get("/demo/status")
+def demo_status(request: Request, format: str = ""):
+    """Integration readiness: routers mounted, remote P2/P3/P4 probes, flags (never values), DB counts."""
+    s = ops.status(app)
+    if format == "html" or (format != "json" and "text/html" in request.headers.get("accept", "")):
+        return HTMLResponse(ops.status_html(s))
+    return s
+
 @app.post("/demo/reset")
 def demo_reset(request: Request):
     _auth(request.headers.get("x-hub-token"))
     t0 = time.time()
-    db.reset_all(); bus.reset(); CALLER_BY_CALL.clear(); DECOY_CALLS.clear(); ingested.clear()
+    db.reset_all(); bus.reset(); ops.reset(); CALLER_BY_CALL.clear(); DECOY_CALLS.clear(); ingested.clear()
     return {"ok": True, "seconds": round(time.time() - t0, 3)}
 
 @app.post("/demo/replay")

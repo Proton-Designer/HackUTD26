@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# Start the Backfire hub (+ mounted routers) and a cloudflared quick tunnel; print the public URL.
+# Usage: scripts/run_hub            env: HUB_PORT=8000 DEMO_MODE=1 HUB_TOKEN=... NO_TUNNEL=1 P2_BASE/P3_BASE/P4_BASE/VOIP_BASE
+# The tunnel URL is EPHEMERAL (changes each run). A stable URL needs a cloudflared named tunnel (`cloudflared tunnel login`
+# + a Cloudflare domain/account) -> NEEDS LEAD. This script never changes Telnyx config; it only prints the command for the lead.
+set -u
+cd "$(dirname "$0")/.."
+PORT="${HUB_PORT:-8000}"
+PY=python3; [ -x .venv-hub/bin/python ] && PY=.venv-hub/bin/python
+LOGDIR=logs; mkdir -p "$LOGDIR"
+pids=()
+cleanup() { for p in "${pids[@]:-}"; do [ -n "$p" ] && kill "$p" 2>/dev/null; done; }
+trap cleanup EXIT INT TERM
+
+if curl -fsS -m 1 "http://127.0.0.1:$PORT/healthz" >/dev/null 2>&1; then
+  echo "port $PORT already serves a hub; not starting another (stop it or set HUB_PORT)"; exit 1
+fi
+"$PY" -m uvicorn server.main:app --host 0.0.0.0 --port "$PORT" >"$LOGDIR/hub.log" 2>&1 &
+pids+=($!)
+for _ in $(seq 1 30); do curl -fsS -m 1 "http://127.0.0.1:$PORT/healthz" >/dev/null 2>&1 && break; sleep 0.5; done
+curl -fsS -m 1 "http://127.0.0.1:$PORT/healthz" >/dev/null 2>&1 || { echo "hub failed to start; see $LOGDIR/hub.log"; tail -5 "$LOGDIR/hub.log"; exit 1; }
+echo "hub up:      http://127.0.0.1:$PORT   (status: /demo/status, latency: /demo/latency, Maria's app: /app/)"
+
+PUBLIC=""
+if [ "${NO_TUNNEL:-}" != "1" ]; then
+  if command -v cloudflared >/dev/null; then
+    cloudflared tunnel --no-autoupdate --url "http://127.0.0.1:$PORT" >"$LOGDIR/tunnel.log" 2>&1 &
+    pids+=($!)
+    for _ in $(seq 1 40); do
+      PUBLIC=$(grep -Eo 'https://[a-z0-9-]+\.trycloudflare\.com' "$LOGDIR/tunnel.log" | head -1); [ -n "$PUBLIC" ] && break; sleep 0.5
+    done
+  else
+    echo "cloudflared not installed (brew install cloudflared); hub is local only"
+  fi
+fi
+if [ -n "$PUBLIC" ]; then
+  echo "public URL:  $PUBLIC   (ephemeral; changes every run)"
+  echo "Maria's app: $PUBLIC/app/"
+  echo "Telnyx webhook (LEAD runs; replace <APP_ID> with the Call Control app id, webhook path per voip/):"
+  echo "  curl -sS -X PATCH https://api.telnyx.com/v2/call_control_applications/<APP_ID> -H \"Authorization: Bearer \$TELNYX_API_KEY\" -H 'Content-Type: application/json' -d '{\"webhook_event_url\":\"$PUBLIC/telnyx/webhook\"}'"
+elif [ "${NO_TUNNEL:-}" != "1" ]; then
+  echo "no tunnel URL yet; see $LOGDIR/tunnel.log"
+fi
+echo "Ctrl-C to stop."
+wait
