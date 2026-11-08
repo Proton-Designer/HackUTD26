@@ -8,7 +8,8 @@ All HTTP/WS paths hang off the P1 hub base URL (public tunnel in demo). Audio ev
 - `GET /routing/lookup?from=+1555...` -> `{"decision":"NORMAL|BLOCKED_BACKFIRE|LIVE_GUARD","reason":"...","attestation":"A|B|C|none"}` in under 50 ms. Optional `&attestation=A`.
 - `POST /user/action` `{call_id, action}` -> publishes `user.action`. `{"ok":true}`
 - `POST /intel/ingest` (P1 stub, logs only; P4 later) `{call_id, scammer_transcript, artifacts[]}` -> `{"ok":true,"stub":true}`
-- `GET /protection-log` -> `{"blocked":[{number,reason,ts,undo_token}],"calls":[...]}`; `POST /protection-log/undo {undo_token}` -> `{"ok":true}`
+- `GET /protection-log` -> `{"blocked":[{number,reason,ts,undo_token}],"calls":[{call_id,from_number,decision,reason,ts}]}` (`decision` = NORMAL|BLOCKED_BACKFIRE|LIVE_GUARD, `ts` unix seconds, newest first, max 50); `POST /protection-log/undo {undo_token}` -> `{"ok":true}`
+- `GET /app/` serves `web/customer/` static (same origin as the hub, for the phone via tunnel).
 - `GET /healthz` -> `{"ok":true}`
 
 ## P2 detection
@@ -17,7 +18,7 @@ All HTTP/WS paths hang off the P1 hub base URL (public tunnel in demo). Audio ev
 
 ## P3 decoy
 - `WSS /decoy/{call_id}`: Telnyx media-streaming protocol, bidirectional. **P1 is the client**: after handoff it sends `connected`, `start` (with `streamSid`/`stream_id`, `call_id` as custom parameter and in the path), then `media` frames caller->decoy; P3 returns `media` (PCMU 8 kHz base64), `mark`, `clear`. P1 relays them to the caller's leg.
-- `POST /voice/enroll` `{recording (base64 or multipart), consent_version}` -> `{"voice_id":"..."}`; emits `voice.enrolled`.
+- `POST /voice/enroll` JSON body `{"recording": "<base64 of the audio bytes, no data: prefix>", "mime": "audio/webm" | "audio/ogg" (as recorded by MediaRecorder), "consent_version": "v1"}` -> `{"voice_id":"..."}`; emits `voice.enrolled`.
 - `DELETE /voice/{voice_id}` -> `{"ok":true}`; emits `voice.deleted`.
 
 ## P4

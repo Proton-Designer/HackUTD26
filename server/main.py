@@ -2,6 +2,8 @@
 import asyncio, logging, os, time
 from fastapi import HTTPException, Request, FastAPI, WebSocket, WebSocketDisconnect, Body, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+import pathlib
 from . import bus, db, routing, replay
 
 log = logging.getLogger("hub")
@@ -131,3 +133,8 @@ if os.environ.get("DEMO_MODE") == "1":
     @app.on_event("startup")
     async def _auto_replay():
         asyncio.create_task(replay.run(None, 1.0, loop=True))
+
+# Maria's app, same-origin with the hub (phone via tunnel). Mounted last so API routes win.
+_WEB = pathlib.Path(__file__).resolve().parent.parent / "web" / "customer"
+if _WEB.is_dir():
+    app.mount("/app", StaticFiles(directory=str(_WEB), html=True), name="customer-app")

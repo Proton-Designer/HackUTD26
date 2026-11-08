@@ -91,3 +91,8 @@ def test_emergency_never_blocked():
         db.add_confirmed("911")
     db.q("INSERT INTO confirmed_scammers VALUES('911','t','x',0)")  # even if forced in
     assert routing.decide("911")["decision"] == "NORMAL"
+
+def test_app_mounted_same_origin():
+    c = TestClient(app)
+    assert c.get("/app/").status_code == 200
+    assert c.get("/healthz").json()["ok"]
