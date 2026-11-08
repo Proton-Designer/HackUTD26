@@ -202,7 +202,8 @@ def test_sim_call_helpers():
 def test_voip_mounted_in_single_process():
     from server import ops
     s = ops.status(app)["pipelines"]
-    assert s["voip"]["mounted"] is True and s["P3 /decoy"]["mounted"] is False   # /decoy-echo is not P3
+    assert s["voip"]["mounted"] is True
+    assert s["P3 /decoy"].get("stand_in") is True or s["P3 /decoy"]["mounted"] is False   # voip's /decoy alias is the stand-in persona, not P3; /decoy-echo is not P3
     paths = [getattr(r, "path", "") for r in app.routes]
     assert paths[-2:] == ["/command-center", "/app"] or set(paths[-2:]) == {"/command-center", "/app"}   # static mounts stay last
 

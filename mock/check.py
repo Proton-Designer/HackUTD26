@@ -31,7 +31,9 @@ SCHEMA = {
  "voice.enrolled": {"voice_id": str, "consent_version": str},
  "voice.deleted": {"voice_id": str},
 }
-OPTIONAL = {"call.ended": {"legit"}, "intel.action": {"gate_status", "scope", "approval", "reason", "evidence"}, "blocklist.updated": {"active", "reason"},
+OPTIONAL = {"call.ended": {"legit"}, "artifacts.extracted": {"source"},
+            "campaign.updated": {"status", "new", "linked_via", "sightings", "independent_sightings", "poisoning_attempt_seen", "n_indicators", "calling_numbers", "strong_indicators", "immunity"},
+            "injection.denied": {"kind", "target", "source", "attempted_poisoning"}, "intel.lookup": {"kind", "status", "reason", "simulated", "expires", "newly_registered", "chain"}, "intel.action": {"gate_status", "scope", "approval", "reason", "evidence"}, "blocklist.updated": {"active", "reason"},
             "intel.plan": {"steps", "inputs"}, "intel.agent": {"engine", "model", "plan", "n_proposals", "n_baseline_added", "error"}, "intel.proposals": {"engine", "actions"}}
 TRACE_ONLY = {"intel.plan", "intel.agent", "intel.proposals"}
 ARTIFACT_KINDS = {"instruction_to_ai", "callback_phone", "domain", "url", "wallet", "payment_handle", "gift_card_brand", "bank", "remote_app", "impersonated_org", "script_tags"}

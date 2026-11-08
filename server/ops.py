@@ -134,6 +134,8 @@ def status(app):
         futs = {n: ex.submit(_probe, _remote_base(env)) for n, (_, env) in EXPECTED.items()}
         for n, (prefix, env) in EXPECTED.items():
             names[n] = {"mounted": any(p.startswith(prefix) for p in paths), "remote": futs[n].result()}
+            if n == "P3 /decoy" and names[n]["mounted"] and not os.environ.get("P3_DECOY_URL") and any(p.startswith("/decoy-standin/") for p in paths):
+                names[n]["stand_in"] = True   # /decoy/{id} is voip's stand-in persona alias, not the real P3
     try:
         counts = {"confirmed_scammers": len(db.list_confirmed()), "calls": len(db.list_calls())}
         for tbl in ("campaign_numbers", "trusted"):
