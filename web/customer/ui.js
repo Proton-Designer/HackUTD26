@@ -40,10 +40,14 @@
   // ---- protection log ----
   const fmt = n => /^\+1\d{10}$/.test(n || "") ? `+1 (${n.slice(2, 5)}) ${n.slice(5, 8)}-${n.slice(8)}` : (n || "");
   async function renderProtection() {
+    paintProtection();   // local state first: the screen is never blank while the hub answers (UI review bug 4)
     if (HUB) {
       try { const d = await hub("GET", "/protection-log"); state.blocked = d.blocked || []; state.calls = (d.calls || []).length; }
       catch (e) { console.log("[backfire] protection-log unavailable", String(e)); }
     }
+    paintProtection();
+  }
+  function paintProtection() {
     const ul = $("blockedList"); ul.replaceChildren();
     state.blocked.forEach(b => {
       const li = document.createElement("li"); const d = document.createElement("div");

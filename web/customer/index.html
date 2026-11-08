@@ -23,6 +23,8 @@ if (!Element.prototype.replaceChildren) Element.prototype.replaceChildren = func
   window.addEventListener("unhandledrejection", function (e) { try { console.log("[backfire] rejected:", e.reason && e.reason.message || e.reason); } catch (x) {} });
 })();
 </script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -60,7 +62,7 @@ if (!Element.prototype.replaceChildren) Element.prototype.replaceChildren = func
       <p id="alertTag" class="alert-tag" hidden></p>
       <ul id="chips" class="chips"></ul>
       <div class="alert-actions">
-        <button class="big gets" id="btnGets"><span class="b-main">Fire Back</span><span class="b-sub">Backfire takes the call in your voice</span></button>
+        <button class="big gets" id="btnGets"><span class="b-main">Fire Back</span><span class="b-sub">Backfire talks to them in your voice</span></button>
         <div class="pair">
           <button class="big outline" id="btnContinue">Continue</button>
           <button class="big outline danger" id="btnHang">Hang up</button>
@@ -75,7 +77,7 @@ if (!Element.prototype.replaceChildren) Element.prototype.replaceChildren = func
     <div id="talkBox" class="talk" hidden>
       <p class="talk-title">You're on the call</p>
       <div class="talk-row">
-        <button class="mic" id="micBtn" aria-pressed="false" aria-label="Microphone on. Tap to mute">🎤</button>
+        <button class="mic" id="micBtn" aria-pressed="false" aria-label="Microphone on. Tap to mute"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
         <div class="meter" aria-hidden="true"><i id="talkLevel"></i></div>
         <span id="micDot" class="dot idle" role="img" aria-label="Not sending" title="Not sending"></span>
       </div>
@@ -103,6 +105,7 @@ if (!Element.prototype.replaceChildren) Element.prototype.replaceChildren = func
     <div class="ended-only">
       <h1 id="endedTitle">Call ended</h1>
       <p class="lead" id="endedMsg"></p>
+      <ul id="summary" class="summary" hidden aria-label="Call summary"></ul>
     </div>
     <div class="stats" aria-label="Your protection so far">
       <div><b id="statCalls">0</b><span>Calls handled</span></div>

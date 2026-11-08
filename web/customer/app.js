@@ -21,7 +21,7 @@
   const DEBUG = qs.has("debug");
   window.BF = window.BF || {}; BF.hub = HUB; BF.onEventRef = null;
   // footer tells the truth about the mode: demo replay / recorded replay / simulated call / live call (Telnyx)
-  BF.footer = () => { const f = document.getElementById("src"); if (f) f.textContent = !HUB ? "Demo replay" : BF.replay ? "Replay · recorded demo" : BF.sim ? "Simulated call" : "Live call · Telnyx"; };
+  BF.footer = () => { const f = document.getElementById("src"); if (f) f.parentNode.hidden = !qs.has("debug"); if (f) f.textContent = !HUB ? "Demo replay" : BF.replay ? "Replay · recorded demo" : BF.sim ? "Simulated call" : "Live call · Telnyx"; };
   // Phone-free sim mode (?sim=1 or hub flag SIM_MODE): no Telnyx login, the page rings/answers from hub events and plays the caller audio itself (sim.js). Fails soft to false.
   BF.modeP = qs.has("sim") ? Promise.resolve({ sim: true }) : qs.has("talk") ? Promise.resolve({ listen: true, talk: true }) : qs.has("listen") ? Promise.resolve({ listen: true }) : HUB ? fetch(HUB + "/demo/status?format=json").then(r => r.json()).then(j => { const f = (j && j.flags) || {}; if (typeof f.CUSTOMER_NAME === "string") { try { document.title = "Backfire \u00b7 " + (f.CUSTOMER_NAME ? f.CUSTOMER_NAME + "\u2019s phone" : "phone"); } catch (e) {} } return { sim: !!f.SIM_MODE, listen: f.MARIA_LEG === "listen" || f.MARIA_LEG === "talk", talk: f.MARIA_LEG === "talk" }; }).catch(() => ({})) : Promise.resolve({});
   BF.simP = BF.modeP.then(m => !!(m.sim || m.listen));   // true = no Telnyx login (phone-free sim, or listening mode where Maria's leg is not a SIP client)
@@ -117,7 +117,7 @@
   function endCall(msg) {
     $("active").dataset.handoff = ""; $("handoffMsg").hidden = true; $("alertBox").hidden = true; BF.resumed = false; clearTimeout(st.handT); stopRing(); unlockScreen(); { const k = $("keepOpen"); if (k) k.hidden = true; }
     { const n = $("actedMsg"); if (n) n.hidden = true; }
-    clearInterval(st.timer); st.answered = false; show("ended"); { const missed = /^Missed/.test(msg || ""); $("endedTitle").textContent = missed ? "Missed call" : "Call ended"; $("endedMsg").textContent = missed ? "You did not answer. Backfire is still watching your calls." : (msg || ""); }
+    clearInterval(st.timer); st.answered = false; setBadge("watching"); renderSummary(msg); show("ended"); { const missed = /^Missed/.test(msg || ""); $("endedTitle").textContent = missed ? "Missed call" : "Call ended"; $("endedMsg").textContent = missed ? "You did not answer. Backfire is still watching your calls." : (msg || ""); }
     $("phone").dataset.state = "ended";
   }
 
@@ -130,7 +130,7 @@
     const d = ev.data || {};
     switch (ev.type) {
       case "call.incoming":
-        st.callId = ev.call_id; st.alerted = false;
+        st.callId = ev.call_id; st.alerted = false; st.risk = 0; st.chips = []; st.handed = false; st.haul = 0; st.lastFrom = String(d.from || "").replace(/\D/g, "").slice(-10);
         $("active").dataset.handoff = ""; $("handoffMsg").hidden = true; $("alertBox").hidden = true; $("idleMsg").hidden = false; setBadge("watching");   // a new call never starts on the previous call's handoff/alert screen
         $("callerNumber").textContent = fmtNum(d.from);
         $("scamLabel").hidden = !(d.scam_id_score >= 0.5);
@@ -145,7 +145,8 @@
       case "alert.fired":
         if (d.level === "first" && st.alerted) break;      // re-alert only on level: realert
         st.alerted = true; setBadge("alert"); renderChips(d.why_chips);
-        { const tg = $("alertTag"); const e = String(d.engine || d.source || "").toLowerCase(); if (tg) { tg.textContent = !e ? "" : /device|local|on-?device/.test(e) ? "Checked on this phone" : "Checked by Backfire's server"; tg.hidden = !tg.textContent; } }
+        { const tg = $("alertTag"), n = (d.why_chips || []).length, s = Math.max(+d.s || 0, st.risk || 0), tier = s >= 0.85 ? "High risk" : s >= 0.6 ? "Elevated risk" : n >= 2 ? "High risk" : "Possible risk";
+          if (tg) { tg.textContent = tier + (n ? " \u00b7 " + n + " signal" + (n > 1 ? "s" : "") : ""); tg.hidden = false; } st.chips = (d.why_chips || []).map(ACR); }
         $("alertBox").hidden = false; $("idleMsg").hidden = true; $("handoffMsg").hidden = true; $("active").dataset.handoff = "";
         twoBeeps(); break;
       case "user.action": {                               // first tap wins on the hub; show an action taken on ANOTHER phone
@@ -153,12 +154,28 @@
         const who = d.by || d.device || d.client || "another phone", n = $("actedMsg");
         if (!mine && n && d.action) { n.textContent = ({ continue: "Continue", scammer_get_scammed: "Fire Back", hang_up: "Hang up" }[d.action] || d.action) + " was chosen on " + (/^another/.test(who) ? who : "the " + who) + "."; n.hidden = false; }
         break; }
-      case "handoff.started": clearTimeout(st.handT); showHandoff(); break;
+      case "handoff.started": clearTimeout(st.handT); st.handed = true; showHandoff(); break;
+      case "risk.update": st.risk = Math.max(st.risk || 0, +d.s || 0); break;
+      case "artifacts.extracted": st.haul = (d.artifacts || d.items || []).length || +d.n_artifacts || st.haul || 0; break;
+      case "blocklist.updated": if (st.lastFrom && String(d.number || "").replace(/\D/g, "").slice(-10) === st.lastFrom) { const b = $("sumBlocked"); if (b) { b.textContent = "Blocked for you"; b.className = "ok"; } } break;
       case "handoff.failed": failHandoff(d.reason); break;   // F3: the hub could not hand the call to Backfire: she is still on the call
       case "handoff.restored": st.alerted = false; clearTimeout(st.handT); twoBeeps(); setBadge("watching");   // F5: a later alert must fire again; F20: she hears/feels that she is back on the call
         $("alertBox").hidden = true; $("idleMsg").hidden = true; setHandoffUI("restored"); break;
       default: break;
     }
+  }
+  // Call-ended summary (UI review: the ended screen wasted the payoff). Filled from what this page saw during the call.
+  function renderSummary(msg) {
+    const box = $("summary"); if (!box) return;
+    const secs = st.t0 && st.answered !== undefined ? Math.max(0, Math.floor((Date.now() - st.t0) / 1000)) : 0;
+    const rows = [];
+    if (st.callId && !/^Missed|declined/.test(msg || "")) rows.push(["Duration", String(Math.floor(secs / 60)).padStart(2, "0") + ":" + String(secs % 60).padStart(2, "0"), ""]);
+    if ($("callerNumber").textContent) rows.push(["Caller", $("callerNumber").textContent, ""]);
+    if (st.alerted || (st.chips || []).length) rows.push(["Red flags", (st.chips || []).join(", ") || "Scam signs detected", "warn"]);
+    if (st.handed) rows.push(["Backfire", "Took the call in your voice" + (st.haul ? " \u00b7 saved " + st.haul + " detail" + (st.haul > 1 ? "s" : "") + " about the scammer" : ""), "ok"]);
+    if (st.handed || st.alerted) rows.push(["Number", "Checking\u2026", "", "sumBlocked"]);
+    box.replaceChildren(...rows.map(([k, v, cls, id]) => { const li = document.createElement("li"); const a = document.createElement("span"); a.textContent = k; const b = document.createElement("b"); b.textContent = v; if (cls) b.className = cls; if (id) b.id = id; li.append(a, b); return li; }));
+    box.hidden = !rows.length;
   }
   function ring() { if (st.callId && !st.answered && $("phone").dataset.state !== "ringing") { $("phone").dataset.state = "ringing"; show("incoming"); startRing(); } }
   // Handoff screen states (F3): pending -> done ("Backfire has the call") | failed (still on the call). data-view picks the layout.

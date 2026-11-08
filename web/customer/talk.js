@@ -57,14 +57,15 @@
     starting = false;
   }
   function stopMic() { try { proc && proc.disconnect(); src && src.disconnect(); } catch (e) {} try { stream && stream.getTracks().forEach(x => x.stop()); } catch (e) {} try { ctx && ctx.close(); } catch (e) {} proc = src = stream = ctx = null; n = 0; sum = cnt = t = 0; stats.mic = "off"; }
-  function render0() { const b = $("micBtn"); if (b) { b.textContent = "🎤"; b.setAttribute("aria-label", "Tap to turn the microphone on"); } }
+  const ICON = { mic: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>', off: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 9V6a3 3 0 0 1 6 0v5M15 13.5a3 3 0 0 1-5.6 1.5M5.5 11a6.5 6.5 0 0 0 10.6 5M18.5 11a6.4 6.4 0 0 1-.4 2.2M12 17.5V21M3 3l18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>', shield: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5 4.5 5.5v5.7c0 4.6 3.1 8.6 7.5 10.3 4.4-1.7 7.5-5.7 7.5-10.3V5.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>' };
+  function render0() { const b = $("micBtn"); if (b) { b.innerHTML = ICON.mic; b.setAttribute("aria-label", "Tap to turn the microphone on"); } }
   function hint(s) { const h = $("talkHint"); if (h) h.textContent = s; }
   function render() {
     const b = $("micBtn"); if (!b) return;
     b.disabled = handed; b.setAttribute("aria-pressed", String(muted));
-    b.textContent = handed ? "🛡" : muted ? "🔇" : "🎤";
+    b.innerHTML = handed ? ICON.shield : muted ? ICON.off : ICON.mic;
     b.setAttribute("aria-label", handed ? "Backfire is talking for you" : muted ? "Muted. Tap to unmute" : "Microphone on. Tap to mute");
-    if (handed) hint("Backfire is talking to the caller for you."); else if (muted) hint("You are muted. The caller can't hear you."); else if (stats.mic === "on") hint("Use earphones so the caller doesn't hear themselves.");
+    if (handed) hint("Backfire is talking to the caller for you."); else if (muted) hint("You are muted. The caller can't hear you."); else if (stats.mic === "on" || /Backfire is talking/.test(($("talkHint") || {}).textContent || "")) hint("Use earphones so the caller doesn't hear themselves.");
   }
   const TAB = Math.random().toString(36).slice(2), lock = k => { try { const j = JSON.parse(localStorage.getItem(k) || "null"); return j && j.tab !== TAB && Date.now() - j.ts < 4000; } catch (e) { return false; } };
   const hold = k => { try { localStorage.setItem(k, JSON.stringify({ tab: TAB, ts: Date.now() })); } catch (e) {} };
