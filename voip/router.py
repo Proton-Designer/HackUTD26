@@ -58,7 +58,7 @@ def attestation_of(p: dict) -> str:
         if isinstance(src, dict):
             for k in ATT_KEYS:
                 v = src.get(k)
-                if isinstance(v, str) and v.strip().upper()[:1] in ("A", "B", "C"): return v.strip().upper()[:1]
+                if isinstance(v, str) and v.strip().upper() in ("A", "B", "C"): return v.strip().upper()
     return "none"
 
 def _key_paths(o, pre="", depth=0):
