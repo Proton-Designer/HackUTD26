@@ -24,6 +24,11 @@ from fastapi import Body, Depends, FastAPI, HTTPException, Request, WebSocket, W
 from . import core, voice
 
 log = logging.getLogger("p3.decoy")
+_p3 = logging.getLogger("p3")   # nobody configures logging under uvicorn, so p3 INFO lines (per-turn latency) were dropped
+if not _p3.handlers:
+    _h = logging.StreamHandler()
+    _h.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s", "%H:%M:%S"))
+    _p3.addHandler(_h); _p3.setLevel(logging.INFO); _p3.propagate = False
 app = FastAPI(title="Backfire P3 decoy")
 CAP_S = 20 * 60
 BARGE_IN_MS = 300
@@ -82,6 +87,17 @@ async def voice_delete(voice_id: str):
     return {"ok": True}   # voice.deleted: published by the hub's proxy (server/voice.py)
 
 
+_STT = None
+
+
+def _shared_stt(make):
+    """One STT client for the process (P2's get_stt logs its fallback probe once, not per call)."""
+    global _STT
+    if _STT is None:
+        _STT = make()
+    return _STT
+
+
 class Session:
     """One decoy conversation on one call."""
 
@@ -101,7 +117,8 @@ class Session:
         self.fillers: list[list[bytes]] = []
         from detection.stream import Segmenter
         from detection.stt import get_stt, mulaw_decode
-        self.seg, self.stt, self.decode = Segmenter(), get_stt(), mulaw_decode
+        self.seg, self.stt, self.decode = Segmenter(), _shared_stt(get_stt), mulaw_decode
+        self.stt_ms = 0
         self.stream_id = None
 
     def ev(self, type_, data):
@@ -137,19 +154,25 @@ class Session:
         except Exception:
             pass
 
-    async def say(self, text: str, latency_ms: int = 0, record: bool = False):
+    async def say(self, text: str, latency_ms: int = 0, record: bool = False) -> int:
+        """Speaks text sentence by sentence. Returns ms until the first sentence's audio was queued (TTS time)."""
+        t0, first_ms = time.monotonic(), 0
         for sentence in [s for s in __import__("re").split(r"(?<=[.!?])\s+", text) if s.strip()]:
             if not self.active:
-                return
+                return first_ms
             self.play(await self.voice.frames(sentence))
+            first_ms = first_ms or int((time.monotonic() - t0) * 1000)
         self.ev("decoy.turn", {"speaker": "decoy", "text": text, "latency_ms": latency_ms})
         if record:
             self.history.append({"role": "assistant", "content": text})
+        return first_ms
 
     # -------------------------------------------------- turns
     async def on_utterance(self, pcm: np.ndarray):
         try:
+            t_stt = time.monotonic()
             text = (await self.stt.transcribe(pcm)).strip()
+            self.stt_ms = int((time.monotonic() - t_stt) * 1000)
         except Exception as e:
             log.warning("STT failed: %s", type(e).__name__)
             return
@@ -171,10 +194,14 @@ class Session:
                     self.play(random.choice(self.fillers))
                 self.history.append({"role": "user", "content": f"<caller>{core.clean(heard)}</caller>"})
                 out = await core.chat([{"role": "system", "content": core.SYSTEM}] + self.history[-16:])
+                llm_ms = int((time.monotonic() - t0) * 1000)
                 out = out or "I'm sorry, could you say that again? The line is terrible."
                 hist, spoken = core.guard(out, self.persona, self.given, self.ev)
                 self.history.append({"role": "assistant", "content": hist})
-                await self.say(spoken, int((time.monotonic() - t0) * 1000))
+                tts_ms = await self.say(spoken, llm_ms)
+                # Caller stopped talking -> first decoy audio queued = stt + llm + tts (the segmenter's end-of-speech wait is extra).
+                log.info("turn %s: stt=%dms llm=%dms tts_first=%dms total=%dms voice=%s chars=%d", self.call_id, self.stt_ms,
+                         llm_ms, tts_ms, self.stt_ms + llm_ms + tts_ms, "clone" if self.voice.cloned else "synthetic", len(spoken))
                 if time.time() - self.t0 > CAP_S:
                     await self.say(core.GOODBYE)
                     self.active = False
