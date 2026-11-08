@@ -43,6 +43,11 @@ STT_TIMEOUT_S, LLM_TIMEOUT_S = 6.0, 7.0
 DECOY_ENDPOINT_MS = int(__import__("os").environ.get("DECOY_ENDPOINT_MS", "800"))
 HOLD_MAX_S = 4.0           # longest we hold a ready reply for a caller who keeps talking
 REDO_MAX = 2               # re-think at most twice per turn when the caller adds more
+# Polite wrap-up (P1/Ayman, #86 e): once we have how they get paid (handle / site / wallet) plus one more artifact type,
+# play along for a few more turns, then say goodbye and close; the hub hangs up the caller (ended_by=decoy).
+STRONG_KINDS = {"payment_handle", "domain", "url", "wallet"}
+WRAP_TURNS = int(__import__("os").environ.get("DECOY_WRAP_TURNS", "3"))
+WRAP_LINE = "Okay, I've got all of that written down. I'm going to go take care of it right now. Bye bye."
 FILLER_AFTER_S = 0.6       # play a filler only if Nemotron hasn't answered by then
 STALLS = ["Hold on, let me find my glasses.", "Oh, sorry, the line went funny. Say that again?"]
 
@@ -154,6 +159,8 @@ class Session:
         self.arts: dict[str, dict] = {}      # haul so far, deduped (incremental extraction during the call)
         self.extracted_upto = 0
         self.extracting = False
+        self.turns = 0
+        self.wrap_at: int | None = None
         self.stream_id = None
 
     def ev(self, type_, data):
@@ -268,6 +275,19 @@ class Session:
             self.busy = True
             asyncio.create_task(self.reply())
 
+    async def finish(self, line: str, why: str):
+        """Say goodbye, let it play out, then end: the WS closes and the hub hangs up the caller (ended_by=decoy)."""
+        await self.hold_floor()
+        await self.say(line)
+        while self.active and time.monotonic() < self.speaking_until + 0.6:
+            await asyncio.sleep(0.05)
+        log.info("decoy %s wrapping up: %s", self.call_id, why)
+        self.active = False
+        try:
+            await self.ws.close()
+        except Exception:
+            pass
+
     def caller_talking(self) -> bool:
         """The caller is mid-utterance right now (and it isn't just our own voice coming back)."""
         return self.seg.cur is not None and not self.speaking()
@@ -297,6 +317,11 @@ class Session:
             k = json.dumps(a, sort_keys=True)
             if k not in self.arts:
                 self.arts[k] = a; new += 1
+        kinds = {a.get("kind") for a in self.arts.values()}
+        if self.wrap_at is None and kinds & STRONG_KINDS and len(kinds) >= 2:
+            self.wrap_at = self.turns + WRAP_TURNS
+            log.info("haul %s: payment details + %d types (%s); wrapping up after %d more turns", self.call_id,
+                     len(kinds), ",".join(sorted(k for k in kinds if k)), WRAP_TURNS)
         return new
 
     async def extract_now(self, tries: int = 1) -> bool:
@@ -346,12 +371,14 @@ class Session:
                 hist, spoken = core.guard(out, self.persona, self.given, self.ev)
                 self.history.append({"role": "assistant", "content": hist})
                 tts_ms = await self.say(spoken, llm_ms)
+                self.turns += 1
                 # Caller stopped talking -> first decoy audio queued = stt + llm + tts (the segmenter's end-of-speech wait is extra).
                 log.info("turn %s: stt=%dms llm=%dms tts_first=%dms total=%dms voice=%s chars=%d", self.call_id, self.stt_ms,
                          llm_ms, tts_ms, self.stt_ms + llm_ms + tts_ms, "clone" if self.voice.cloned else "synthetic", len(spoken))
                 if time.time() - self.t0 > CAP_S:
-                    await self.say(core.GOODBYE)
-                    self.active = False
+                    await self.finish(core.GOODBYE, "time cap")
+                elif self.wrap_at is not None and self.turns >= self.wrap_at:
+                    await self.finish(WRAP_LINE, "got the payment details")
         except Exception:
             log.exception("turn failed (decoy keeps listening)")
         finally:
