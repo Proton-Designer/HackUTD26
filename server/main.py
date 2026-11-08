@@ -211,6 +211,8 @@ def _observe(ev):
         DECOY_CALLS.add(cid)
     elif t == "handoff.restored":
         DECOY_CALLS.discard(cid)
+        for k in [k for k in _ALERTS if k[0] == str(cid)]:   # F5: after a restore a genuinely new 'first' alert must be able to fire
+            _ALERTS.pop(k, None)
     elif t == "call.ended" and cid in DECOY_CALLS and CALLER_BY_CALL.get(cid) and intel_api is None and d.get("legit") is not True:  # stub only when intel is not mounted (intel.observe blocks the caller otherwise)
         num = CALLER_BY_CALL[cid]
         if num in db.EMERGENCY or db.has("trusted", num):  # a (possibly spoofed) trusted number must not poison her blocklist

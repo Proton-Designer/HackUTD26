@@ -675,3 +675,17 @@ def test_answer_and_decline_only_while_ringing():
     assert act("RING3", "answer").status_code == 409                                   # a blocked call never rings
     assert act("RING3", "bogus").json()["ok"] is False
     assert TestClient(app).post("/user/action", json={"call_id": "RING1", "action": "answer"}).status_code == 401
+
+
+def test_f5_restore_clears_alert_dedupe_so_new_first_alert_fires(monkeypatch):
+    from server import main as m
+    monkeypatch.delenv("PIPELINE_TOKEN", raising=False); m._ALERTS.clear()
+    c = TestClient(app)
+    first = lambda: c.post("/events", json={"type": "alert.fired", "call_id": "F5", "data": {"level": "first", "why_chips": ["x"]}}).json()
+    n = lambda: len([e for e in bus.history if e["type"] == "alert.fired" and e["call_id"] == "F5"])
+    assert first() == {"ok": True} and first().get("duplicate") and n() == 1
+    bus.publish("handoff.started", "F5", {}); assert first().get("duplicate") and n() == 1   # still deduped during the handoff
+    bus.publish("handoff.restored", "F5", {})
+    assert first() == {"ok": True} and n() == 2                                                # new first alert after restore
+    other = c.post("/events", json={"type": "alert.fired", "call_id": "F5b", "data": {"level": "first", "why_chips": []}}).json()
+    assert other == {"ok": True}
