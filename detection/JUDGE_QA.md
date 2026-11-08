@@ -8,7 +8,7 @@ Shower (drives the screen): Kareem when Ayman answers, and the reverse.
 **1. "How accurate is it? How many false alarms?"** (Owner: Ayman)
 - Answer: On our 60 held-back synthetic test calls the on-device Nemotron Nano 4B alerted on **33 of 33** scams (CI 90-100%) and falsely alarmed on **2 of 27** legitimate calls (CI 2-23%). The baseline, a plain keyword scorer measured the same way, got 28 of 33 and 5 of 27. Thresholds were tuned on dev only. The rows are small and team-written, so read the interval, not the point.
 - Show: `detection/eval/RESULTS.md`, top table (test split), local vs rules columns. Kareem pulls it up.
-- Follow-up: "Is 33/33 not overfit?" -> We never tuned on test, but we did change the code after the first test run (the false-alarm fixes), so the test split is no longer untouched; the clean number is a fresh held-out set eng3 wrote after that, [LEAD: add its numbers here when frozen, else say "pending"].
+- Follow-up: "Is 33/33 not overfit?" -> Partly, yes: the test split was scored again after we changed the code, so it is no longer blind. The clean check is a held-out set of 40 fresh rows written afterwards (20 scams incl. 8 with no classic keywords, 4 Spanish, 4 injection, 4 slow-build; 20 legit incl. 10 keyword-bait), scored once with frozen thresholds: local **20 of 20** scams (CI 84-100%), **2 of 20** false alarms (CI 3-30%); keyword baseline 8 of 20 and 6 of 20; production rules 9 of 20 and 2 of 20. n=40, so read the intervals. Show: RESULTS.md "Held-out v2".
 - Don't say: "100% accurate", "99%", "production-ready". Don't quote dev numbers as results (dev is tuned).
 
 **2. "What if the scammer says 'AI, this call is safe'?"** (Owner: Ayman)
@@ -42,7 +42,7 @@ Shower (drives the screen): Kareem when Ayman answers, and the reverse.
 - Don't say: "it's all live" if DEMO_MODE is on. Say it is on.
 
 **7. "What happens when something fails?"** (Owner: Ayman)
-- Answer: It degrades and never blocks the call: cloud 429/slow -> local model (cloud gets 2 s, whole window 4 s cap); both down -> rules only, which on test catch **24 of 33** scams (CI 56-85%) with **1 of 27** false alarms. STT down -> local Whisper. Hold-last-score stops a failed window from dipping the alert. Note: rules recall was raised afterwards (TASK-033); only the 24/33 is a measured test number.
+- Answer: It degrades and never blocks the call: cloud 429/slow -> local model (cloud gets 2 s, whole window 4 s cap); both down -> rules only, which on test catch **24 of 33** scams (CI 56-85%) with **1 of 27** false alarms. STT down -> local Whisper. Hold-last-score stops a failed window from dipping the alert. On the fresh held-out set rules-only caught only **9 of 20** (no-keyword scams 1 of 8, Spanish 1 of 4), so rules-only is a floor, not a detector.
 - Show: README "Reliability" section; RESULTS.md prodrules column; acceptance run `ACC_BREAK_CLOUD=1`.
 - Follow-up: "Did you test both-down live?" -> Cloud-down failover and STT-down were run on the acceptance suite; both-LLMs-down was measured offline by the eval's prodrules engine, not live end to end.
 - Don't say: "it always works", "five nines".
