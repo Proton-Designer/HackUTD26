@@ -6,3 +6,6 @@
 - eng2: first alert = s>=ALERT_S(0.80) OR a hard ask with s>=0.60 (HARD_ASK_S), because gift-card/OTP asks are rarely innocent and ≤2 s latency matters; realert only on a NEW transition into critical or a NEW hard ask after Continue, re-armed when s<0.80; after handoff.restored the first-alert state resets; quiet switch-off (180 s of s<0.40) only when no alert fired on the call.
 - Acceptance suite uses TTS-synthesized calls cached in testdata/acc (1.5 MB) and one hub+P2 pair with parallel call_ids, because ask-first latency is run alone first so other calls don't inflate it (eng2).
 - Supervised run.sh (restart 2 s, Ctrl-C x2 stops), /healthz wiring fields (detection/health.py), scripts/concurrency.py, RUNBOOK.md (eng2).
+- eng1: DEMO_MODE cache = exact normalized key, then char n-gram cosine >= 0.92 with an asks-subset check and the rule floor, because real STT changes punctuation/case but a looser match could serve a lower-risk answer.
+- eng1: recorder windows mirror alert.py (last 6 utterances), because the cache key is the exact window text.
+- eng1: when the token bucket is empty a window gets rules only (no queueing past 0.5 s), because late alerts are worse than a rule-floor score.
