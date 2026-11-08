@@ -1,4 +1,4 @@
-import base64, json, time
+import base64, json, pathlib, time
 import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives import serialization
@@ -496,3 +496,27 @@ def test_talk_mode_skips_hello_and_never_dials(monkeypatch):
     assert calls == [] and R.CALLS[sid]["listen"] is True and R.listen_mode() and R.talk_mode()
     ans = [e for e in bus.history if e["call_id"] == sid and e["type"] == "call.answered"]
     assert ans[0]["data"] == {"by": "maria", "via": "talk"}
+
+
+def test_persona_prefers_magpie_and_falls_back_to_say(tmp_path, monkeypatch):
+    from voip import persona as P
+    monkeypatch.setenv("DECOY_LINES_DIR", str(tmp_path)); monkeypatch.setenv("NVIDIA_API_KEY", "k"); monkeypatch.setenv("DECOY_VOICES_DIR", str(tmp_path / "nov"))
+    monkeypatch.setattr(P, "_magpie_py", lambda: pathlib.Path("/fake/python")); monkeypatch.setattr(P.shutil, "which", lambda x: "/bin/" + x)
+    ran = []
+    def fake_run(cmd, **k):
+        ran.append(pathlib.Path(cmd[0]).name)
+        class R: returncode = 0
+        if cmd[0] == "/fake/python":
+            if MAG_FAIL[0]: R.returncode = 2
+            else: open(cmd[2], "wb").write(b"\xff" * 1600)
+        elif cmd[0] == "say": open(cmd[cmd.index("-o") + 1], "wb").write(b"x" * 2000)
+        else: open(cmd[-1], "wb").write(b"\xff" * 1600)
+        return R()
+    monkeypatch.setattr(P.subprocess, "run", fake_run)
+    import pathlib as _pl; MAG_FAIL = [False]
+    assert P.generate_hello() is not None and ran == ["python"]            # Magpie used, no 'say'
+    assert P._tag().startswith("magpie:")
+    f = tmp_path / "hello.ulaw"; (tmp_path / "hello.key").unlink(); f.unlink(); MAG_FAIL[0] = True; ran.clear()
+    assert P.generate_hello() is not None and "say" in ran                 # Magpie failed -> say fallback
+    assert (tmp_path / "hello.key").read_text().endswith("|fb")
+    ran.clear(); P.generate_hello(); assert ran == []                      # fallback reused for FALLBACK_RETRY_S, Magpie not hammered

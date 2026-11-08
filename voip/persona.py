@@ -2,7 +2,7 @@
 instead of echoing the scammer. Synthetic voice (macOS say + ffmpeg -> raw PCMU 8 kHz), generated once into logs/decoy_lines/ (gitignored).
 Served as WS /decoy-standin/{call_id} speaking the same frames as P3 (media events with base64 PCMU payload). Env DECOY_STANDIN=persona|echo
 (default persona); server/relay.py picks the URL (see wip/eng2-relay-persona.patch.txt). Fail open: if audio can't be generated, it stays silent."""
-import asyncio, base64, hashlib, json, logging, os, pathlib, shutil, subprocess
+import asyncio, base64, hashlib, json, logging, os, pathlib, shutil, subprocess, time
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 log = logging.getLogger("voip.persona")
@@ -28,25 +28,60 @@ VOICE_PREF = ("Grandma (English (US))", "Samantha")
 def _voice() -> str: return os.environ.get("DECOY_VOICE") or VOICE_PREF[0]
 def _rate() -> str: return os.environ.get("DECOY_RATE", "135")
 
+def _magpie_py():
+    """decoy/.venv's python (has the Riva client), only if Magpie is usable here: key set, venv present, not disabled."""
+    py = ROOT / "decoy" / ".venv" / "bin" / "python"
+    return py if (py.is_file() and os.environ.get("NVIDIA_API_KEY") and os.environ.get("DECOY_TTS", "magpie").lower() != "say") else None
+
+def _tag() -> str:
+    """Which voice we ask for: the enrolled clone (decoy/voices) if present, else synthetic Magpie, else macOS say."""
+    if _magpie_py():
+        try:
+            d = pathlib.Path(os.environ.get("DECOY_VOICES_DIR") or (ROOT / "decoy" / "voices"))
+            m = json.loads((d / "voices.json").read_text()); vid = max(m, key=lambda k: m[k]["ts"])
+            if (d / f"{vid}.wav").exists(): return f"magpie-clone:{vid}"
+        except Exception: pass
+        return "magpie:" + os.environ.get("DECOY_SYNTH_VOICE", "Magpie-Multilingual.EN-US.Aria.Calm")
+    return f"say:{_voice()}|{_rate()}"
+
+FALLBACK_RETRY_S = 600   # a 'say' fallback produced while Magpie was failing is reused this long before Magpie is retried
+
 def _key(text: str) -> str:
-    """Cache key: text + voice + rate. Files are rebuilt whenever any of them changes."""
-    return hashlib.sha1(f"{_voice()}|{_rate()}|{text}".encode()).hexdigest()[:16]
+    """Cache key: text + voice engine/tag. Files are rebuilt whenever any of them changes."""
+    return hashlib.sha1(f"{_tag()}|{text}".encode()).hexdigest()[:16]
+
+def _synth_magpie(text: str, f: pathlib.Path) -> bool:
+    py = _magpie_py()
+    if not py: return False
+    try:
+        tmp = f.with_suffix(".tmp")
+        r = subprocess.run([str(py), str(ROOT / "voip" / "magpie_tts.py"), str(tmp), text], capture_output=True, timeout=30)
+        if r.returncode == 0 and tmp.is_file() and tmp.stat().st_size >= FRAME_BYTES:
+            tmp.replace(f); return True
+        log.warning("Magpie TTS failed (rc=%s); falling back to say", r.returncode)
+    except Exception as e:
+        log.warning("Magpie TTS error (%s); falling back to say", type(e).__name__)
+    f.with_suffix(".tmp").unlink(missing_ok=True); return False
 
 def _synth(text: str, f: pathlib.Path, force=False) -> bool:
-    """say -> ffmpeg -> raw PCMU 8 kHz at f (+ f.key). Cached by _key. False when unavailable."""
-    kf = f.with_suffix(".key")
-    if not force and f.is_file() and f.stat().st_size >= FRAME_BYTES and kf.is_file() and kf.read_text() == _key(text): return True
-    if not (shutil.which("say") and shutil.which("ffmpeg")): return f.is_file() and f.stat().st_size >= FRAME_BYTES   # keep any older file
+    """NVIDIA Magpie (preferred) else macOS say -> raw PCMU 8 kHz at f (+ f.key). Cached by _key. False when unavailable."""
+    kf = f.with_suffix(".key"); key = _key(text); have = f.is_file() and f.stat().st_size >= FRAME_BYTES
+    if not force and have and kf.is_file():
+        k = kf.read_text()
+        if k == key: return True
+        if k == key + "|fb" and time.time() - kf.stat().st_mtime < FALLBACK_RETRY_S: return True
+    if _synth_magpie(text, f):
+        kf.write_text(key); return True
+    if not (shutil.which("say") and shutil.which("ffmpeg")): return have   # keep any older file
     aiff = f.with_suffix(".aiff")
     try:
         for v in dict.fromkeys([_voice(), VOICE_PREF[1]]):
             r = subprocess.run(["say", "-v", v, "-r", _rate(), "-o", str(aiff), text], capture_output=True)
             if r.returncode == 0 and aiff.is_file() and aiff.stat().st_size > 1000: break
         else: raise RuntimeError("say failed for every voice")
-        # soften for the phone: gentle low-pass, light normalisation, 150 ms of lead-in silence
         subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(aiff), "-af", "lowpass=f=3400,highpass=f=120,loudnorm=I=-20:TP=-3,adelay=150|150",
                         "-ar", "8000", "-ac", "1", "-f", "mulaw", str(f)], check=True)
-        kf.write_text(_key(text))
+        kf.write_text(key + ("|fb" if _magpie_py() else ""))   # fallback while Magpie is configured: retry Magpie after FALLBACK_RETRY_S
         return True
     except Exception as e:
         log.warning("persona audio %s not generated: %s", f.name, e); return False
