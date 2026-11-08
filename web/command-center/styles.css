@@ -542,3 +542,8 @@ h1, h2, p { margin: 0; }
 .mt-svg .mt-name.mt-flagged { fill: var(--danger-text); }
 .mt-tile.flagged { box-shadow: inset 0 0 0 1px rgba(224, 49, 63, 0.35); }
 .mt-tile.flagged .mt-chip { background: var(--danger); color: #fff; }
+/* shown only when the screen is NOT on live hub data (#112) */
+.mode-badge { font-size: 13px; font-weight: 800; letter-spacing: 0.04em; padding: 6px 12px; border-radius: 999px; white-space: nowrap; }
+.mode-badge[hidden] { display: none; }
+.mode-badge.replay { background: #fff6e6; color: #b45309; box-shadow: inset 0 0 0 1px #f8dcaa; }
+.mode-badge.reconnecting, .mode-badge.connecting { background: #fdecee; color: #c01f2e; box-shadow: inset 0 0 0 1px rgba(224, 49, 63, 0.35); }

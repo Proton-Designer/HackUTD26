@@ -9,8 +9,12 @@
 
   // ---------- config: URL params only, no settings UI ----------
   const qs = new URLSearchParams(location.search);
+  // Served by the hub (https://<hub>/command-center/): live only. It keeps retrying the hub and never falls back to
+  // the replay on its own, so a judged screen can't silently show recorded data (#112). ?src= still overrides.
+  const FROM_HUB = /^https?:$/.test(location.protocol) && /\/command-center\/?(index\.html)?$/.test(location.pathname)
+    && !/\/web\/command-center/.test(location.pathname);
   const CFG = {
-    src: (qs.get('src') || 'auto').toLowerCase(),        // auto | live | mock | fixture
+    src: (qs.get('src') || (FROM_HUB ? 'live' : 'auto')).toLowerCase(), // auto | live | mock | fixture
     server: (qs.get('server') || '').replace(/\/+$/, ''), // P1 base URL, e.g. http://192.168.1.20:8000
     speed: Math.max(0.1, parseFloat(qs.get('speed')) || 1),
     maxGap: Math.max(0.3, parseFloat(qs.get('gap')) || 6), // replay: long silences are squeezed to this many seconds
@@ -55,7 +59,7 @@
   // STIR/SHAKEN level in T-Mobile's words
   const ATTEST = { A: 'Caller Verified', B: 'caller ID partly verified', C: 'caller ID not verified', NONE: 'no caller ID check' };
   const attestWords = a => ATTEST[String(a || 'none').toUpperCase()] || `attestation ${a}`;
-  const TAGLINE = 'T-Mobile customers hand a live scam call to an AI decoy that <em>exposes and blocks the scammer.</em>';
+  const TAGLINE = 'T-Mobile customers hand a scam call to an AI decoy that <em>stops the payout and blocks the scammer.</em>';
   const CALL_EVENTS = new Set(['call.incoming', 'call.routed', 'call.answered', 'call.ended', 'transcript.caller', 'risk.update', 'alert.fired', 'user.action', 'handoff.started', 'handoff.restored', 'decoy.turn', 'decoy.fake_value', 'guardrail.tripped']);
 
   // ---------- helpers ----------
@@ -872,6 +876,7 @@
 
   const RENDER = {
     header() {
+      renderSource(); // the REPLAY / RECONNECTING badge (shown only when not live)
       const el = $('engine');
       if (!el) return; // engine and source pills are off the screen
       const model = S.model;
@@ -1203,17 +1208,13 @@
     step();
   }
 
+  // Live stays clean (no label). Anything that isn't live data says so in the header (#112).
   function renderSource() {
-    const el = $('source');
-    const host = MODE.url.replace(/^wss?:\/\//, '');
-    const m = {
-      connecting: ['', 'CONNECTING', 'looking for the P1 server'],
-      live: ['live', 'LIVE', host],
-      reconnecting: ['reconnecting', 'RECONNECTING', host],
-      replay: ['replay', 'REPLAY', MODE.label],
-    }[MODE.kind];
-    el.className = `source ${m[0]}`;
-    el.innerHTML = `<span class="dot"></span><b>${m[1]}</b><span>${esc(m[2])}</span>`;
+    const el = $('mode-badge');
+    if (!el) return;
+    const t = { replay: 'REPLAY · recorded test call', reconnecting: 'RECONNECTING to the hub…', connecting: 'CONNECTING to the hub…' }[MODE.kind];
+    el.hidden = !t;
+    if (t) { el.textContent = t; el.className = `mode-badge ${MODE.kind}`; }
   }
 
   // ---------- views ----------
@@ -1242,7 +1243,8 @@
       dirty('payoff');
     } catch (err) {
       // hub not reachable (offline replay): the saved snapshot in fixture.js, labelled as a snapshot; live data that stops is labelled stale
-      if (!CHAIN.at && window.BACKFIRE_CHAIN) CHAIN.data = window.BACKFIRE_CHAIN;
+      // the saved snapshot is for the offline replay only; on a live screen the map waits for the hub instead
+      if (!CHAIN.at && window.BACKFIRE_CHAIN && MODE.kind === 'replay') CHAIN.data = window.BACKFIRE_CHAIN;
       CHAIN.live = false;
     } finally {
       CHAIN.busy = false;
