@@ -34,3 +34,18 @@ Owner: eng2. Evidence goes to `voip/API_EVIDENCE.md`; raw logs to `.claude/overn
 
 ## 3. After the first call
 Update API_EVIDENCE.md (payload shapes, winning `target_legs`, attestation location), LANE-eng2.md, and tell the lead which fallbacks were used. Remove `VOIP_ALLOW_UNSIGNED`.
+
+## 4. Live results, 2026-11-08 00:11-00:15 (trial account, automated test calls from the scam line to itself)
+Evidence for call 1: hub `/events` log (`logs/eng2_events_live.log`). Calls 2-3: reported by lead/eng3, NOT in my logs (I restarted the hub; media frame logging only exists from commit 7376280).
+| Check | Status | Evidence |
+|---|---|---|
+| 1 webhook reaches hub (unsigned mode, VOIP_ALLOW_UNSIGNED=1) | VERIFIED | `call.initiated/answered` POSTs 200 through the tunnel; `call.incoming` + `call.routed LIVE_GUARD` emitted |
+| 1b Ed25519 signature | OPEN | no TELNYX_PUBLIC_KEY (portal-only); compensating control added: `GET /calls/{ccid}` must succeed for call.initiated (fail closed) - untested live |
+| 2 attestation | OPEN | `attestation: "none"` for this self-call; payload field location still unverified (needs a real PSTN call from another carrier) |
+| 3 answer with stream params starts ONE stream | VERIFIED (lead) | media WS `/media/<sid>` connected with token. Frame counts / `connected`+`start` shape NOT captured |
+| 4 caller-only audio | OPEN | no frame/track evidence |
+| 5 Maria: dial + WebRTC ring + answer | VERIFIED (eng3, via lead) | needed `connection_id = TELNYX_CALL_CONTROL_APP_ID` (cred-connection id -> 422 10015). eng3's page ring + answer seen |
+| 5b WS after Maria joined | FAILED (call 2) | media WS 502 during my uvicorn restart; cause = restart, not a code bug (unconfirmed) |
+| 6-12 conference keeps stream, handoff, target_legs, leave/join audio, gap, callback rejection, limits | OPEN | blocked: Telnyx disabled outbound/termination on the trial account (D17, balance -0.03), so no further calls |
+Findings to carry: (a) POST /calls needs the Call Control App id; (b) trial credit can't be used for termination; (c) trial allows one Call Control app, so our own dialed legs come back through the same webhook - handled (`call.initiated` acted on only for direction=incoming); (d) webrtc-token on trial returns SIP login (device-gated).
+Next: on the backup account, re-run from check 3 with `TARGET_LEGS=self`, record media frame counts/track, then 6-12.
