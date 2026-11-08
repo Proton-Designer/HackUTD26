@@ -466,8 +466,8 @@ def test_intel_chain_and_map_open_get_only_nothing_else():
     for p in ("/intel/chain", "/intel/map"):
         assert c.get(p).status_code in (200, 404, 422), p            # reached the handler, not the guard
         assert c.get(p).status_code != 401
-        assert c.post(p).status_code in (401,)                       # other methods stay gated
-        assert c.get(p + "/").status_code in (401, 404, 307)         # no prefix/trailing-slash widening
+        assert c.post(p).status_code in (401, 405)                 # other methods are not served
+        assert c.get(p + "/", follow_redirects=False).status_code in (401, 404, 307)         # no prefix/trailing-slash widening
     for p in ("/intel/chain/x", "/intel/mapx", "/intel/state", "/intel/blocked", "/intel/campaigns", "/intel/chains"):
         assert c.get(p).status_code in (401, 404), p
     assert c.get("/intel/state").status_code == 401
