@@ -79,7 +79,7 @@
   "st5v2_foot": "Capital One Nessie sandbox, mock data. T-Mobile actions simulated. Callback Protection: 67M+ warnings (Nov 2026).",
   "s3v4_title": "Nemotron on a laptop caught 33 of 33 test scams",
   "s3v4_next": "Next: Pilot on T-Mobile's call servers, with a Capital One payee-risk feed.",
-  "s3v4_foot": "How we measured: 60 team-written synthetic scripts (33 scam, 27 legit), tuned on a separate dev set. Small sample.\nLocal model on a laptop GPU, standing in for the phone. On a real phone call the alert fired 12 s in.",
+  "s3v4_foot": "How we measured: 60 team-written synthetic scripts (33 scam, 27 legit), tuned on a separate dev set. Small sample. Test set re-scored after later fixes; a separate held-out set of 40 gave 20 of 20 and 1 of 20 false alarms.\nLocal Nemotron Nano 4B on a laptop GPU scores the live call; NVIDIA-hosted Nemotron is the fallback (never scored on our test set). On a real phone call the alert fired 12 s in.",
   "s2v5_title": "One tap turns a scam call into evidence that stops his payout",
   "s2v5_step1": "1\nNetwork sends only the caller's audio",
   "s2v5_step2": "2\nNemotron hears the scam: two beeps",

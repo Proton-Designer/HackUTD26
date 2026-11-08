@@ -34,7 +34,7 @@
   "columns": [
    "",
    "Local Nemotron Nano 4B\n(runs the live demo)",
-   "Keyword rules\n(baseline)"
+   "Our rules-only\nfallback (no AI)"
   ],
   "rows": [
    [
@@ -55,10 +55,10 @@
   ],
   "highlight_col": 1
  },
- "proof_models_note": "Local model on a laptop GPU, standing in for the phone. On a real phone call the alert fired 12 s in.",
+ "proof_models_note": "Local Nemotron Nano 4B on a laptop GPU scores the live call; NVIDIA-hosted Nemotron is the fallback (never scored on our test set). On a real phone call the alert fired 12 s in.",
  "metric_big": "33 of 33",
  "metric_context": "test scams caught, with 2 of 27 look-alike legit calls wrongly flagged",
- "metric_method": "60 team-written synthetic scripts (33 scam, 27 legit), tuned on a separate dev set. Small sample.",
+ "metric_method": "60 team-written synthetic scripts (33 scam, 27 legit), tuned on a separate dev set. Small sample. Test set re-scored after later fixes; a separate held-out set of 40 gave 20 of 20 and 1 of 20 false alarms.",
  "tmobile_line": "Protects before the ring, during the call and after; only the caller is ever analyzed.",
  "nvidia_line": "Nemotron detects, plays the decoy, then an agent plans lookups and proposes blocks.",
  "capitalone_line": "The payout account the decoy captures stops the customer's transfer and flags the mule account.",
