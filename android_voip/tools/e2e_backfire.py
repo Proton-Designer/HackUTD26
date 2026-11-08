@@ -186,8 +186,11 @@ async def main(a):
     ans = await scammer.expect("answer")
     await scammer.remote(ans["sdp"], "answer")
     t_decoy = time.monotonic()
-    await asyncio.sleep(4)
-    check(scammer.loudness_since(t_decoy + 1) > 300, "scammer hears the decoy (echo decoy plays the scammer's tone back)")
+    for _ in range(20):  # the hub's stand-in decoy (persona lines or echo) speaks within a few seconds
+        await asyncio.sleep(0.5)
+        if scammer.loudness_since(t_decoy + 0.5) > 300:
+            break
+    check(scammer.loudness_since(t_decoy + 0.5) > 300, "scammer hears the decoy (hub stand-in: persona lines or echo)")
     types = [e["type"] for e in events]
     check("handoff.started" in types, "handoff.started on the bus")
     check(any(e["type"] == "call.answered" and e["data"].get("by") == "decoy" for e in events), "call.answered by decoy")
@@ -196,6 +199,11 @@ async def main(a):
     await scammer.send({"type": "bye", "to": tr["to"], "callId": call_id, "reason": "remote_hangup"})
     await asyncio.sleep(1)
     check(any(e["type"] == "call.ended" and e["data"].get("ended_by") == "caller" for e in events), "call.ended by caller")
+    # With P4's intel mounted, the block comes from intel after artifacts or its grace period (INTEL_EXTRACT_GRACE, 20 s).
+    for _ in range(60):
+        if any(e["type"] == "blocklist.updated" for e in events):
+            break
+        await asyncio.sleep(0.5)
     check(any(e["type"] == "blocklist.updated" for e in events), "scammer's number added to maria's blocklist")
 
     # 7. scammer calls back -> rejected before ringing

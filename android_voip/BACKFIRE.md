@@ -59,7 +59,8 @@ From the repo root on the laptop (one-time setup: `python3 -m venv .venv-hub && 
 
 ```bash
 # 1. hub + Android routes, reachable from the phones (prints DEVICE PIN)
-HUB_PORT=8000 .venv-hub/bin/python -m uvicorn android_voip.bridge.hub_app:app --host 0.0.0.0 --port 8000
+DECOY_STANDIN=echo HUB_PORT=8000 .venv-hub/bin/python -m uvicorn android_voip.bridge.hub_app:app --host 0.0.0.0 --port 8000
+#    DECOY_STANDIN=echo: P1's persona stand-in only serves Telnyx calls (and needs macOS `say`); the echo serves Android ones
 #    add P3_DECOY_URL=ws://<decoy host> to use the real decoy; unset = the hub's echo decoy
 #    add P2_STT_URL=ws://<p2 host> to stream the caller's audio to detection
 
