@@ -3,13 +3,20 @@
 Paths: POST /telnyx/webhook · WS /media/{call_id}?t=<token> · GET /voip/webrtc-token
 call_id == Telnyx call_session_id. Fail open: no exception here may hang up or block a call."""
 import asyncio, base64, json, logging, os, re, secrets, time
-from fastapi import APIRouter, HTTPException, Request, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, HTTPException, Request, WebSocket, WebSocketDisconnect
 from . import telnyx
 from .relay import Relay, make_p2_sink
 from .security import Limiter, verify_signature
 
 log = logging.getLogger("voip")
 router = APIRouter()
+def _require_device(request: Request):
+    """eng1's pairing-PIN dependency (server.device); fail closed if it cannot be imported."""
+    try:
+        from server import device
+    except Exception:
+        raise HTTPException(503, "device auth unavailable")
+    return device.require_device(request)
 ID_RE = re.compile(r"^[A-Za-z0-9_:.=-]{8,200}$")
 CALL_CAP_S = int(os.environ.get("VOIP_CALL_CAP_S", "300"))
 LIMITER = Limiter(per_caller=int(os.environ.get("VOIP_PER_CALLER", "4")), max_concurrent=int(os.environ.get("VOIP_MAX_CONCURRENT", "5")))
@@ -48,7 +55,12 @@ def _cs_load(s):
     try: return json.loads(base64.b64decode(s or ""))
     except Exception: return {}
 
-def maria_sip_uri(): return f"sip:{os.environ['TELNYX_SIP_USER']}@sip.telnyx.com"
+def maria_sip_uri():
+    u = os.environ.get("TELNYX_SIP_USER")
+    return f"sip:{u}@sip.telnyx.com" if u else None
+
+for _v in ("TELNYX_CRED_CONNECTION_ID", "TELNYX_SIP_USER", "TELNYX_API_KEY"):
+    if not os.environ.get(_v): log.warning("voip: %s not set; Maria cannot be dialed / Telnyx commands will fail (fail open)", _v)
 
 async def _safe(coro, what, sim=False):
     if sim:
@@ -105,7 +117,10 @@ async def on_answered(p):
         conf = await _safe(telnyx.create_conference(st["caller_ccid"], f"bf-{sid[:12]}"), "create_conference", sim)
         st["conf_id"] = ((conf or {}).get("data") or {}).get("id")
         frm = os.environ.get("TELNYX_FROM_NUMBER") or st["from"]  # UNVERIFIED which 'from' Telnyx accepts for SIP dial
-        r = await _safe(telnyx.dial({"connection_id": os.environ["TELNYX_CRED_CONNECTION_ID"], "to": maria_sip_uri(), "from": frm,
+        conn, to = os.environ.get("TELNYX_CRED_CONNECTION_ID"), maria_sip_uri()
+        if not (conn and to) and not sim:
+            log.error("cannot dial Maria: TELNYX_CRED_CONNECTION_ID/TELNYX_SIP_USER missing"); return
+        r = await _safe(telnyx.dial({"connection_id": conn, "to": to, "from": frm,
                                      "client_state": _cs(sid=sid, role="maria"), "timeout_secs": 40}), "dial maria", sim)
         st["maria_ccid"] = ((r or {}).get("data") or {}).get("call_control_id")
         if sim: emit("call.answered", sid, {"by": "maria"}); st["maria_answered"] = True  # simulator has no Maria leg
@@ -117,10 +132,12 @@ async def on_answered(p):
 async def on_hangup(p):
     sid, st, role = _who(p)
     if not st or st["ended"]: return
+    if role == "maria" and st.get("handed_off") and not st.get("restored"): return   # Maria put the phone down after handoff: decoy keeps the caller
     if role == "maria" and not st.get("maria_answered"): return  # Maria never picked up: caller stays with line; no call.ended yet
     st["ended"] = True; LIMITER.release(sid)
     other = st.get("maria_ccid") if role == "caller" else st.get("caller_ccid")
     if other: await _safe(telnyx.hangup(other), "hangup other leg", st.get("sim", False))
+    await _stop_decoy(sid)
     emit("call.ended", sid, {"ended_by": "caller" if role == "caller" else "maria", "duration_s": round(time.time() - st["t0"], 1)})
     r = RELAYS.pop(sid, None)
     if r: await r.close()
@@ -128,6 +145,8 @@ async def on_hangup(p):
 @router.post("/telnyx/webhook")
 async def webhook(req: Request):
     raw = await req.body()
+    global LOOP
+    LOOP = asyncio.get_running_loop()
     sim = is_sim(None, req.headers)
     hub_token = os.environ.get("HUB_TOKEN")   # simulator traffic must also present the hub token when one is set
     if sim and hub_token and not secrets.compare_digest(req.headers.get("x-hub-token", ""), hub_token): raise HTTPException(401, "bad token")
@@ -166,7 +185,7 @@ async def media(ws: WebSocket, call_id: str, t: str = ""):
     async def send_to_caller(frame: dict): await ws.send_text(json.dumps(frame))   # Telnyx media/clear/mark frames back to the caller leg
     st["send_to_caller"] = send_to_caller
     try:
-        if hub: await _maybe_await(hub.open(call_id, send_to_caller))
+        if hub: await _maybe_await(hub.open(call_id, send_to_caller, on_decoy_lost=_decoy_lost))
         else:
             local = RELAYS[call_id] = Relay()
             s = await make_p2_sink(call_id)
@@ -194,13 +213,85 @@ async def _maybe_await(x):
     if asyncio.iscoroutine(x) or isinstance(x, asyncio.Future): return await x
     return x
 
-@router.get("/voip/webrtc-token")
+@router.get("/voip/webrtc-token", dependencies=[Depends(_require_device)])
 async def webrtc_token(req: Request):
-    # Fail closed: this mints a credential that can place calls. Needs HUB_TOKEN match, or explicit dev opt-out VOIP_OPEN_TOKEN=1.
-    hub_token = os.environ.get("HUB_TOKEN")
-    if os.environ.get("VOIP_OPEN_TOKEN") != "1" and not (hub_token and secrets.compare_digest(req.headers.get("x-hub-token", ""), hub_token)):
-        raise HTTPException(401, "bad or missing token")
     try: tok = await telnyx.webrtc_token(os.environ["TELNYX_TELEPHONY_CREDENTIAL_ID"])
     except Exception as e:
         log.warning("webrtc token failed: %s", e); raise HTTPException(502, "token unavailable")
     return {"token": tok.strip()}
+
+
+# ---------------- TASK-008: handoff (Scammer Get Scammed) ----------------
+RESTORE_WINDOW_S = int(os.environ.get("VOIP_RESTORE_S", "30"))
+LOOP = None   # event loop, captured from the webhook so sync bus observers can schedule work
+
+async def _stop_decoy(sid):
+    hub = _hub_relay()
+    if hub:
+        try: await _maybe_await(hub.stop_decoy(sid))
+        except Exception: log.exception("stop_decoy failed")
+
+async def handoff(sid):
+    """Decoy first (no audible gap), then take Maria out of the conference. Her leg is kept (not hung up) for the restore window.
+    Fail open: if the decoy cannot start, Maria stays on the call."""
+    st = CALLS.get(sid); hub = _hub_relay()
+    if not st or st["ended"] or st.get("handed_off") or not hub: return False
+    sim = st.get("sim", False)
+    if not await _maybe_await(hub.start_decoy(sid)):
+        log.warning("handoff aborted for %s: decoy not available (Maria stays)", sid); return False
+    st["handed_off"] = True
+    if st.get("conf_id") and st.get("maria_ccid"):
+        await _safe(telnyx.leave_conference(st["conf_id"], st["maria_ccid"]), "leave maria", sim)
+    deadline = time.time() + RESTORE_WINDOW_S; st["restore_deadline"] = deadline
+    emit("handoff.started", sid, {"restore_deadline": deadline})
+    asyncio.create_task(_restore_expiry(sid, deadline))
+    return True
+
+async def _restore_expiry(sid, deadline):
+    await asyncio.sleep(max(0, deadline - time.time()))
+    st = CALLS.get(sid)
+    if st and st.get("handed_off") and not st.get("restored") and st.get("maria_ccid"):
+        await _safe(telnyx.hangup(st["maria_ccid"]), "hangup maria after restore window", st.get("sim", False))
+
+async def restore(sid):
+    """Below the cut line: bring Maria back before the deadline. Stops the decoy, rejoins her leg."""
+    st = CALLS.get(sid)
+    if not st or st["ended"] or not st.get("handed_off") or st.get("restored") or time.time() > st.get("restore_deadline", 0): return False
+    await _stop_decoy(sid)
+    if st.get("conf_id") and st.get("maria_ccid"):
+        await _safe(telnyx.join_conference(st["conf_id"], st["maria_ccid"]), "rejoin maria", st.get("sim", False))
+    st["restored"] = True
+    emit("handoff.restored", sid, {"restore_deadline": st["restore_deadline"]})
+    return True
+
+async def _decoy_lost(sid):
+    """P3 closed/crashed: the decoy session is over. End the caller's call (ended_by decoy) so the hub blocklists the number."""
+    st = CALLS.get(sid)
+    if not st or st["ended"] or st.get("restored"): return
+    st["ended"] = True; LIMITER.release(sid)
+    sim = st.get("sim", False)
+    for k in ("caller_ccid", "maria_ccid"):
+        if st.get(k): await _safe(telnyx.hangup(st[k]), "hangup after decoy end", sim)
+    emit("call.ended", sid, {"ended_by": "decoy", "duration_s": round(time.time() - st["t0"], 1)})
+
+def _on_bus(ev):
+    """Bus observer: user.action drives the Telnyx side. Sync callback -> schedule on the captured loop."""
+    try:
+        if ev["type"] != "user.action" or LOOP is None: return
+        sid, act = ev["call_id"], ev["data"].get("action")
+        if sid not in CALLS: return
+        if act == "scammer_get_scammed": asyncio.run_coroutine_threadsafe(handoff(sid), LOOP)
+        elif act == "hang_up": asyncio.run_coroutine_threadsafe(_maria_hangup(sid), LOOP)
+    except Exception:
+        log.exception("voip bus observer failed")
+
+async def _maria_hangup(sid):
+    st = CALLS.get(sid)
+    if st and not st.get("handed_off") and st.get("maria_ccid"):   # her WebRTC client normally hangs up itself; belt and braces
+        await _safe(telnyx.hangup(st["maria_ccid"]), "maria hang_up", st.get("sim", False))
+
+try:
+    from server import bus as _b
+    if not any(getattr(f, "__name__", "") == "_on_bus" for f in _b._observers): _b.add_observer(_on_bus)
+except Exception:
+    log.warning("voip: bus observer not registered (hub bus unavailable)")

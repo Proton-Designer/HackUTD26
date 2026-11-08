@@ -2,7 +2,7 @@ import base64, json, time
 import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives import serialization
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
 from voip import router as R, telnyx
 from voip.security import Limiter, verify_signature
@@ -83,21 +83,26 @@ def test_blocked_caller_rejected_before_ring(monkeypatch, client):
     assert client.post("/telnyx/webhook", content=b, headers=sign(b)).status_code == 200
     assert calls == [("reject", "v3:real_abcdef1234")]   # never answered, Maria never dialed
 
-def test_voip_app_mounts_on_hub():
-    from voip.app import app
+def test_hub_mounts_voip():
+    from server.main import app
     paths = set(app.openapi()['paths']) | {getattr(r, 'path', '') for r in app.routes}
     assert "/telnyx/webhook" in paths and "/voip/webrtc-token" in paths and "/healthz" in paths
 
 
-def test_webrtc_token_fails_closed(monkeypatch, client):
+def test_webrtc_token_requires_device(monkeypatch, client):
     async def tok(cid): return "jwt.abc"
     monkeypatch.setattr(telnyx, "webrtc_token", tok); monkeypatch.setenv("TELNYX_TELEPHONY_CREDENTIAL_ID", "x")
-    monkeypatch.delenv("HUB_TOKEN", raising=False); monkeypatch.delenv("VOIP_OPEN_TOKEN", raising=False)
-    assert client.get("/voip/webrtc-token").status_code == 401
-    monkeypatch.setenv("HUB_TOKEN", "s3"); assert client.get("/voip/webrtc-token").status_code == 401
-    assert client.get("/voip/webrtc-token", headers={"x-hub-token": "s3"}).json() == {"token": "jwt.abc"}
-    monkeypatch.delenv("HUB_TOKEN"); monkeypatch.setenv("VOIP_OPEN_TOKEN", "1")
-    assert client.get("/voip/webrtc-token").json() == {"token": "jwt.abc"}
+    from fastapi import HTTPException
+    def deny(request: Request):
+        if request.headers.get("x-device-token") != "ok": raise HTTPException(401, "pair")
+    app = FastAPI(); app.include_router(R.router); app.dependency_overrides[R._require_device] = deny
+    c = TestClient(app)
+    assert c.get("/voip/webrtc-token").status_code == 401
+    assert c.get("/voip/webrtc-token", headers={"x-device-token": "ok"}).json() == {"token": "jwt.abc"}
+
+def test_webrtc_token_real_device_dep_rejects_remote(monkeypatch, client):
+    monkeypatch.setenv("TELNYX_TELEPHONY_CREDENTIAL_ID", "x")
+    assert client.get("/voip/webrtc-token", headers={"cf-ray": "1"}).status_code == 401   # tunnel-style request, no pairing
 
 def test_sim_event_cannot_end_real_call(monkeypatch, client):
     R.CALLS["sess-real-1234567"] = {"caller_ccid": "v3:real_abcdef1234", "from": "+1", "decision": "LIVE_GUARD", "t0": 0, "ended": False, "sim": False}
@@ -110,3 +115,45 @@ def test_duplicate_initiated_does_not_overwrite(client):
     R.CALLS["sess-1234567890"] = {"caller_ccid": "v3:real_abcdef1234", "from": "+1", "decision": "LIVE_GUARD", "t0": 0, "ended": False, "sim": False}
     client.post("/telnyx/webhook", content=wh("call.initiated"), headers={"x-sim-call": "1"})
     assert R.CALLS["sess-1234567890"]["caller_ccid"] == "v3:real_abcdef1234" and R.CALLS["sess-1234567890"]["sim"] is False
+
+
+class FakeRelay:
+    def __init__(s, ok=True): s.ok, s.calls = ok, []
+    async def open(s, cid, send, on_decoy_lost=None): s.calls.append(("open", cid))
+    async def caller_frame(s, cid, f): s.calls.append(("frame", f.get("event")))
+    async def start_decoy(s, cid): s.calls.append(("start_decoy", cid)); return s.ok
+    async def stop_decoy(s, cid): s.calls.append(("stop_decoy", cid))
+    async def close(s, cid): s.calls.append(("close", cid))
+
+import asyncio
+def _state(sim=True, conf=True):
+    return {"caller_ccid": "v3:sim_abcdef123456", "maria_ccid": "v3:sim_maria1234567", "conf_id": "conf-1" if conf else None,
+            "from": "+1", "decision": "LIVE_GUARD", "t0": time.time(), "ended": False, "sim": sim}
+
+def test_handoff_decoy_first_then_events(monkeypatch):
+    fr = FakeRelay(); monkeypatch.setattr(R, "_hub_relay", lambda: fr); R.CALLS["sess-h1-1234567"] = _state()
+    assert asyncio.run(R.handoff("sess-h1-1234567")) is True
+    st = R.CALLS["sess-h1-1234567"]; assert st["handed_off"] and st["restore_deadline"] > time.time() + 25
+    assert [e["type"] for e in bus.history if e["call_id"] == "sess-h1-1234567"] == ["handoff.started"]
+    assert asyncio.run(R.handoff("sess-h1-1234567")) is False   # idempotent
+
+def test_handoff_fails_open_when_decoy_unavailable(monkeypatch):
+    fr = FakeRelay(ok=False); monkeypatch.setattr(R, "_hub_relay", lambda: fr); R.CALLS["sess-h2-1234567"] = _state()
+    assert asyncio.run(R.handoff("sess-h2-1234567")) is False
+    assert not R.CALLS["sess-h2-1234567"].get("handed_off")   # Maria stays on the call
+
+def test_restore_and_decoy_end(monkeypatch):
+    fr = FakeRelay(); monkeypatch.setattr(R, "_hub_relay", lambda: fr); R.CALLS["sess-h3-1234567"] = _state()
+    async def go():
+        await R.handoff("sess-h3-1234567"); ok = await R.restore("sess-h3-1234567"); return ok
+    assert asyncio.run(go()) is True and ("stop_decoy", "sess-h3-1234567") in fr.calls
+    assert "handoff.restored" in [e["type"] for e in bus.history if e["call_id"] == "sess-h3-1234567"]
+    R.CALLS["sess-h4-1234567"] = _state(); R.CALLS["sess-h4-1234567"]["handed_off"] = True
+    asyncio.run(R._decoy_lost("sess-h4-1234567"))
+    ev = [e for e in bus.history if e["call_id"] == "sess-h4-1234567"][-1]
+    assert ev["type"] == "call.ended" and ev["data"]["ended_by"] == "decoy"
+
+def test_maria_hangup_after_handoff_keeps_caller(monkeypatch, client):
+    st = _state(); st.update(handed_off=True, maria_answered=True); R.CALLS["sess-1234567890"] = st
+    client.post("/telnyx/webhook", content=wh("call.hangup", call_control_id="v3:sim_maria1234567"), headers={"x-sim-call": "1"})
+    assert st["ended"] is False
