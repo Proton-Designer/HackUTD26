@@ -122,13 +122,15 @@ def main():
                 if code == 404: check("2", "pairing (hub /pair)", False, "POST /pair is 404", gap="eng1 (TASK-014 hub side not landed)")
                 else: check("2", "pairing screen not needed on localhost (dev exemption); /pair answers", code in (200, 401), f"/pair -> {code}")
             shot("02-idle")
-            # 2b. pairing link /app/?pair=XXXXXX (fresh phone): pairs by itself, the code is stripped from the URL before the reload
+            # 2b. pairing link /app/#pair=XXXXXX (fresh phone): the code is in the fragment (never sent to the hub), pairs by itself, stripped before the reload
             c2 = br.new_context(viewport={"width": 390, "height": 844}, device_scale_factor=2); p2 = c2.new_page(); navs = []
-            p2.on("request", lambda r: navs.append(r.url) if r.is_navigation_request() else None)
-            p2.goto(BASE + "/app/?pair=" + PIN + "&novoip"); p2.wait_for_selector("#phone")
+            p2.on("request", lambda r: navs.append(r.url) if r.is_navigation_request() else None); sent = []
+            p2.on("request", lambda r: sent.append(r.url))   # every URL the page sends to a server
+            p2.goto(BASE + "/app/?novoip#pair=" + PIN); p2.wait_for_selector("#phone")
             tok = wait_for(lambda: p2.evaluate("localStorage.getItem('bf.device')"), 8); time.sleep(1.0)
             check("2b", "pairing link pairs automatically (device token stored)", bool(tok))
             check("2b", "pairing link: the code is stripped from the URL (and was gone before the reload)", "pair=" not in p2.url and len(navs) >= 2 and all("pair=" not in u for u in navs[1:]), f"navigations={len(navs)} code_in_url={'pair=' in p2.url}")
+            check("2b", "pairing link: the code never reaches a server (fragment only, no request URL carries it)", not any(PIN in u.split("#")[0] for u in sent), f"requests={len(sent)}")
             # 2d. first run after the link: ONE screen, one button, then Home (no voice step, no never-screen step, no Done screen)
             check("2d", "first run: one onboarding screen with 'Turn on protection' and the mic reason", p2.locator("#pairView").is_hidden() and p2.locator("#step1").is_visible() and p2.inner_text("#s1on") == "Turn on protection" and "microphone" in p2.inner_text("#s1mic"))
             p2.screenshot(path=str(SHOTS / "02d-onboarding.png"))
@@ -141,7 +143,7 @@ def main():
             c2.close()
             # 2c. a bad link never leaves the code in the URL and falls back (localhost needs no pairing, so the app carries on)
             c3 = br.new_context(viewport={"width": 375, "height": 667}, device_scale_factor=2); p3 = c3.new_page()
-            p3.goto(BASE + "/app/?pair=000000&skipsetup&novoip"); p3.wait_for_selector("#phone"); time.sleep(1.5)
+            p3.goto(BASE + "/app/?skipsetup&novoip#pair=000000"); p3.wait_for_selector("#phone"); time.sleep(1.5)
             check("2c", "bad pairing link: code stripped, no token, back to the app", "pair=" not in p3.url and not p3.evaluate("localStorage.getItem('bf.device')") and p3.locator("#callView").is_visible() and p3.locator("#pairView").is_hidden())
             p3.evaluate("BF.onUnauthorized()"); time.sleep(0.3)   # the fallback code box, as a 401 would show it
             fits = p3.evaluate("(() => { const h = document.getElementById('pairTitle'); return h.getBoundingClientRect().height < 1.6 * parseFloat(getComputedStyle(h).lineHeight); })()")

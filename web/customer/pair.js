@@ -1,5 +1,6 @@
 // Device pairing (TASK-014). Hub contract: POST /pair {pin} -> {device_token}; protected paths want header x-device-token.
-// A pairing link /app/?pair=XXXXXX pairs by itself: the code is stripped from the URL first (history.replaceState), then POST /pair, then reload.
+// A pairing link /app/#pair=XXXXXX pairs by itself. The code rides in the URL FRAGMENT, which browsers never send to a server (no hub/Cloudflare
+// access log, no Referer); it is stripped from the address bar first (history.replaceState), then POST /pair, then reload.
 // The 6-digit box is the fallback. Fail open: if the hub has no /pair (404) or never answers 401, nothing here ever shows.
 (() => {
   "use strict";
@@ -40,10 +41,11 @@
     return new Promise(res => { BF.hubFetch("/protection-log", { noWait: true }).then(r => { if (r.status !== 401) res(); }).catch(() => res()); });
   }
   // Pairing link: the code never stays in the address bar, history or a bookmark. Strip it before anything else (and before the reload).
-  const qs = new URLSearchParams(location.search), linkPin = (qs.get("pair") || "").replace(/\D/g, "");
-  if (qs.has("pair")) {
-    qs.delete("pair"); const q = qs.toString();
-    try { history.replaceState(history.state, "", location.pathname + (q ? "?" + q : "") + location.hash); } catch (e) {}
+  // Fragment only. A ?pair= query (already sent to the server, so already in its logs) is never used, only removed from the address bar.
+  const hs = new URLSearchParams(location.hash.replace(/^#/, "")), qs = new URLSearchParams(location.search), linkPin = (hs.get("pair") || "").replace(/\D/g, "");
+  if (hs.has("pair") || qs.has("pair")) {
+    hs.delete("pair"); qs.delete("pair"); const q = qs.toString(), h = hs.toString();
+    try { history.replaceState(history.state, "", location.pathname + (q ? "?" + q : "") + (h ? "#" + h : "")); } catch (e) {}
   }
   if (linkPin.length === 6) {
     let views = null;   // "Connecting your phone..." while the link pairs (after every script has set its first view)
