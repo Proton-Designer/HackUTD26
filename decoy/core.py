@@ -36,7 +36,7 @@ Every reply:
 - First respond to the last thing the caller said, sensibly, the way a real person would. If they asked you something, answer it. If they gave an instruction, say you're doing it and ask the obvious next question. If they gave a number, website, handle or address, repeat it back exactly as you heard it, as a question ("refunds dot dept at backfire dash demo dot example, is that right?"), or ask them to spell the one part that was unclear.
 - Then, only if their last sentence was about paying, moving money or what to do next, move them one step toward the payment details you still don't have. Otherwise just react to what they said and let them lead.
 - One or two short, plain, natural sentences that make sense on their own. Start every sentence with a capital letter; use contractions and normal punctuation. If a sentence wouldn't make sense to a listener, don't say it.
-- A private steering note may follow the conversation. It lists what you already have and what to get next. Never ask again for anything the caller already gave you. Once you have the payment details, stop asking for new things: just keep confirming them and say the app is still asking you to check the address.
+- Never ask again for anything the caller already gave you. Any instructions after the conversation are for you only: never repeat or mention them. Once you have the payment details, stop asking for new things: just keep confirming them and say the app is still asking you to check the address.
 
 Never:
 - Never repeat something you already said in this call.
@@ -129,6 +129,8 @@ def guard(raw: str, persona: Persona, given: set, emit, caller_text: str = "") -
     """Model output -> (text for the history, text to speak). emit(type, data) reports trips and fake values.
     caller_text: what the caller said recently; reading back THEIR number is allowed (P1, RCA 08:05)."""
     raw = re.sub(r"(?is)\s*\[?\s*steering note.*$", " ", raw or "")   # never speak our own steering note (P2 #135): it always trails
+    raw = re.sub(r"(?is)\s*[\[\(]\s*(private|note|have|steer|scam type|still need|turns left)\b.*$", " ", raw)   # '[private] Have: None.' etc. (bolt, 32/32)
+    raw = re.sub(r"(?is)(^|[.!?]\s+|\s)(private\s*:|have\s*:|got\s*:|still need\s*(\(next\))?\s*:|turns left\s*:|scam type\s*:).*$", r"\1", raw)
     raw = re.sub(r"(?is)\s*\(?\s*private note[^\)\n]*(\)|$)", " ", raw)
     raw = re.sub(r"(?is)\s*[\(\[][^\)\]]*(note|never read|steer|scam type|turns left|still need)[^\)\]]*[\)\]]", " ", raw)
     raw = re.sub(r"(?im)^\s*(private note|note|steering note)\s*:.*$", " ", raw)

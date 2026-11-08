@@ -56,3 +56,13 @@ def test_guard_never_speaks_the_steering_note():   # P2 #135: bolt echoed '(Priv
         hist, spoken = core.guard(raw, p, set(), lambda *a: None)
         assert "note" not in spoken.lower() and "still need" not in spoken.lower(), spoken
         assert spoken.startswith("Okay, what's the address?"), spoken
+
+
+def test_guard_strips_private_have_tail():   # P2 #135 follow-up: bolt ended 32/32 replies with '[private] Have: None.'
+    from decoy import core
+    p = core.Persona("t")
+    for raw in ["Okay, so where do I send it? [private] Have: None.", "Okay, so where do I send it? [private] Have: Scam setup.",
+                "Okay, so where do I send it? Have: callback_phone. Still need: payment.", "Okay, so where do I send it?\n(Have: nothing yet)"]:
+        spoken = core.guard(raw, p, set(), lambda *a: None)[1]
+        assert spoken == "Okay, so where do I send it?", spoken
+    assert core.guard("I have to go to the bank, what do I have to do?", p, set(), lambda *a: None)[1] == "I have to go to the bank, what do I have to do?"
