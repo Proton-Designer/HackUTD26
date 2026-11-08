@@ -106,6 +106,24 @@ owed_list() {
   done | sort -u
 }
 
+# Re-ping threads where I'm blocked and the other side hasn't answered for 10+ minutes (at most every 10 min).
+nudge_blockers() {
+  local f="$STATE_DIR/nudge_$ME" last now rec num upd title
+  now=$(date +%s); last=$(cat "$f" 2>/dev/null | tr -dc '0-9'); last="${last:-0}"
+  [ $((now - last)) -lt 300 ] && return 0
+  echo "$now" > "$f"
+  while IFS= read -r -d "$RS" rec; do
+    rec="${rec#$'\n'}"; [ -z "$rec" ] && continue
+    num="${rec%%$US*}"; rec="${rec#*$US}"; upd="${rec%%$US*}"; title="${rec#*$US}"
+    [ $((now - upd)) -lt 600 ] && continue        # thread touched in the last 10 min (by anyone)
+    T gh api "repos/$REPO/issues/$num/comments" -f body="⏰ Still blocked on this ($(( (now - upd) / 60 )) min without an update). Please ack with an ETA or send done.
+---
+_from: $ME · $(date '+%H:%M')_" </dev/null >/dev/null 2>&1
+  done < <(T gh api -X GET "repos/$REPO/issues" -f labels="from:$ME,blocking" -f state=open -f per_page=30 \
+             --jq '.[] | "\(.number)\u001f\(.updated_at|fromdateiso8601)\u001f\(.title)\u001e"' </dev/null 2>/dev/null)
+  return 0
+}
+
 watch_running() {
   local pid; pid=$(cat "$WATCH_PID" 2>/dev/null | tr -dc '0-9')
   [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null
@@ -131,6 +149,11 @@ case "$MODE" in
     l=$(cat "$LAST" 2>/dev/null | tr -dc '0-9'); l="${l:-0}"
     [ $(( $(date +%s) - l )) -lt "$THROTTLE" ] && exit 0
     presence_push working
+    nudge_blockers
+    case "$(uname -s 2>/dev/null)" in
+      MINGW*|MSYS*|CYGWIN*)   # Claude Code on Windows may hide PostToolUse feedback: don't mark mail read here
+        [ "${BACKFIRE_POST_DELIVER:-0}" = 1 ] || { date +%s > "$LAST"; exit 0; };;
+    esac
     deliver stderr && exit 2; exit 0;;
   hook-stop)
     note_hook "$HOOK_IN"
@@ -179,7 +202,7 @@ RULES
     while true; do
       deliver stdout && exit 0
       now=$(date +%s)
-      [ $((now - lastp)) -ge 120 ] && { presence_push idle; lastp=$now; }
+      [ $((now - lastp)) -ge 120 ] && { presence_push idle; nudge_blockers; lastp=$now; }
       if [ $((now - start)) -ge "${BACKFIRE_WATCH_MAX:-1500}" ]; then
         echo "⏰ Backfire comms: inbox watch expired with no new mail. Re-arm it in the background (bash scripts/comms/inbox watch) and continue or stop."; exit 0
       fi
