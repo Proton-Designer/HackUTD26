@@ -13,4 +13,4 @@ All eval data is synthetic (team-written scripts). Intervals are Wilson 95%. Say
 | 8 | Cloud model: **no test number** (shared NVIDIA key returned 429); acceptance suite 9 of 9 pass on the current rules | 9 cases | `eval/RESULTS.md` "Not scored"; acceptance run at c03a3a9 (4fd3df9 report) | Acceptance uses TTS-synthesized calls and small case counts |
 
 Don't say: "100%", "real-time" (say 1.7 s), "validated", "outperforms", "nothing leaves the device" (hosted STT unless `P2_STT=whisper`).
-One line to leave with a judge: "A small model on the laptop caught every scam in our synthetic sets, with a couple of false alarms on look-alikes, and if it and the cloud both fail, keyword rules still catch about half."
+One line to leave with a judge: "A small model on the laptop caught every scam in our synthetic sets, with a couple of false alarms on look-alikes, and if it and the cloud both fail, keyword rules still catch roughly half to three-quarters (9 of 20 held-out, 24 of 33 test)."
