@@ -230,7 +230,9 @@ def test_unsigned_initiated_requires_live_call(monkeypatch, client):
     assert client.post("/telnyx/webhook", json=body).status_code == 403
 
 
-def test_attestation_found_in_nested_field():
-    assert R.attestation_of({"x": {"shaken_stir_attestation": "a"}}) == "A"
-    assert R.attestation_of({"sip_headers": {"X-Attest": "B"}}) == "B"
-    assert R.attestation_of({"from": "+1"}) == "none"
+def test_attestation_only_from_carrier_fields():
+    assert R.attestation_of({"shaken_stir_attestation": "a"}) == "A"
+    assert R.attestation_of({"shaken_stir": {"attestation": "B"}}) == "B"
+    assert R.attestation_of({"sip_headers": {"X-Attest": "A", "attestation": "A"}}) == "none"   # caller-controlled: ignored
+    assert R.attestation_of({"custom_headers": [{"name": "attestation", "value": "A"}], "x": {"shaken_stir_attestation": "A"}}) == "none"
+    assert "sip_headers.X-Attest" not in R._key_paths({"sip_headers": {"X-Attest": "A"}})

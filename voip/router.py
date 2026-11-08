@@ -48,21 +48,27 @@ def _routing(frm, att):
     except Exception:
         log.exception("routing failed; fail open"); return {"decision": "NORMAL", "reason": "Routing error, fail open"}
 
-def _find_att(o, depth=0):
-    """Recursive: any key containing shaken/stir/attest holding an A/B/C value (live field name unverified; CDR proved Telnyx sees 'A')."""
-    if depth > 4: return None
-    if isinstance(o, dict):
-        for k, v in o.items():
-            if any(w in str(k).lower() for w in ("shaken", "stir", "attest")) and isinstance(v, str) and v.strip().upper()[:1] in ("A", "B", "C"):
-                return v.strip().upper()[:1]
-        for v in o.values():
-            r = _find_att(v, depth + 1)
-            if r: return r
-    return None
+ATT_KEYS = ("shaken_stir_attestation", "attestation")   # carrier-populated, exact names only (live location still unverified)
 
 def attestation_of(p: dict) -> str:
-    """Best-effort SHAKEN/STIR read from the webhook payload (field location unverified -> 'none' when absent)."""
-    return _find_att(p) or "none"
+    """SHAKEN/STIR level from carrier-populated payload fields only: top level or the `shaken_stir` object, exact keys.
+    Never read sip_headers/custom headers (the caller controls those) and no substring or recursive matching.
+    Unverified location -> 'none' (fail safe: no A means no trusted-contact bypass). Discovery: key paths are logged on call.initiated."""
+    for src in (p, p.get("shaken_stir")):
+        if isinstance(src, dict):
+            for k in ATT_KEYS:
+                v = src.get(k)
+                if isinstance(v, str) and v.strip().upper()[:1] in ("A", "B", "C"): return v.strip().upper()[:1]
+    return "none"
+
+def _key_paths(o, pre="", depth=0):
+    """Key paths only (never values) for discovery logging; skips caller-controlled header maps' contents."""
+    out = []
+    if isinstance(o, dict) and depth < 3:
+        for k, v in o.items():
+            out.append(pre + str(k))
+            if isinstance(v, dict) and k not in ("sip_headers", "custom_headers"): out += _key_paths(v, pre + str(k) + ".", depth + 1)
+    return out
 
 def _cs(**kw): return base64.b64encode(json.dumps(kw).encode()).decode()
 def _cs_load(s):
@@ -88,7 +94,7 @@ async def on_initiated(p, base_ws=None, sim=False):
     if not (ccid and sid and ID_RE.match(ccid) and ID_RE.match(sid)): return {}
     if sid in CALLS: return {}   # duplicate/replayed initiated for a known session: never overwrite state (sim or real)
     att = attestation_of(p)
-    log.info("call.initiated payload keys (no values): %s attestation=%s", sorted(p.keys()), att)
+    log.warning("call.initiated payload key paths (no values): %s attestation=%s", sorted(_key_paths(p)), att)
     emit("call.incoming", sid, {"from": frm, "to": p.get("to", ""), "attestation": att, "scam_id_score": 0.8 if att in ("C", "none") else 0.1})
     d = _routing(frm, att)
     reason = LIMITER.check(frm, sid) if d["decision"] != "BLOCKED_BACKFIRE" else None
@@ -208,7 +214,11 @@ async def media(ws: WebSocket, call_id: str, t: str = ""):
         await ws.close(code=1008); return
     await ws.accept()
     hub = _hub_relay(); local = None
-    async def send_to_caller(frame: dict): await ws.send_text(json.dumps(frame))   # Telnyx media/clear/mark frames back to the caller leg
+    sent = {}   # evidence: frames written back to the caller leg (decoy/echo audio), by event type (counts only)
+    async def send_to_caller(frame: dict):   # Telnyx media/clear/mark frames back to the caller leg
+        await ws.send_text(json.dumps(frame))
+        k = str(frame.get("event", "?")) if isinstance(frame, dict) else "?"; sent[k] = sent.get(k, 0) + 1
+        if k == "media" and sent[k] == 1: log.warning("first decoy->caller media frame sent on %s", call_id[:8])
     st["send_to_caller"] = send_to_caller
     try:
         if hub: await _maybe_await(hub.open(call_id, send_to_caller, on_decoy_lost=_decoy_lost))
@@ -233,7 +243,7 @@ async def media(ws: WebSocket, call_id: str, t: str = ""):
             except Exception as e: log.warning("relay frame error (ignored): %s", e)
     except (WebSocketDisconnect, RuntimeError): pass
     finally:
-        st.pop("send_to_caller", None); log.warning("media WS closed %s frames=%s", call_id[:8], stats)
+        st.pop("send_to_caller", None); log.warning("media WS closed %s frames_in=%s frames_to_caller=%s", call_id[:8], stats, sent)
         try:
             if hub: await _maybe_await(hub.close(call_id))
             elif local: await local.close()
