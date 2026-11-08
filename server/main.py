@@ -22,15 +22,9 @@ ACTIONS = {"continue", "scammer_get_scammed", "hang_up", "answer", "decline"}
 RING_ACTIONS = {"answer", "decline"}   # the customer accepts/declines an incoming call: valid only while it is ringing
 
 def _ringing(cid) -> bool:
-    """Ringing = call.incoming seen and not yet routed BLOCKED_BACKFIRE, answered or ended."""
-    seen = False
-    for e in bus.history:
-        if e.get("call_id") != cid: continue
-        t = e.get("type")
-        if t == "call.incoming": seen = True
-        elif t in ("call.answered", "call.ended", "handoff.started"): return False
-        elif t == "call.routed" and (e.get("data") or {}).get("decision") == "BLOCKED_BACKFIRE": return False
-    return seen
+    """Ringing = call.incoming seen and not yet routed BLOCKED_BACKFIRE, answered, in handoff or ended (uncapped bus.CALLS registry)."""
+    c = bus.CALLS.get(cid)
+    return bool(c and not (c["answered"] or c["ended"] or c["blocked"] or c["handoff"] == "started"))
 
 app.include_router(relay.router)
 app.include_router(device.router)
@@ -280,7 +274,7 @@ def demo_status(request: Request, format: str = ""):
     try:
         device.require_device(request)
     except HTTPException:   # public/tunnel viewers get the count only: call ids and activity times stay local/paired
-        s.pop("active_call_ids", None); s["flags"].pop("last_call_activity_ts", None)
+        s.pop("active_call_ids", None); s.pop("active_calls_detail", None); s["flags"].pop("last_call_activity_ts", None)
     if format == "html" or (format != "json" and "text/html" in request.headers.get("accept", "")):
         return HTMLResponse(ops.status_html(s))
     return s

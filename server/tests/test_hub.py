@@ -708,3 +708,37 @@ def test_f11_reset_refused_while_a_call_is_live_unless_force():
     assert r1.status_code == 409 and "F11LIVE-" in r1.json()["detail"] and kept            # nothing wiped
     assert r2.status_code == 200 and not db.list_confirmed()
     assert local.post("/demo/reset").status_code == 200                                      # no live call: normal reset
+
+
+def test_status_active_calls_detail_paired_or_loopback_only():
+    inc = lambda cid, frm: bus.publish("call.incoming", cid, {"from": frm, "to": "+15555550100", "attestation": "C", "scam_id_score": 0.8})
+    inc("AD-ringing-1", "+15555550123"); bus.publish("call.routed", "AD-ringing-1", {"decision": "LIVE_GUARD", "reason": "x"})
+    inc("AD-answered-2", "+15555550124"); bus.publish("call.answered", "AD-answered-2", {"by": "maria"}); bus.publish("handoff.started", "AD-answered-2", {})
+    inc("AD-restored-3", "+15555550125"); bus.publish("call.answered", "AD-restored-3", {"by": "maria"})
+    bus.publish("handoff.started", "AD-restored-3", {}); bus.publish("handoff.restored", "AD-restored-3", {})
+    inc("AD-ended-4", "+15555550126"); bus.publish("call.ended", "AD-ended-4", {"ended_by": "caller", "duration_s": 2})
+    inc("AD-blocked-5", "+15555550127"); bus.publish("call.routed", "AD-blocked-5", {"decision": "BLOCKED_BACKFIRE", "reason": "x"})
+    remote = TestClient(app).get("/demo/status").json()
+    assert "active_calls_detail" not in remote and "active_call_ids" not in remote                  # unpaired/remote: omitted
+    for c in (paired(), TestClient(app, client=("127.0.0.1", 5000))):
+        d = {x["call_id"]: x for x in c.get("/demo/status").json()["active_calls_detail"]}
+        assert set(d) == {"AD-ringing-1", "AD-answered-2", "AD-restored-3"}                           # FULL ids; ended and blocked excluded
+        assert d["AD-ringing-1"] == {"call_id": "AD-ringing-1", "from": "+15555550123", "age_s": d["AD-ringing-1"]["age_s"], "handoff": "none", "answered": False}
+        assert d["AD-answered-2"]["handoff"] == "started" and d["AD-answered-2"]["answered"] is True
+        assert d["AD-restored-3"]["handoff"] == "restored" and d["AD-ringing-1"]["age_s"] >= 0
+
+
+def test_call_registry_survives_history_eviction():
+    from server import relay
+    bus.publish("call.incoming", "LONG1", {"from": "+15555550123", "to": "+15555550100", "attestation": "C", "scam_id_score": 0.8})
+    for i in range(bus.HISTORY_MAX + 50):                                              # a long call: its call.incoming scrolls out of history
+        bus.publish("transcript.caller", "LONG1", {"utterance_id": str(i), "text": "x", "is_final": False})
+    assert not any(e["type"] == "call.incoming" for e in bus.history)
+    assert relay._known_call("LONG1") and "LONG1" in bus.CALLS                         # still known: /listen, /talk, rejoin keep working
+    c = TestClient(app, client=("127.0.0.1", 5000))
+    assert any(x["call_id"] == "LONG1" for x in c.get("/demo/status").json()["active_calls_detail"])
+    bus.publish("handoff.started", "LONG1", {})
+    for i in range(bus.HISTORY_MAX + 5): bus.publish("risk.update", "LONG1", {"s": 0.5})
+    assert relay._decoy_on("LONG1") and not relay._call_ended("LONG1")
+    bus.publish("call.ended", "LONG1", {}); assert relay._call_ended("LONG1") and not relay._decoy_on("LONG1")
+    assert not any(x["call_id"] == "LONG1" for x in c.get("/demo/status").json()["active_calls_detail"])

@@ -140,6 +140,15 @@ def customer_name() -> str:
     n = "Maria" if n is None else n
     return "".join(ch for ch in n if ch.isprintable() and ch not in "<>&\"'`\\").strip()[:40]
 
+def active_calls_detail():
+    """Calls live right now (ringing or answered), from the uncapped bus.CALLS registry: FULL call_id, caller number, age, handoff state, answered flag.
+    Only for paired/loopback viewers (main.demo_status strips it otherwise). Blocked calls (never ring) and ended calls are not live."""
+    import time
+    from . import bus
+    now = time.time()
+    return [{"call_id": cid, "from": c["from"], "age_s": round(max(0.0, now - c["t0"]), 1), "handoff": c["handoff"], "answered": c["answered"]}
+            for cid, c in list(bus.CALLS.items()) if not c["ended"] and not c["blocked"]]
+
 def status(app):
     paths = _paths(app.routes)
     names = {}
@@ -160,7 +169,7 @@ def status(app):
         _ids, _last = relay.active_calls()
     except Exception:
         _ids, _last = [], None
-    return {"hub": "up", "pipelines": names, "active_call_ids": [i[:8] for i in _ids],
+    return {"hub": "up", "pipelines": names, "active_calls_detail": active_calls_detail(), "active_call_ids": [i[:8] for i in _ids],
             "flags": {"DEMO_MODE": os.environ.get("DEMO_MODE") == "1", "FALLBACK": os.environ.get("FALLBACK") == "1", "SIM_MODE": os.environ.get("SIM_MODE") == "1", "FALLBACK_DETECT": os.environ.get("FALLBACK_DETECT") == "1", "NVIDIA_API_KEY_set": _nvidia_key_set(), "telnyx_ok": telnyx_state["ok"], "telnyx_last_error": telnyx_state["kind"], "intel_engine": _intel_engine(), "HUB_TOKEN_set": bool(os.environ.get("HUB_TOKEN")), "MARIA_LEG": os.environ.get("MARIA_LEG") or "sip", "CUSTOMER_NAME": customer_name(), "active_calls": len(_ids), "last_call_activity_ts": _last},
             "db": counts, "latency": latency_summary()["metrics"]}
 

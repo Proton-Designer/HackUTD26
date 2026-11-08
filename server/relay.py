@@ -372,7 +372,7 @@ def _known_call(call_id) -> bool:
         return True
     try:
         from . import bus
-        return any(e.get("call_id") == call_id for e in bus.history)
+        return call_id in bus.CALLS or any(e.get("call_id") == call_id for e in bus.history)
     except Exception:
         return False
 
@@ -443,19 +443,16 @@ def _decoy_on(call_id) -> bool:
         return True
     try:
         from . import bus
-        on = False
-        for e in bus.history:
-            if e.get("call_id") == call_id:
-                if e.get("type") == "handoff.started": on = True
-                elif e.get("type") in ("handoff.restored", "call.ended"): on = False
-        return on
+        c = bus.CALLS.get(call_id)
+        return bool(c and c["handoff"] == "started" and not c["ended"])
     except Exception:
         return False
 
 def _call_ended(call_id) -> bool:
     try:
         from . import bus
-        return any(e.get("call_id") == call_id and e.get("type") == "call.ended" for e in bus.history)
+        c = bus.CALLS.get(call_id)
+        return bool(c and c["ended"])
     except Exception:
         return False
 

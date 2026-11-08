@@ -6,6 +6,24 @@ _loop = None
 _observers: list = []
 history: list = []  # last events, for late WS subscribers / debugging
 HISTORY_MAX = 500
+CALLS: dict = {}   # call_id -> lifecycle state, NOT capped by HISTORY_MAX (a long call's call.incoming scrolls out of history): from, t0, answered, handoff, ended, blocked
+CALLS_MAX = 500
+
+def _track(ev):
+    cid, t, d = ev.get("call_id"), ev.get("type"), ev.get("data") or {}
+    if not cid: return
+    c = CALLS.get(cid)
+    if t == "call.incoming":
+        CALLS[cid] = {"from": d.get("from", ""), "t0": ev["ts"], "answered": False, "handoff": "none", "ended": False, "blocked": False}
+        for k in list(CALLS)[:-CALLS_MAX]:
+            CALLS.pop(k, None)
+    elif c is None:
+        return
+    elif t == "call.answered": c["answered"] = True
+    elif t == "handoff.started": c["handoff"] = "started"
+    elif t == "handoff.restored": c["handoff"] = "restored"
+    elif t == "call.ended": c["ended"] = True
+    elif t == "call.routed" and d.get("decision") == "BLOCKED_BACKFIRE": c["blocked"] = True
 
 def make_event(type_, call_id, data=None, ts=None):
     return {"type": type_, "call_id": call_id, "ts": ts if ts is not None else time.time(), "data": data or {}}
@@ -16,6 +34,8 @@ def publish(type_, call_id, data=None, ts=None):
         ev = make_event(type_, call_id, data, ts)
         history.append(ev)
         del history[:-HISTORY_MAX]
+        try: _track(ev)
+        except Exception: log.exception("call tracking failed")
         for q in list(_subs):
             try:
                 if _loop is not None and _loop.is_running():
@@ -52,4 +72,4 @@ def unsubscribe(q):
     _subs.discard(q)
 
 def reset():
-    history.clear()
+    history.clear(); CALLS.clear()
