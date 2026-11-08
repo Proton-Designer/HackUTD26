@@ -100,7 +100,7 @@
     window.scrollTo(0, 0);
   }
   function finish(msg) { $("doneMsg").textContent = msg; setup(3); }
-  function toDns(msg) { state.doneMsg = msg; if (state.fromSettings) { state.fromSettings = false; view("protView"); } else setup("dns"); }
+  function toDns(msg) { state.doneMsg = msg; $("dnsNote").textContent = msg; if (state.fromSettings) { state.fromSettings = false; view("protView"); } else setup("dns"); }
   $("s1on").onclick = () => { store.set("on", "1"); state.guardOn = true; store.set("done", "1"); setup(2); };
   $("s2skip").onclick = () => toDns("Backfire is on. Scammers will hear a synthetic voice. You can set up your voice later in Protection.");
   $("s2agree").onclick = () => { $("paragraph").textContent = newParagraph(); resetRec(); setup("rec"); };
@@ -143,52 +143,58 @@
   }
 
   // ---- recording: MediaRecorder, 30-60 s, live level meter, review + re-record ----
-  const MIN_S = qs.has("fakemic") ? 3 : 30, MAX_S = 60;
+  const MIN_S = 3, MAX_S = 60;   // Stop works after ~3 s; 60 s auto-stop
   let rec = null, chunks = [], discard = false, blob = null, t0 = 0, tick = null, actx = null, raf = 0;
   const mmss = s => Math.floor(s / 60) + ":" + String(Math.floor(s % 60)).padStart(2, "0");
   function stopMeter() { clearInterval(tick); cancelAnimationFrame(raf); $("recLevel").style.width = "0%"; try { actx && actx.close(); } catch (e) {} actx = null; }
-  function resetRec() { stopMeter(); blob = null; chunks = []; $("recTime").textContent = "0:00"; $("recBtn").hidden = false; $("recBtn").textContent = "● Start recording"; $("recReview").hidden = true; $("recStatus").textContent = ""; $("recSkip").hidden = false; }
+  function resetRec() { stopMeter(); blob = null; chunks = []; $("recTime").textContent = "0:00"; $("recBtn").hidden = false; $("recBtn").disabled = false; $("recBtn").textContent = "● Start recording"; $("recReview").hidden = true; $("recStatus").textContent = ""; $("recSkip").hidden = false; }
   const b64 = blob => new Promise(res => { const r = new FileReader(); r.onload = () => res(String(r.result).split(",")[1] || ""); r.readAsDataURL(blob); });
+  function busyMsg(t) { const s = $("recStatus"); s.textContent = ""; const i = document.createElement("span"); i.className = "spin"; i.setAttribute("aria-hidden", "true"); s.append(i, document.createTextNode(" " + t)); }
   async function enroll(b) {
-    $("recStatus").textContent = "Saving…"; $("recSave").disabled = true;
+    busyMsg("Saving your voice…"); $("recSave").disabled = true; $("recAgain").disabled = true; $("recSkip").disabled = true;
+    const done = () => { $("recSave").disabled = false; $("recAgain").disabled = false; $("recSkip").disabled = false; };
     try {
       let voice_id;
-      if (HUB) { const r = await hub("POST", "/voice/enroll", { recording: await b64(b), mime: (b.type || "audio/webm").split(";")[0], consent_version: CONSENT_VERSION }); voice_id = r && r.voice_id; }
-      else voice_id = "v_simulated_" + Math.random().toString(36).slice(2, 8);   // no hub configured: simulated
+      if (HUB) {
+        const body = { recording: await b64(b), mime: (b.type || "audio/webm").split(";")[0], consent_version: CONSENT_VERSION };
+        const r = await Promise.race([hub("POST", "/voice/enroll", body), new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), 30000))]);
+        voice_id = r && r.voice_id;
+      } else voice_id = "v_simulated_" + Math.random().toString(36).slice(2, 8);   // no hub configured: simulated
       if (!voice_id) {                                      // {voice_id:null, fallback:"synthetic"}: the voice service is not connected. Never claim she is enrolled.
-        state.voiceId = null; store.set("voice", null);
+        state.voiceId = null; store.set("voice", null); done();
         toDns("Your voice wasn't saved; Backfire will use a synthetic voice. You can try again later in Protection.");
         return;
       }
-      state.voiceId = voice_id; store.set("voice", voice_id);
+      state.voiceId = voice_id; store.set("voice", voice_id); done();
       toDns("Your voice is saved" + (HUB ? "" : " (simulated)") + ". Backfire is on. You can delete your voice any time in Protection.");
-    } catch (e) { console.log("[backfire] enroll failed", String(e)); $("recStatus").textContent = "That didn't save. Press Save again, or record again."; $("recSave").disabled = false; }
+    } catch (e) {
+      console.log("[backfire] enroll failed", String(e)); done();
+      $("recStatus").textContent = /\b401\b/.test(String(e)) ? "Please pair this phone first, then try again." : "Your voice wasn't saved. Press Save to try again, or skip to use a synthetic voice.";   // handled errors stay out of Maria's face; BF.onUnauthorized shows the pair screen itself
+    }
   }
   $("recSave").onclick = () => { if (blob) enroll(blob); };
   $("recAgain").onclick = () => { $("paragraph").textContent = newParagraph(); resetRec(); };   // a fresh paragraph each time
   $("recBtn").onclick = async () => {
-    if (rec) {                                              // second press = stop (only once long enough)
-      const s = (Date.now() - t0) / 1000;
-      if (s < MIN_S) { $("recStatus").textContent = "Keep reading. " + Math.ceil(MIN_S - s) + " more seconds, please."; return; }
-      rec.stop(); return;
-    }
+    if (rec) { if ((Date.now() - t0) / 1000 >= MIN_S) rec.stop(); return; }   // second press = stop
     try {
       if (!navigator.mediaDevices) throw new Error("no mic API");
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      chunks = []; blob = null; rec = new MediaRecorder(stream);
+      chunks = []; blob = null;
+      const mime = ["audio/webm;codecs=opus", "audio/mp4", "audio/ogg"].find(t => { try { return MediaRecorder.isTypeSupported(t); } catch (e) { return false; } });   // iOS Safari records audio/mp4
+      rec = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
       rec.ondataavailable = e => chunks.push(e.data);
       rec.onstop = () => {
         stream.getTracks().forEach(t => t.stop()); stopMeter(); const r = rec; rec = null;
         if (discard) { discard = false; chunks = []; resetRec(); return; }
-        blob = new Blob(chunks, { type: r.mimeType || "audio/webm" });
-        $("recBtn").hidden = true; $("recReview").hidden = false; $("recSave").disabled = false; $("recSkip").hidden = true;
+        blob = new Blob(chunks, { type: r.mimeType || mime || "audio/webm" });
+        $("recBtn").hidden = true; $("recReview").hidden = false; $("recSave").disabled = false; $("recSkip").hidden = false;
         $("recStatus").textContent = "Recorded " + mmss((Date.now() - t0) / 1000) + ". Save it, or record again.";
       };
       // level meter (fail soft: recording still works without it)
       try { actx = new (window.AudioContext || window.webkitAudioContext)(); const an = actx.createAnalyser(); an.fftSize = 512; actx.createMediaStreamSource(stream).connect(an); const buf = new Uint8Array(512);
         const loop = () => { an.getByteTimeDomainData(buf); let m = 0; for (const v of buf) m = Math.max(m, Math.abs(v - 128)); $("recLevel").style.width = Math.min(100, m / 80 * 100) + "%"; raf = requestAnimationFrame(loop); }; loop(); } catch (e) {}
-      rec.start(); t0 = Date.now(); $("recBtn").textContent = "■ Stop"; $("recSkip").hidden = true; $("recStatus").textContent = "Recording… read the words above.";
-      tick = setInterval(() => { const s = (Date.now() - t0) / 1000; $("recTime").textContent = mmss(s); if (s >= MIN_S) $("recBtn").textContent = "■ Stop (you can stop now)"; if (s >= MAX_S && rec) rec.stop(); }, 250);
+      rec.start(); t0 = Date.now(); $("recBtn").textContent = "■ Stop"; $("recBtn").disabled = true; $("recSkip").hidden = true; $("recStatus").textContent = "Recording… read the words above.";
+      tick = setInterval(() => { const s = (Date.now() - t0) / 1000; $("recTime").textContent = mmss(s); if (s >= MIN_S) $("recBtn").disabled = false; if (s >= MAX_S && rec) rec.stop(); }, 250);
     } catch (e) {
       $("recStatus").textContent = "We couldn't use the microphone. Allow it in your browser and try again, or skip.";
       if (qs.has("fakemic")) { blob = new Blob(["x"], { type: "audio/webm" }); enroll(blob); }   // test hook only

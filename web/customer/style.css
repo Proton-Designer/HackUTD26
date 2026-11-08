@@ -73,3 +73,8 @@ nav#tabs button.on{background:#fff;color:#000;border-color:#fff}
 .step{display:flex;flex-direction:column;gap:14px}
 #stepDns input{font-size:1.2rem;padding:.7rem;border-radius:14px;border:2px solid #8aa;background:#111;color:#fff;width:100%;box-sizing:border-box}
 .plainlist.small{font-size:.95rem}
+
+.spin{display:inline-block;width:1em;height:1em;border:3px solid #556;border-top-color:#fff;border-radius:50%;vertical-align:-.15em;animation:bfspin .8s linear infinite}@keyframes bfspin{to{transform:rotate(360deg)}}
+#recBtn:disabled{opacity:.6}
+
+.note{margin:0;padding:12px 14px;border-radius:14px;background:#1d2a1f;border:2px solid var(--ok);font-size:1.05rem;font-weight:700}.note:empty{display:none}

@@ -26,8 +26,9 @@
   BF.modeP.then(m => { BF.listen = !!m.listen; BF.sim = !!m.sim && !m.listen; const f = document.getElementById("src"); if (f && BF.listen) f.textContent = "· live call · listening mode"; else if (f && BF.sim) f.textContent = "· simulated call (no phone line)"; });
   // Device pairing (TASK-014): the hub issues a per-device token after the PIN is entered once. Every hub call goes through hubFetch.
   BF.deviceToken = () => { try { return localStorage.getItem("bf.device"); } catch (e) { return null; } };
+  BF.authReady = Promise.resolve();   // pair.js replaces this on a fresh phone: protected routes wait until the device is paired (no 401 noise before pairing)
   BF.hubFetch = async (path, opts) => {
-    opts = opts || {}; const h = { ...(opts.headers || {}) }; const t = BF.deviceToken(); if (t) h["x-device-token"] = t;
+    opts = opts || {}; if (!opts.noWait) await BF.authReady; const h = { ...(opts.headers || {}) }; const t = BF.deviceToken(); if (t) h["x-device-token"] = t;
     const r = await fetch(HUB + path, { ...opts, headers: h });
     if (r.status === 401 && BF.onUnauthorized) BF.onUnauthorized();
     return r;

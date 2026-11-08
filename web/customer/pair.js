@@ -26,5 +26,10 @@
   }
   $("pairBtn").onclick = pair; $("pairPin").onkeydown = e => { if (e.key === "Enter") pair(); };
   // first run: no token yet -> probe a protected path; 401 shows the pairing screen, anything else means no pairing needed
-  if (!BF.deviceToken()) BF.hubFetch("/protection-log").catch(() => {});
+  // Every other protected call waits on BF.authReady: it resolves once the probe says no pairing is needed, and never resolves on a 401 (the page reloads after pairing).
+  if (!BF.deviceToken()) {
+    BF.authReady = new Promise(res => {
+      BF.hubFetch("/protection-log", { noWait: true }).then(r => { if (r.status !== 401) res(); }).catch(() => res());
+    });
+  }
 })();
