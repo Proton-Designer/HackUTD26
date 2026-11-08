@@ -52,9 +52,12 @@ Hub = ONE process (hub + voip + relay + intel + `/app` + `/command-center`). Tel
 - [ ] Between judges: `scripts/reset_demo`.
 
 ## 3. Phone-free (rollback if Telnyx/phones fail)
-- [ ] Hub in SIM mode: `SIM_MODE=1 scripts/restart_hub_safe` (reuses the tunnel; SIM webhooks are loopback-only so the tunnel stays safe).
-- [ ] Demo audio exists: `logs/sim_scam.wav` (else `scripts/make_scam_wav.sh`), also served at `GET /demo/caller.wav`.
-- [ ] `scripts/preflight` (default = SIM checks) then `scripts/demo_call --reset` (prints the phone-test steps first, then a timeline). Tap the button on Maria's page after the alert. Say the caller is simulated.
+Verified 2026-11-08 on an isolated hub (:8020, SIM_MODE=1, own LOGDIR/DBs) with the judge card voiced by `say`: alert 8.6 s, Fire Back, decoy audio returned to the caller, call.ended 31.6 s, `intel.agent` + `blocklist.updated` ~21 s after hang-up.
+- [ ] **Hub in SIM mode with the sim Maria leg:** `SIM_MODE=1 MARIA_LEG=sip scripts/restart_hub_safe` (reuses the tunnel; SIM webhooks are loopback-only). Do NOT leave `MARIA_LEG=talk`/`listen` from `.env`: those modes (a) RING until Answer is tapped (set `MARIA_AUTO_ANSWER=1` or tap Answer on Maria's page), and (b) do not arm the script-text fallback detector, so with P2 down or posting to another hub there is NO alert. `MARIA_LEG=sip` self-answers and arms the fallback after `PHONEFREE_P2_WAIT_S` (6 s) if P2 sends nothing. Restore `MARIA_LEG=talk` (and drop `SIM_MODE`) afterwards.
+- [ ] Caller audio = the judge card: `scripts/make_scam_wav.sh "<card text from pitch/script.md demo block>"` (writes `logs/sim_scam.wav`, also served at `GET /demo/caller.wav`). If you pass a different `--wav`, also set `DEMO_SCRIPT_TEXT` to its text so the fallback detector reads the same words.
+- [ ] `scripts/preflight` (default = SIM checks), then `scripts/demo_call --reset` (prints phone steps, then a timeline). Tap **Scammer Get Scammed** on Maria's page after the alert (~8-9 s). No page? Pair a device (`POST /pair {"pin": <DEVICE_PIN>}`), then `POST /user/action` with header `x-device-token` and `{"call_id": <id from the timeline/WS /events>, "action": "scammer_get_scammed"}`. Say the caller is simulated.
+- [ ] Expect timeline: incoming+routed 0 s, answered ~1.5, alert.fired ~8-9, user.action + handoff.started, alert `realert` ~1 s later, call.ended ~30 s, `intel.agent` and `blocklist.updated` ~20-25 s after the end (demo_call waits 45 s; use `--wait-intel 60` if slow).
+- [ ] Known quirk: a real P2 (remote) posts its alerts to ITS `HUB_URL` (the live :8000), not to an isolated test hub, so isolated runs need P2 unreachable (`P2_STT_URL=ws://127.0.0.1:9 P2_BASE=http://127.0.0.1:9 RUN_HUB_KEEP=P2_STT_URL,P2_BASE`) to use the fallback detector. On the live hub in SIM mode a healthy P2 alerts natively.
 - [ ] Total fallback (no P2/P3/telephony at all): second terminal `HUB_PORT=8001 scripts/run_hub --fallback` (looped replay, say it is a replay), or `POST /demo/replay` on the running hub.
 
 ## 4. Safe restart
