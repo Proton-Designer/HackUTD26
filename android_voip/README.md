@@ -49,6 +49,27 @@ callback blocking). See [BACKFIRE.md](BACKFIRE.md).
    adb pull /sdcard/Android/data/com.example.voip.consumer/files/calls/
    ```
 
+## iPhone (or any browser): the web phone
+
+`server/web/index.html` is Demo VoIP as a web page, speaking the same signaling protocol, so an iPhone can call an
+Android phone (and the other way round). No App Store, no Mac, no Xcode. The server serves it on the same port as
+signaling. It supports the Backfire carrier role as the **caller** (it follows `transfer` to the decoy silently), so
+the judge can play the scammer on an iPhone. Backfire itself (Live Guard, the decoy) still runs only on Android.
+
+iOS only allows the microphone on **https**, so expose the server through a tunnel:
+```
+sudo pacman -S cloudflared                     # once (macOS: brew install cloudflared)
+cd server && npm start                         # signaling + web phone on :8090
+cloudflared tunnel --url http://localhost:8090 # prints https://<random>.trycloudflare.com
+```
+On the iPhone: open that https URL in **Safari** → pick a name → **Go online** → allow the microphone → tap
+**Call** next to the Android phone's name. For an app icon: Share → **Add to Home Screen**.
+The Android phones keep using `ws://<laptop-ip>:8090` (or `wss://<random>.trycloudflare.com`).
+
+Limits (web, not native): iOS pauses the page when it is in the background or the screen locks, so keep it open
+with the screen on (it requests a screen wake lock); there's no ringing while closed and no earpiece/speaker toggle.
+The call audio itself is peer to peer (STUN only, like the Android app), so both phones should be on the same Wi-Fi.
+
 ## Receiving call audio in your own app
 
 Add the `:export-api` module as a dependency, request the permission, and bind:

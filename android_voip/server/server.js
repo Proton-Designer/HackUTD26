@@ -18,6 +18,10 @@
 //   Fail open: if the hub is down, calls connect as plain calls.
 import { WebSocketServer, WebSocket } from "ws";
 import os from "node:os";
+import http from "node:http";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const PORT = Number(process.env.PORT || 8090);
 const RELAYED = new Set(["offer", "answer", "ice", "reject", "bye"]);
@@ -30,7 +34,20 @@ const ROUTE_TIMEOUT_MS = 800;
 // callId -> {caller, callee, decision, answered, handedOff}; only calls the hub knows about.
 const calls = new Map();
 
-const wss = new WebSocketServer({ port: PORT, host: "0.0.0.0" });
+// HTTP on the same port serves the web phone (web/: iPhone or any browser); WebSocket upgrades are signaling.
+const WEB = path.join(path.dirname(fileURLToPath(import.meta.url)), "web");
+const TYPES = { ".html": "text/html; charset=utf-8", ".json": "application/manifest+json", ".svg": "image/svg+xml" };
+const httpServer = http.createServer((req, res) => {
+  const name = decodeURIComponent((req.url || "/").split("?")[0]).replace(/^\/+/, "") || "index.html";
+  const file = path.join(WEB, path.basename(name));   // flat folder: no path traversal
+  fs.readFile(file, (err, body) => {
+    if (err) { res.writeHead(404); return res.end("not found"); }
+    res.writeHead(200, { "Content-Type": TYPES[path.extname(file)] || "application/octet-stream", "Cache-Control": "no-cache" });
+    res.end(body);
+  });
+});
+const wss = new WebSocketServer({ server: httpServer });
+httpServer.listen(PORT, "0.0.0.0");
 
 function send(ws, msg) {
   if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(msg));
@@ -189,4 +206,4 @@ const addrs = Object.values(os.networkInterfaces()).flat()
   .filter((a) => a && a.family === "IPv4" && !a.internal).map((a) => a.address);
 console.log(`Signaling server listening on port ${PORT}`);
 console.log(HUB ? `Backfire carrier mode: hub ${HUB}` : "Backfire off (set BACKFIRE_HUB=http://127.0.0.1:8000 to enable)");
-for (const a of addrs) console.log(`  ws://${a}:${PORT}`);
+for (const a of addrs) console.log(`  ws://${a}:${PORT}   (web phone: http://${a}:${PORT}/ ; iPhone needs an https URL, see README)`);
