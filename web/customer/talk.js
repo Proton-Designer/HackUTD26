@@ -17,7 +17,8 @@
   const ulaw = s => { s = Math.max(-1, Math.min(1, s)) * 32767 | 0; let sign = 0; if (s < 0) { s = -s; sign = 0x80; } s = Math.min(s, 32635) + 132; let e = 7; for (let m = 0x4000; (s & m) === 0 && e > 0; e--, m >>= 1); return ~(sign | (e << 4) | ((s >> (e + 3)) & 15)) & 255; };
   const b64 = u8 => { let s = ""; for (let i = 0; i < u8.length; i++) s += String.fromCharCode(u8[i]); return btoa(s); };
   let gateOpen = false;
-  const sending = () => !muted && !handed && gateOpen && ws && ws.readyState === 1;
+  let hubAnswered = false;   // mic frames flow only after the hub's call.answered
+  const sending = () => !muted && !handed && hubAnswered && gateOpen && ws && ws.readyState === 1;
 
   function onAudio(e) {
     const x = e.inputBuffer.getChannelData(0), ratio = ctx.sampleRate / 8000; let peak = 0, ss = 0;
@@ -97,12 +98,12 @@
   }
   function close() { clearTimeout(wsT); wsExpected = true; try { ws && ws.close(); } catch (e) {} ws = null; wsCid = null; wsTry = 0; stats.state = "idle"; }
   function show(on) { const b = $("talkBox"); if (b) b.hidden = !(on && BF.talk) || !!BF.observer; }
-  function end() { active = null; refused = 0; BF.observer = false; { const o = $("observerMsg"); if (o) o.hidden = true; } close(); stopMic(); show(false); handed = false; muted = false; render(); }
+  function end() { active = null; hubAnswered = false; refused = 0; BF.observer = false; { const o = $("observerMsg"); if (o) o.hidden = true; } close(); stopMic(); show(false); handed = false; muted = false; render(); }
 
   const eb = $("earBox"); if (eb) { eb.checked = earphones; eb.onchange = () => { earphones = eb.checked; try { localStorage.setItem("bf.earphones", earphones ? "1" : "0"); } catch (e) {} }; }
   setInterval(() => { const d = $("micDot"); if (!d) return; const on = !!stream && Date.now() - lastSend < 1000; d.className = "dot " + (on ? "live" : stats.mic === "blocked" || stats.state === "error" ? "bad" : "idle"); d.title = on ? "Your voice is reaching the call" : "Not sending"; d.setAttribute("aria-label", d.title); }, 300);
   $("micBtn").addEventListener("click", () => { if (handed) return; if (!stream) { startMic(); return; } muted = !muted; render(); });   // first tap also (re)starts a blocked mic
-  $("answerBtn").addEventListener("click", () => { if (!BF.talk) return; show(true); startMic(); });   // the tap is the gesture iOS wants for the mic prompt
+  $("answerBtn").addEventListener("click", () => { if (!BF.talk) return; show(true); startMic(); if (hubAnswered) open(cid); });   // the tap is the gesture iOS wants for the mic prompt
   ["endBtn", "btnHang", "declineBtn"].forEach(id => $(id).addEventListener("click", end));
   new MutationObserver(() => { const a = $("alertBox"), b = $("talkBox"); if (a && b) b.classList.toggle("compact", !a.hidden); }).observe($("alertBox"), { attributes: true, attributeFilter: ["hidden"] });
   const prev = BF.onEvent;
@@ -110,8 +111,8 @@
     if (prev) prev(ev);
     if (!BF.talk || !ev) return;
     switch (ev.type) {
-      case "call.incoming": if (active === ev.call_id) break; end(); cid = ev.call_id; active = ev.call_id; break;   // a repeated incoming for the same call must not close the mic/socket
-      case "call.answered": cid = ev.call_id || cid; active = cid; open(cid); show(true); break;
+      case "call.incoming": if (active === ev.call_id) break; hubAnswered = false; end(); cid = ev.call_id; active = ev.call_id; break;   // a repeated incoming for the same call must not close the mic/socket
+      case "call.answered": cid = ev.call_id || cid; active = cid; hubAnswered = true; if ($("phone").dataset.state === "active") { open(cid); show(true); } break;   // ringing + hub-answered: wait for the customer's Answer tap
       case "handoff.started": handed = true; render(); break;
       case "handoff.restored": handed = false; render(); break;
       case "call.ended": active = null; end(); break;

@@ -40,7 +40,9 @@ try:
         def call(pg,answered=True,cid="c1"):
             pg.evaluate(f"BF.deliver({{type:'call.incoming',call_id:'{cid}',ts:new Date().toISOString(),data:{{from:'+15555550123',attestation:'none',scam_id_score:0.8}}}})")
             pg.evaluate(f"BF.deliver({{type:'call.routed',call_id:'{cid}',data:{{decision:'LIVE_GUARD',reason:'Caller ID not verified'}}}})"); time.sleep(.5)
-        def answered(pg,cid="c1"): pg.evaluate(f"BF.onEvent({{type:'call.answered',call_id:'{cid}',ts:new Date().toISOString(),data:{{by:'maria'}}}})")
+        def answered(pg,cid="c1"):
+            if pg.evaluate("BF.ui()")=="ringing": pg.click("#answerBtn")   # nothing auto-answers any more: the customer taps Answer
+            pg.evaluate(f"BF.onEvent({{type:'call.answered',call_id:'{cid}',ts:new Date().toISOString(),data:{{by:'maria'}}}})")
         ev=lambda pg,t,d="{}",cid="c1": pg.evaluate(f"BF.deliver({{type:'{t}',call_id:'{cid}',ts:new Date().toISOString(),data:{d}}})")
         # 01 pair
         pg=mk(paired=False,skip=False); shot(pg,"01-pair"); pg.context.close()

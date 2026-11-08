@@ -22,7 +22,9 @@
     a = new Audio(WAV); a.preload = "auto"; a.setAttribute("playsinline", ""); a.onerror = () => { console.warn("[backfire] sim caller audio unavailable:", WAV); };
     BF.simAudio = a; a.addEventListener("loadedmetadata", play, { once: true }); a.load(); play();
   }
-  $("answerBtn").addEventListener("click", () => { tapped = true; if (!t0) tapT = setTimeout(() => { t0 = t0 || Date.now(); start(); if (BF.listen && !lws && lastCid) { want = "caller"; decoyStart(lastCid); } }, 1500); setTimeout(start, 0); });   // no call.answered within 1.5 s: sync to the tap
+  let hubAnswered = false;   // the hub's call.answered has arrived for this call (nothing is opened before it, and never before the customer taps Answer)
+  function afterAnswer() { start(); if (BF.listen && !lws && lastCid) { want = "caller"; stats.frames = 0; stats.late = 0; decoyStart(lastCid); } }
+  $("answerBtn").addEventListener("click", () => { tapped = true; setTimeout(() => { if (hubAnswered) afterAnswer(); }, 0); });   // if the hub already answered the caller while it was ringing, start now; otherwise wait for call.answered
   ["declineBtn", "endBtn", "btnHang"].forEach(id => $(id).addEventListener("click", stop));
   // ---- decoy listen-in: after handoff the page plays Backfire's decoy live (WS /listen/{call_id}, {track:'caller'|'decoy', payload: base64 PCMU 8 kHz 20 ms}) ----
   const ULAW = (() => { const t = new Float32Array(256); for (let i = 0; i < 256; i++) { const u = ~i & 255, s = u & 128 ? -1 : 1, e = (u >> 4) & 7, m = u & 15; t[i] = s * (((m << 3) + 132) * (1 << e) - 132) / 32768; } return t; })();
@@ -72,13 +74,12 @@
   BF.onEvent = ev => {
     if (prev) prev(ev);
     switch (ev && ev.type) {
-      case "call.incoming": if (active === ev.call_id) break; lastCid = ev.call_id; active = ev.call_id; decoyStop(); stop(); break;   // a repeated incoming for the same call must not tear the sockets down
+      case "call.incoming": if (active === ev.call_id) break; hubAnswered = false; lastCid = ev.call_id; active = ev.call_id; decoyStop(); stop(); break;   // a repeated incoming for the same call must not tear the sockets down
       case "call.answered":
         if (!BF.sim && !BF.listen) break;
-        lastCid = ev.call_id || lastCid; active = lastCid; if (!t0) t0 = Date.parse(ev.ts) || Date.now();
-        if ($("phone").dataset.state === "ringing") $("answerBtn").click();   // no SIP leg to answer: the page answers for Maria
-        else start();
-        if (BF.listen) { want = "caller"; stats.frames = 0; stats.late = 0; decoyStart(lastCid); }   // listening mode: the real caller, live
+        lastCid = ev.call_id || lastCid; active = lastCid; hubAnswered = true; if (!t0) t0 = Date.parse(ev.ts) || Date.now();
+        if ($("phone").dataset.state === "ringing") { if (qs.has("autoanswer")) $("answerBtn").click(); }   // NEVER answers by itself; ?autoanswer=1 is for automated test harnesses only
+        else afterAnswer();                                                                                    // the customer already tapped Answer: audio starts now
         break;
       case "handoff.started":
         held = true; if (a) a.pause(); want = "decoy"; stats.frames = 0; stats.late = 0; dnext = 0; decoyLabel(false);
@@ -88,7 +89,7 @@
         held = false;
         if (BF.listen) { want = "caller"; stats.frames = 0; dnext = 0; decoyLabel(false); } else { decoyStop(); play(); }
         break;
-      case "call.ended": active = null; decoyStop(); stop(); break;
+      case "call.ended": active = null; hubAnswered = false; decoyStop(); stop(); break;
     }
   };
 })();
