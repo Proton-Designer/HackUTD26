@@ -64,3 +64,14 @@ Finals arrived 0.23-0.35 s after endpoint; 1 alert, 0 failovers, 0 429s, 7 utter
 
 ## b58cec24: SIMULATED call into the live service (benign), NOT a real phone call
 P1's phone-free simulated call (a script streamed in Telnyx stream format, 04:54:48-04:55:24, media format `audio/x-mulaw`, start keys include `tracks`). A dentist-office reminder: 4 utterances, finals 0.27-0.33 s after endpoint, every risk update s=0.05 low, 0 alerts, 0 failovers. It confirms the live service accepts that start-message variant and stays quiet on benign talk; it is not a real-PSTN true negative and is not counted in the real-call numbers.
+
+## 499a20d2: second real PSTN scam call (IRS + OTP/SSN), live local engine
+Team actor, scripted, n=1. Live first alert +14.9 s (P1's number), IRS impersonation + one-time-code / SSN asks, max s 0.95, 0 false alarms. Replayed through the private stack (HEAD eff9462, local engine): first alert +14.2 s, same chips, max 0.95, 10 finals scored.
+
+## TASK-063 replay table (real PSTN dumps through private hub :8190 + P2 :8102 on eff9462, local engine; aggregates only)
+| call | length | finals scored | first alert | max s | false alarms | note |
+|---|---|---|---|---|---|---|
+| adad65a0 | 43 s | 7 | +11.8 s (SSN ask) | 0.95 | 0 | scam script |
+| 0afc3446 | 99 s | 13 | none | 0.05 | 0 | team chatter, no scam content; `user.action hang_up` posted at +6.6 s (as the live Decline tap): all finals still scored (live run before the TASK-061 fix scored 0 of 14) |
+| 499a20d2 | 59 s | 10 | +14.2 s (IRS, OTP/SSN) | 0.95 | 0 | scam script; s falls to 0.05 on the last benign closing line after the alert |
+Caveat: n=3, team actors, scripts the team knows; shows the path works on real phone lines, not a detection rate.
