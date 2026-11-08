@@ -135,3 +135,10 @@ Times are wall clock from my read-only WS /events recorder (started 06:39) and P
 All 3 calls: 1 alert each, 0 failovers, 0 429s, 0 zero-audio runs (caller track continuous), handoff.started the same second as the tap, decoy opener 2 s after the tap, then 4-10 decoy/scammer turns. Intel ran 20-40 s after call end (block her + link campaign applied, network block queued for approval, ftc packet denied).
 
 **Why e3e343de alerted at +43.7 s (lead's question):** the first ~37 s of the script had no ask. "I'm looking to charge your credit card", "a brief on the payment", "I got installed", "did it pick it up yet?" and "can you open your banking app?" scored s 0.00-0.05 (local model, all windows low). The score jumped to 0.95 only on "open your banking app and send your information" (final at +41.8 s, alert +43.7 s, 1.9 s after the final). So the delay was the script, not the pipeline. One real weakness: the remote-install cue ("installed", "did it pick it up yet") did not move the score; remote_app asks are caught only when named (TeamViewer etc.). Not changed.
+
+## Rehearsal calls (post-freeze 07:50; eng2 analyst; real Telnyx PSTN from the team number; aggregates only, no audio)
+| call | time | length | first caller words (finals) | alert | src | max s | haul / hold_transfer / flag_payee | errors |
+|---|---|---|---|---|---|---|---|---|
+| 1b838cd2 | 08:45:58 | 101 s | gift cards (Target) then Zelle to refunds.department@... and a phone number | 08:46:13 (+14 s) | LLM / fast path, s 0.90 | 0.97 | haul: gift_card_brand, domain, handle `920.7856782` ONLY (no refunds.dept); hold_transfer / flag_payee did NOT fire (miss fixed later by 3baff9e + 580d8b5, regression `decoy_ab/regress_1b838cd2.py`: now refunds.dept hit + +19207856782) | none |
+| 8ebe0804 | 09:17:49 | 0.7 s | n/a | n/a | n/a | n/a | declined by the customer before answer | none |
+| 92ea32cc | 09:17:56 | 23.5 s | "Yo, what is a." / "Yo, hello." (chatter, no scam) | none (correct) | n/a | 0.05 | none; no handoff | none, 0 failovers, 0 429s |
