@@ -172,3 +172,20 @@ def test_two_concurrent_calls_bucket_exhausted_fast_rules(monkeypatch):
     (ra, rb), dt = asyncio.run(both())
     assert len(calls) == 1 and dt < 1.0           # one got the token, the other fell back to rules without starving
     assert ra["s"] >= 0.9 and isinstance(rb["s"], float)
+
+
+def test_demo_fuzzy_hit_and_new_ask_rejected(monkeypatch):
+    monkeypatch.setenv("DEMO_MODE", "1"); D._CACHE.clear()
+    base = "hello this is michael with apex digital about your account and a client that referred you"
+    monkeypatch.setattr(D, "_demo_load", lambda: {D._demo_key(D._key("cloud", base)): {"s": 0.3, "asks": []}})
+    D._FUZZY["n"] = -1
+    async def boom(w, m): raise RuntimeError("live")
+    import detection.engines.cloud as C; monkeypatch.setattr(C, "score", boom)
+    r = asyncio.run(D._engine_score("Hello, this is Michael with Apex Digital about your account and a client that referred you!", {}, "cloud"))
+    assert r["s"] == 0.3                                   # fuzzy hit
+    import pytest
+    with pytest.raises(RuntimeError):
+        asyncio.run(D._engine_score(base + " please buy gift cards", {}, "cloud"))   # new ask: not served
+    monkeypatch.delenv("DEMO_MODE")
+    with pytest.raises(RuntimeError):
+        asyncio.run(D._engine_score("Hello, this is Michael with Apex Digital about your account and a client that referred you!", {}, "cloud"))

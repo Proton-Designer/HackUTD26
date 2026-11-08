@@ -141,6 +141,38 @@ def _demo_key(k: tuple) -> str:
     return "|".join(k)
 
 
+FUZZY_COS = 0.92
+_FUZZY = {"n": -1, "rows": []}
+
+
+def _vec(text: str):
+    from detection.campaign import _grams
+    g = _grams(text); n = sum(v * v for v in g.values()) ** 0.5 or 1.0
+    return g, n
+
+
+def _demo_fuzzy(k: tuple):
+    """DEMO_MODE only: nearest recorded window by char n-gram cosine >= 0.92, accepted only if the live text's rule asks
+    are a subset of the cached asks (never serve a lower-risk answer for a new hard ask). The rule floor is applied by merge()."""
+    try:
+        cache = _demo_load(); pre = f"{k[0]}|{k[1]}|"
+        if _FUZZY["n"] != len(cache):
+            _FUZZY["rows"] = [(key[len(pre):], v) + _vec(key[len(pre):]) for key, v in cache.items() if key.startswith(pre)]
+            _FUZZY["n"] = len(cache)
+        g, n = _vec(k[2]); best, bc = None, 0.0
+        for text, v, g2, n2 in _FUZZY["rows"]:
+            c = sum(c1 * g2.get(t, 0) for t, c1 in g.items()) / (n * n2)
+            if c > bc: best, bc = v, c
+        if best is None or bc < FUZZY_COS:
+            return None
+        if not set(rule_scan(k[2])["asks"]) <= set(best.get("asks") or []):
+            log.info("demo fuzzy rejected (new ask) cos=%.3f", bc); return None
+        log.info("demo cache fuzzy hit cos=%.3f", bc)
+        return best
+    except Exception:
+        return None
+
+
 async def _acquire(engine: str) -> bool:
     """Process-wide token bucket (P2_CLOUD_RPM, default 35) for cloud calls; waits at most 0.5 s."""
     if engine != "cloud":
@@ -170,6 +202,9 @@ async def _engine_score(window_text: str, metadata: dict, engine: str) -> dict:
         hit = _demo_load().get(_demo_key(k))
         if isinstance(hit, dict):
             log.info("demo cache hit")
+            return hit
+        hit = _demo_fuzzy(k)
+        if hit is not None:
             return hit
         log.info("demo cache miss: %s", _norm(window_text)[-60:])
     if not await _acquire(engine):
