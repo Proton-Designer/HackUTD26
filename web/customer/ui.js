@@ -117,7 +117,8 @@
   }
   function home() { view("callView"); applyGuard(); paintHome(); if (BF.pendingStart) { const f = BF.pendingStart; BF.pendingStart = null; f(); } }
   function finish(msg) { $("homeNote").textContent = msg || ""; home(); }
-  function paintHome() { const c = $("voiceCard"); if (c) c.hidden = !!state.voiceId || !state.guardOn; }
+  function paintHome() { const c = $("voiceCard"); if (c) c.hidden = !!state.voiceId || state.hubVoice === true || !state.guardOn; }
+  BF.renderVoiceCard = () => paintHome();
   // end of the voice flow (the Do Not Screen list now lives in Protection only)
   function toDns(msg) { state.doneMsg = msg; if (state.fromSettings) { state.fromSettings = false; view("protView"); } else finish(msg); }
   // The one tap: turns Live Guard on, unlocks call sounds (same gesture) and asks for the mic now, with the reason on screen, so the prompt never comes mid-call.
@@ -251,5 +252,6 @@
   applyGuard();
   if (!store.get("done") && !qs.has("skipsetup")) setup(1); else view("callView");
   BF.setup = setup; BF.view = view; BF._enroll = enroll;
-  BF.hasVoice = () => !!state.voiceId;   // app.js words the handoff/summary as "your voice" only when a voice is enrolled
+  BF.hasVoice = () => !!state.voiceId || state.hubVoice === true;   // the decoy's voice is per hub: a clone enrolled on another phone counts
+  if (HUB) BF.hubFetch("/voice/status").then(r => r.ok ? r.json() : null).then(j => { if (j && typeof j.cloned === "boolean") { state.hubVoice = j.cloned; if (BF.renderVoiceCard) BF.renderVoiceCard(); } }).catch(() => {});   // app.js words the handoff/summary as "your voice" only when a voice is enrolled
 })();

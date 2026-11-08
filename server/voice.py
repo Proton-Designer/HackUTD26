@@ -118,3 +118,18 @@ async def delete_voice(voice_id: str, request: Request):
         except Exception as e:
             log.warning("voice delete via P3 failed (%s); local delete reported ok", type(e).__name__)
     return {"ok": True}
+
+
+@router.get("/voice/status", dependencies=[Depends(device.require_device)])
+async def voice_status():
+    """Whether the decoy has a cloned voice loaded (the voice is per hub, not per phone), so the app never says
+    'synthetic voice' while a clone is in use. {cloned: true|false|null}; null = P3 unreachable or not connected."""
+    base = _base()
+    if not base:
+        return {"cloned": None}
+    try:
+        async with httpx.AsyncClient(timeout=3) as c:
+            r = await c.get(f"{base}/healthz", headers=_hdrs())
+        return {"cloned": bool(r.json().get("cloned_voice"))} if r.status_code == 200 else {"cloned": None}
+    except Exception:
+        return {"cloned": None}
