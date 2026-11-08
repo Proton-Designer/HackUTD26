@@ -622,3 +622,17 @@ def test_duplicate_alert_fired_ignored_and_logged(monkeypatch, caplog):
         m._ALERTS[("DUP1", "realert")] -= 10                                                              # a later genuine rise
         assert post("DUP1", "realert").json() == {"ok": True} and len(ws_events("DUP1")) == 3
     assert any("dup alert ignored call=DUP1" in r.getMessage() for r in caplog.records)
+
+
+def test_device_cannot_poison_alert_dedupe(monkeypatch):
+    from server import main as m
+    monkeypatch.setenv("PIPELINE_TOKEN", "pt-secret"); m._ALERTS.clear()
+    bus.publish("call.incoming", "DV4", {"from": "+15555550123", "to": "+15555550100", "attestation": "C", "scam_id_score": 0.8})
+    dev, anon = paired(), TestClient(app)
+    with dev.websocket_connect("/listen/DV4", subprotocols=["bf-device", dev.headers["x-device-token"]]):
+        r = dev.post("/events", json={"type": "alert.fired", "call_id": "DV4", "data": {"level": "first", "why_chips": [], "engine": "device"}})
+        assert r.status_code == 403
+        assert ("DV4", "first") not in m._ALERTS                                       # a refused device post leaves no dedupe state
+    real = anon.post("/events", json={"type": "alert.fired", "call_id": "DV4", "data": {"level": "first", "why_chips": ["x"]}},
+                     headers={"x-pipeline-token": "pt-secret"})
+    assert real.json() == {"ok": True} and any(e["type"] == "alert.fired" and e["call_id"] == "DV4" for e in bus.history)

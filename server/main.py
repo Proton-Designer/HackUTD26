@@ -68,12 +68,15 @@ def post_event(request: Request, body: dict = Body(...)):
     if t in RESERVED:
         raise HTTPException(403, f"{t} is hub-only")
     data = body.get("data") or {}
-    if t == "alert.fired" and _dup_alert(cid, data.get("level") if isinstance(data, dict) else None):
-        log.warning("dup alert ignored call=%s level=%s", str(cid)[:8], (data or {}).get("level") if isinstance(data, dict) else None)
-        return {"ok": True, "duplicate": True}
+    lvl = data.get("level") if isinstance(data, dict) else None
     if dev_only:
-        data = _device_event(request.headers.get("x-device-token"), t, cid, data)
+        data = _device_event(request.headers.get("x-device-token"), t, cid, data)   # raises for anything but device risk/transcript: never reaches dedupe
+    elif t == "alert.fired" and _dup_alert(cid, lvl):
+        log.warning("dup alert ignored call=%s level=%s", str(cid)[:8], lvl)
+        return {"ok": True, "duplicate": True}
     bus.publish(t, cid, data, None if dev_only else body.get("ts"))
+    if t == "alert.fired" and not dev_only:
+        _record_alert(cid, lvl)   # remembered only after an authorized publish
     return {"ok": True}
 
 _ALERTS: dict = {}          # (call_id, level) -> time of the last accepted alert.fired from POST /events
@@ -81,14 +84,14 @@ REALERT_DEDUP_S = 3.0       # P2 retries a failed POST within seconds; real re-a
 
 def _dup_alert(cid, level) -> bool:
     """P2 retries POSTs, so the same alert.fired can arrive twice. Exactly one level 'first' per call, ever; a 'realert' repeated within
-    REALERT_DEDUP_S is a retry (genuine re-alerts need a dip and a new rise, so they are further apart)."""
-    now, key = time.time(), (str(cid), str(level))
+    REALERT_DEDUP_S is a retry (genuine re-alerts need a dip and a new rise, so they are further apart). Read-only: see _record_alert."""
+    now = time.time()
     for k in [k for k, v in _ALERTS.items() if now - v > 3600]: _ALERTS.pop(k, None)
-    last = _ALERTS.get(key)
-    if last is not None and (level != "realert" or now - last < REALERT_DEDUP_S):
-        return True
-    _ALERTS[key] = now
-    return False
+    last = _ALERTS.get((str(cid), str(level)))
+    return last is not None and (level != "realert" or now - last < REALERT_DEDUP_S)
+
+def _record_alert(cid, level):
+    _ALERTS[(str(cid), str(level))] = time.time()
 
 # ---- paired-device events: engine "device" risk.update / transcript.caller from a second client (e.g. native Android on-device detection) ----
 _BANDS = {"low", "watch", "high", "critical"}
