@@ -128,3 +128,26 @@ def test_demo_mode_serves_recorded_and_records(monkeypatch, tmp_path):
     D._CACHE.clear(); monkeypatch.delenv("DEMO_RECORD"); monkeypatch.setenv("DEMO_MODE", "1")
     assert asyncio.run(D._engine_score("rec me", {}, "cloud")) == {"s": 0.2} and e.n == 1
     asyncio.run(D._engine_score("other", {}, "cloud")); assert e.n == 2  # miss -> live
+
+
+IRS2 = ("This is Officer Daniel Brooks with the IRS Enforcement Division. Am I speaking with the taxpayer? "
+        "Ma'am, there is a warrant for your arrest for unpaid federal taxes from 2023.")
+
+
+def test_campaign_chip_raise_only():
+    o = run(IRS2, {"s": 0.5}); assert "Known scam campaign" in o["why_chips"] and o["s"] == 0.6 and len(o["why_chips"]) <= 4
+    assert "Known scam campaign" not in run("hello there my friend how are you today", {"s": 0.1})["why_chips"]
+
+
+def test_campaign_not_on_legit_lookalike():
+    o = run(LEGIT, {"s": 0.3}); assert "Known scam campaign" not in o["why_chips"] and o["s"] == 0.3
+
+
+def test_chips_dedupe_llm_repeats():
+    o = schema.normalize({"asks": ["gift_card", "secrecy"], "impersonates": "IRS", "addresses_ai_system": True,
+                          "why_chips": ["claims IRS authority", "asks for gift cards", "ASKS FOR GIFT CARDS", "urgent deadline", "secrecy"]})
+    assert o["why_chips"] == ["Claims to be IRS", "Asks for gift cards", "Talks to the AI", "Secrecy"] or \
+        o["why_chips"][:3] == ["Claims to be IRS", "Asks for gift cards", "Talks to the AI"]
+    assert len({c.lower() for c in o["why_chips"]}) == len(o["why_chips"]) <= 4
+    o = schema.normalize({"asks": ["otp"], "why_chips": ["urgent deadline"]})
+    assert o["why_chips"] == ["Asks for a one-time code", "Urgent deadline"]

@@ -54,6 +54,13 @@ def _bool(v) -> bool:
     return bool(v)
 
 
+_STOP = frozenset("a an the to be of for is are asks ask asking claims claim claiming says wants wanting requests request requesting your you with talks talk about".split())
+
+
+def _words(text: str) -> set:
+    return {w for w in re.findall(r"[a-z0-9$]+", text.lower()) if w not in _STOP}
+
+
 def build_chips(asks, impersonates, addresses_ai, extra=()):
     """At most 4 chips, severity order: impersonation, hard asks, AI, secrecy, then model extras."""
     chips = []
@@ -64,9 +71,14 @@ def build_chips(asks, impersonates, addresses_ai, extra=()):
         chips.append(CHIP_AI)
     if "secrecy" in asks:
         chips.append(ASK_CHIPS["secrecy"])
+    seen = [_words(c) for c in chips]
     for c in extra:
-        if isinstance(c, str) and c.strip() and c.strip()[:40] not in chips:
-            chips.append(c.strip()[:40])
+        c = c.strip()[:40] if isinstance(c, str) else ""
+        w = _words(c)
+        if not w or any(w & x for x in seen):  # repeats a structured/earlier chip (case-insensitive, by content word)
+            continue
+        c = c[0].upper() + c[1:]
+        chips.append(c); seen.append(w)
     # AI chip must survive the cap: drop trailing hard asks first if needed
     if addresses_ai and CHIP_AI not in chips[:4]:
         chips.remove(CHIP_AI); chips.insert(min(len(chips), 3), CHIP_AI)

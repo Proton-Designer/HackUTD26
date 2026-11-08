@@ -62,7 +62,25 @@ def rule_scan(text: str) -> dict:
     return {"asks": asks, "injection": inj, "floor": floor}
 
 
-def merge(raw, rules: dict, engine: str) -> dict:
+def _campaign(out: dict, text: str) -> dict:
+    """Raise-only: known scam script similarity adds +0.1 and the chip (kept within 4 chips)."""
+    try:
+        from detection import campaign
+        if campaign.match(text):
+            out["s"] = round(min(1.0, out["s"] + campaign.BOOST), 3)
+            out["band"] = schema.band(out["s"])
+            if campaign.CHIP not in out["why_chips"]:
+                out["why_chips"] = out["why_chips"][:3] + [campaign.CHIP]
+    except Exception:
+        pass
+    return out
+
+
+def merge(raw, rules: dict, engine: str, text: str = "") -> dict:
+    return _campaign(_merge(raw, rules, engine), text)
+
+
+def _merge(raw, rules: dict, engine: str) -> dict:
     out = schema.normalize(raw, engine)
     asks = [a for a in schema.ASKS if a in set(out["asks"]) | set(rules["asks"])]
     ai = out["addresses_ai_system"] or rules["injection"]
@@ -79,7 +97,8 @@ def quick(window_text: str, engine: str = "cloud") -> dict:
     Lets the alert machine fire on a rule floor >= 0.80 before the LLM returns."""
     engine = engine if engine in schema.ENGINES else "cloud"
     try:
-        return merge(None, rule_scan(window_text if isinstance(window_text, str) else ""), engine)
+        t = window_text if isinstance(window_text, str) else ""
+        return merge(None, rule_scan(t), engine, t)
     except Exception:
         return schema.normalize({}, engine)
 
@@ -187,7 +206,7 @@ async def detect(call_id: str, window_text: str, metadata: dict | None, engine: 
         except Exception as e:  # fail open to rules only
             note = type(e).__name__
             log.warning("detect %s engine=%s fell back to rules: %s", call_id, engine, note)
-        out = merge(raw, rules, engine)
+        out = merge(raw, rules, engine, text)
         if raw is None:
             out["scam_type"] = out["scam_type"] if out["asks"] else "unknown"
         return out
