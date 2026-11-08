@@ -87,6 +87,32 @@ PLAYBOOKS: dict[str, dict] = {
 }
 
 
+# P2's risk.update scam_type labels -> our playbook (#142: 'gift_card' gave 'generic'). Matched on the normalised label
+# (lowercase, '_'/'-' -> space); first rule whose words all appear wins.
+LABEL_RULES = [
+    (("gift",), "irs_gov"), (("irs",), "irs_gov"), (("tax",), "irs_gov"), (("government",), "irs_gov"), (("police",), "irs_gov"),
+    (("warrant",), "irs_gov"), (("jury",), "irs_gov"),
+    (("social", "security"), "ssa_medicare"), (("ssa",), "ssa_medicare"), (("medicare",), "ssa_medicare"),
+    (("tech",), "tech_support"), (("microsoft",), "tech_support"), (("virus",), "tech_support"), (("refund",), "tech_support"),
+    (("remote",), "tech_support"),
+    (("crypto",), "crypto"), (("bitcoin",), "crypto"), (("investment",), "crypto"), (("romance",), "crypto"),
+    (("grandparent",), "grandparent"), (("grandchild",), "grandparent"), (("family",), "grandparent"), (("bail",), "grandparent"),
+    (("utility",), "utility"), (("utilities",), "utility"), (("power",), "utility"), (("electric",), "utility"),
+    (("delivery",), "delivery"), (("package",), "delivery"), (("shipping",), "delivery"),
+    (("prize",), "prize"), (("lottery",), "prize"), (("sweepstake",), "prize"),
+    (("job",), "job"), (("employment",), "job"), (("recruit",), "job"),
+    (("bank",), "bank"), (("fraud",), "bank"), (("zelle",), "bank"), (("account",), "bank"), (("safe",), "bank"),
+]
+
+
+def map_label(label: str) -> str | None:
+    t = " " + re.sub(r"[_\-/]+", " ", (label or "").lower()) + " "
+    for words, scam in LABEL_RULES:
+        if all(re.search(r"\b" + re.escape(w), t) for w in words):
+            return scam
+    return None
+
+
 def classify(lines: list[str], current: str = "generic") -> str:
     """Keyword score over the caller's lines, recent lines weighted up. Re-classifies only when another type clearly
     leads (so one stray word doesn't flip the playbook)."""

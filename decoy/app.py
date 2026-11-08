@@ -294,7 +294,8 @@ class Session:
             self.history.append({"role": "user", "content": "<caller>" + core.clean(" ".join(self.pre_lines))[-1500:] + "</caller>"})
         self.pre_label: str = pre.get("label") or ""                # P2's scam_type label, e.g. "irs impersonation"
         if self.pre_lines or self.pre_label:
-            self.scam = PB.classify(self.pre_lines + ([self.pre_label] if self.pre_label else []), self.scam) if PLAYBOOKS_ON else self.scam
+            if PLAYBOOKS_ON:   # P2's label is the starting type (#142); the transcript can still clearly override it
+                self.scam = PB.classify(self.pre_lines, PB.map_label(self.pre_label) or self.scam)
             log.info("decoy %s: pre-handoff context %d lines, P2 label %r -> scam %s", call_id, len(self.pre_lines),
                      self.pre_label, self.scam)
 
@@ -472,7 +473,7 @@ class Session:
         self.caller_turns += 1
         self.last_heard = time.monotonic()
         if PLAYBOOKS_ON:
-            new = PB.classify(self.pre_lines + ([self.pre_label] if self.pre_label else []) + self.scammer_lines, self.scam)
+            new = PB.classify(self.pre_lines + self.scammer_lines, self.scam)
             if new != self.scam:
                 log.info("decoy %s: scam type %s -> %s at caller line %d", self.call_id, self.scam, new, self.caller_turns)
                 self.scam = new

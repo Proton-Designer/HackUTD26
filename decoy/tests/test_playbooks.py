@@ -44,3 +44,13 @@ def test_bail_signals():
     assert not PB.SUSPICION.search("This call is recorded. Our automated system flagged your account.")   # scammer's own script
     assert not PB.REFUSAL.search("Our secure line is 1-888-555-0123.")
     assert set(PB.GOODBYES) >= {"got_payment_details", "time_cap", "no_progress", "suspicion", "hostile", "refused", "silence"}
+
+
+def test_p2_labels():   # #142 live eb66fef0: P2 label 'gift_card' gave 'generic'
+    assert PB.map_label("gift_card") == "irs_gov" and PB.map_label("irs impersonation") == "irs_gov"
+    assert PB.map_label("tech support") == "tech_support" and PB.map_label("crypto_investment") == "crypto"
+    assert PB.map_label("grandparent") == "grandparent" and PB.map_label("bank fraud dept") == "bank"
+    assert PB.map_label("utility_shutoff") == "utility" and PB.map_label("social security") == "ssa_medicare"
+    assert PB.map_label("") is None and PB.map_label("unknown thing") is None
+    # the label is the starting type; vague lines don't flip it
+    assert PB.classify(["Hello, are you there?", "Listen to me carefully."], PB.map_label("gift_card")) == "irs_gov"
