@@ -26,12 +26,13 @@
   }
   function onCall(c) {
     const st = c.state;
+    (BF.voipEvents = BF.voipEvents || []).push(Date.now() + " " + st + " " + (c.direction || "") + " rs=" + !!c.remoteStream);   // debug trail for call-state transitions
     if (st === "ringing" && c.direction === "inbound") {
       call = c;
       // normally the hub's call.incoming drives the ring screen; if it hasn't arrived shortly, ring from the SIP call itself
       setTimeout(() => { if (call === c && !["ringing", "active"].includes(BF.ui())) BF.deliver({ type: "call.incoming", call_id: "sip_" + c.id, ts: new Date().toISOString(), data: { from: c.remoteCallerNumber || "Unknown caller", scam_id_score: 0, attestation: "C" } }); }, 1500);
     } else if (st === "active" && c.remoteStream) {
-      audio.srcObject = c.remoteStream; audio.play().catch(() => {});
+      audio.srcObject = c.remoteStream; audio.play().catch(e => { (BF.voipEvents = BF.voipEvents || []).push(Date.now() + " play() rejected: " + e); });
     } else if (["hangup", "destroy"].includes(st) && call === c) {
       call = null; audio.srcObject = null;
       if (["ringing", "active"].includes(BF.ui())) BF.endUI("Call ended.");
