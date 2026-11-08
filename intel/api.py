@@ -79,9 +79,15 @@ def undo(undo_token: str):
     row = _store().undo(undo_token)
     if not row:
         raise HTTPException(404, "unknown or already undone")
-    _cfg["emit"]("blocklist.updated", None, {"number": row["number"], "scope": row["scope"],
-                                             "undo_token": undo_token, "active": False, "reason": "undone by customer"})
+    _emit_undo(row)
     return {"undone": True, **row}
+
+
+def _emit_undo(row: dict) -> None:
+    """blocklist.updated active=false for the undone block and every other block lifted on that number (F16)."""
+    for r in [row] + list(row.get("also_undone") or []):
+        _cfg["emit"]("blocklist.updated", None, {"number": r["number"], "scope": r["scope"], "undo_token": r["undo_token"],
+                                                 "active": False, "reason": "undone by customer"})
 
 
 @router.get("/blocked")
@@ -199,6 +205,5 @@ def undo_block(undo_token: str) -> bool:
         return _undo_hold(undo_token) is not None
     row = _store().undo(undo_token)
     if row:
-        _cfg["emit"]("blocklist.updated", None, {"number": row["number"], "scope": row["scope"],
-                                                 "undo_token": undo_token, "active": False, "reason": "undone by customer"})
+        _emit_undo(row)
     return bool(row)

@@ -77,3 +77,7 @@
 - Echo guard: in talk mode the customer's voice leaks into the caller track, so the extractor can capture the
   customer's OWN number. intel drops any callback/calling-number artifact equal to call.incoming.to before lookups and
   campaign linking (reported in intel.plan.dropped), and the gate denies any action targeting it (defense in depth).
+- F16 (#93): the customer's protection-log undo lifts EVERY active block on that number (her + campaign + network)
+  so it really rings again (routing checks all scopes), with one blocklist.updated active=false per lifted block.
+  Fine for the one-customer demo; production would add a per-customer exception instead of lifting blocks that
+  protect other customers.

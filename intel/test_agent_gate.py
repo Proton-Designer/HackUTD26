@@ -330,3 +330,19 @@ def test_customer_own_number_never_a_target(store, events):
     ctx = gate.Context(calling_number=JUDGE_NUMBER, customer_number=me, campaign_id="c", campaign_status="confirmed")
     d = gate.decide([{"kind": "callback_protection_warning", "target": "(469) 908-8594"}], ctx)
     assert d[0]["outcome"] == "denied" and "customer's own number" in d[0]["reason"]
+
+
+def test_customer_undo_lifts_campaign_and_network_blocks_too(store, events, tmp_path):
+    """F16 (#93): after the customer's undo the number must actually ring again."""
+    from intel import api
+    seed(store, events)
+    run_judge(store, events)                                   # her + campaign blocks on the judge number
+    store.add_block(JUDGE_NUMBER, "network")                   # + analyst-approved network block
+    assert len(store.q("SELECT * FROM blocklist WHERE number='2145550199' AND active=1")) == 3
+    ev = []
+    api.configure(store=store, emit=cap(ev))
+    tok = store.q("SELECT undo_token FROM blocklist WHERE number='2145550199' AND scope='her'")[0]["undo_token"]
+    assert api.undo_block(tok)
+    assert not store.is_blocked(JUDGE_NUMBER)[0]
+    assert {e["data"]["scope"] for e in ev if e["type"] == "blocklist.updated" and e["data"]["active"] is False} \
+        == {"her", "campaign", "network"}

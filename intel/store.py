@@ -72,7 +72,13 @@ class Store:
         if not row:
             return None
         self.x("UPDATE blocklist SET active=0 WHERE undo_token=?", token)
-        return row[0]
+        # F16 (#93): the customer's undo must make the number ring again, so lift the campaign and network blocks on
+        # that same number too (routing checks every scope). Demo = one customer; production would add a per-customer
+        # exception instead of lifting blocks that protect others.
+        also = self.q("SELECT * FROM blocklist WHERE number=? AND active=1", row[0]["number"])
+        if also:
+            self.x("UPDATE blocklist SET active=0 WHERE number=? AND active=1", row[0]["number"])
+        return {**row[0], "also_undone": also}
 
     # ---- Nessie transfer holds (mock bank) ----
     def add_hold(self, action_id: str, call_id: str, transfer_id: str, amount, destination: str) -> str:
