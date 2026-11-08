@@ -71,7 +71,7 @@ def _paths(routes, prefix=""):
     out = []
     for r in routes:
         if hasattr(r, "original_router"):  # newer FastAPI wraps include_router results
-            out += _paths(r.original_router.routes, prefix + getattr(r.original_router, "prefix", ""))
+            out += _paths(r.original_router.routes, prefix + (getattr(r, "prefix", "") or ""))  # route.path already carries the router's own prefix
         elif hasattr(r, "path"):
             out.append(prefix + r.path)
     return out

@@ -128,6 +128,8 @@ def test_latency_and_status(tmp_path, monkeypatch):
     assert s["hub"] == "up" and "P2 /detect" in s["pipelines"] and "HUB_TOKEN_set" in s["flags"]
     assert "HUB_TOKEN" not in str(s.get("flags", {}).values())
     assert "<table>" in c.get("/demo/status?format=html").text
+    assert s["pipelines"]["P4 /intel"]["mounted"] is True    # in-process intel router counts as mounted
+    assert s["pipelines"]["voip"]["mounted"] is True
 
 
 def test_static_mounts_load():
