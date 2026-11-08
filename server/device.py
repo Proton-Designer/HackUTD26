@@ -44,9 +44,17 @@ def _valid(token) -> bool:
     _ensure_table()
     return db.q("SELECT 1 FROM device_tokens WHERE hash=?", (_hash(token),)).fetchone() is not None
 
+def _same_origin_or_none(request: Request) -> bool:
+    """A cross-origin browser request (hostile page hitting localhost) must not ride the loopback bypass."""
+    o = request.headers.get("origin")
+    if not o:
+        return True
+    from urllib.parse import urlsplit
+    return urlsplit(o).netloc.lower() == (request.headers.get("host") or "").lower()
+
 def require_device(request: Request):
     """FastAPI dependency (voip may import it): direct localhost, or valid x-device-token, or x-hub-token == HUB_TOKEN."""
-    if is_direct_local(request):
+    if is_direct_local(request) and _same_origin_or_none(request):
         return
     hub = os.environ.get("HUB_TOKEN")
     if hub and secrets.compare_digest(request.headers.get("x-hub-token", ""), hub):

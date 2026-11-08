@@ -415,3 +415,13 @@ def test_trusted_crud_needs_device_and_validates():
     assert c.delete("/trusted/%2B15555550123").json() == {"ok": True, "removed": False}   # idempotent
     assert c.delete("/trusted/garbage").status_code == 200
     assert not db.has("trusted", "+15555550123")
+
+
+def test_loopback_bypass_refuses_cross_origin_browser_writes():
+    local = TestClient(app, client=("127.0.0.1", 5000))
+    h = {"host": "127.0.0.1:8000"}
+    assert local.post("/trusted", json={"number": "+15555550123"}, headers={**h, "origin": "https://evil.example"}).status_code == 401
+    assert local.delete("/trusted/%2B15555550188", headers={**h, "origin": "http://localhost:3000"}).status_code == 401
+    assert db.has("trusted", "+15555550188") and not db.has("trusted", "+15555550123")
+    assert local.post("/trusted", json={"number": "+15555550123"}, headers={**h, "origin": "http://127.0.0.1:8000"}).status_code == 200
+    assert local.post("/trusted", json={"number": "+15555550124"}, headers=h).status_code == 200   # curl at the console
