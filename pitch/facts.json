@@ -1,0 +1,141 @@
+{
+ "name": "Backfire",
+ "tagline": "T-Mobile customers hand a live scam call to an AI decoy that exposes and blocks the scammer",
+ "try_it": "Call [ADD: scam line number] and play the scammer",
+ "problem_number": "$15.9B",
+ "problem_context": "reported lost to fraud by Americans in 2025, up from $12.5B in 2024",
+ "problem_source": "FTC testimony to Congress, Mar 2026",
+ "how_title": "One tap turns a scam call into evidence that blocks the scammer",
+ "steps": [
+  {
+   "label": "Network sends only the caller's audio",
+   "kind": "carrier"
+  },
+  {
+   "label": "Nemotron detects the scam: two beeps",
+   "kind": "nemotron"
+  },
+  {
+   "label": "Maria taps Scammer Get Scammed",
+   "kind": "input"
+  },
+  {
+   "label": "Decoy gets the payout; agent verifies it",
+   "kind": "nemotron"
+  },
+  {
+   "label": "Scammer blocked before it rings again",
+   "kind": "action"
+  }
+ ],
+ "real_vs_simulated": "Real: Nemotron agents, a live phone call, domain and blockchain lookups. Simulated: T-Mobile network (Telnyx), Scam ID, attestation, network-wide blocks.",
+ "proof_title": "Nemotron caught [ADD: N of M] test scams with [ADD: K] false alarms",
+ "proof_table": {
+  "columns": [
+   "",
+   "Cloud Nemotron\n(runs the demo)",
+   "Local Nemotron 4B\n(phone-sized)",
+   "Keyword rules\n(baseline)"
+  ],
+  "rows": [
+   [
+    "Scam calls caught",
+    "__ of __",
+    "__ of __",
+    "__ of __"
+   ],
+   [
+    "Real look-alike calls wrongly flagged",
+    "__ of __",
+    "__ of __",
+    "__ of __"
+   ],
+   [
+    "Tricks aimed at the AI caught",
+    "__ of __",
+    "__ of __",
+    "__ of __"
+   ]
+  ],
+  "highlight_col": 1
+ },
+ "proof_models_note": "Cloud: Nemotron 3.5 Lightning. Local: Nemotron Nano 4B on a laptop GPU, standing in for the phone.",
+ "metric_big": "[ADD: N]",
+ "metric_context": "test scam scripts caught, vs [ADD: K of L] legit look-alike scripts wrongly flagged",
+ "metric_method": "60 team-written synthetic test scripts; settings frozen on a separate 60 before scoring. Small sample.",
+ "tmobile_line": "Protects before the ring, during the call and after; only the caller is ever analyzed.",
+ "nvidia_line": "Nemotron agents detect, play the decoy, then plan lookups and propose blocks with tools.",
+ "next_line": "Pilot on T-Mobile's Live Translation call servers (*87*).",
+ "story": {
+  "persona_title": "Maria, 78",
+  "persona_line": "picks up a call. Caller ID shows her bank.",
+  "persona_note": "Synthetic scenario. Data: FTC Data Spotlight, Aug 2025 (ages 60+).",
+  "caller_label": "Her bank",
+  "caller_quote": "“Your account's being drained. Move your savings to a safe account. Don't tell the branch.”",
+  "stakes_title": "Scams that start with a phone call cost the most",
+  "stakes_a_num": "$3,000",
+  "stakes_a_label": "median loss when the scam starts with a phone call",
+  "stakes_b_num": "$599",
+  "stakes_b_label": "median loss when it starts on social media",
+  "stakes_source": "Reported losses, people 60+. Source: FTC, Protecting Older Consumers 2025-2026, Oct 2026",
+  "gap_title": "Once a scam call gets through, nothing helps her",
+  "gap_cols": [
+   {
+    "head": "Before the ring",
+    "body": "Scam ID and Scam Block judge the number",
+    "stat": "~29B calls tagged in 2025"
+   },
+   {
+    "head": "During the call",
+    "body": "No help on incoming calls"
+   },
+   {
+    "head": "After the call",
+    "body": "She reports it and never hears what happened"
+   }
+  ],
+  "gap_source": "Callback Protection warns only on outbound calls. Source: T-Mobile, Advancing Cybersecurity at T-Mobile, Nov 2026",
+  "flip_title": "Caller Beware",
+  "flip_line": "With Backfire, the caller is the one who should worry.",
+  "flip_buttons": [
+   "Continue",
+   "Scammer Get Scammed",
+   "Hang up"
+  ],
+  "flip_caption": "One tap hands the scammer to an AI that talks in her voice.",
+  "flip_privacy": "Only the caller's side of the call is ever analyzed.",
+  "flip_proof": [
+   {
+    "num": "280,000+",
+    "label": "calls TPG Telecom diverted to AI “victims”: 100+ days of scammer time wasted"
+   },
+   {
+    "num": "1 in 20",
+    "label": "calls where scammers spotted the AI as a bot (about 5%, two studies)"
+   }
+  ],
+  "flip_sources": "Sources: GSMA case study, Apate.ai and TPG Telecom (Australia), Oct 2025 (longest call: 54 min). Bot recognition: Traister et al., arXiv 2609.29528, 2026 (10,015 calls); Sahin et al., USENIX SOUPS 2017 (200 calls).",
+  "loop_title": "Follow the scam, not the number",
+  "loop_left_head": "What the decoy gets",
+  "loop_right_head": "Where T-Mobile uses it",
+  "loop_rows": [
+   [
+    "Callback number",
+    "Callback Protection warns anyone who dials it"
+   ],
+   [
+    "Website",
+    "Safe Web Browsing blocks it after one analyst click"
+   ],
+   [
+    "Wallet",
+    "Exchange freeze request after one analyst click"
+   ]
+  ],
+  "loop_source": "Callback Protection has played 67M+ warnings (T-Mobile, Nov 2026). T-Mobile actions are simulated in our demo.",
+  "persona_stat": {
+   "num": "4x",
+   "label": "as many older adults reported losing $10,000+ to fake bank, company or government impostors in 2024 as in 2020 (8,269 vs 1,790)"
+  }
+ }
+}
