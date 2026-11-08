@@ -24,10 +24,14 @@ def _lat(metric, call_id, ms):
     except Exception:
         pass
 
+P2_RETRY_S = float(os.environ.get("P2_RETRY_S", "2"))     # reconnect spacing while P2 is down during a call
+P2_FAST_TRIES = int(os.environ.get("P2_FAST_TRIES", "3"))  # consecutive failed connects at P2_RETRY_S before slowing to P2_SLOW_S
+P2_SLOW_S = float(os.environ.get("P2_SLOW_S", "10"))
+
 class _Session:
     def __init__(self, call_id, send, on_lost):
         self.call_id, self.send, self.on_lost = call_id, send, on_lost
-        self.p2_q = asyncio.Queue(QMAX); self.header = []; self.stream_id = None; self.p2_retry = 0.0
+        self.p2_q = asyncio.Queue(QMAX); self.header = []; self.stream_id = None; self.p2_retry = 0.0; self.p2_fail = 0
         self.p2_task = asyncio.create_task(_p2_pump(self))
         self.decoy_active = False; self.d_ws = None; self.d_q = None; self.d_tasks = []
         self.n = 0; self.sent_t = {}; self.dropped = 0; self.t_act = time.time()
@@ -146,12 +150,15 @@ async def _p2_pump(s):
                     for h in s.header:  # late connect: replay connected/start so P2 sees the stream header
                         await ws.send(json.dumps(h)); skip.add(h["event"]); sent += 1
                     ever = True
-                    log.warning("P2 connected call=%s", s.call_id[:8])
+                    log.warning("P2 connected call=%s%s", s.call_id[:8], f" after {s.p2_fail} failed attempt(s)" if s.p2_fail else "")
+                    s.p2_fail = 0
                     if frame.get("event") in skip:
                         skip.discard(frame["event"]); continue
                 except Exception as e:
-                    log.warning("P2 connect failed (%s); dropping, retry in 5s", type(e).__name__)
-                    ws = None; s.p2_retry = time.time() + 5; continue
+                    s.p2_fail += 1
+                    wait = P2_RETRY_S if s.p2_fail <= P2_FAST_TRIES else P2_SLOW_S   # 3 quick retries 2 s apart, then a slow heartbeat (never give up for the call)
+                    log.warning("P2 connect failed (%s) call=%s attempt=%d; frames dropped, retry in %ds", type(e).__name__, s.call_id[:8], s.p2_fail, wait)
+                    ws = None; s.p2_retry = time.time() + wait; continue
             try:
                 t0 = time.time()
                 await asyncio.wait_for(ws.send(json.dumps(frame)), 1)
@@ -163,7 +170,7 @@ async def _p2_pump(s):
                 log.warning("P2 send failed (%s)", type(e).__name__)
                 try: await ws.close()
                 except Exception: pass
-                ws = None; s.p2_retry = time.time() + 5
+                ws = None; s.p2_retry = time.time() + P2_RETRY_S
     except asyncio.CancelledError:
         pass
     except Exception:

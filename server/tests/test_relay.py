@@ -357,3 +357,30 @@ def test_listen_reconnect_from_same_device_replaces_and_frees_slot(monkeypatch):
             tok2 = remote.post("/pair", json={"pin": device.PIN}).json()["device_token"]
             with pytest.raises(Exception):                                                # a different device at the cap is still refused
                 with remote.websocket_connect("/listen/L7", subprotocols=["bf-device", tok2]): pass
+
+
+def test_p2_down_at_call_start_retries_during_call_then_connects(monkeypatch, caplog):
+    import logging
+    monkeypatch.setattr(relay, "P2_RETRY_S", 0.3); monkeypatch.setattr(relay, "P2_FAST_TRIES", 2); monkeypatch.setattr(relay, "P2_SLOW_S", 0.3)
+    got = []
+    async def h2(ws):
+        async for m in ws: got.append(json.loads(m))
+    async def go():
+        s, port = await _server(h2); s.close(); await s.wait_closed()          # P2 DOWN: nothing listens on this port
+        monkeypatch.setenv("P2_STT_URL", f"ws://127.0.0.1:{port}"); monkeypatch.delenv("PIPELINE_TOKEN", raising=False)
+        async def to_caller(f): pass
+        await relay.open("cdownretry1", to_caller)
+        await relay.caller_frame("cdownretry1", {"event": "connected"})
+        await relay.caller_frame("cdownretry1", {"event": "start", "stream_id": "S", "start": {}})
+        for i in range(1, 25): await relay.caller_frame("cdownretry1", fr(i)); await asyncio.sleep(0.05)   # ~1.2 s: several failed attempts
+        assert not got
+        s2 = await websockets.serve(h2, "127.0.0.1", port)                      # P2 comes back mid-call
+        for i in range(25, 70): await relay.caller_frame("cdownretry1", fr(i)); await asyncio.sleep(0.03)
+        await asyncio.sleep(0.3); await relay.close("cdownretry1"); s2.close()
+    with caplog.at_level(logging.WARNING, logger="hub.relay"):
+        run(go())
+    msgs = [r.getMessage() for r in caplog.records]
+    assert any("P2 connect failed" in m and "attempt=1" in m and "retry in" in m for m in msgs) and any("attempt=3" in m for m in msgs)
+    assert any(m.startswith("P2 connected call=cdownret") and "failed attempt" in m for m in msgs)
+    assert [m["event"] for m in got[:2]] == ["connected", "start"]                  # header replayed on the late connect
+    assert sum(1 for m in got if m["event"] == "media") >= 10                         # media flows again after P2 returns

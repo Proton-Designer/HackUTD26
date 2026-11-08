@@ -48,6 +48,19 @@ def ws_connects(base, path="/events"):
     except Exception as e:
         return False, type(e).__name__
 
+def p2_host():
+    """Host:port of the P2 URL the hub uses (shell env, else repo .env; never prints the URL path/query/credentials)."""
+    vals = {k: os.environ.get(k) for k in ("P2_STT_URL", "P2_BASE")}
+    try:
+        for ln in (ROOT / ".env").read_text().splitlines():
+            k, _, v = ln.partition("=")
+            if k.strip() in vals and not vals[k.strip()]:
+                vals[k.strip()] = v.strip().strip("\"'")
+    except OSError:
+        pass
+    u = vals.get("P2_STT_URL") or vals.get("P2_BASE")
+    return (urlsplit(u).netloc.rsplit("@", 1)[-1] or "?") if u else "no P2_STT_URL/P2_BASE set"
+
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--live", action="store_true"); ap.add_argument("--local"); ap.add_argument("--tunnel")
     ap.add_argument("--no-tunnel", action="store_true"); a = ap.parse_args()
@@ -81,7 +94,7 @@ def main():
     rec(eng.startswith("nemotron"), "intel_engine is nemotron", eng)
     rec(fl.get("NVIDIA_API_KEY_set") is True, "NVIDIA_API_KEY set on hub", str(fl.get("NVIDIA_API_KEY_set")))
     p2 = pl.get("P2 /detect", {})
-    rec(p2.get("remote") == "up", "P2 reachable (P2_STT_URL/P2_BASE healthz)", f"remote={p2.get('remote')}, mounted={p2.get('mounted')}")
+    rec(p2.get("remote") == "up", "P2 reachable (P2_STT_URL/P2_BASE healthz)", f"host={p2_host()}, remote={p2.get('remote')}, mounted={p2.get('mounted')}" + ("" if p2.get("remote") == "up" else "; P2 down: no live alerts. Start/restart P2 (bash detection/scripts/run.sh) or arm FALLBACK_DETECT=1"))
     t_ok = fl.get("telnyx_ok")
     rec(t_ok is not False, "telnyx_ok is not false", {None: "no REST call reported yet", True: "true", False: "false: last Telnyx REST call was 401/10009"}[t_ok if t_ok in (None, True, False) else None])
 
