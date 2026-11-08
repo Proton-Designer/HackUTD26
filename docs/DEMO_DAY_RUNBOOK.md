@@ -8,7 +8,7 @@ Hub = ONE process (hub + voip + relay + intel + `/app` + `/command-center`). Tel
 - [ ] `.env` has: `TELNYX_*` (API key, public key, app/connection/SIP/credential ids, scam line), `NVIDIA_API_KEY`, `DEVICE_PIN`, `PIPELINE_TOKEN` (same value on P2/P3), `P2_STT_URL` or `P2_BASE`, `P3_DECOY_URL` + `P3_VOICE_URL`, `MARIA_LEG` (`sip` default).
 - [ ] `.env` must NOT have `SIM_MODE`, `VOIP_OPEN_TOKEN`, `DEMO_MODE`; leave `HUB_TOKEN` unset. A stale `PUBLIC_WS` in `.env` is ignored when a tunnel is reused or `NO_TUNNEL=1`.
 - [ ] `ffmpeg` on PATH (decoy decodes voice enrollment, incl. iOS mp4).
-- [ ] Window 1, decoy (P3): `set -a; . ./.env; set +a; HUB_URL=http://127.0.0.1:8000 .venv-hub/bin/python -m uvicorn decoy.app:app --host 127.0.0.1 --port 8300` (needs `numpy`, `nvidia-riva-client`, see `decoy/requirements.txt`; use the venv P3 uses if `.venv-hub` lacks them).
+- [ ] Window 1, decoy (P3), from its own venv (`decoy/.venv`, built by eng2; if missing: `python3 -m venv decoy/.venv && decoy/.venv/bin/pip install -r decoy/requirements.txt`): `set -a; . ./.env; set +a; HUB_URL=http://127.0.0.1:8000 decoy/.venv/bin/python -m uvicorn decoy.app:app --host 127.0.0.1 --port 8300`. Loopback only; it is normally already running (check `lsof -nP -iTCP:8300 -sTCP:LISTEN`; don't start a second one).
 - [ ] Window 2, P2: `bash detection/scripts/run.sh` (supervised).
 - [ ] Window 3, hub: `scripts/run_hub` (starts cloudflared, exports `PUBLIC_WS`, hub on :8000). Note the **public URL**. Keep this shell open: closing it kills the tunnel.
 - [ ] Lead only: `scripts/point_telnyx` (dry run) then `scripts/point_telnyx --apply` (both URLs must print OK). Needed only when the tunnel URL changed.
@@ -24,7 +24,7 @@ Hub = ONE process (hub + voip + relay + intel + `/app` + `/command-center`). Tel
 | `listen` | `MARIA_LEG=listen` | answer + caller stream only, no Maria dial; caller hears a short synthetic "Hello?"; Maria's page just listens (`WS /listen`) |
 | `talk` | `MARIA_LEG=talk` | like listen, plus Maria speaks through `WS /talk/{call_id}` (her mic, muted while the decoy has the call) |
 | SIM (phone-free) | `SIM_MODE=1` | simulated caller, no Telnyx requests; loopback only |
-- [ ] Switch: edit `MARIA_LEG` in `.env` (it is NOT in run_hub's keep-list, so `.env` wins; or run with `RUN_HUB_KEEP=MARIA_LEG MARIA_LEG=talk`), then **safe restart** (section 4). Confirm in `/demo/status` flags.
+- [ ] Switch: edit `MARIA_LEG` in `.env` (or export `MARIA_LEG=talk` in the shell before the restart: it is in run_hub's keep-list, so an explicit shell value beats `.env`), then **safe restart** (section 4). Confirm in `/demo/status` flags.
 - [ ] SIM on: `SIM_MODE=1 scripts/restart_hub_safe`; back to live: restart WITHOUT `SIM_MODE` and re-run `scripts/preflight --live`. Never leave SIM_MODE on with the real tunnel for a real demo.
 
 ## 2. Run a live call
