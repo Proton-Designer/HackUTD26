@@ -152,7 +152,11 @@
     setBadge("watching"); $("guard").hidden = false; $("alertBox").hidden = true; $("handoffMsg").hidden = true; $("idleMsg").hidden = false;
     st.callId = null; window.__userActions.length = 0; show("ended"); $("endedMsg").textContent = "Waiting for a call…"; $("replayBtn").hidden = !!SERVER;
     $("src").textContent = SERVER ? "· live" : "· demo replay";
-    if (SERVER) { if (!ws) connectWS(); }
+    if (SERVER) {
+      if (!ws) connectWS();
+      // Honest footer: a hub in fallback/demo mode is replaying a recorded story, not a live phone line (fail soft: keep "live" if unknown).
+      fetch(HUB + "/demo/status?format=json").then(r => r.json()).then(j => { const f = (j && j.flags) || {}; if (f.FALLBACK || f.DEMO_MODE) { $("src").textContent = "· replay (recorded demo)"; BF.replay = true; } }).catch(() => {});
+    }
     else if (needsSetup()) BF.pendingStart = startReplay;      // demo call waits until onboarding is finished
     else startReplay();
   }
