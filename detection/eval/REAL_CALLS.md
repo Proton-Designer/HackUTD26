@@ -12,7 +12,7 @@ Aggregate numbers only. Audio dumps (`logs/audio/`) and transcripts stay local a
 | 8894eb46 | 03:20 | 33 s | 2 / 1 | n/a | no windows scored | 0 / 0 | n/a | no | n/a | benign test |
 | 6352e850 | 03:26 | 146 s | 23 / 14 | 0.24 s p50 / 0.84 s max | 14 local | 0 / 0 | none | no | low (0.05) | scam-card role-play: the card was read but the detector heard nothing |
 
-**6352e850 (P1 scam-card call) is a miss caused upstream, not by the detector.** The inbound track carried 28 s of digital zero while the card was read, which is a P1-side mute (the detector only heard greetings and "can you hear me" chatter). The risk stayed at 0.00-0.05 for 14 windows, which is correct for what it heard. Lead's positive control: the same card text sent to live `/detect` (local engine) scores s 1.00 critical in about 1 s. So detector recall on the card text is fine, and the failure is the audio path. A later call (497ef1d4, 03:3x) was still in progress when this was written and is not in the table.
+**6352e850 (P1 scam-card call) is a miss caused upstream, not by the detector.** The inbound track carried digital zero in 6 runs (29 s in total, longest 15 s at 54-69 s) while the card was read, which is a P1-side mute (the detector only heard greetings and "can you hear me" chatter). The risk stayed at 0.00-0.05 for 14 windows, which is correct for what it heard. Lead's positive control: the same card text sent to live `/detect` (local engine) scores s 1.00 critical in about 1 s. So detector recall on the card text is fine, and the failure is the audio path. A later call (497ef1d4, 03:3x) was still in progress when this was written and is not in the table.
 
 ## Takeaway
 1. The pipeline ran on real PSTN audio end to end (Telnyx mu-law 8 kHz -> Riva STT -> local llama): 6 calls, 0 crashes, calls always connected, 0 false alerts.
@@ -104,19 +104,19 @@ Result: no alert moved by more than 0.2 s versus the earlier numbers, 0 new fals
 PSTN vs simulated for these three: not stated in any file I have (not guessed; asked the lead).
 
 ## Caller-track mute (TASK-083, read only, 06:05; per-second RMS of the caller track in logs/audio, aggregates only)
-Zero = per-second RMS < 2 (digital zero, not line noise) after speech started. Stretch = start second + length in s, only runs > 1 s. P1's `689c3f6` (03:33) added per-second inbound RMS logging and 20 ms paced Maria injection; no commit claims a mute fix.
-| call | time | zero stretches > 1 s | vs 689c3f6 |
+**Run** = per-second RMS < 2 (digital zero, not line noise) for more than 1 s, counted after the first second with RMS >= 2 (speech start). Runs are written as (start second + length in s). Re-measured on every dump at 06:20 (TASK-092 review). P1's `689c3f6` (03:33) added per-second inbound RMS logging and 20 ms paced Maria injection; no commit claims a mute fix.
+| call | time | runs | vs 689c3f6 |
 |---|---|---|---|
-| 4d8dd2f8 | 03:04 | 5 (2-6 s each) | before |
+| 4d8dd2f8 | 03:04 | 6 (12 s from 2; then 2, 2, 6, 3, 2 s) | before |
 | 922262b2 | 03:06 | 1 (11 s, from 4 s) | before |
 | 37cbc8e2 | 03:17 | 2 (3 s, 2 s) | before |
 | 8894eb46 | 03:20 | 2 (5 s, 7 s) | before |
-| 6352e850 | 03:26 | 6+ (longest 15 s at 54-69 s) | before (the scam-card miss) |
-| 497ef1d4 | 03:32 | 3 (2-3 s) | before |
-| 93c95fd6 | 03:34 | 3 (2-3 s) | before |
+| 6352e850 | 03:26 | 6 (3, 2, 15 s from 54, 3, 4, 2 s; 29 s in runs) | before (the scam-card miss) |
+| 497ef1d4 | 03:32 | 3 (2, 2, 3 s) | before |
+| 93c95fd6 | 03:34 | 5 (2, 4, 2, 2, 3 s) | **deploy time unknown**; call started ~03:34:25, about 1 min after the commit, and still had gaps |
 | adad65a0 | 04:46 | 0 | after |
 | 0afc3446 | 05:03 | 0 | after |
 | 499a20d2 | 05:05 | 0 | after |
 | a9142648 | 05:08 | 0 | after |
 | ba80d152 | 05:37 | 0 | after |
-Verdict: **not seen since 689c3f6 (0 of 5 dumps), unproven for Maria talk-over.** The 5 later calls are continuously spoken scam scripts and none had Maria talking over the caller; no hub inrms log is kept, so the cause of the old gaps is not shown. Proof needs one talk-mode call with Maria speaking over a silent caller and the hub log kept (P1 rehearsal 09:00). The simulated b58cec24 (one 2 s gap) is not counted.
+Verdict: **deploy time of `689c3f6` unknown; 93c95fd6 (03:34, 1 min after the commit) still had 2-4 s gaps; the 5 calls from 04:4x on (adad65a0 ... ba80d152) had none. That is an observation, not a proven fix, and unproven for Maria talk-over.** The 5 later calls are continuously spoken scam scripts and none had Maria talking over the caller; no hub inrms log is kept, so the cause of the old gaps is not shown. Proof needs one talk-mode call with Maria speaking over a silent caller and the hub log kept (P1 rehearsal 09:00). The simulated b58cec24 (one 2 s gap) is not counted.
