@@ -128,7 +128,7 @@
   function freshState() {
     return {
       seq: 0, count: 0,
-      calls: new Map(), focus: null,
+      calls: new Map(), focus: null, known: new Set(),
       engine: null, model: '', voice: null,
       arts: new Map(), artOrder: [], orgs: [], tags: [], loose: [], instructions: [], standIn: false,
       trace: [], traceCall: null, proposed: new Set(), inputLogged: new Set(), agent: null, agentN: 0,
@@ -813,6 +813,12 @@
     S.seq++; S.count++;
     const h = H[e.type];
     if (!h) return;
+    // Only calls this screen saw ring (#119): drill posts or stray events for an unknown call_id are ignored,
+    // so a test run can never show up as a fake call. Events without a call_id (voice.enrolled) still apply.
+    if (e.call_id) {
+      if (e.type === 'call.incoming') S.known.add(e.call_id);
+      else if (!S.known.has(e.call_id)) return;
+    }
     S.lastMs = Number.isFinite(e.ms) ? e.ms : Date.now();
     try {
       h(e, e.data, CALL_EVENTS.has(e.type) ? getCall(e.call_id) : null);
@@ -1122,7 +1128,9 @@
       const row = (state, title, sub, extra) => `<li class="po ${state}"><span class="po-dot" aria-hidden="true">${state === 'done' ? '✓' : ''}</span>`
         + `<div class="po-txt"><b>${title}</b>${sub ? `<span>${sub}</span>` : ''}${extra || ''}</div></li>`;
       const rows = [];
+      const idle = !S.focus && !S.actOrder.length; // before any call: every step waits, nothing pulses (#119)
       rows.push(m.handle ? row('done', 'Got his payout account', esc(handleText(m.handle)))
+        : idle ? row('wait', 'Get his payout account', 'Starts when a scam call is handed to the decoy')
         : row('now', 'Getting his payout account', 'The decoy keeps asking where to send the money'));
       if (m.stopped) rows.push(row('done', `Stopped ${amt} before it left the customer's account`, 'Pending Zelle cancelled · the customer can undo'));
       else if (m.hold && m.hold.undone) rows.push(row('done', 'The customer released the transfer', 'Their choice, from their app'));
@@ -1291,6 +1299,12 @@
     app.dataset.view = VIEW.name;
     app.dataset.chapter = chapter;
     applyBrand(chapter);
+    // Before any call (#119): the Money trail is the bank before the scam (seeded pending $1,800, 7 earlier victims),
+    // and the banner says so, so it can't read as a finished call
+    if (!S.focus && !S.actOrder.length) {
+      if (chapter === 'money') head('Waiting for a call · <em>the bank before the scam</em>', "Capital One Nessie sandbox, mock data: 7 earlier victims paid one mule account, and the customer's $1,800 Zelle to it is still pending", '');
+      else head(TAGLINE, 'Live Guard is on and waiting for a call to the scam line. It only ever hears the caller.', '');
+    }
     document.querySelectorAll('.views [data-view]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.view === chapter)));
     const follow = $('follow');
     follow.hidden = !VIEW.pinned;
