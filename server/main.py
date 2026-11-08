@@ -1,5 +1,5 @@
 """Backfire hub: event bus, WS /events, routing store, stubs. Run: uvicorn server.main:app --port 8000"""
-import asyncio, logging, os, re, time
+import asyncio, logging, os, re, secrets, time
 from fastapi.responses import HTMLResponse
 from fastapi import Depends, HTTPException, Request, FastAPI, WebSocket, WebSocketDisconnect, Body, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -52,7 +52,12 @@ async def ws_events(ws: WebSocket, call_id: str | None = None, token: str | None
 
 @app.post("/events")
 def post_event(request: Request, body: dict = Body(...)):
-    _auth(request.headers.get("x-hub-token"))
+    pt = os.environ.get("PIPELINE_TOKEN")   # P2/P3/P4 present x-pipeline-token; when set it is required (fail closed) and separate from HUB_TOKEN
+    if pt:
+        if not secrets.compare_digest(request.headers.get("x-pipeline-token", ""), pt):
+            raise HTTPException(401, "bad or missing pipeline token")
+    else:
+        _auth(request.headers.get("x-hub-token"))
     t, cid = body.get("type"), body.get("call_id")
     if not t or not cid:
         return {"ok": False, "error": "type and call_id required"}

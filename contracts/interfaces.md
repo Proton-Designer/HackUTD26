@@ -43,3 +43,6 @@ All async, none raises, none blocks on P2/P3 (bounded queues, drop on full).
 ### Device pairing (TASK-014)
 - `POST /pair {"pin":"123456"}` -> `{"device_token":"..."}` (401 wrong pin; 429 after 5 failures/min per IP or 30 total). PIN = env `DEVICE_PIN` or random 6 digits at hub start, printed by `scripts/run_hub` and in `logs/device_pin.txt`.
 - Header `x-device-token: <token>` is required on `GET /protection-log`, `POST /protection-log/undo`, `POST /user/action` and `GET /voip/webrtc-token` (via `Depends(server.device.require_device)`). Direct loopback requests (no proxy headers) and `x-hub-token == HUB_TOKEN` also pass. Requests arriving through the tunnel are always remote. `WS /events`, `/app`, `/command-center` stay open (read-only).
+
+### Pipeline auth on `POST /events` (TASK-019)
+If hub env `PIPELINE_TOKEN` is set, `POST /events` requires header `x-pipeline-token: <PIPELINE_TOKEN>` (401 otherwise; fail closed; `HUB_TOKEN` is not accepted there). P2/P3/P4 send it when posting events. If unset, the old behavior applies (open, or `x-hub-token` when `HUB_TOKEN` is set). Reserved hub-only types are still rejected with 403. `WS /events` stays readable by browsers. Intel/voip/relay publish in-process and are not affected.

@@ -8,6 +8,8 @@
 set -u
 [ "${1:-}" = "--fallback" ] && { export DEMO_MODE=1 FALLBACK=1; echo "FALLBACK MODE: DEMO_MODE replay of mock/events.json on loop (no telephony needed)"; }
 cd "$(dirname "$0")/.."
+# Repo .env OVERRIDES the shell (tmux shells hold stale TELNYX_* values).
+if [ -f .env ]; then set -a; . ./.env; set +a; fi
 PORT="${HUB_PORT:-8000}"
 PY=python3; [ -x .venv-hub/bin/python ] && PY=.venv-hub/bin/python
 LOGDIR=logs; mkdir -p "$LOGDIR"
@@ -15,8 +17,9 @@ pids=()
 cleanup() { for p in "${pids[@]:-}"; do [ -n "$p" ] && kill "$p" 2>/dev/null; done; }
 trap cleanup EXIT INT TERM
 
-if curl -fsS -m 1 "http://127.0.0.1:$PORT/healthz" >/dev/null 2>&1; then
-  echo "port $PORT already serves a hub; not starting another (stop it or set HUB_PORT)"; exit 1
+if lsof -nP -iTCP:"$PORT" -sTCP:LISTEN >/dev/null 2>&1; then   # any listener, healthy hub or stale/foreign process
+  echo "port $PORT is already in use by: $(lsof -nP -iTCP:"$PORT" -sTCP:LISTEN | awk 'NR>1{print $1" pid "$2}' | sort -u | tr '\n' ',')"
+  echo "stop it (kill <pid>) or set HUB_PORT"; exit 1
 fi
 PUBLIC=""
 if [ "${NO_TUNNEL:-}" != "1" ]; then
@@ -34,9 +37,9 @@ fi
 [ -n "$PUBLIC" ] && export PUBLIC_WS="wss://${PUBLIC#https://}"   # voip builds the Telnyx stream_url from this
 [ "${SIM_MODE:-}" = "1" ] && [ -n "$PUBLIC" ] && echo "WARNING: SIM_MODE=1 with a public tunnel lets anyone with the URL post simulated webhooks (x-sim-call). Do not use for the real demo."
 "$PY" -m uvicorn server.main:app --host "${HUB_BIND:-127.0.0.1}" --port "$PORT" >"$LOGDIR/hub.log" 2>&1 &
-pids+=($!)
-for _ in $(seq 1 30); do curl -fsS -m 1 "http://127.0.0.1:$PORT/healthz" >/dev/null 2>&1 && break; sleep 0.5; done
-curl -fsS -m 1 "http://127.0.0.1:$PORT/healthz" >/dev/null 2>&1 || { echo "hub failed to start; see $LOGDIR/hub.log"; tail -5 "$LOGDIR/hub.log"; exit 1; }
+HUB_PID=$!; pids+=($HUB_PID)
+for _ in $(seq 1 30); do kill -0 "$HUB_PID" 2>/dev/null || break; curl -fsS -m 1 "http://127.0.0.1:$PORT/healthz" >/dev/null 2>&1 && break; sleep 0.5; done
+{ kill -0 "$HUB_PID" 2>/dev/null && curl -fsS -m 1 "http://127.0.0.1:$PORT/healthz" >/dev/null 2>&1; } || { echo "hub failed to start; see $LOGDIR/hub.log"; tail -5 "$LOGDIR/hub.log"; exit 1; }
 echo "hub up:      http://127.0.0.1:$PORT   (status: /demo/status, latency: /demo/latency, Maria's app: /app/)"
 
 if [ -n "$PUBLIC" ]; then

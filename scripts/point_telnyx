@@ -3,12 +3,14 @@
 # Usage: scripts/point_telnyx [--apply] [--url https://xxxx.trycloudflare.com]     needs TELNYX_API_KEY in env (never printed).
 set -u
 cd "$(dirname "$0")/.."
+if [ -f .env ]; then set -a; . ./.env; set +a; fi   # repo .env overrides stale shell values
 APPLY=0; URL=""
 while [ $# -gt 0 ]; do case "$1" in --apply) APPLY=1;; --url) URL="${2:-}"; shift;; *) echo "usage: $0 [--apply] [--url URL]"; exit 2;; esac; shift; done
 [ -z "$URL" ] && URL=$(cat logs/tunnel_url.txt 2>/dev/null)
 case "$URL" in https://*) ;; *) echo "no https tunnel URL (run scripts/run_hub first, or pass --url)"; exit 1;; esac
 HOOK="${URL%/}/telnyx/webhook"
-APP=3088437325215040882; CONN=3088441327981954669
+APP="${TELNYX_CALL_CONTROL_APP_ID:-}"; CONN="${TELNYX_CRED_CONNECTION_ID:-}"
+[ -z "$APP" ] || [ -z "$CONN" ] && { echo "set TELNYX_CALL_CONTROL_APP_ID and TELNYX_CRED_CONNECTION_ID in .env"; exit 1; }
 declare -a TARGETS=("call_control_applications/$APP" "credential_connections/$CONN")
 BODY="{\"webhook_event_url\":\"$HOOK\"}"
 echo "webhook URL: $HOOK"

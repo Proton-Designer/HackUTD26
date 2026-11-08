@@ -1,6 +1,6 @@
 # P1 runbook: network hub, scam line, Maria's app (simulated carrier network)
 
-All commands run from the repo root. The hub is ONE process: hub + voip (Telnyx scam line) + relay + intel + static `/app` and `/command-center`.
+All commands run from the repo root. `run_hub` and `point_telnyx` load the repo `.env` first and it OVERRIDES stale shell values. The hub is ONE process: hub + voip (Telnyx scam line) + relay + intel + static `/app` and `/command-center`.
 
 ## Env: set / must NOT be set
 | var | real demo | note |
@@ -11,6 +11,7 @@ All commands run from the repo root. The hub is ONE process: hub + voip (Telnyx 
 | `DEVICE_PIN` | optional | else random 6 digits, printed by `run_hub` and in `logs/device_pin.txt` |
 | `P2_BASE`, `P3_BASE`, `P4_BASE` | set to the live pipelines (http://host:port) | status page probes them; relay uses P2_BASE and P3_BASE |
 | `NVIDIA_API_KEY` | set (or repo-root `.env`) | intel agent (Nemotron); falls back to baseline rules |
+| `PIPELINE_TOKEN` | set (shared with P2/P3/P4, header `x-pipeline-token`) | gates `POST /events` so spoofed risk.update can't trigger restore/legit |
 | `HUB_TOKEN` | leave UNSET | browser apps need `WS /events`; device pairing protects the sensitive routes |
 | **`SIM_MODE`** | **MUST NOT be set** | with a public tunnel anyone could post `x-sim-call` webhooks that skip signature verification |
 | **`VOIP_OPEN_TOKEN`** | **MUST NOT be set** | would mint WebRTC tokens without pairing |

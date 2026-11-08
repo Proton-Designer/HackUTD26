@@ -231,3 +231,16 @@ def test_forged_artifacts_and_trusted_numbers_cannot_poison():
     istore._default.add_block("+15555550188", "her", "poison")   # trusted bank number
     assert routing.decide("+15555550188", "A")["decision"] == "NORMAL"
     assert routing.decide("+15555550188", "none")["decision"] == "LIVE_GUARD"
+
+
+def test_pipeline_token_gates_post_events(monkeypatch):
+    c = TestClient(app)
+    ev = {"type": "risk.update", "call_id": "p1", "data": {"s": 0.9}}
+    assert c.post("/events", json=ev).json()["ok"]                       # unset: open (dev)
+    monkeypatch.setenv("PIPELINE_TOKEN", "pt")
+    assert c.post("/events", json=ev).status_code == 401
+    assert c.post("/events", json=ev, headers={"x-pipeline-token": "bad"}).status_code == 401
+    monkeypatch.setenv("HUB_TOKEN", "hub")                               # HUB_TOKEN is separate and not accepted here
+    assert c.post("/events", json=ev, headers={"x-hub-token": "hub"}).status_code == 401
+    assert c.post("/events", json=ev, headers={"x-pipeline-token": "pt"}).json()["ok"]
+    assert c.post("/events", json={"type": "user.action", "call_id": "p1", "data": {}}, headers={"x-pipeline-token": "pt"}).status_code == 403
