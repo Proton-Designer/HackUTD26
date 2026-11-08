@@ -87,3 +87,15 @@ def test_guard_allows_readback_when_stt_spelled_digits_as_words():   # P3 #141: 
     caller = "Our secure line is one eight eight eight five five five zero one two three."
     assert core.guard("Okay, 1-888-555-0123?", p, set(), lambda *a: None, caller)[1] == "Okay, 1-888-555-0123?"
     assert "can't read" in core.guard("Okay, 1-888-555-9999?", p, set(), lambda *a: None, caller)[1]
+
+
+def test_known_payee_survives_stt_dropping_domain_words():   # P1 judge-card pass: card 1 heard "by Zell to refunds. Backfire Example"
+    from decoy import core
+    hid = ("zelle", "refunds.dept@backfire-demo.example")
+    core._KNOWN = [hid]
+    try:
+        t = "open your banking app and send $1800 by zell to refunds. backfire example, stay on the line while you do it."
+        assert any(a.get("id") == hid[1] for a in core.canon_known([], t))
+        assert not core.canon_known([], "we will issue refunds next week. backfire is a band.")   # no payment rail said -> no match
+    finally:
+        core._KNOWN = None
