@@ -13,7 +13,7 @@ SCHEMA = {
  "call.answered": {"by": str},
  "call.ended": {"ended_by": ENDED, "duration_s": float},
  "transcript.caller": {"utterance_id": str, "text": str, "is_final": bool},
- "risk.update": {"s": float, "band": BAND, "asks": list, "scam_type": str, "stage": STAGE, "impersonates": (str, type(None)), "addresses_ai_system": bool, "why_chips": list, "engine": {"cloud", "local"}},
+ "risk.update": {"s": float, "band": BAND, "asks": list, "scam_type": str, "stage": STAGE, "impersonates": (str, type(None)), "addresses_ai_system": bool, "why_chips": list, "engine": {"cloud", "local", "fallback"}},
  "alert.fired": {"level": {"first", "realert"}, "why_chips": list},
  "user.action": {"action": {"continue", "scammer_get_scammed", "hang_up"}},
  "handoff.started": {"restore_deadline": float},

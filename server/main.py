@@ -133,6 +133,11 @@ def _observe(ev):
         bus.publish("blocklist.updated", cid, {"number": num, "scope": "her", "undo_token": token})
 
 bus.add_observer(_observe)
+try:   # insurance detector, OFF unless FALLBACK_DETECT=1
+    from . import fallback_detect
+    fallback_detect.install()
+except Exception:
+    log.exception("fallback_detect unavailable (fail open)")
 
 @app.get("/protection-log", dependencies=[Depends(device.require_device)])
 def protection_log():
