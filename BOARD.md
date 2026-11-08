@@ -51,17 +51,10 @@
 - **11:30 (H23:30)** Final Devpost submitted (hard deadline 12:00).
 
 ## Decisions log
+- 23:15 (H11:15) | **No sleep shifts.** The whole team works through the night (Rayan). Sleep schedule removed from the board and from the delegator's rules.
 - 23:05 (H11:05) | **P4 split in two, one owner each:** Kareem = P4a Intel (`intel/`: real lookups, fixed-chain Nemotron agent, policy gate); Rayan = P4b command center + story. Not both on all of P4 (shared files, merge fights) and not one person alone (13 items incl. the pitch). Command center starts now on mock events instead of 02:00, because it's the screen judges watch. Intel agent uses a fixed chain, not free tool-calling, because it's more reliable in a live demo. Cost: Kareem's eval set stops at 30 rows (Ayman-B grows it with Claude if needed); Kareem is on backend logic, so he escalates fast (Evan for Nemotron, Ayman for the server). Fallback: if lookups aren't on screen by 03:00, Rayan pairs on them and the agent becomes proposals from a template. Ayman (Decider) can override.
 - 23:00 (H11:00) | Team talks to the delegator through the Discord bot (`@Delegation_Bot done/blocked/next/...`). Only the bot edits BOARD.md, to avoid merge conflicts. Bot runs on Rayan's laptop.
 - 22:55 (H10:55) | **Lanes reassigned by Ayman (Decider):** Ayman runs P1 Network & call control (machine A) and P2 Detection (machine B) in two Claude sessions; Evan runs P3 Decoy & voice; P4 Intel + command center + story starts later (by 02:00, owner TBD). Overrides the 22:45 lane split. Cost: Ayman carries Decider + integrator + two lanes; P4 starts late. Fallback: P1 ships a stub that adds decoy-ended callers to `confirmed_scammers`, so "callback rejected before ring" works without P4; real lookups are P4's first task at 02:00.
 - 22:45 (H10:45) | Lanes set by the team: Evan owns everything Nemotron + the VoIP app; Ayman owns the product workflow starting from the local server. This overrides the delegator default (Evan as integrator): **Ayman owns the shared event contract and merges**, because his server is the hub every screen reads from. Cost: Ayman carries both Decider and integrator load. Fallback: Evan takes merges if Ayman is stuck past 30 min.
 - 22:45 (H10:45) | Schedule compressed because the idea was locked at H10:30: feature freeze 05:00, code freeze 08:00, rehearsals from 09:00. Cost: about 6 hours of build time for the full path. Fallback: cut order below.
 - 22:45 (H10:45) | Cut order if behind (first to go first): (1) voice clone → synthetic voice; (2) live local-4B toggle → offline cloud-vs-local accuracy table on the eval set; (3) Twilio coaching beeps → app plays beeps locally; (4) analyst network-wide actions → show proposed + one approve click on mock data. Never cut: judge calls the scam line, alert + Scammer Get Scammed, real lookups, callback rejected before ring.
-
-## Sleep shifts
-- Evan 03:00-04:30
-- Ayman 04:30-06:00
-- Kareem 06:00-07:30
-- Rayan 07:30-09:00
-(Changed 23:05: Kareem now codes P4a, so he sleeps after the 05:00 checkpoint, not before it.)
-(Never both coders down at once. Nobody sleeps through a checkpoint they own.)
