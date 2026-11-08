@@ -37,3 +37,23 @@ Per-card alert time vs the end of the ask line: 6 of 10 fired before the ask lin
 1. The fallback path works: no lost utterances, bypass after 2 fails, 1-1.2 s per final once bypassed; keep it, and do not rely on Riva alone.
 2. Because the key is shared and already 429ing, set `P2_STT=whisper` as the PRIMARY for judging (equal or better words matched and about half the final latency on the cards, no dependency on the shared key), keeping Riva only if a quick on-site real-voice test shows Whisper clearly worse.
 3. If Riva stays primary, lower `P2_STT_TIMEOUT` to about 3 s and expect ~7 s finals on the first two utterances of a Riva outage.
+
+## 3. Real human voices: Whisper replay vs live Riva on the 8 real PSTN dumps (TASK-053; aggregates only, no text)
+Whisper base.en (`P2_STT=whisper`, local llama) replayed in real time on :8104 from the same dumps; Riva = the live finals logged for the same call. Riva is a proxy, not ground truth (there is no reference text). Agreement = share of Riva's words also in Whisper's finals (multiset). Both sides are cut at 80 chars per final in the logs.
+
+| call | Riva finals / Whisper finals | agreement (Riva words found in Whisper / reverse) | Whisper endpoint->final p50 / max | Riva live p50 |
+|---|---|---|---|---|
+| 37cbc8e2, 8894eb46, a99a2060 (1-2 word "hello" calls) | 2/2, 1/1, 2/2 | 100% | 0.6-1.0 s | ~0.3 s |
+| 922262b2 | 6 / 6 | 88% / 100% | 0.67 / 0.99 s | ~0.3 s (lagged by blocking, now fixed) |
+| 4d8dd2f8 | 7 / 6 | 69% / 45% | 1.13 / 1.5 s | ~0.3-2 s |
+| 497ef1d4 | 10 / 8 | 48% / 71% | 0.94 / 5.39 s | ~0.25 s |
+| 6352e850 (146 s, 28 s of digital zero) | 14 / 12 | 60% / 74% | 1.04 / 8.25 s | 0.24 s |
+| 93c95fd6 (93 s, the call with real scam content) | 13 / 16 | 90% / 69% | 1.11 / 3.3 s | ~0.25 s |
+- On the one call with a real scam ask (93c95fd6) both engines raised an alert: live Riva +18.3 s from call start, Whisper replay +21.9 s (about 3.6 s later, from slower finals and the extra window).
+- Dropped / hallucinated: no Whisper final inside the 28 s digital-zero stretch of 6352e850 (finals at 45.7 s and 82.5 s only), and no "Thank you."-style hallucination. Whisper had 2 finals with no Riva counterpart in 8 calls and missed 4 Riva finals (short words); Riva also produced a few odd short finals.
+- Lower agreement on the three conversational calls means the two engines disagree on short or noisy phrases. I cannot say which is right without reference text.
+- **Latency is the real difference on real voices:** live Riva answered in ~0.25 s after endpoint (when the key was healthy); Whisper p50 is ~1.0-1.2 s with spikes of 4-8 s in 3 of 8 replays (497ef1d4, 6352e850, 93c95fd6) while other eval jobs shared the CPU (load average 3-5). The 6 s Riva finals seen earlier were the blocking bug, not Riva.
+- `P2_STT=whisper` never constructs Riva and does not import `riva`: checked with `NVIDIA_API_KEY` unset (`WhisperSTT`, no riva modules loaded). It does fetch the model from huggingface.co on first use, it is not preloaded at startup (the first utterance pays the load: 1.4 s final in my warm-up), and the first transcribe in a fresh process is cold.
+
+**Verdict: do NOT switch the default.** The synthetic cards favored Whisper, the real voices do not: Riva is about 4x faster when its key answers. Keep Riva primary with the tested Whisper fallback (no lost utterances, bypass after 2 fails), and switch to `P2_STT=whisper` only if Riva probes 429/hang at judging time (flip, restart, `P2_STT_TIMEOUT` ~3 s if Riva stays primary). Whisper still catches the scam call, about 3.6 s later.
+Caveats: n=8 calls, one or two speakers, role-play, no reference transcript, CPU shared with teammates' jobs during the replays.
