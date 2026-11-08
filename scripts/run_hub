@@ -8,8 +8,15 @@
 set -u
 [ "${1:-}" = "--fallback" ] && { export DEMO_MODE=1 FALLBACK=1; echo "FALLBACK MODE: DEMO_MODE replay of mock/events.json on loop (no telephony needed)"; }
 cd "$(dirname "$0")/.."
-# Repo .env OVERRIDES the shell (tmux shells hold stale TELNYX_* values).
-if [ -f .env ]; then set -a; . ./.env; set +a; fi
+# Repo .env OVERRIDES stale inherited shell values (tmux shells hold old TELNYX_* keys), EXCEPT the run-control vars below:
+# anything in this protected list (plus RUN_HUB_KEEP=VAR1,VAR2 for extras) that you set explicitly in the shell wins over .env,
+# so an isolated test copy (own HUB_PORT/HUB_DB/INTEL_DB/LOGDIR/DEVICE_PIN...) never inherits the live hub's values from .env.
+KEEP="HUB_PORT HUB_BIND HUB_DB INTEL_DB LOGDIR HUB_NO_PIN_FILE DEVICE_PIN HUB_TOKEN NO_TUNNEL SIM_MODE DEMO_MODE FALLBACK FALLBACK_DETECT ${RUN_HUB_KEEP//,/ }"
+if [ -f .env ]; then
+  saved=""; for v in $KEEP; do [ -n "${!v+x}" ] && saved+="export $v=$(printf '%q' "${!v}");"; done
+  set -a; . ./.env; set +a
+  eval "$saved"
+fi
 PORT="${HUB_PORT:-8000}"
 PY=python3; [ -x .venv-hub/bin/python ] && PY=.venv-hub/bin/python
 export LOGDIR="${LOGDIR:-logs}"; mkdir -p "$LOGDIR"   # honour LOGDIR so test copies never touch the live hub logs

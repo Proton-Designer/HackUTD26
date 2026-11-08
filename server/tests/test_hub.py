@@ -97,6 +97,21 @@ def test_reset_seeds_intel_and_fails_open(monkeypatch):
     r = c.post("/demo/reset").json()
     assert r["ok"] and r["seeded"] is False and r["seed_error"] == "RuntimeError"
 
+def test_demo_reset_and_replay_need_device_or_local(monkeypatch):
+    db.add_confirmed("+15555550999")
+    remote = TestClient(app)                                   # host "testclient" = remote
+    assert remote.post("/demo/reset").status_code == 401
+    assert remote.post("/demo/replay", json={}).status_code == 401
+    assert db.list_confirmed()                                 # nothing was wiped
+    local = TestClient(app, client=("127.0.0.1", 5000))
+    assert local.post("/demo/reset", headers={"cf-connecting-ip": "1.2.3.4"}).status_code == 401   # via tunnel = remote
+    assert db.list_confirmed()
+    monkeypatch.setenv("HUB_TOKEN", "s3")
+    assert remote.post("/demo/reset", headers={"x-hub-token": "s3"}).status_code == 200
+    assert not db.list_confirmed()
+    monkeypatch.delenv("HUB_TOKEN")
+    assert local.post("/demo/reset").status_code == 200        # operator at the console
+
 def test_token_required(monkeypatch):
     import server.main as m
     monkeypatch.setattr(m, "HUB_TOKEN", "s3")

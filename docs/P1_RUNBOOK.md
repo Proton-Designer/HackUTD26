@@ -50,3 +50,5 @@ First run shows "Enter the code shown on the demo screen": type the DEVICE PIN p
 
 ## Where things are
 `logs/hub.log`, `logs/tunnel.log`, `logs/latency.jsonl`, `logs/tunnel_url.txt`, `logs/device_pin.txt` (all gitignored). Latency summary: `/demo/latency`.
+
+`scripts/run_hub` env precedence: repo `.env` overrides stale inherited vars (old TELNYX_* in tmux shells) EXCEPT run-control vars you set explicitly in the shell (HUB_PORT HUB_BIND HUB_DB INTEL_DB LOGDIR HUB_NO_PIN_FILE DEVICE_PIN HUB_TOKEN NO_TUNNEL SIM_MODE DEMO_MODE FALLBACK FALLBACK_DETECT, plus anything in `RUN_HUB_KEEP=VAR1,VAR2`), so isolated test copies keep their own values. `POST /demo/reset` and `/demo/replay` need direct localhost, a paired device, or `x-hub-token` (remote without one = 401).

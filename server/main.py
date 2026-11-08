@@ -183,11 +183,11 @@ def _reset_intel():
     except Exception:
         log.exception("intel reset failed")
 
-@app.post("/demo/reset")
+@app.post("/demo/reset", dependencies=[Depends(device.require_device)])
 def demo_reset(request: Request, seed: bool = Query(True)):
     """One reset for everything (data/RESET.md): hub state + intel tables, then intel.seed_demo in-process
-    (yesterday's synthetic sighting) unless ?seed=0. Seeding fails open: reset still succeeds."""
-    _auth(request.headers.get("x-hub-token"))
+    (yesterday's synthetic sighting) unless ?seed=0. Seeding fails open: reset still succeeds.
+    Direct localhost, a paired device, or x-hub-token==HUB_TOKEN only (a remote caller must not be able to wipe the demo)."""
     t0 = time.time()
     db.reset_all(); bus.reset(); _reset_intel(); ops.reset(); CALLER_BY_CALL.clear(); DECOY_CALLS.clear()
     out = {"ok": True, "seeded": False}
@@ -206,9 +206,8 @@ def demo_reset(request: Request, seed: bool = Query(True)):
     out["seconds"] = round(time.time() - t0, 3)
     return out
 
-@app.post("/demo/replay")
+@app.post("/demo/replay", dependencies=[Depends(device.require_device)])
 async def demo_replay(request: Request, body: dict = Body(default={})):
-    _auth(request.headers.get("x-hub-token"))
     """DEMO_MODE: replay mock/events.json on WS /events. body: {call_id?: str, speed?: float}"""
     asyncio.create_task(replay.run(body.get("call_id"), float(body.get("speed", 1.0))))
     return {"ok": True}
