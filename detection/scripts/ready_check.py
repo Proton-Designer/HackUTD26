@@ -38,11 +38,15 @@ def env_flag(environ_bytes, key="P2_DUMP_AUDIO"):
             return "on" if kv.split(b"=", 1)[1].decode(errors="ignore").strip() == "1" else "off"
     return "unset"
 
-def tag_status(head, tag_map):
-    """head sha, {tag: sha} -> (ok, detail)."""
+def tag_status(head, tag_map, same_code=None):
+    """head sha, {tag: sha}, optional same_code(tag)->bool (detection/ identical to that tag) -> (ok, detail)."""
     hit = sorted(t for t, s in tag_map.items() if s == head and TAG_RE.match(t))
     if hit: return True, f"HEAD {head[:7]} == {hit[-1]}"
     latest = sorted((t for t in tag_map if TAG_RE.match(t)))
+    if latest and same_code:
+        try:
+            if same_code(latest[-1]): return True, f"HEAD {head[:7]} has the same runtime .py as {latest[-1]} (only non-P2 commits since)"
+        except Exception: pass
     return False, f"HEAD {head[:7]} matches no p2-known-good tag (latest tag {latest[-1] if latest else 'none'})"
 
 def stale_code(proc_start_ts, last_detection_commit_ts):
@@ -115,7 +119,7 @@ def main():
             head = sh(["git", "rev-parse", "HEAD"], root); tags = {}
             for l in sh(["git", "tag", "--list", "p2-known-good-*", "--format=%(refname:short) %(objectname) %(*objectname)"], root).splitlines():
                 p = l.split(); tags[p[0]] = (p[2] if len(p) > 2 else p[1])
-            ok, d = tag_status(head, tags); add("live HEAD is a p2-known-good tag", "PASS" if ok else "FAIL", d, "" if ok else "deploy only a tagged commit: git checkout p2-known-good-<latest>, restart p2svc (or tag this HEAD after the lead accepts it)")
+            ok, d = tag_status(head, tags, lambda t: sh(["git", "diff", "--stat", t, "HEAD", "--", ":(glob)detection/*.py", ":(glob)detection/engines/*.py"], root) == ""); add("live HEAD is a p2-known-good tag", "PASS" if ok else "FAIL", d, "" if ok else "deploy only a tagged commit: git checkout p2-known-good-<latest>, restart p2svc (or tag this HEAD after the lead accepts it)")
             dirty = sh(["git", "status", "--porcelain", "--", "detection"], root)
             add("detection/ clean in live checkout", "PASS" if not dirty else "FAIL", "clean" if not dirty else f"{len(dirty.splitlines())} changed paths", "commit or discard local edits in detection/ before judging")
             st = float(sh(["bash", "-c", f"date -d \"$(ps -o lstart= -p {pid})\" +%s"], root) or 0); lc = float(sh(["git", "log", "-1", "--format=%ct", "--", ":(glob)detection/*.py"], root) or 0)

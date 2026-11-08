@@ -39,3 +39,11 @@ def test_stale_code():
 def test_controls():
     c = R.controls({"band": "critical", "s": 1.0}, {"band": "low", "s": 0.0}); assert all(ok for _, ok, _ in c)
     c = R.controls({"band": "high"}, None); assert not any(ok for _, ok, _ in c)
+
+
+def test_tag_status_same_code_after_non_p2_commits():
+    tags = {"p2-known-good-0535": "aaa111"}
+    ok, d = R.tag_status("bbb222", tags, lambda t: True)
+    assert ok and "p2-known-good-0535" in d
+    assert not R.tag_status("bbb222", tags, lambda t: False)[0]
+    assert not R.tag_status("bbb222", tags, lambda t: 1 / 0)[0]

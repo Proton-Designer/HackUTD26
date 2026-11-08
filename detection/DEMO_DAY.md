@@ -38,9 +38,20 @@ Then: `curl -s <tunnel url>/healthz` -> 200. Then one test call: `(set -a; . ./.
 Offline insurance: `OFFLINE=1 bash detection/scripts/demo_local.sh` (hub+P2+decoy+simulated caller, no internet).
 
 ## 4. Freeze rules
-- Known-good tag = the newest `git tag -l 'p2-known-good-*' | tail -1` (now **p2-known-good-0443**; older 0334, 0250). Do not deploy during a judge visit; do not deploy after code freeze (08:00) except a rollback.
+- Known-good tag = the newest `git tag -l 'p2-known-good-*' | tail -1` (at 05:40: **p2-known-good-0535**). Do not deploy during a judge visit; do not deploy after code freeze (08:00) except a rollback.
 - Roll back: `git checkout <newest p2-known-good tag>` in the live checkout, then restart p2svc (Ctrl-C twice in its window, rerun step 2). Return later with `git checkout <branch>`.
 - Never `pkill`/`tmux kill-*` in the live session; interrupt (Ctrl-C) the one window you mean.
+
+## Code freeze 07:45 (lead, in `~/HackUTD26`, live checkout; ~3 min; do it between calls)
+Run from the repo root. `$P2W` = the tmux window running p2svc (`tmux list-windows -t backfire-p2`). Nothing here kills by port or name.
+1. **No call, no jobs.** `curl -s localhost:8100/healthz | python3 -c 'import sys,json;print(json.load(sys.stdin)["active_stt_sockets"])'` -> `0` (if not 0, wait; never restart mid-call). Stop evals/acceptance runs in the eng windows.
+2. **Code is final.** `git status --short detection contracts/models.md` -> empty; `git log -1 --format=%h` and note it. `git fetch -q && git diff --stat HEAD origin/finalized-idea-backfire -- detection` -> empty (pull first if not; no pushes after 08:00 except a rollback).
+3. **Dumps off.** `rm -f logs/audio/*.wav; ls logs/audio | wc -l` -> `0`.
+4. **Restart p2svc without dumps**: `tmux send-keys -t backfire-p2:$P2W C-c; sleep 1; tmux send-keys -t backfire-p2:$P2W C-c` (two Ctrl-C within the window stops the supervisor), then `tmux send-keys -t backfire-p2:$P2W 'env -u P2_DUMP_AUDIO P2_ENGINE=local HUB_URL=<hub url> bash detection/scripts/run.sh' Enter`. Wait ~6 s: `curl -s localhost:8100/healthz` -> `"ok":true`, `"engine":"local"`, `"primary":"local"`, `"local_reachable":true`, `"stt":{"backend":"riva",...}`, `"hub_subscriber_connected":true`.
+5. **Tag it.** `git tag p2-known-good-$(date +%H%M)` (only if step 6 passes; if it fails, delete the tag with `git tag -d` and fix first).
+6. **Readiness.** `bash detection/scripts/ready_check.sh --live http://localhost:8100 --tunnel <p2 tunnel URL> --tests` -> ends `READY` with 0 FAIL. Expected: `P2_DUMP_AUDIO off in live process` PASS (`=unset`), `logs/audio empty` PASS, `live HEAD is a p2-known-good tag` PASS (an exact tag, or "same runtime .py as" the newest tag when only non-P2 commits followed), positive control `critical`, negative control `low`. A WARN is OK if you can say why. NOT READY -> do not tag; fix the FAIL line.
+7. **One rehearsal call** (after the rest of the line is quiet): place or stream a scam test call; confirm one alert, then `bash detection/scripts/call_report.py --last 1` shows engine local, no timeouts. Then `ls logs/audio | wc -l` -> `0` again (dumps stayed off).
+8. **Leave it alone.** Watchdog alive (`pgrep -fc watchdog.sh` is read-only; expect 1), no more evals, no llama tuning. Rollback only via section 4.
 
 ## 5. Before judging
 - Stop evals/benchmarks (shared GPU + NVIDIA key): no `eval/` runs, no acceptance runs, no llama tuning.
