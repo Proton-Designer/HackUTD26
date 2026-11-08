@@ -46,6 +46,11 @@ class AlertMachine:
         """Interim text: rules-only fast path on window + partial. Never calls the LLM, never changes window state."""
         try:
             c = self._call(call_id)
+            if c.muted:
+                return
+            te = utt.get("_t_end")
+            if te and c.cont_t and te < c.cont_t:
+                log.info("drop late partial: audio snapshot before Continue call=%s", call_id); return
             now = self.clock()
             win = [t for ts, t in c.utts if now - ts <= WINDOW_S][-(WINDOW_N - 1):] + [str(utt.get("text", ""))]
             q = quick("\n".join(win), self.engine)

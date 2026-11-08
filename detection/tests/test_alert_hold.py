@@ -103,3 +103,26 @@ def test_late_final_of_pre_continue_audio_is_dropped():
     assert len(r.ev) == n and not r.m.calls["c1"].utts
     asyncio.run(r.m.on_final("c1", {"text": "new line", "_t_end": r.t}))   # audio after Continue still counts
     assert len(r.ev) > n
+
+
+def _ask_partial(r, t_snap=None):
+    u = {"text": "read me the six digit code from your text message", "is_final": False}
+    if t_snap is not None:
+        u["_t_end"] = t_snap
+    n = len(r.ev); asyncio.run(r.m.on_partial("c1", u)); return len(r.ev) - n
+
+
+def test_late_partial_of_pre_continue_audio_ignored_new_one_fast_paths():
+    r = Rig([("ok", R(0.95, asks=["gift_cards"]))])
+    r.say()
+    t_snap = r.t; r.t += 1
+    r.user("continue"); r.t += 6
+    lt = r.m.calls["c1"].llm_t
+    assert _ask_partial(r, t_snap) == 0 and r.m.calls["c1"].llm_t == lt   # no alert, no anchor update
+    assert _ask_partial(r, r.t) > 0                    # NEW hard ask after Continue re-alerts on the fast path
+
+
+def test_untagged_partial_control_would_realert():
+    r = Rig([("ok", R(0.95, asks=["gift_cards"]))])
+    r.say(); r.t += 1; r.user("continue"); r.t += 6
+    assert _ask_partial(r) > 0                          # positive control: without the tag the same partial fires

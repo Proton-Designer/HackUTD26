@@ -129,7 +129,7 @@ async def stt_ws(ws: WebSocket, call_id: str):
     def submit(arrs):
         for a in arrs:
             chain.put_nowait((f"{call_id}-u{ids[0]}", a, time.time())); ids[1] = ids[0]; ids[0] += 1; pstate["text"] = ""
-    async def partial(n, pcm):
+    async def partial(n, pcm, t_snap):
         try:
             text = (await stt.get_stt().transcribe(pcm)).strip()
             if text and text != pstate["text"] and ids[1] < n:      # drop if this utterance already finalized
@@ -137,7 +137,7 @@ async def stt_ws(ws: WebSocket, call_id: str):
                 utt = {"utterance_id": f"{call_id}-u{n}", "text": text, "is_final": False}
                 await hub.emit("transcript.caller", call_id, utt)
                 if on_partial:
-                    await on_partial(call_id, utt)
+                    await on_partial(call_id, dict(utt, _t_end=t_snap))   # _t_end = wall clock of the audio snapshot, internal only (hub got plain utt)
         except Exception as e:
             log.debug("partial failed: %s", type(e).__name__)
         finally:
@@ -156,7 +156,7 @@ async def stt_ws(ws: WebSocket, call_id: str):
                         snap = seg.snapshot()
                         if snap is not None:
                             pstate["busy"], pstate["t"] = True, time.monotonic()
-                            tasks.add(asyncio.create_task(partial(ids[0], snap)))
+                            tasks.add(asyncio.create_task(partial(ids[0], snap, time.time())))
                 except Exception:
                     log.warning("bad audio frame ignored")
             elif ev == "stop":
