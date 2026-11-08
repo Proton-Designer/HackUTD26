@@ -168,6 +168,15 @@ def main():
             check("6", "second call from the same number: call.routed BLOCKED_BACKFIRE", bool(r2) and r2[-1]["data"]["decision"] == "BLOCKED_BACKFIRE", json.dumps(r2[-1:] ) , gap="follows from the handoff gap" if not bl else None)
             check("6", "app never rang for the blocked call (rings still 1)", pg.evaluate("window.__rings") == 1, f"rings={pg.evaluate('window.__rings')}", gap="follows from the handoff gap" if not r2 or r2[-1]["data"]["decision"] != "BLOCKED_BACKFIRE" else None)
             shot("06b-blocked")
+            # 7. regression (07:45 live bug): a NEW call after a handed-off call must start on the normal call screen, not "Backfire has the call"
+            call3 = SimCall("+12145550177"); call3.start()
+            check("7", "next call (other number) rings", bool(wait_for(lambda: pg.evaluate("BF.ui()") == "ringing")), pg.evaluate("BF.ui()"))
+            pg.click("#answerBtn"); call3.answer()
+            wait_for(lambda: pg.evaluate("BF.ui()") == "active"); time.sleep(1.0)
+            view = pg.evaluate("document.getElementById('active').dataset.view")
+            check("7", "next call does NOT show the previous call's handoff screen", view == "call" and not pg.locator("#handoffMsg").is_visible(), f"view={view} handoffVisible={pg.locator('#handoffMsg').is_visible()}")
+            shot("07-next-call")
+            call3.hangup()
             br.close()
     finally:
         try: os.killpg(hub.pid, 15)

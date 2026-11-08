@@ -97,7 +97,7 @@
   const ACR = s => String(s).replace(/\b(Irs|Ssa|Fbi|Dea|Ftc|Usps|Cdc|Dhs)\b/g, m => m.toUpperCase());   // server title-cases impersonated agencies
   function renderChips(chips) { const ul = $("chips"); ul.replaceChildren(...(chips || []).map(c => { const li = document.createElement("li"); li.textContent = ACR(c); return li; })); }
   function endCall(msg) {
-    $("active").dataset.handoff = ""; BF.resumed = false; clearTimeout(st.handT); stopRing(); unlockScreen(); { const k = $("keepOpen"); if (k) k.hidden = true; }
+    $("active").dataset.handoff = ""; $("handoffMsg").hidden = true; $("alertBox").hidden = true; BF.resumed = false; clearTimeout(st.handT); stopRing(); unlockScreen(); { const k = $("keepOpen"); if (k) k.hidden = true; }
     { const n = $("actedMsg"); if (n) n.hidden = true; }
     clearInterval(st.timer); st.answered = false; show("ended"); { const missed = /^Missed/.test(msg || ""); $("endedTitle").textContent = missed ? "Missed call" : "Call ended"; $("endedMsg").textContent = missed ? "You did not answer. Backfire is still watching your calls." : (msg || ""); }
     $("phone").dataset.state = "ended";
@@ -113,6 +113,7 @@
     switch (ev.type) {
       case "call.incoming":
         st.callId = ev.call_id; st.alerted = false;
+        $("active").dataset.handoff = ""; $("handoffMsg").hidden = true; $("alertBox").hidden = true; $("idleMsg").hidden = false; setBadge("watching");   // a new call never starts on the previous call's handoff/alert screen
         $("callerNumber").textContent = fmtNum(d.from);
         $("scamLabel").hidden = !(d.scam_id_score >= 0.5);
         $("attest").textContent = d.attestation === "A" ? "Caller ID verified" : "Caller ID not verified";
