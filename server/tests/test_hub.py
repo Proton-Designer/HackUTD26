@@ -16,7 +16,8 @@ def test_routing_decisions():
     r = routing.decide("+15555550999"); assert r["decision"] == "BLOCKED_BACKFIRE"
     db.add_campaign("+15555550123")
     assert routing.decide("+15555550123", "A")["decision"] == "BLOCKED_BACKFIRE"
-    assert routing.decide("911")["decision"] == "NORMAL"
+    assert routing.decide("911", "A")["decision"] == "NORMAL"
+    assert routing.decide("911")["decision"] == "LIVE_GUARD"  # unverified 911 caller ID is not a free pass
     assert routing.decide("12345")["decision"] == "LIVE_GUARD"  # unverified short code not exempt
     db.add_confirmed("12345"); assert routing.decide("12345")["decision"] == "BLOCKED_BACKFIRE"
 
@@ -89,8 +90,9 @@ def test_trusted_number_not_auto_blocked():
 def test_emergency_never_blocked():
     with pytest.raises(ValueError):
         db.add_confirmed("911")
-    db.q("INSERT INTO confirmed_scammers VALUES('911','t','x',0)")  # even if forced in
-    assert routing.decide("911")["decision"] == "NORMAL"
+    db.q("INSERT INTO confirmed_scammers VALUES('+911','t','x',0)")  # even if forced in
+    assert routing.decide("911", "A")["decision"] == "NORMAL"
+    assert routing.decide("911")["decision"] == "LIVE_GUARD"  # unverified 911 caller ID is not a free pass
 
 def test_app_mounted_same_origin():
     c = TestClient(app)

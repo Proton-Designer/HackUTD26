@@ -7,8 +7,10 @@ EXEMPT = {"911", "+911", "988", "+988"}  # explicit set only; unverified short c
 def decide(from_number, attestation="none"):
     try:
         n = db.norm(from_number)
-        if n in EXEMPT:  # emergency numbers are never blocked (exact match only)
-            return {"decision": "NORMAL", "reason": "Exempt (emergency number)", "attestation": attestation}
+        if n in EXEMPT:  # emergency numbers are never blocked; only verified callers skip Live Guard
+            if attestation in ("A", "B"):
+                return {"decision": "NORMAL", "reason": "Exempt (emergency number)", "attestation": attestation}
+            return {"decision": "LIVE_GUARD", "reason": "Caller ID not verified", "attestation": attestation}
         # blocklist before any other exemption: an exemption must never bypass a confirmed/campaign block
         if db.has("confirmed_scammers", n):
             return {"decision": "BLOCKED_BACKFIRE", "reason": "Confirmed scammer for her", "attestation": attestation}
