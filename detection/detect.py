@@ -6,7 +6,7 @@ from detection import schema
 log = logging.getLogger("p2.detect")
 OVERALL_TIMEOUT_S = 4.0
 
-_NEG = re.compile(r"\b(never|won'?t|will not|would not|do not|don'?t|doesn'?t|does not|can'?t|cannot|no one|nobody|not)\b", re.I)
+_NEG = re.compile(r"\b(never|won'?t|will not|would not|do not|don'?t|doesn'?t|does not|can'?t|cannot|no one|nobody|not|nunca|jam[aá]s|no le (?:vamos|pedimos|pediremos|pido)|no (?:te|les?) (?:vamos|pedimos|pediremos|pido|voy))\b", re.I)
 # a new clause starts after a sentence end, or at "but/however/now ..." or ", read me ...": a later real request must still fire
 _CLAUSE = re.compile(r"[.?!;:\n]|,?\s+\b(?:but|however|except|instead|now)\b|,\s*(?:now |please |then |so )?\b(?:read|tell|give|send|text|repeat)\s+(?:me|us)\b", re.I)
 # weak asks (bare nouns) only count with a request verb / question cue within ~6 words
@@ -15,6 +15,8 @@ _WEAK = {"gift_card", "crypto", "p2p", "ssn", "card"}
 # the user's own past action / status ("the Zelle you made", "is ready") is a confirmation, not a request
 _OWN = re.compile(r"^\W*(?:\w+\W+){0,3}?(you|your)\b\W+(?:\w+\W+){0,2}?(made|started|initiated|sent|requested|ordered|authori[sz]ed|did|set up)\b", re.I)
 
+# a REPORTED question about wiring ("you asked how to send a wire transfer", "wondered about the wire") is the caller answering, not asking (TASK-052)
+_REPORTED = re.compile(r"\b(you|your)\s+(?:\w+\s+){0,2}?(asked|wondered|inquired|wanted to know)\s+(how|about|whether|if)\b", re.I)
 _WEAK_WIRE = re.compile(r"wire transfer|(por )?transferencia|wire (\w+ ){0,3}(dollars|bucks)|wire \$", re.I)
 ASK_RULES = {
     "gift_card": r"gift ?cards?|itunes card|google play card|steam card|prepaid (debit )?cards?|tarjetas? de regalo|tarjetas? prepago",
@@ -60,6 +62,8 @@ def _is_request(text: str, start: int, end: int) -> bool:
     ce = end + ce.start() if ce else len(text)
     before = text[cs:start].split()[-6:]
     after = text[end:ce].split()[:6]
+    if _REPORTED.search(text[cs:start]) and _WEAK_WIRE.match(text[start:end]):
+        return False
     if not _REQ.search(" ".join(before + after)):
         return False
     return not _OWN.match(text[end:ce])
