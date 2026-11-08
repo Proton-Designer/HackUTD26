@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="referrer" content="no-referrer">
+<title>Backfire</title>
+<link rel="icon" type="image/png" href="assets/backfire-favicon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<meta name="theme-color" content="#0e0d14">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Backfire">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>html,body{background:#0e1116;color:#fff}</style>
+<script>
+// Safety net for phones without dev tools (older iOS Safari): never a blank white page. Shows the first script error on screen and polyfills replaceChildren (Safari < 14).
+if (!Element.prototype.replaceChildren) Element.prototype.replaceChildren = function () { while (this.firstChild) this.removeChild(this.firstChild); for (var i = 0; i < arguments.length; i++) this.append(arguments[i]); };
+(function () {
+  function show(m) { try { var p = document.getElementById("crash"); if (!p) { p = document.createElement("pre"); p.id = "crash"; p.style.cssText = "position:fixed;left:0;right:0;bottom:0;margin:0;padding:8px;background:#400;color:#fff;font:12px/1.3 monospace;white-space:pre-wrap;z-index:99;max-height:40vh;overflow:auto"; (document.body || document.documentElement).appendChild(p); } if (p.textContent.length < 600) p.textContent += m + "\n"; } catch (e) {} }
+  var dbg = /[?&]debug\b/.test(location.search);   // handled errors never reach the customer; the red box is for ?debug=1 and only for uncaught exceptions
+  window.addEventListener("error", function (e) { var m = "Error: " + (e.message || "script") + " @" + String(e.filename || "").split("/").pop() + ":" + (e.lineno || ""); if (dbg) show(m); else try { console.log("[backfire]", m); } catch (x) {} });
+  window.addEventListener("unhandledrejection", function (e) { try { console.log("[backfire] rejected:", e.reason && e.reason.message || e.reason); } catch (x) {} });
+})();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main id="phone" data-state="idle">
+  <p id="a2hs" class="hint-bar" hidden role="note"><span id="a2hsText">Add Backfire to your Home Screen: tap Share, then Add to Home Screen.</span> <button id="a2hsClose" aria-label="Close">OK</button></p>
+  <header class="status">
+    <img class="flame" src="assets/backfire-flame.png" alt="Backfire" width="14" height="21">
+    <button class="chip-icon sound off" id="sound" type="button" aria-label="Sound off. Tap to turn sound on" title="Sound"></button>
+    <span class="badge guard watching" id="guard">Live Guard on</span>
+  </header>
+
+  <div id="callView">
+  <button id="soundBanner" class="sound-banner" type="button" aria-describedby="soundWhy"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5v5h3.5l5 4v-13l-5 4zM16 9.5l5 5M21 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Tap to turn on call sounds</span><span id="soundWhy" class="sr-only">Your phone keeps Backfire silent until you tap once, so a call could arrive without ringing.</span></button>
+  <!-- INCOMING -->
+  <section id="incoming" class="screen" hidden>
+    <p class="pill amber" id="scamLabel" hidden>Scam Likely</p>
+    <h1 id="callerName">Unknown caller</h1>
+    <p class="number" id="callerNumber"></p>
+    <p class="sub" id="attest"></p>
+    <p class="note-line push" id="incomingHint">If you answer, Backfire listens to the caller only.</p>
+    <div class="row two">
+      <button class="big decline" id="declineBtn">Decline</button>
+      <button class="big accept" id="answerBtn"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.6 10.8a15 15 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11 11 0 0 0 3.5.56 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.2.2 2.4.56 3.5a1 1 0 0 1-.25 1z" fill="currentColor"/></svg>Answer</button>
+    </div>
+  </section>
+
+  <!-- ACTIVE (data-view: call | alert | handoff, set by app.js) -->
+  <section id="active" class="screen" data-view="call" hidden>
+    <div class="handoff-hero" aria-hidden="true"><span class="ring-icon"><img src="assets/backfire-flame.png" alt="" width="40" height="60"></span></div>
+    <h2 id="handoffTitle" class="handoff-title">Backfire has the call</h2>
+    <p id="handoffLead" class="handoff-lead">It's talking to the caller in your voice and saving what they reveal.</p>
+    <div class="who"><h1 id="activeName">Unknown caller</h1><p class="number" id="timer">00:00</p></div>
+
+    <div id="alertBox" class="alert" hidden role="alert" aria-live="assertive">
+      <h2 class="alert-title">This call may be a scam</h2>
+      <p id="alertTag" class="alert-tag" hidden></p>
+      <ul id="chips" class="chips"></ul>
+      <div class="alert-actions">
+        <button class="big gets" id="btnGets"><span class="b-main">Fire Back</span><span class="b-sub">Backfire talks to them in your voice</span></button>
+        <div class="pair">
+          <button class="big outline" id="btnContinue">Continue</button>
+          <button class="big outline danger" id="btnHang">Hang up</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="handoffMsg" class="handoff" hidden><span id="handoffMain">You can put the phone down.</span><span id="handoffSub" class="handoff-sub">We'll tell you when it's over.</span></div>
+    <p id="observerMsg" class="observer" hidden role="status">Customer is answering on another phone. You can still watch and press the buttons.</p>
+    <p id="actedMsg" class="observer" hidden role="status"></p>
+
+    <div id="talkBox" class="talk" hidden>
+      <p class="talk-title">You're on the call</p>
+      <div class="talk-row">
+        <button class="mic" id="micBtn" aria-pressed="false" aria-label="Microphone on. Tap to mute"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+        <div class="meter" aria-hidden="true"><i id="talkLevel"></i></div>
+        <span id="micDot" class="dot idle" role="img" aria-label="Not sending" title="Not sending"></span>
+      </div>
+      <p class="talk-hint" id="talkHint">You're on the call. Speak normally.</p>
+    </div>
+
+    <p id="decoyMsg" class="decoy" hidden>Listening to Backfire's decoy</p>
+    <p id="keepOpen" class="keep-open" hidden role="note">Keep Backfire open during calls. If you switch apps, the call audio can pause.</p>
+    <p id="idleMsg" class="sub">Backfire is listening to the caller only, never to you.</p>
+
+    <div class="call-actions">
+      <button class="big outline" id="decoyBtn" type="button" aria-pressed="true" hidden><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a8 8 0 0 0-8 8v6a3 3 0 0 0 3 3h1v-7H6v-2a6 6 0 0 1 12 0v2h-2v7h1a3 3 0 0 0 3-3v-6a8 8 0 0 0-8-8z" fill="currentColor"/></svg><span id="decoyBtnText">Listening to the decoy</span></button>
+      <button class="big outline danger" id="endBtn">End call</button>
+    </div>
+  </section>
+
+  <!-- IDLE / ENDED -->
+  <section id="ended" class="screen" hidden>
+    <div class="idle-only">
+      <div class="glow"><img src="assets/backfire-flame.png" alt="" width="64" height="96"></div>
+      <h1 id="homeTitle">You're protected</h1>
+      <p class="lead" id="homeLead">Backfire listens to the caller's side of calls from numbers you don't know.</p>
+      <p id="homeNote" class="note" role="status"></p>
+      <p id="iosTip" class="tip-line" role="note" hidden><span>Keep Backfire open during calls. If you switch apps, the call audio can pause.</span><button id="iosTipOk" type="button" aria-label="Got it, hide this tip">Got it</button></p>
+      <button id="voiceCard" class="home-card" type="button" hidden><span class="hc-main">Make Backfire sound like you <span class="hc-time">· 20 sec</span></span><span class="hc-sub">Optional. Takes about 20 seconds.</span></button>
+    </div>
+    <div class="ended-only">
+      <h1 id="endedTitle">Call ended</h1>
+      <p class="lead" id="endedMsg"></p>
+      <ul id="summary" class="summary" hidden aria-label="Call summary"></ul>
+    </div>
+    <div class="stats" id="statsBox" aria-label="Your protection so far">
+      <div><b id="statCalls">0</b><span>Calls handled</span></div>
+      <div><b id="statBlocked">0</b><span>Numbers blocked</span></div>
+    </div>
+    <button class="big accept" id="replayBtn">Replay demo call</button>
+  </section>
+
+  </div>
+
+  <!-- PROTECTION: three sections (Status, Activity, Privacy & voice) -->
+  <section id="protView" class="screen left" hidden>
+    <h1>Protection</h1>
+    <section class="card" aria-labelledby="hStatus"><h2 id="hStatus">Status</h2>
+      <div class="group">
+        <h3>Live Guard</h3>
+        <p id="guardState" class="sub"></p>
+        <button class="big outline" id="guardToggle"></button>
+        <div id="guardOffBox" class="confirm" hidden role="group" aria-label="Turn Live Guard off">
+          <p>Turn Live Guard off? Backfire will stop watching your calls.</p>
+          <label class="check"><input type="checkbox" id="guardAlso"><span>Also delete my voice</span></label>
+          <div class="pair"><button class="big outline" id="guardOffNo">Cancel</button><button class="big outline danger" id="guardOffYes">Turn off</button></div>
+        </div>
+      </div>
+      <div class="mini-stats" aria-label="Your protection so far">
+        <div><b id="callsCount">0</b><span>Calls handled</span></div>
+        <div><b id="blockedCount">0</b><span>Numbers blocked</span></div>
+      </div>
+    </section>
+    <section class="card" aria-labelledby="hActivity"><h2 id="hActivity">Activity</h2>
+      <p class="sub">Numbers Backfire blocked for you. Tap Undo if one was a mistake.</p>
+      <ul id="blockedList" class="rows"></ul><p id="blockedEmpty" class="sub empty">None yet.</p>
+    </section>
+    <section class="card" aria-labelledby="hPrivacy"><h2 id="hPrivacy">Privacy &amp; voice</h2>
+      <div class="group">
+        <h3>Your voice</h3>
+        <p id="voiceState" class="sub"></p>
+        <button class="big outline danger" id="voiceDelete" hidden>Delete my voice</button>
+        <div id="voiceConfirm" class="confirm" hidden role="alertdialog" aria-label="Delete my voice">
+          <p>This deletes the voice Backfire uses for every call. Delete?</p>
+          <div class="pair"><button class="big outline" id="voiceNo">Cancel</button><button class="big outline danger" id="voiceYes">Yes, delete</button></div>
+        </div>
+        <button class="big outline" id="voiceSetup" hidden>Set up my voice</button>
+      </div>
+      <div class="group">
+        <h3>Numbers to never screen</h3>
+        <p class="sub">Family, your doctor, your bank. Backfire never screens or blocks these.</p>
+        <ul id="dnsList" class="rows"></ul>
+        <button class="big outline" id="dnsOpen" aria-expanded="false" aria-controls="dnsForm">Add a number</button>
+        <div id="dnsForm" class="dns-form" hidden>
+          <input id="dnsNumber" inputmode="tel" autocomplete="off" aria-label="Phone number" placeholder="Phone number">
+          <input id="dnsLabel" autocomplete="off" aria-label="Name" placeholder="Name (for example: Dr. Lee)">
+          <div class="pair"><button class="big outline" id="dnsCancel">Cancel</button><button class="big accept" id="dnsAdd">Add</button></div>
+        </div>
+      </div>
+      <div class="group">
+        <h3>Calls</h3>
+        <label class="check"><input type="checkbox" id="earBox"><span>I use earphones on calls</span></label>
+        <p class="sub">With earphones on, the caller never hears themselves through your speaker.</p>
+      </div>
+      <details class="group keep">
+        <summary>What we keep</summary>
+        <ul class="plainlist small">
+          <li>Your side of a call: <b>never heard, never kept</b>.</li>
+          <li>The caller's words: kept only if an alert fired, deleted after 72 hours.</li>
+          <li>Scammer numbers and websites: kept so they can be stopped.</li>
+          <li>Your voice: an 8-second sample, kept until you delete it.</li></ul>
+      </details>
+    </section>
+  </section>
+
+  <!-- ONBOARDING (each step: content, then a pinned .actions bar) -->
+  <section id="setupView" class="screen left" hidden>
+    <div id="step1" class="step">
+      <div class="step-body">
+        <img class="wordmark" src="assets/backfire-wordmark.png" alt="Backfire" width="150" height="25">
+        <h1>Protect this phone from scam calls</h1>
+        <ul class="trust">
+          <li>Backfire listens to the <b>caller only</b>, never to you.</li>
+          <li>Nothing from your side of a call is saved.</li>
+          <li>You can turn it off at any time.</li></ul>
+        <p class="note-line mic-why" id="s1mic">Your phone will then ask to use the microphone. Backfire needs it only so you can talk on calls it protects. Saying yes now means it never asks in the middle of a call.</p>
+      </div>
+      <div class="actions"><button class="big accept" id="s1on">Turn on protection</button></div>
+    </div>
+    <div id="step2" class="step" hidden>
+      <div class="step-body">
+        <h1>Make Backfire sound like you</h1>
+        <p class="body">If you press <b>Fire Back</b>, Backfire can talk to the scammer in <b>your voice</b>, so they waste their time and not yours.</p>
+        <div class="card"><h2>Voice permission</h2>
+          <p class="body small">A voice profile is <b>biometric data</b>. If you agree, Backfire makes one from a short recording of you reading a paragraph.</p>
+          <ul class="plainlist small">
+            <li>Used <b>only</b> when you press Fire Back.</li>
+            <li>Backfire keeps only an <b>8-second voice sample</b>, not the whole recording.</li>
+            <li>Stored on Backfire's server and used for nothing else.</li>
+            <li>You can <b>delete it any time</b> in Protection.</li></ul>
+          <p class="body small">You are protected either way. Without this, Backfire uses a synthetic voice.</p></div>
+      </div>
+      <div class="actions">
+        <button class="big accept" id="s2agree">I agree</button>
+        <button class="big outline" id="s2skip">Not now, keep the synthetic voice</button>
+      </div>
+    </div>
+    <div id="stepRec" class="step" hidden>
+      <div class="step-body">
+        <h1>Read this out loud</h1>
+        <p class="body">Press the red button, read the paragraph at a normal pace, then press <b>Stop</b>.</p>
+        <ul class="tips"><li>Find a quiet room.</li><li>Hold the phone about 20 cm from your mouth.</li><li>Never record while on a call.</li></ul>
+        <blockquote id="paragraph"></blockquote>
+        <div class="meter" aria-hidden="true"><i id="recLevel"></i></div>
+        <p class="timer-line"><span id="recTime">0:00</span> / 1:00</p>
+        <p class="sub" id="recStatus" role="status"></p>
+      </div>
+      <div class="actions">
+        <button class="big record" id="recBtn">● Start recording</button>
+        <div id="recReview" hidden>
+          <button class="big accept" id="recSave">Save my voice</button>
+          <button class="big outline" id="recAgain">Record again</button>
+        </div>
+        <button class="big outline" id="recSkip">Skip, use a synthetic voice</button>
+      </div>
+    </div>
+  </section>
+
+  <nav id="tabs" aria-label="Main" hidden>
+    <button data-v="callView" class="on"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 11 12 4l8.5 7M6 9.5V20h4.5v-5.5h3V20H18V9.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Home</span></button>
+    <button data-v="protView"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5 4.5 5.5v5.7c0 4.6 3.1 8.6 7.5 10.3 4.4-1.7 7.5-5.7 7.5-10.3V5.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span>Protection</span></button>
+  </nav>
+
+  <!-- PAIRING (TASK-014): a /app/?pair=XXXXXX link pairs by itself; the code box is the fallback, shown only when the hub answers 401 -->
+  <section id="pairView" class="screen left" hidden>
+    <div class="step-body">
+      <img class="wordmark" src="assets/backfire-wordmark.png" alt="Backfire" width="150" height="25">
+      <h1 id="pairTitle">Connect your phone</h1>
+      <p class="body link-hide">Open the Backfire link you were sent, or type the 6-digit code from it.</p>
+      <input id="pairPin" class="link-hide" inputmode="numeric" autocomplete="one-time-code" maxlength="12" aria-label="6-digit code" placeholder="000000">
+      <p class="sub" id="pairMsg" role="status" aria-live="polite"></p>
+    </div>
+    <div class="actions link-hide"><button class="big accept" id="pairBtn">Connect</button></div>
+  </section>
+
+  <footer><span id="src">Simulated call</span></footer>
+  <pre id="log" hidden></pre>
+</main>
+<script src="app.js"></script>
+<script src="pair.js"></script>
+<script src="ui.js"></script>
+<script src="voip.js"></script>
+<script src="sim.js"></script>
+<script src="talk.js"></script>
+</body>
+</html>

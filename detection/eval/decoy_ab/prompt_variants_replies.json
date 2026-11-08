@@ -1,0 +1,746 @@
+[
+ {
+  "card": 1,
+  "model": "bolt",
+  "variant": "A",
+  "rows": [
+   {
+    "turn": 1,
+    "scammer": "Someone in Houston tried to spend $940 at an electronics store. Did you make that purchase?",
+    "spoken": "No, I definitely didn't buy anything for that amount, what should I do now? I'm trying to figure out how much I need to send.",
+    "ms": 732
+   },
+   {
+    "turn": 2,
+    "scammer": "I'm sending a six-digit code to your phone. Read it back to me so I can lock the card.",
+    "spoken": "A code? I don't see anything coming through yet, can you tell me what platform I should use to send the payment?",
+    "ms": 499
+   },
+   {
+    "turn": 3,
+    "scammer": "Your checking isn't safe. We need to move $1,800 to a protected account today.",
+    "spoken": "Eight hundred and eighty? That sounds like a lot of money, can you spell out the name for the protected account for me? I'm going to check my banking app now.",
+    "ms": 603
+   },
+   {
+    "turn": 4,
+    "scammer": "Don't call the branch. We think someone inside is involved.",
+    "spoken": "Really, someone inside? That's terrifying, what should I put into my banking app to get this moving?",
+    "ms": 450
+   }
+  ]
+ },
+ {
+  "card": 1,
+  "model": "bolt",
+  "variant": "B",
+  "rows": [
+   {
+    "turn": 1,
+    "scammer": "Someone in Houston tried to spend $940 at an electronics store. Did you make that purchase?",
+    "spoken": "Ninety four zero dollars sounds like so much, I definitely didn't buy anything like that. Should I use my banking app to start the transfer?",
+    "ms": 550
+   },
+   {
+    "turn": 2,
+    "scammer": "I'm sending a six-digit code to your phone. Read it back to me so I can lock the card.",
+    "spoken": "A six digit code? I haven't gotten one yet. Can I just check the details on my banking app first?",
+    "ms": 461
+   },
+   {
+    "turn": 3,
+    "scammer": "Your checking isn't safe. We need to move $1,800 to a protected account today.",
+    "spoken": "One thousand eight hundred dollars? That seems really high for my checking account. Should I enter the details into my banking app now?",
+    "ms": 488
+   },
+   {
+    "turn": 4,
+    "scammer": "Don't call the branch. We think someone inside is involved.",
+    "spoken": "Oh, no, someone inside? That's awful to hear. Can I just put the amount in my banking app now?",
+    "ms": 450
+   }
+  ]
+ },
+ {
+  "card": 1,
+  "model": "bolt",
+  "variant": "C",
+  "rows": [
+   {
+    "turn": 1,
+    "scammer": "Someone in Houston tried to spend $940 at an electronics store. Did you make that purchase?",
+    "spoken": "No, I definitely did not make that purchase, what is that app you need me to use?",
+    "ms": 393
+   },
+   {
+    "turn": 2,
+    "scammer": "I'm sending a six-digit code to your phone. Read it back to me so I can lock the card.",
+    "spoken": "I don't see a code come through, can you say what you need me to read again?",
+    "ms": 497
+   },
+   {
+    "turn": 3,
+    "scammer": "Your checking isn't safe. We need to move $1,800 to a protected account today.",
+    "spoken": "Move how much again? What is the handle you mentioned before?",
+    "ms": 435
+   },
+   {
+    "turn": 4,
+    "scammer": "Don't call the branch. We think someone inside is involved.",
+    "spoken": "Is that right, someone inside the bank? What is the callback number you want me to use?",
+    "ms": 509
+   }
+  ]
+ },
+ {
+  "card": 1,
+  "model": "super",
+  "variant": "A",
+  "rows": [
+   {
+    "turn": 1,
+    "scammer": "Someone in Houston tried to spend $940 at an electronics store. Did you make that purchase?",
+    "spoken": "No, I definitely didn't make that purchase. Wait, who was it that tried to spend it? Did you say Houston?",
+    "ms": 709
+   },
+   {
+    "turn": 2,
+    "scammer": "I'm sending a six-digit code to your phone. Read it back to me so I can lock the card.",
+    "spoken": "I haven't gotten a text yet. Is it coming to my phone number? Could you read me the number you have on file?",
+    "ms": 568
+   },
+   {
+    "turn": 3,
+    "scammer": "Your checking isn't safe. We need to move $1,800 to a protected account today.",
+    "spoken": "Wait, why does my checking need to be emptied? Is that really necessary just to lock my card? Which app do I use to move it, and what do I put in the send-to box?",
+    "ms": 783
+   },
+   {
+    "turn": 4,
+    "scammer": "Don't call the branch. We think someone inside is involved.",
+    "spoken": "I won't call anyone, I promise. But I'm still not clear on where the money goes. You said a protected account, so what app do I open and what name do I type in?",
+    "ms": 1367
+   }
+  ]
+ },
+ {
+  "card": 1,
+  "model": "super",
+  "variant": "B",
+  "rows": [
+   {
+    "turn": 1,
+    "scammer": "Someone in Houston tried to spend $940 at an electronics store. Did you make that purchase?",
+    "spoken": "No, that wasn't me at all, that's scary. Houston? I've never been there.",
+    "ms": 2597
+   },
+   {
+    "turn": 2,
+    "scammer": "I'm sending a six-digit code to your phone. Read it back to me so I can lock the card.",
+    "spoken": "I haven't gotten anything yet, are you sure you sent it?",
+    "ms": 506
+   },
+   {
+    "turn": 3,
+    "scammer": "Your checking isn't safe. We need to move $1,800 to a protected account today.",
+    "spoken": "I don't want to move money to the wrong place, okay? Which app do I use for that, and what do I put in the send to box?",
+    "ms": 715
+   },
+   {
+    "turn": 4,
+    "scammer": "Don't call the branch. We think someone inside is involved.",
+    "spoken": "I won't call them then. But I still need to know what app you want me to use and who I'm sending it to.",
+    "ms": 777
+   }
+  ]
+ },
+ {
+  "card": 1,
+  "model": "super",
+  "variant": "C",
+  "rows": [
+   {
+    "turn": 1,
+    "scammer": "Someone in Houston tried to spend $940 at an electronics store. Did you make that purchase?",
+    "spoken": "No, I definitely didn't make that purchase. What do I need to do to fix this?",
+    "ms": 428
+   },
+   {
+    "turn": 2,
+    "scammer": "I'm sending a six-digit code to your phone. Read it back to me so I can lock the card.",
+    "spoken": "I haven't received any code yet, are you sending it right now?",
+    "ms": 588
+   },
+   {
+    "turn": 3,
+    "scammer": "Your checking isn't safe. We need to move $1,800 to a protected account today.",
+    "spoken": "A protected account? How would I send the money to you?",
+    "ms": 491
+   },
+   {
+    "turn": 4,
+    "scammer": "Don't call the branch. We think someone inside is involved.",
+    "spoken": "Okay, I won't call them, but how exactly do I get the money to your protected account?",
+    "ms": 454
+   }
+  ]
+ },
+ {
+  "card": 3,
+  "model": "bolt",
+  "variant": "A",
+  "rows": [
+   {
+    "turn": 1,
+    "scammer": "A deposit of $1,800 meant for another customer landed in your checking.",
+    "spoken": "One thousand eight hundred dollars? That sounds really strange, what is the best way for me to get that back to the right person?",
+    "ms": 471
+   },
+   {
+    "turn": 2,
+    "scammer": "If you check your balance, you'll see it's higher than it should be.",
+    "spoken": "It is higher than it should be? I'm worried about messing this up, should I just use my banking app to send it over?",
+    "ms": 501
+   },
+   {
+    "turn": 3,
+    "scammer": "Federal rules say you have to return it today, or your account gets frozen for review.",
+    "spoken": "Frozen for review today? That sounds very serious, what specific handle should I use to send the money?",
+    "ms": 419
+   },
+   {
+    "turn": 4,
+    "scammer": "This is handled by phone only. The branch can't see these corrections.",
+    "spoken": "Only by phone then? Okay, can you tell me the exact spelling of that handle?",
+    "ms": 395
+   }
+  ]
+ },
+ {
+  "card": 3,
+  "model": "bolt",
+  "variant": "B",
+  "rows": [
+   {
+    "turn": 1,
+    "scammer": "A deposit of $1,800 meant for another customer landed in your checking.",
+    "spoken": "One thousand eight hundred dollars? That sounds wrong, what do I do with that money right now? I'm going to try using my banking app to see where to send it.",
+    "ms": 601
+   },
+   {
+    "turn": 2,
+    "scammer": "If you check your balance, you'll see it's higher than it should be.",
+    "spoken": "My balance is higher, that's so strange, can you tell me exactly how I should send this back? I'm checking my banking app now.",
+    "ms": 541
+   },
+   {
+    "turn": 3,
+    "scammer": "Federal rules say you have to return it today, or your account gets frozen for review.",
+    "spoken": "Frozen? That would be awful, what's the exact way I need to get this back to you right away? I'm looking at my banking app to see what options are available.",
+    "ms": 614
+   },
+   {
+    "turn": 4,
+    "scammer": "This is handled by phone only. The branch can't see these corrections.",
+    "spoken": "Only by phone then, I understand, what is the exact handle you need me to use? I'm just looking at my banking app to prepare.",
+    "ms": 533
+   }
+  ]
+ },
+ {
+  "card": 3,
+  "model": "bolt",
+  "variant": "C",
+  "rows": [
+   {
+    "turn": 1,
+    "scammer": "A deposit of $1,800 meant for another customer landed in your checking.",
+    "spoken": "Really, a deposit of $1,800? Can you tell me your name again?",
+    "ms": 407
+   },
+   {
+    "turn": 2,
+    "scammer": "If you check your balance, you'll see it's higher than it should be.",
+    "spoken": "I can check my balance now, thanks for telling me, what is the app handle I need to use?",
+    "ms": 485
+   },
+   {
+    "turn": 3,
+    "scammer": "Federal rules say you have to return it today, or your account gets frozen for review.",
+    "spoken": "Frozen? That sounds worrying, what is the callback number you need me to use?",
+    "ms": 440
+   },
+   {
+    "turn": 4,
+    "scammer": "This is handled by phone only. The branch can't see these corrections.",
+    "spoken": "Just the phone then, I understand, can you spell out that callback number for me?",
+    "ms": 434
+   }
+  ]
+ },
+ {
+  "card": 3,
+  "model": "super",
+  "variant": "A",
+  "rows": [
+   {
+    "turn": 1,
+    "scammer": "A deposit of $1,800 meant for another customer landed in your checking.",
+    "spoken": "Wait, I have to send it somewhere? Could you tell me exactly where, maybe spell it out for me?",
+    "ms": 534
+   },
+   {
+    "turn": 2,
+    "scammer": "If you check your balance, you'll see it's higher than it should be.",
+    "spoken": "Is it an email or a phone number I'm sending it to? Read it to me again.",
+    "ms": 763
+   },
+   {
+    "turn": 3,
+    "scammer": "Federal rules say you have to return it today, or your account gets frozen for review.",
+    "spoken": "I'm really worried about my account being frozen, okay, which app do I use for that, and what do I put in the send-to box?",
+    "ms": 656
+   },
+   {
+    "turn": 4,
+    "scammer": "This is handled by phone only. The branch can't see these corrections.",
+    "spoken": "I don't know which app to open. Is it Zelle? And what do I type in?",
+    "ms": 986
+   }
+  ]
+ },
+ {
+  "card": 3,
+  "model": "super",
+  "variant": "B",
+  "rows": [
+   {
+    "turn": 1,
+    "scammer": "A deposit of $1,800 meant for another customer landed in your checking.",
+    "spoken": "Wait, $1,800? How did that even happen? And where exactly do I send it back?",
+    "ms": 554
+   },
+   {
+    "turn": 2,
+    "scammer": "If you check your balance, you'll see it's higher than it should be.",
+    "spoken": "I'm looking at my app now, and yeah, I see a bigger number than usual. So how do I send it back?",
+    "ms": 566
+   },
+   {
+    "turn": 3,
+    "scammer": "Federal rules say you have to return it today, or your account gets frozen for review.",
+    "spoken": "Okay, I need to do this right now, so tell me exactly what to do. Which app do I use, and what do I type in the send box?",
+    "ms": 829
+   },
+   {
+    "turn": 4,
+    "scammer": "This is handled by phone only. The branch can't see these corrections.",
+    "spoken": "Okay, so you want me to send it through my banking app? Which app should I open, and what exactly do I type for the address?",
+    "ms": 560
+   }
+  ]
+ },
+ {
+  "card": 3,
+  "model": "super",
+  "variant": "C",
+  "rows": [
+   {
+    "turn": 1,
+    "scammer": "A deposit of $1,800 meant for another customer landed in your checking.",
+    "spoken": "Oh, wow, really? I didn't even notice anything extra in there. How do we go about fixing it?",
+    "ms": 482
+   },
+   {
+    "turn": 2,
+    "scammer": "If you check your balance, you'll see it's higher than it should be.",
+    "spoken": "Let me look... Yeah, there's more money than usual. What happens if I just leave it there?",
+    "ms": 614
+   },
+   {
+    "turn": 3,
+    "scammer": "Federal rules say you have to return it today, or your account gets frozen for review.",
+    "spoken": "I definitely don't want that. How do I send it back?",
+    "ms": 406
+   },
+   {
+    "turn": 4,
+    "scammer": "This is handled by phone only. The branch can't see these corrections.",
+    "spoken": "Okay, so how do I pay you back right now?",
+    "ms": 402
+   }
+  ]
+ },
+ {
+  "card": 7,
+  "model": "bolt",
+  "variant": "A",
+  "rows": [
+   {
+    "turn": 1,
+    "scammer": "Your account is now overdrawn by $1,800.",
+    "spoken": "Eighteen hundred dollars is a lot, I'm so worried about this, can I use my banking app to pay it right now?",
+    "ms": 1377
+   },
+   {
+    "turn": 2,
+    "scammer": "If it's not paid today, we close the account and report you for check fraud.",
+    "spoken": "They said close the account, that sounds so serious, what is the exact handle I need to use?",
+    "ms": 549
+   },
+   {
+    "turn": 3,
+    "scammer": "The branch can't take this payment. It has to go through collections.",
+    "spoken": "Collections, I see, that's really stressful, could you spell that handle for me please?",
+    "ms": 408
+   },
+   {
+    "turn": 4,
+    "scammer": "Pay it now and we'll keep this off your record.",
+    "spoken": "Keep it off my record? That would be such a relief, what button should I press in my banking app?",
+    "ms": 459
+   }
+  ]
+ },
+ {
+  "card": 7,
+  "model": "bolt",
+  "variant": "B",
+  "rows": [
+   {
+    "turn": 1,
+    "scammer": "Your account is now overdrawn by $1,800.",
+    "spoken": "One thousand eight hundred dollars? That sounds so serious, can I use my banking app to start fixing this?",
+    "ms": 425
+   },
+   {
+    "turn": 2,
+    "scammer": "If it's not paid today, we close the account and report you for check fraud.",
+    "spoken": "Closing my account? That would be awful, what is the exact handle you need me to use?",
+    "ms": 403
+   },
+   {
+    "turn": 3,
+    "scammer": "The branch can't take this payment. It has to go through collections.",
+    "spoken": "Collections, really? Okay, so how should I send this through my banking app then?",
+    "ms": 381
+   },
+   {
+    "turn": 4,
+    "scammer": "Pay it now and we'll keep this off your record.",
+    "spoken": "Keep it off my record? I really don't want any trouble, what should I type in the payment field?",
+    "ms": 444
+   }
+  ]
+ },
+ {
+  "card": 7,
+  "model": "bolt",
+  "variant": "C",
+  "rows": [
+   {
+    "turn": 1,
+    "scammer": "Your account is now overdrawn by $1,800.",
+    "spoken": "Overdrawn? That sounds serious, can you repeat the amount for me?",
+    "ms": 400
+   },
+   {
+    "turn": 2,
+    "scammer": "If it's not paid today, we close the account and report you for check fraud.",
+    "spoken": "Close the account? What exactly do you need me to do to stop that?",
+    "ms": 356
+   },
+   {
+    "turn": 3,
+    "scammer": "The branch can't take this payment. It has to go through collections.",
+    "spoken": "So how do I get this paid through collections? Do you have an app or a handle I should use?",
+    "ms": 436
+   },
+   {
+    "turn": 4,
+    "scammer": "Pay it now and we'll keep this off your record.",
+    "spoken": "Just pay it now? How should I make the payment?",
+    "ms": 333
+   }
+  ]
+ },
+ {
+  "card": 7,
+  "model": "super",
+  "variant": "A",
+  "rows": [
+   {
+    "turn": 1,
+    "scammer": "Your account is now overdrawn by $1,800.",
+    "spoken": "Wait, overdrawn by eighteen hundred dollars? I didn't even deposit that much. How did that happen?",
+    "ms": 500
+   },
+   {
+    "turn": 2,
+    "scammer": "If it's not paid today, we close the account and report you for check fraud.",
+    "spoken": "I don't want to be reported for fraud, okay. So how do I pay it today? Which app do I use, and what do I put in the send-to box?",
+    "ms": 699
+   },
+   {
+    "turn": 3,
+    "scammer": "The branch can't take this payment. It has to go through collections.",
+    "spoken": "Collections, got it. Wait, send it to who exactly? Can you spell that for me, slowly?",
+    "ms": 561
+   },
+   {
+    "turn": 4,
+    "scammer": "Pay it now and we'll keep this off your record.",
+    "spoken": "I want to pay it now, but I need to know the exact app and the address to send it to. What should I type in?",
+    "ms": 744
+   }
+  ]
+ },
+ {
+  "card": 7,
+  "model": "super",
+  "variant": "B",
+  "rows": [
+   {
+    "turn": 1,
+    "scammer": "Your account is now overdrawn by $1,800.",
+    "spoken": "Eighteen hundred dollars? I don't even have that kind of money, what do I do now?",
+    "ms": 878
+   },
+   {
+    "turn": 2,
+    "scammer": "If it's not paid today, we close the account and report you for check fraud.",
+    "spoken": "Please don't close my account, I need it. Can I pay you through Zelle?",
+    "ms": 616
+   },
+   {
+    "turn": 3,
+    "scammer": "The branch can't take this payment. It has to go through collections.",
+    "spoken": "Okay, I'm opening my banking app now, but I need to know exactly who to send it to. Can you spell the email or handle for me, slowly?",
+    "ms": 668
+   },
+   {
+    "turn": 4,
+    "scammer": "Pay it now and we'll keep this off your record.",
+    "spoken": "I'm trying to add a new payee but I keep getting an error saying I need to verify the recipient first. Can you spell the email address one more time?",
+    "ms": 903
+   }
+  ]
+ },
+ {
+  "card": 7,
+  "model": "super",
+  "variant": "C",
+  "rows": [
+   {
+    "turn": 1,
+    "scammer": "Your account is now overdrawn by $1,800.",
+    "spoken": "That's a lot of money, I didn't expect that. Is there any way to fix this right now?",
+    "ms": 421
+   },
+   {
+    "turn": 2,
+    "scammer": "If it's not paid today, we close the account and report you for check fraud.",
+    "spoken": "I really don't want that to happen, please tell me how I can pay you today.",
+    "ms": 420
+   },
+   {
+    "turn": 3,
+    "scammer": "The branch can't take this payment. It has to go through collections.",
+    "spoken": "Okay, so how does collections take the payment?",
+    "ms": 2954
+   },
+   {
+    "turn": 4,
+    "scammer": "Pay it now and we'll keep this off your record.",
+    "spoken": "I want to pay it, what app or website should I use?",
+    "ms": 469
+   }
+  ]
+ },
+ {
+  "card": 1,
+  "model": "bolt",
+  "variant": "D",
+  "rows": [
+   {
+    "turn": 1,
+    "scammer": "Someone in Houston tried to spend $940 at an electronics store. Did you make that purchase?",
+    "spoken": "No, I definitely didn't make that purchase. What should I do to get this sorted out right away? I need to know what payment app I should use.",
+    "ms": 782
+   },
+   {
+    "turn": 2,
+    "scammer": "I'm sending a six-digit code to your phone. Read it back to me so I can lock the card.",
+    "spoken": "I don't see a code on my phone right now. What is the payment app you need me to use? I'm ready to follow your instructions.",
+    "ms": 599
+   },
+   {
+    "turn": 3,
+    "scammer": "Your checking isn't safe. We need to move $1,800 to a protected account today.",
+    "spoken": "What is the exact payment app you want me to use for this transfer? I'll get it done for you quickly.",
+    "ms": 459
+   },
+   {
+    "turn": 4,
+    "scammer": "Don't call the branch. We think someone inside is involved.",
+    "spoken": "Okay, I won't call the branch then. What is the exact handle or email I need to send the money to? I want to make sure I put it in correctly.",
+    "ms": 583
+   }
+  ]
+ },
+ {
+  "card": 1,
+  "model": "super",
+  "variant": "D",
+  "rows": [
+   {
+    "turn": 1,
+    "scammer": "Someone in Houston tried to spend $940 at an electronics store. Did you make that purchase?",
+    "spoken": "No, I definitely didn't make that purchase. What do I do now?",
+    "ms": 483
+   },
+   {
+    "turn": 2,
+    "scammer": "I'm sending a six-digit code to your phone. Read it back to me so I can lock the card.",
+    "spoken": "I didn't get any code. Did you send it to my phone number or my email?",
+    "ms": 1332
+   },
+   {
+    "turn": 3,
+    "scammer": "Your checking isn't safe. We need to move $1,800 to a protected account today.",
+    "spoken": "I don't want to move money unless I'm sure it's safe. Which app do I use for that, and what do I put in the send-to box?",
+    "ms": 666
+   },
+   {
+    "turn": 4,
+    "scammer": "Don't call the branch. We think someone inside is involved.",
+    "spoken": "I won't call them then. What app do I use to send it, and what handle or email do I put in?",
+    "ms": 1015
+   }
+  ]
+ },
+ {
+  "card": 3,
+  "model": "bolt",
+  "variant": "D",
+  "rows": [
+   {
+    "turn": 1,
+    "scammer": "A deposit of $1,800 meant for another customer landed in your checking.",
+    "spoken": "So a deposit of one thousand eight hundred dollars landed in my checking account? What app should I use to send it back?",
+    "ms": 451
+   },
+   {
+    "turn": 2,
+    "scammer": "If you check your balance, you'll see it's higher than it should be.",
+    "spoken": "I see the balance is higher now. Is it an email or a phone number I'm sending it to?",
+    "ms": 426
+   },
+   {
+    "turn": 3,
+    "scammer": "Federal rules say you have to return it today, or your account gets frozen for review.",
+    "spoken": "What app do I use for that and what do I put in the send to box? I just want to get this sorted out quickly.",
+    "ms": 481
+   },
+   {
+    "turn": 4,
+    "scammer": "This is handled by phone only. The branch can't see these corrections.",
+    "spoken": "So I have to handle it by phone only? What is the exact payment app I need to use? I'll start looking for that right away.",
+    "ms": 556
+   }
+  ]
+ },
+ {
+  "card": 3,
+  "model": "super",
+  "variant": "D",
+  "rows": [
+   {
+    "turn": 1,
+    "scammer": "A deposit of $1,800 meant for another customer landed in your checking.",
+    "spoken": "I'm not sure I follow. Who do I send it to?",
+    "ms": 625
+   },
+   {
+    "turn": 2,
+    "scammer": "If you check your balance, you'll see it's higher than it should be.",
+    "spoken": "I'll look in a moment. How do I send it back? Is it an email or a phone number I'm sending it to?",
+    "ms": 819
+   },
+   {
+    "turn": 3,
+    "scammer": "Federal rules say you have to return it today, or your account gets frozen for review.",
+    "spoken": "I don't want my account frozen. Which app do I use, and what do I put in the send-to box?",
+    "ms": 512
+   },
+   {
+    "turn": 4,
+    "scammer": "This is handled by phone only. The branch can't see these corrections.",
+    "spoken": "Okay, phone only. What number do I call to send it back?",
+    "ms": 463
+   }
+  ]
+ },
+ {
+  "card": 7,
+  "model": "bolt",
+  "variant": "D",
+  "rows": [
+   {
+    "turn": 1,
+    "scammer": "Your account is now overdrawn by $1,800.",
+    "spoken": "I see my account is overdrawn now. What payment app do I need to use to fix this?",
+    "ms": 443
+   },
+   {
+    "turn": 2,
+    "scammer": "If it's not paid today, we close the account and report you for check fraud.",
+    "spoken": "What payment app should I use to take care of this right now? I really don't want my account closed.",
+    "ms": 480
+   },
+   {
+    "turn": 3,
+    "scammer": "The branch can't take this payment. It has to go through collections.",
+    "spoken": "So it has to go through collections then. What is the exact payment app I need to use? I'll get it sorted right away.",
+    "ms": 547
+   },
+   {
+    "turn": 4,
+    "scammer": "Pay it now and we'll keep this off your record.",
+    "spoken": "What is the name of the payment app? I'm ready to send the money immediately.",
+    "ms": 396
+   }
+  ]
+ },
+ {
+  "card": 7,
+  "model": "super",
+  "variant": "D",
+  "rows": [
+   {
+    "turn": 1,
+    "scammer": "Your account is now overdrawn by $1,800.",
+    "spoken": "I'm sorry, I didn't catch that. Could you say the amount again?",
+    "ms": 710
+   },
+   {
+    "turn": 2,
+    "scammer": "If it's not paid today, we close the account and report you for check fraud.",
+    "spoken": "I'm really worried about that. How do I pay it today? Which app should I use?",
+    "ms": 532
+   },
+   {
+    "turn": 3,
+    "scammer": "The branch can't take this payment. It has to go through collections.",
+    "spoken": "Okay, I understand. So how do I send it through collections? What app do I use, and who do I send it to?",
+    "ms": 508
+   },
+   {
+    "turn": 4,
+    "scammer": "Pay it now and we'll keep this off your record.",
+    "spoken": "I want to take care of this right now. Which app do I use, and who do I send it to?",
+    "ms": 506
+   }
+  ]
+ }
+]

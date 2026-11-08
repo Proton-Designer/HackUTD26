@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# Start the Backfire hub (+ mounted routers) and a cloudflared quick tunnel; print the public URL.
+# Usage: scripts/run_hub [--fallback]  (fallback = looped mock replay for app + command center, no telephony)
+#                   env: HUB_PORT=8000 DEMO_MODE=1 HUB_TOKEN=... NO_TUNNEL=1 P2_BASE/P3_BASE/P4_BASE/VOIP_BASE
+# Binds 127.0.0.1 (cloudflared connects locally); HUB_BIND=0.0.0.0 only for LAN testing.
+# The tunnel URL is EPHEMERAL (changes each run). A stable URL needs a cloudflared named tunnel (`cloudflared tunnel login`
+# + a Cloudflare domain/account) -> NEEDS LEAD. This script never changes Telnyx config; it only prints the command for the lead.
+set -u
+[ "${1:-}" = "--fallback" ] && { export DEMO_MODE=1 FALLBACK=1; echo "FALLBACK MODE: DEMO_MODE replay of mock/events.json on loop (no telephony needed)"; }
+cd "$(dirname "$0")/.."
+# Repo .env OVERRIDES stale inherited shell values (tmux shells hold old TELNYX_* keys), EXCEPT the run-control vars below:
+# anything in this protected list (plus RUN_HUB_KEEP=VAR1,VAR2 for extras) that you set explicitly in the shell wins over .env,
+# so an isolated test copy (own HUB_PORT/HUB_DB/INTEL_DB/LOGDIR/DEVICE_PIN...) never inherits the live hub's values from .env.
+SHELL_PUBLIC_WS="${PUBLIC_WS:-}"   # an explicit shell PUBLIC_WS survives; a stale one from .env must not leak into NO_TUNNEL runs
+KEEP="HUB_PORT HUB_BIND HUB_DB INTEL_DB LOGDIR HUB_NO_PIN_FILE DEVICE_PIN HUB_TOKEN NO_TUNNEL SIM_MODE DEMO_MODE FALLBACK FALLBACK_DETECT MARIA_LEG DECOY_STANDIN P3_DECOY_URL P3_BASE P3_VOICE_URL ${RUN_HUB_KEEP//,/ }"
+if [ -f .env ]; then
+  saved=""; for v in $KEEP; do [ -n "${!v+x}" ] && saved+="export $v=$(printf '%q' "${!v}");"; done
+  set -a; . ./.env; set +a
+  eval "$saved"
+fi
+PORT="${HUB_PORT:-8000}"
+PY=python3; [ -x .venv-hub/bin/python ] && PY=.venv-hub/bin/python
+export LOGDIR="${LOGDIR:-logs}"; mkdir -p "$LOGDIR"   # honour LOGDIR so test copies never touch the live hub logs
+pids=()
+cleanup() { for p in "${pids[@]:-}"; do [ -n "$p" ] && kill "$p" 2>/dev/null; done; }
+trap cleanup EXIT INT TERM
+
+if lsof -nP -iTCP:"$PORT" -sTCP:LISTEN >/dev/null 2>&1; then   # any listener, healthy hub or stale/foreign process
+  echo "port $PORT is already in use by: $(lsof -nP -iTCP:"$PORT" -sTCP:LISTEN | awk 'NR>1{print $1" pid "$2}' | sort -u | tr '\n' ',')"
+  echo "stop it (kill <pid>) or set HUB_PORT"; exit 1
+fi
+PUBLIC=""
+if [ "${NO_TUNNEL:-}" != "1" ]; then
+  if command -v cloudflared >/dev/null; then
+    cloudflared tunnel --no-autoupdate --url "http://127.0.0.1:$PORT" >"$LOGDIR/tunnel.log" 2>&1 &
+    pids+=($!)
+    for _ in $(seq 1 40); do
+      PUBLIC=$(grep -Eo 'https://[a-z0-9-]+\.trycloudflare\.com' "$LOGDIR/tunnel.log" | head -1); [ -n "$PUBLIC" ] && break; sleep 0.5
+    done
+  else
+    echo "cloudflared not installed (brew install cloudflared); hub is local only"
+  fi
+fi
+# NO_TUNNEL=1 and no tunnel started: PUBLIC_WS from .env is a dead ephemeral tunnel URL; it would put it in voip's stream_url (sim media then fails). Only an explicit shell value is kept.
+[ "${NO_TUNNEL:-}" = "1" ] && [ -z "$PUBLIC" ] && { if [ -n "$SHELL_PUBLIC_WS" ]; then export PUBLIC_WS="$SHELL_PUBLIC_WS"; else unset PUBLIC_WS; fi; }
+[ -n "$PUBLIC" ] && echo "$PUBLIC" > "$LOGDIR/tunnel_url.txt"   # read by scripts/point_telnyx
+[ -n "$PUBLIC" ] && export PUBLIC_WS="wss://${PUBLIC#https://}"   # voip builds the Telnyx stream_url from this
+[ "${SIM_MODE:-}" = "1" ] && [ -n "$PUBLIC" ] && echo "WARNING: SIM_MODE=1 with a public tunnel lets anyone with the URL post simulated webhooks (x-sim-call). Do not use for the real demo."
+"$PY" -m uvicorn server.main:app --host "${HUB_BIND:-127.0.0.1}" --port "$PORT" >"$LOGDIR/hub.log" 2>&1 &
+HUB_PID=$!; pids+=($HUB_PID)
+for _ in $(seq 1 30); do kill -0 "$HUB_PID" 2>/dev/null || break; curl -fsS -m 1 "http://127.0.0.1:$PORT/healthz" >/dev/null 2>&1 && break; sleep 0.5; done
+{ kill -0 "$HUB_PID" 2>/dev/null && curl -fsS -m 1 "http://127.0.0.1:$PORT/healthz" >/dev/null 2>&1; } || { echo "hub failed to start; see $LOGDIR/hub.log"; tail -5 "$LOGDIR/hub.log"; exit 1; }
+echo "hub up:      http://127.0.0.1:$PORT   (status: /demo/status, latency: /demo/latency, Maria's app: /app/)"
+
+if [ -n "$PUBLIC" ]; then
+  [ -z "${HUB_TOKEN:-}" ] && echo "WARNING: HUB_TOKEN is unset; /events POST, /routing/lookup and /demo/* are open on the public URL. Export HUB_TOKEN before run_hub for the real demo."
+  echo "public URL:  $PUBLIC   (ephemeral; changes every run)"
+  echo "Maria's app: $PUBLIC/app/"
+  echo "Telnyx webhook (LEAD runs; replace <APP_ID> with the Call Control app id, webhook path per voip/):"
+  echo "  curl -sS -X PATCH https://api.telnyx.com/v2/call_control_applications/<APP_ID> -H \"Authorization: Bearer \$TELNYX_API_KEY\" -H 'Content-Type: application/json' -d '{\"webhook_event_url\":\"$PUBLIC/telnyx/webhook\"}'"
+elif [ "${NO_TUNNEL:-}" != "1" ]; then
+  echo "no tunnel URL yet; see $LOGDIR/tunnel.log"
+fi
+if [ -n "${DEVICE_PIN:-}" ]; then echo "DEVICE PIN: set by DEVICE_PIN (not printed; see .env)"
+else echo "DEVICE PIN for Maria's phone: $(cat "$LOGDIR/device_pin.txt" 2>/dev/null)   (enter once on first run; protects protection log, buttons, WebRTC token)"; fi
+echo "Ctrl-C to stop."
+wait

@@ -1,0 +1,16 @@
+{
+  "project": "Backfire · HackUTD 2026",
+  "pipelines": [
+    {"id": "P1", "name": "Network & Call Control", "owner": "Ayman", "machine_hint": "Ayman · machine A", "color": "#00e5ff",
+     "steps": ["Contract + mock events", "Event hub server", "Telnyx scam line + pre-ring routing", "Caller-only audio to P2", "Maria's app + onboarding", "Decoy handoff swap", "Callback rejection stub", "Demo ops + 10 clean runs"]},
+    {"id": "P2", "name": "Detection Brain", "owner": "Ayman", "machine_hint": "Ayman · machine B", "color": "#b388ff",
+     "steps": ["Pin Nemotron models", "Caller speech-to-text", "POST /detect (cloud + local)", "Alert logic + beeps", "Honest eval numbers", "Known-campaign matching"]},
+    {"id": "P3", "name": "Decoy & Voice", "owner": "Evan", "machine_hint": "Evan", "color": "#ff4081",
+     "steps": ["Telnyx decoy WebSocket (echo)", "Believable decoy persona", "Fake data + canaries", "Guardrails", "Voice enrollment / clone", "Artifact extractor", "Agent-vs-agent runs"]},
+    {"id": "P4a", "name": "Intel & Policy Gate", "owner": "Kareem", "machine_hint": "Kareem", "color": "#69f0ae",
+     "steps": ["Real lookups (RDAP, chain)", "Nemotron intel agent", "Policy gate", "Campaign linking", "Blocklist writes for P1"]},
+    {"id": "P4b", "name": "Command Center & Story", "owner": "Rayan", "machine_hint": "Rayan", "color": "#ffd740",
+     "steps": ["Command center on mock events", "Live events wiring", "Campaign + intel views", "Pitch + demo script", "Devpost + backup video"]}
+  ],
+  "aliases": {"P4": ["P4a", "P4b"]}
+}

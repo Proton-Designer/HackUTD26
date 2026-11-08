@@ -1,0 +1,112 @@
+eng2 -> P3 (via lead): PATCH NOTE for decoy/voice.py. NOT applied (decoy/ is P3's). Apply with: patch -p0 decoy/voice.py < this section, or copy the new functions.
+
+PROBLEM: to_pcmu_frames() downsamples Magpie's 22.05 kHz to 8 kHz with a 3-tap moving average + np.interp (linear). That barely filters: everything above 4 kHz
+folds back into the speech band (4.5k -> 3.5k at -6.9 dB, 5k -> 3k at -8.8 dB, 6k -> 2k at -14.5 dB). TTS fricatives (s, sh, t, f) and breath live at 4-10 kHz, so
+the phone line gets metallic/buzzy noise: the "robotic" sound.
+
+FIX: numpy-only polyphase resampler (scipy is NOT in decoy/.venv): Kaiser(beta 5.65, 96 taps, ~60 dB stop-band) windowed-sinc low-pass, 3.6 kHz corner, evaluated at the exact
+fractional input position of every output sample (22050 -> 8000 = 320/882, 320 phases, table cached, each phase normalised to unity DC gain). Then peak-normalise the
+utterance to ~ -3 dBFS (23000/32768; gain capped at 4x = +12 dB; near-silence with peak <= 200 is left alone; np.rint + clip so it never clips), same mu-law table, same
+160-byte frames, same silence padding. Signature and return type unchanged (bytes in, list[bytes] out), so decoy/app.py, core.py, tests need no change.
+
+MEASURED (decoy/.venv, this laptop; tone through the real function, level relative to input; NEW includes up to +3 dB normalisation gain on these test tones):
+  tone    OLD (peak Hz, dB)        NEW (peak Hz, dB)
+   500 Hz  500   -0.1               500   +3.1     (passband flat to 3.4 kHz: all within 1.3 dB of each other)
+  1000     1000  -0.2               1000  +3.2
+  2000     2000  -1.2               2000  +4.1
+  3000     3000  -2.8               3000  +2.8
+  3400     3400  -3.7               3400  +2.9
+  3700     3700  -4.4               3700  -1.1      (transition band)
+  4200     3800  -5.8  ALIAS        3800  -51.6
+  4500     3500  -6.9  ALIAS        1550  -73.1     (OLD alias at -6.9 dB, NEW below -70 dB)
+  5000     3000  -8.8  ALIAS        3000  -58.1
+  6000     2000  -14.5 ALIAS        2000  -66.2
+  7000     1000  -27.6 ALIAS        1000  -66.7
+  9000     1000  -18.0 ALIAS        2950  -74.1
+ (gain-matched run, tone amp 0.70 so NEW applies ~0 dB: 4.5 kHz OLD -3.9 dB vs NEW -70.9 dB; 5 kHz -5.9 vs -55.4; 6 kHz -11.6 vs -65.5; 9 kHz -15.1 vs -68.1)
+ Real speech (macOS 'say' Samantha, 22.05 kHz) vs an ffmpeg-swr 8 kHz reference, gain-matched log-spectral distance 300-3400 Hz: OLD 2.66 dB, NEW 0.94 dB.
+ Output length exact (0.5 s -> 25 frames, 3 s -> 150, 12 s -> 600), all frames 160 bytes, silence stays 0xFF, 2 s of loud noise: peak 22908, clip fraction 0.
+ Speed, 10 s of audio: NEW 0.010 s cold and warm (about 980x real time; table build is part of that, < 10 ms); OLD 0.002 s. Per sentence (2-5 s) this is 2-5 ms.
+ Check: the 5 offline tests in decoy/tests/test_core.py pass against the patched voice.py (run on a copy). Test script: logs/eng2-rs/test.py (gitignored), output logs/eng2-rs/test.out.
+NOTE for P3: peak-normalising per utterance makes every sentence about equally loud (good for the phone, but a very quiet whisper line would also be raised up to 12 dB). If you
+prefer a fixed gain instead, replace the `x = x * min(4.0, 23000.0 / peak)` line with a constant like `x = x * 1.6` (+4 dB; P3's recorded output peaks ~8300 = -12 dBFS today).
+Also check the clone path in Voice._synth: it is the same function (TTS_RATE 22050), so it gets the same fix.
+
+================ UNIFIED DIFF (against decoy/voice.py at HEAD) ================
+--- decoy/voice.py
++++ decoy/voice.py
+@@ -11,6 +11,7 @@
+ import base64
+ import json
+ import logging
++import math
+ import os
+ import pathlib
+ import secrets
+@@ -46,18 +47,58 @@
+ _ENC = _enc_table()
+ 
+ 
++_RS_CACHE: dict = {}
++
++
++def _kaiser(u: np.ndarray, half: int, beta: float) -> np.ndarray:
++    """Kaiser window evaluated at (possibly fractional) positions u in [-half, half]."""
++    r = np.clip(u / half, -1.0, 1.0)
++    return np.i0(beta * np.sqrt(1.0 - r * r)) / np.i0(beta)
++
++
++def _rs_table(rate: int, fc: float, half: int, beta: float):
++    """Polyphase table for rate -> 8000 Hz: a Kaiser-windowed sinc low-pass (cut-off fc Hz, ~60 dB stop-band) evaluated at the exact fractional
++    input positions of every output sample. Returns (T[phase, 2*half] float32, up, down)."""
++    key = (rate, fc, half, beta)
++    if key not in _RS_CACHE:
++        g = math.gcd(8000, rate); up, down = 8000 // g, rate // g           # 22050 -> 320 / 882
++        j = np.arange(2 * half)
++        f = np.arange(up) / up                                                  # fractional part of the input position, per phase r = (n*down) % up
++        u = f[:, None] + (half - 1 - j)[None, :]                                # distance (input samples) from output instant to tap k
++        h = (2 * fc / rate) * np.sinc(2 * fc / rate * u) * _kaiser(u, half, beta)
++        h /= h.sum(axis=1, keepdims=True)                                       # unity gain at DC for every phase
++        _RS_CACHE[key] = (h.astype(np.float32), up, down)
++    return _RS_CACHE[key]
++
++
++def resample_to_8k(x: np.ndarray, rate: int) -> np.ndarray:
++    """float32 mono at `rate` -> 8 kHz with a proper anti-alias low-pass (3.6 kHz corner, > 55 dB down at 4.4 kHz and above)."""
++    if rate == 8000:
++        return x
++    half, fc = 48, 3600.0
++    T, up, down = _rs_table(rate, fc, half, 5.65)
++    n_out = int(len(x) * up // down)
++    xp = np.concatenate([np.zeros(half, np.float32), x.astype(np.float32), np.zeros(half + 2, np.float32)])
++    out = np.empty(n_out, np.float32)
++    ar = np.arange(2 * half)
++    for s0 in range(0, n_out, 4096):                                            # chunked: bounded memory
++        n = np.arange(s0, min(n_out, s0 + 4096))
++        ic = (n * down) // up                                                   # integer part of the input position
++        out[s0:s0 + len(n)] = (xp[ic[:, None] + ar[None, :]] * T[(n * down) % up]).sum(axis=1)
++    return out
++
++
+ def to_pcmu_frames(pcm16: bytes, rate: int) -> list[bytes]:
+-    """16-bit mono PCM at any rate -> list of 160-byte mu-law frames (20 ms at 8 kHz)."""
++    """16-bit mono PCM at any rate -> list of 160-byte mu-law frames (20 ms at 8 kHz). Proper polyphase low-pass resample (no aliasing), then the
++    utterance is peak-normalised to about -3 dBFS (gain capped at 4x, never clipped)."""
+     x = np.frombuffer(pcm16, dtype="<i2").astype(np.float32)
+     if len(x) == 0:
+         return []
+-    if rate != 8000:  # band-limit by averaging, then linear interpolation down to 8 kHz
+-        k = max(1, int(round(rate / 8000)))
+-        if k > 1:
+-            x = np.convolve(x, np.ones(k) / k, mode="same")
+-        t = np.arange(0, len(x) - 1, rate / 8000)
+-        x = np.interp(t, np.arange(len(x)), x)
+-    u = _ENC[(np.clip(x, -32768, 32767).astype(np.int32) + 32768)].tobytes()
++    x = resample_to_8k(x, rate)
++    peak = float(np.max(np.abs(x))) if len(x) else 0.0
++    if peak > 200:                                                             # leave near-silence alone (no noise boost)
++        x = x * min(4.0, 23000.0 / peak)
++    u = _ENC[(np.clip(np.rint(x), -32768, 32767).astype(np.int32) + 32768)].tobytes()
+     u += b"\xff" * (-len(u) % 160)  # pad with mu-law silence
+     return [u[i:i + 160] for i in range(0, len(u), 160)]
+ 

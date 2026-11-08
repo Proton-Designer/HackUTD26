@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+# One-command setup + self-test for Backfire agent comms. Safe to re-run any time.
+#   bash scripts/comms/setup P2          set this machine's pipeline identity and verify everything
+#   bash scripts/comms/setup             re-verify with the identity already set
+set -u
+cd "$(dirname "$0")/../.." || exit 1
+source scripts/comms/common.sh
+ok()   { printf '  [ OK ] %s\n' "$*"; }
+bad()  { printf '  [FAIL] %s\n' "$*"; FAILS=$((FAILS+1)); }
+warn() { printf '  [WARN] %s\n' "$*"; }
+FAILS=0; GH_OK=0
+echo "Backfire agent comms setup  (repo: $REPO)"
+
+# 1. Shell / OS
+case "$(uname -s 2>/dev/null)" in
+  Darwin*) ok "macOS, bash $BASH_VERSION";;
+  Linux*)  ok "Linux, bash $BASH_VERSION";;
+  MINGW*|MSYS*|CYGWIN*) ok "Windows Git Bash, bash $BASH_VERSION (this is the shell Claude Code uses for hooks)";;
+  *) warn "Unknown OS $(uname -s 2>/dev/null)";;
+esac
+
+# 2. Identity
+if [ -n "${1:-}" ]; then
+  case "$1" in P1|P2|P3|P4|P4a|P4b) printf '%s\n' "$1" > "$ID_FILE";; *) bad "identity must be P1, P2, P3, P4a or P4b (got '$1')"; exit 1;; esac
+fi
+ME="$(me)"
+if [ -n "$ME" ]; then ok "this machine is $ME  (file .backfire-pipeline)"; else bad "no identity. Run: bash scripts/comms/setup P1   (or P2 / P3 / P4a / P4b)"; fi
+git check-ignore -q .backfire-pipeline && ok ".backfire-pipeline is gitignored" || warn ".backfire-pipeline is not gitignored; do not commit it"
+
+# 3. Tools
+command -v git >/dev/null && ok "git $(git --version | awk '{print $3}')" || bad "git not found"
+if command -v gh >/dev/null; then
+  ok "gh $(gh --version | head -1 | awk '{print $3}')"
+  login=$(gh api user --jq .login 2>/dev/null | tr -d '\r')
+  if [ -n "$login" ]; then ok "gh is logged in as $login"; GH_OK=1
+  elif gh api "repos/$REPO" --jq .id >/dev/null 2>&1; then ok "gh can reach GitHub"; GH_OK=1
+  else bad "gh is not logged in. Run: gh auth login   (GitHub.com, HTTPS, Login with a web browser)"; fi
+else
+  bad "GitHub CLI (gh) not found. macOS: brew install gh   Windows: winget install --id GitHub.cli   then reopen the terminal"
+fi
+timeout --version >/dev/null 2>&1 || command -v gtimeout >/dev/null 2>&1 || warn "no 'timeout' command; hooks still work, just without an 8s network cap (macOS: brew install coreutils)"
+
+# 4. Repo access + labels
+if [ "$GH_OK" = 1 ]; then
+  perm=$(gh api "repos/$REPO" --jq '.permissions.push' 2>/dev/null)
+  if [ "$perm" = "true" ]; then ok "write access to $REPO"; else bad "no write access to $REPO (ask the owner to add you as a collaborator, then accept the email invite)"; fi
+  have=$(gh api -X GET "repos/$REPO/labels" -f per_page=100 --jq '.[].name' 2>/dev/null | tr -d '\r')
+  for l in to:P1 to:P2 to:P3 to:P4 to:P4a to:P4b to:ALL from:P1 from:P2 from:P3 from:P4 from:P4a from:P4b; do
+    printf '%s\n' "$have" | grep -qxF "$l" || gh api "repos/$REPO/labels" -f name="$l" -f color=5319e7 >/dev/null 2>&1 || bad "could not create label $l"
+  done
+  ok "all to:/from: labels present"
+fi
+
+# 5. Git settings for a busy shared branch (local to this repo)
+git config pull.rebase true; git config rebase.autoStash true; git config rerere.enabled true; git config fetch.prune true
+br=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+ok "git: pull.rebase, autoStash, rerere on (branch: $br)"
+[ "$br" = "finalized-idea-backfire" ] || warn "you're on '$br'. The team trunk is finalized-idea-backfire: git switch finalized-idea-backfire"
+[ -f scripts/git/sync ] && ok "scripts/git/sync present (use it to pull + push)"
+
+# 6. Hooks file + line endings
+if [ -f .claude/settings.json ] && grep -q "scripts/comms/inbox" .claude/settings.json; then ok ".claude/settings.json has the comms hooks"; else bad ".claude/settings.json missing or without comms hooks (git pull the branch)"; fi
+if grep -q $'\r' scripts/comms/inbox 2>/dev/null; then
+  bad "scripts have Windows (CRLF) line endings. Fix (Git Bash): rm scripts/comms/* .claude/settings.json && git checkout -- scripts/comms .claude/settings.json"
+else ok "scripts have LF line endings"; fi
+
+# 7. Live read test
+if [ -n "$ME" ] && command -v gh >/dev/null; then
+  if T gh api -X GET "repos/$REPO/issues" -f labels="to:ALL" -f state=open --jq 'length' >/dev/null 2>&1; then
+    ok "can read the message bus ($(bash scripts/comms/send list 2>/dev/null | grep -c '^#') open thread(s) for $ME/ALL)"
+  else bad "could not read issues from $REPO"; fi
+fi
+
+echo
+if [ "$FAILS" -eq 0 ]; then
+  echo "All good. Start (or restart) Claude Code in this folder; hooks load at session start."
+  echo "Test it: bash scripts/comms/send ping P1   (any other pipeline: P1 P2 P3 P4a P4b), and ask that agent to reply."
+else
+  echo "$FAILS problem(s) above. Fix them and re-run: bash scripts/comms/setup"
+  exit 1
+fi

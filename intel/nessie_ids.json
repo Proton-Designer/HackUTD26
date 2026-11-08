@@ -1,0 +1,244 @@
+{
+  "_note": "Synthetic Nessie sandbox objects for the Backfire demo (python -m intel.seed_nessie). No real people.",
+  "created": "2026-11-08T02:09:11",
+  "base": "https://api.nessieisreal.com",
+  "maria": {
+    "name": "Customer (sandbox)",
+    "customer_id": "d5bb3b81-4229-4ff5-8e53-f1c83befca94",
+    "account_id": "e423c8f1-e812-4216-9f37-b99f7f9c9c27"
+  },
+  "others": [
+    {
+      "name": "Alex Sandbox",
+      "customer_id": "c6249f71-b8f9-4806-8518-90fb4acd37fd",
+      "account_id": "33f3b466-0808-4bc4-89e9-6f01122d35ac"
+    },
+    {
+      "name": "Priya Sandbox",
+      "customer_id": "7afae452-e71a-4186-bc8f-3cfef8ec1c45",
+      "account_id": "3c4bdbd4-8634-4de0-b1b5-f6a82ad5cc9b"
+    },
+    {
+      "name": "Jordan Sandbox",
+      "customer_id": "4b2fbbb1-865f-42cc-b199-fe723b92f457",
+      "account_id": "19904540-94ff-4495-b28b-49e0886d12df"
+    },
+    {
+      "name": "Sam Sandbox",
+      "customer_id": "bef7b389-318c-43dd-802f-aa81d633b0f2",
+      "account_id": "e79bcd6c-ab6f-437c-acf6-2aa56de6ed5b"
+    },
+    {
+      "name": "Taylor Sandbox",
+      "customer_id": "874bd634-ddbe-4356-8263-8d6afebbf7fd",
+      "account_id": "be9cbba6-a868-443e-b5ce-e51f9c6906ba"
+    },
+    {
+      "name": "Morgan Sandbox",
+      "customer_id": "2d5f7422-f5a4-4c6f-b6b5-d13afa7f9737",
+      "account_id": "97501a62-5d5e-4fad-a365-4f8c500b104f"
+    },
+    {
+      "name": "Casey Sandbox",
+      "customer_id": "aedfad7e-2867-4a29-8a6f-205007ad3d1d",
+      "account_id": "0586b70e-fb73-44db-b819-abe4284c9100"
+    }
+  ],
+  "payee": {
+    "label": "SIMULATED scammer destination",
+    "customer_id": "cc4e9000-7659-455d-912f-07aa7010d27a",
+    "account_id": "7292b6d8-9b55-41f2-a9e3-89d6a96d64bd"
+  },
+  "merchants": [
+    "f99aa06a-761c-4bca-b23e-dd5eb9808a74",
+    "57dc3024-2858-4d42-b5c9-70360d8dcb16",
+    "3c866610-c59f-4192-8c8f-beb3aaf8fb30",
+    "891cd36e-8d00-402e-94a2-d9b1cf190dda",
+    "483f01ee-be5b-4d7f-95bb-1c21c0f659df",
+    "b1e271d6-190c-4fd7-9418-447fd76a9c6d",
+    "fdd4e8cc-9c4b-4314-8bcb-a6b00d7a8ba4",
+    "d5da32ae-7eba-49f9-91f5-c9d6fed4af58",
+    "607c353c-12e0-426e-bb2e-314c00a469e9"
+  ],
+  "evidence_transfer_ids": [
+    "147a277d-f2bb-4f22-a53f-230bdc21b7c8",
+    "cc5afc50-08c2-481f-bbf2-265b61e3c4d4",
+    "4f4d8357-a268-4eaa-85c0-5e18b0ac66cc",
+    "1918b001-f39e-43d1-98e6-72f02ef479c0",
+    "fb79adea-f897-4651-b2e7-794f4c63d262",
+    "defb1f69-9e7e-4c2f-aeda-3e7e51bac0df",
+    "279a304d-e844-4863-9f14-d16f41ec75cc"
+  ],
+  "cashout": {
+    "label": "SIMULATED cash-out account",
+    "customer_id": "ee30db24-a46d-4b8d-ad14-d6833803b8d1",
+    "account_id": "0ac033f3-7a4c-4a93-a97b-27013e21b5da"
+  },
+  "chain": {
+    "_note": "Recorded edge list (not discovered): Nessie transfers expose no payer/payee. Synthetic.",
+    "nodes": [
+      {
+        "id": "maria",
+        "role": "target",
+        "label": "The customer (protected by Backfire)",
+        "account_id": "e423c8f1-e812-4216-9f37-b99f7f9c9c27"
+      },
+      {
+        "id": "v1",
+        "role": "victim",
+        "label": "Alex Sandbox",
+        "account_id": "33f3b466-0808-4bc4-89e9-6f01122d35ac"
+      },
+      {
+        "id": "v2",
+        "role": "victim",
+        "label": "Priya Sandbox",
+        "account_id": "3c4bdbd4-8634-4de0-b1b5-f6a82ad5cc9b"
+      },
+      {
+        "id": "v3",
+        "role": "victim",
+        "label": "Jordan Sandbox",
+        "account_id": "19904540-94ff-4495-b28b-49e0886d12df"
+      },
+      {
+        "id": "v4",
+        "role": "victim",
+        "label": "Sam Sandbox",
+        "account_id": "e79bcd6c-ab6f-437c-acf6-2aa56de6ed5b"
+      },
+      {
+        "id": "v5",
+        "role": "victim",
+        "label": "Taylor Sandbox",
+        "account_id": "be9cbba6-a868-443e-b5ce-e51f9c6906ba"
+      },
+      {
+        "id": "v6",
+        "role": "victim",
+        "label": "Morgan Sandbox",
+        "account_id": "97501a62-5d5e-4fad-a365-4f8c500b104f"
+      },
+      {
+        "id": "v7",
+        "role": "victim",
+        "label": "Casey Sandbox",
+        "account_id": "0586b70e-fb73-44db-b819-abe4284c9100"
+      },
+      {
+        "id": "mule",
+        "role": "mule",
+        "label": "SIMULATED mule account (scammer destination)",
+        "account_id": "7292b6d8-9b55-41f2-a9e3-89d6a96d64bd"
+      },
+      {
+        "id": "cashout",
+        "role": "cashout",
+        "label": "SIMULATED cash-out account",
+        "account_id": "0ac033f3-7a4c-4a93-a97b-27013e21b5da"
+      }
+    ],
+    "edges": [
+      {
+        "src": "maria",
+        "dst": "mule",
+        "src_account": "e423c8f1-e812-4216-9f37-b99f7f9c9c27",
+        "dst_account": "7292b6d8-9b55-41f2-a9e3-89d6a96d64bd",
+        "transfer_id": null,
+        "dynamic": "maria_pending_demo_transfer",
+        "amount": 1800,
+        "date": null
+      },
+      {
+        "src_account": "33f3b466-0808-4bc4-89e9-6f01122d35ac",
+        "dst_account": "7292b6d8-9b55-41f2-a9e3-89d6a96d64bd",
+        "transfer_id": "147a277d-f2bb-4f22-a53f-230bdc21b7c8",
+        "amount": 950,
+        "date": "2026-10-26",
+        "src": "v1",
+        "dst": "mule"
+      },
+      {
+        "src_account": "3c4bdbd4-8634-4de0-b1b5-f6a82ad5cc9b",
+        "dst_account": "7292b6d8-9b55-41f2-a9e3-89d6a96d64bd",
+        "transfer_id": "cc5afc50-08c2-481f-bbf2-265b61e3c4d4",
+        "amount": 2400,
+        "date": "2026-10-31",
+        "src": "v2",
+        "dst": "mule"
+      },
+      {
+        "src_account": "19904540-94ff-4495-b28b-49e0886d12df",
+        "dst_account": "7292b6d8-9b55-41f2-a9e3-89d6a96d64bd",
+        "transfer_id": "4f4d8357-a268-4eaa-85c0-5e18b0ac66cc",
+        "amount": 1500,
+        "date": "2026-11-05",
+        "src": "v3",
+        "dst": "mule"
+      },
+      {
+        "src_account": "e79bcd6c-ab6f-437c-acf6-2aa56de6ed5b",
+        "dst_account": "7292b6d8-9b55-41f2-a9e3-89d6a96d64bd",
+        "transfer_id": "1918b001-f39e-43d1-98e6-72f02ef479c0",
+        "amount": 3200,
+        "date": "2026-10-28",
+        "src": "v4",
+        "dst": "mule"
+      },
+      {
+        "src_account": "be9cbba6-a868-443e-b5ce-e51f9c6906ba",
+        "dst_account": "7292b6d8-9b55-41f2-a9e3-89d6a96d64bd",
+        "transfer_id": "fb79adea-f897-4651-b2e7-794f4c63d262",
+        "amount": 4100,
+        "date": "2026-10-30",
+        "src": "v5",
+        "dst": "mule"
+      },
+      {
+        "src_account": "97501a62-5d5e-4fad-a365-4f8c500b104f",
+        "dst_account": "7292b6d8-9b55-41f2-a9e3-89d6a96d64bd",
+        "transfer_id": "defb1f69-9e7e-4c2f-aeda-3e7e51bac0df",
+        "amount": 2650,
+        "date": "2026-11-02",
+        "src": "v6",
+        "dst": "mule"
+      },
+      {
+        "src_account": "0586b70e-fb73-44db-b819-abe4284c9100",
+        "dst_account": "7292b6d8-9b55-41f2-a9e3-89d6a96d64bd",
+        "transfer_id": "279a304d-e844-4863-9f14-d16f41ec75cc",
+        "amount": 3300,
+        "date": "2026-11-04",
+        "src": "v7",
+        "dst": "mule"
+      },
+      {
+        "src_account": "7292b6d8-9b55-41f2-a9e3-89d6a96d64bd",
+        "dst_account": "0ac033f3-7a4c-4a93-a97b-27013e21b5da",
+        "transfer_id": "dd49965d-8f3b-493e-b2f4-0d3c204bd8aa",
+        "amount": 6000,
+        "date": "2026-11-01",
+        "src": "mule",
+        "dst": "cashout"
+      },
+      {
+        "src_account": "7292b6d8-9b55-41f2-a9e3-89d6a96d64bd",
+        "dst_account": "0ac033f3-7a4c-4a93-a97b-27013e21b5da",
+        "transfer_id": "ed7861c8-b8e9-4fa9-8cb7-bee7f6a977fa",
+        "amount": 7500,
+        "date": "2026-11-03",
+        "src": "mule",
+        "dst": "cashout"
+      },
+      {
+        "src_account": "7292b6d8-9b55-41f2-a9e3-89d6a96d64bd",
+        "dst_account": "0ac033f3-7a4c-4a93-a97b-27013e21b5da",
+        "transfer_id": "7cb9da9f-5497-40f6-a172-64e68a193c5c",
+        "amount": 3800,
+        "date": "2026-11-06",
+        "src": "mule",
+        "dst": "cashout"
+      }
+    ]
+  }
+}

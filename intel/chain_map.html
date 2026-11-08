@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mule Network Map</title>
+<style>
+  :root {
+    --bg: #0b0b10; --panel: #15151d; --line: #2a2a36;
+    --text: #f2f2f5;      /* 17:1 on --bg */
+    --muted: #b8b8c4;     /* 9.6:1 */
+    --accent: #ff5cb0;    /* text magenta, ~7:1 */
+    --magenta: #e20074;   /* lines/shapes only */
+    --victim: #8fa3ff;    /* 7.6:1 */
+    --cash: #ffb347;      /* 10:1 */
+    --ok: #57d9a3;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text);
+    font: 18px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 1400px; margin: 0 auto; padding: 20px 16px 12px; }
+  header { display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; }
+  h1 { font-size: clamp(20px, 2.4vw, 30px); line-height: 1.3; margin: 0; max-width: 1100px; font-weight: 650; }
+  h1 .num { color: var(--accent); font-variant-numeric: tabular-nums; }
+  .chip { font-size: 14px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line);
+    color: var(--muted); white-space: nowrap; }
+  .chip.live { color: var(--ok); border-color: #2c6b52; }
+  .chip.warn { color: var(--cash); border-color: #6b5228; }
+  .legend { display: flex; flex-wrap: wrap; gap: 18px; margin: 10px 0 0; color: var(--muted); font-size: 15px; }
+  .legend span::before { content: ""; display: inline-block; width: 12px; height: 12px; border-radius: 50%;
+    margin-right: 6px; vertical-align: -1px; background: var(--c); }
+  .stage { margin-top: 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  svg { display: block; width: 100%; height: auto; }
+  .lbl, .sub, .amt, .held-tag { paint-order: stroke; stroke: var(--panel); stroke-width: 6px; stroke-linejoin: round; }
+  .lbl { font-size: 19px; fill: var(--text); }
+  .sub { font-size: 16px; fill: var(--muted); font-variant-numeric: tabular-nums; }
+  .amt { font-size: 17px; fill: var(--text); font-variant-numeric: tabular-nums; font-weight: 600; }
+  .held-tag { font-size: 20px; font-weight: 800; fill: var(--accent); letter-spacing: .5px; }
+  .pending { animation: pulse 1.6s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: .35; } }
+  @media (prefers-reduced-motion: reduce) { .pending { animation: none; } }
+  footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-top: 12px;
+    color: var(--muted); font-size: 15px; }
+  footer strong { color: var(--accent); font-weight: 600; }
+  details { margin-top: 10px; color: var(--muted); font-size: 15px; }
+  summary { cursor: pointer; }
+  textarea { width: 100%; min-height: 120px; margin-top: 8px; background: var(--bg); color: var(--text);
+    border: 1px solid var(--line); border-radius: 8px; padding: 8px; font: 13px/1.4 ui-monospace, Menlo, monospace; }
+  button { margin-top: 8px; background: var(--magenta); color: #fff; border: 0; border-radius: 8px;
+    padding: 8px 14px; font: inherit; font-size: 15px; cursor: pointer; }
+  button.secondary { background: transparent; border: 1px solid var(--line); color: var(--text); margin-left: 8px; }
+  button:focus-visible, summary:focus-visible, textarea:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .empty { padding: 60px 16px; text-align: center; color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1 id="headline" aria-live="polite">Loading the mule network…</h1>
+    <span id="status" class="chip" role="status">connecting</span>
+  </header>
+  <div class="legend" aria-hidden="true">
+    <span style="--c: var(--victim)">Victims</span>
+    <span style="--c: var(--accent)">The customer (on Backfire)</span>
+    <span style="--c: var(--magenta)">Mule account</span>
+    <span style="--c: var(--cash)">Cash-out account</span>
+    <span style="--c: transparent">Money flows left → right · dot size = money through it</span>
+  </div>
+  <div class="stage" id="stage"><div class="empty">Waiting for /intel/chain…</div></div>
+  <table class="sr" id="sr-table" aria-label="Money transfers in the mule network"></table>
+  <details id="paste">
+    <summary>Hub not reachable? Paste the /intel/chain JSON</summary>
+    <label for="json" class="sr">Chain JSON</label>
+    <textarea id="json" placeholder='{"nodes": [...], "edges": [...]}'></textarea>
+    <button id="render" type="button">Render pasted JSON</button>
+    <button id="resume" type="button" class="secondary">Resume live updates</button>
+  </details>
+  <footer>
+    <span><strong>Capital One Nessie sandbox - simulated mock bank data.</strong> All people and accounts are synthetic.</span>
+    <span id="updated"></span>
+  </footer>
+</main>
+<script>
+(() => {
+  "use strict";
+  const NS = "http://www.w3.org/2000/svg";
+  const W = 1400, H = 760;
+  const COL = { victim: 230, target: 230, mule: 760, cashout: 1220 };
+  const COLOR = { victim: "#8fa3ff", target: "#ff5cb0", mule: "#e20074", cashout: "#ffb347" };
+  const URL_CHAIN = new URL("chain", location.href).toString();   // /intel/map -> /intel/chain (same origin)
+  let pasted = false, lastJSON = "";
+
+  const $ = (id) => document.getElementById(id);
+  const money = (n) => "$" + Math.round(Number(n) || 0).toLocaleString("en-US");
+  const shortDate = (d) => {
+    if (!d) return "";
+    const t = new Date(d + "T12:00:00");
+    return isNaN(t) ? String(d) : t.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  };
+  function el(name, attrs = {}, text) {
+    const e = document.createElementNS(NS, name);
+    for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+    if (text != null) e.textContent = text;
+    return e;
+  }
+  function setStatus(text, cls) { const s = $("status"); s.textContent = text; s.className = "chip " + (cls || ""); }
+
+  function headline(g) {
+    const h = $("headline"); h.textContent = "";
+    const span = (t) => { const s = document.createElement("span"); s.className = "num"; s.textContent = t; return s; };
+    const maria = (g.edges || []).find((e) => e.kind === "target");
+    h.append("Mule account collected ", span(money(g.mule_total_in)), " from ", span(String(g.victim_count ?? "?")),
+             " victims, moving it to a cash-out account. ");
+    if (maria && maria.held) h.append("Backfire held the customer's ", span(money(maria.amount)), " before it joined the pile.");
+    else if (maria) h.append("The customer's ", span(money(maria.amount)), " transfer is pending; Backfire is listening.");
+  }
+
+  function layout(g) {
+    const pos = {};
+    const left = g.nodes.filter((n) => n.role === "target" || n.role === "victim");
+    left.sort((a, b) => (a.role === "target" ? -1 : b.role === "target" ? 1 : 0));
+    const top = 110, span = H - 170;
+    left.forEach((n, i) => { pos[n.id] = { x: COL[n.role], y: top + (left.length === 1 ? span / 2 : (span * i) / (left.length - 1)) }; });
+    g.nodes.filter((n) => n.role === "mule").forEach((n) => { pos[n.id] = { x: COL.mule, y: H / 2 }; });
+    g.nodes.filter((n) => n.role === "cashout").forEach((n) => { pos[n.id] = { x: COL.cashout, y: H / 2 }; });
+    return pos;
+  }
+
+  function render(g) {
+    if (!g || !Array.isArray(g.nodes) || !g.nodes.length) {
+      $("stage").innerHTML = '<div class="empty">No chain data yet (seed it with: python -m intel.seed_nessie).</div>';
+      return;
+    }
+    headline(g);
+    const pos = layout(g);
+    const through = (n) => Math.max(n.total_in || 0, n.total_out || 0);
+    const maxM = Math.max(1, ...g.nodes.map(through));
+    const radius = (n) => 10 + 46 * Math.sqrt(through(n) / maxM);
+
+    const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-labelledby": "map-title map-desc" });
+    svg.append(el("title", { id: "map-title" }, "Mule network map"));
+    const maria = g.edges.find((e) => e.kind === "target");
+    svg.append(el("desc", { id: "map-desc" },
+      `${g.victim_count} victims sent ${money(g.mule_total_in)} to a mule account, which moved ${money(g.mule_total_out)} ` +
+      `to a cash-out account.` + (maria ? (maria.held ? ` The customer's ${money(maria.amount)} transfer was held by Backfire.`
+                                                       : ` The customer's ${money(maria.amount)} transfer is pending.`) : "")));
+    const defs = el("defs");
+    for (const [id, c] of [["arrow", "#8a8a9a"], ["arrow-m", "#e20074"], ["arrow-c", "#ffb347"]]) {
+      const m = el("marker", { id, viewBox: "0 0 10 10", refX: 9, refY: 5, markerWidth: 16, markerHeight: 16,
+                                 markerUnits: "userSpaceOnUse", orient: "auto-start-reverse" });
+      m.append(el("path", { d: "M0,0 L10,5 L0,10 z", fill: c })); defs.append(m);
+    }
+    svg.append(defs);
+
+    const edgesG = el("g", { "aria-hidden": "true" });
+    const labelsG = el("g", { role: "list", "aria-label": "Transfers" });
+    const hops = g.edges.filter((e) => e.kind === "cashout");
+    g.edges.forEach((e) => {
+      const a = pos[e.src], b = pos[e.dst]; if (!a || !b) return;
+      const ra = radius(g.nodes.find((n) => n.id === e.src)), rb = radius(g.nodes.find((n) => n.id === e.dst));
+      let bend = 0;
+      if (e.kind === "cashout") { const i = hops.indexOf(e); bend = (i - (hops.length - 1) / 2) * 120; }
+      if (e.kind === "target") bend = -(b.y - a.y) - 60;   // her own lane: arc above every victim edge
+      const x1 = a.x + ra, y1 = a.y, x2 = b.x - rb - 4, y2 = b.y + (e.kind === "cashout" ? bend / 6 : 0);
+      const cx = (x1 + x2) / 2, cy = (y1 + y2) / 2 + bend;
+      const d = `M${x1},${y1} Q${cx},${cy} ${x2},${y2}`;
+      const P = (t) => ({ x: (1 - t) ** 2 * x1 + 2 * (1 - t) * t * cx + t * t * x2, y: (1 - t) ** 2 * y1 + 2 * (1 - t) * t * cy + t * t * y2 });
+      const w = 2 + 8 * Math.sqrt((e.amount || 0) / maxM);
+      const label = `${money(e.amount)} · ${shortDate(e.date)}`;
+      const li = el("g", { role: "listitem", "aria-label":
+        `${nodeLabel(g, e.src)} to ${nodeLabel(g, e.dst)}: ${money(e.amount)}${e.date ? " on " + shortDate(e.date) : ""}` +
+        (e.kind === "target" ? (e.held ? ", held by Backfire" : ", pending") : "") });
+
+      if (e.kind === "target") {
+        const color = "#e20074";
+        if (e.held) {
+          // CUT: the real curve split into two stubs with a gap, a slash + scissors, "HELD $X"
+          const seg = (t0, t1) => {           // sub-curve of the quadratic between t0 and t1
+            const p0 = P(t0), p1 = P(t1);
+            const dx = 2 * (1 - t0) * (cx - x1) + 2 * t0 * (x2 - cx), dy = 2 * (1 - t0) * (cy - y1) + 2 * t0 * (y2 - cy);
+            const k = (t1 - t0) / 2;
+            return `M${p0.x},${p0.y} Q${p0.x + k * dx},${p0.y + k * dy} ${p1.x},${p1.y}`;
+          };
+          edgesG.append(el("path", { d: seg(0, 0.40), stroke: color, "stroke-width": w + 2, fill: "none", "stroke-linecap": "round" }));
+          edgesG.append(el("path", { d: seg(0.52, 1), stroke: color, "stroke-width": w, fill: "none",
+            "stroke-dasharray": "4 10", opacity: ".45" }));
+          const m = P(0.46);
+          edgesG.append(el("line", { x1: m.x - 14, y1: m.y + 20, x2: m.x + 14, y2: m.y - 20, stroke: "#ff5cb0",
+            "stroke-width": 5, "stroke-linecap": "round" }));
+          li.append(el("text", { x: m.x, y: m.y - 30, "text-anchor": "middle", class: "held-tag" }, `✂ HELD ${money(e.amount)}`));
+          li.append(el("text", { x: m.x, y: m.y + 44, "text-anchor": "middle", class: "sub" }, "cut before it reached the mule"));
+        } else {
+          edgesG.append(el("path", { d, stroke: color, "stroke-width": w + 1, fill: "none", "stroke-dasharray": "10 8",
+            class: "pending", "marker-end": "url(#arrow-m)" }));
+          const m = P(0.46);
+          li.append(el("text", { x: m.x, y: m.y - 16, "text-anchor": "middle", class: "amt" }, `${money(e.amount)} · PENDING`));
+        }
+      } else {
+        const isHop = e.kind === "cashout";
+        edgesG.append(el("path", { d, stroke: isHop ? "#ffb347" : "#6f6f80", "stroke-width": w, fill: "none",
+          opacity: isHop ? ".9" : ".7", ...(isHop ? { "marker-end": "url(#arrow-c)" } : {}) }));
+        const m = P(isHop ? 0.5 : 0.22);
+        li.append(el("text", { x: m.x, y: m.y - 10, "text-anchor": "middle", class: isHop ? "amt" : "sub" }, label));
+      }
+      labelsG.append(li);
+    });
+    svg.append(edgesG);
+
+    const nodesG = el("g", { role: "list", "aria-label": "Accounts" });
+    g.nodes.forEach((n) => {
+      const p = pos[n.id]; if (!p) return;
+      const r = radius(n), c = COLOR[n.role] || "#999";
+      const grp = el("g", { role: "listitem", "aria-label": `${n.label}: received ${money(n.total_in)}, sent ${money(n.total_out)}` });
+      if (n.role === "target") grp.append(el("circle", { cx: p.x, cy: p.y, r: r + 7, fill: "none", stroke: c, "stroke-width": 2, opacity: ".6" }));
+      grp.append(el("circle", { cx: p.x, cy: p.y, r, fill: c, opacity: n.role === "victim" ? ".85" : "1" }));
+      const left = n.role === "victim" || n.role === "target";
+      const tx = left ? p.x - r - 14 : p.x, ty = left ? p.y + 6 : p.y + r + 30;
+      grp.append(el("text", { x: tx, y: ty, "text-anchor": left ? "end" : "middle", class: "lbl" }, shortName(n)));
+      const money2 = n.role === "mule" ? `in ${money(n.total_in)} · out ${money(n.total_out)}`
+                   : n.role === "cashout" ? `received ${money(n.total_in)}` : null;
+      if (money2) grp.append(el("text", { x: tx, y: ty + 24, "text-anchor": "middle", class: "sub" }, money2));
+      nodesG.append(grp);
+    });
+    svg.append(nodesG, labelsG);
+    $("stage").replaceChildren(svg);
+    srTable(g);
+  }
+
+  function nodeLabel(g, id) { const n = g.nodes.find((x) => x.id === id); return n ? n.label : id; }
+  function shortName(n) {
+    if (n.role === "mule") return "Mule account (SIMULATED)";
+    if (n.role === "cashout") return "Cash-out (SIMULATED)";
+    if (n.role === "target") return "The customer";
+    return String(n.label).replace(/ Sandbox$/, "");
+  }
+  function srTable(g) {
+    const t = $("sr-table"); t.textContent = "";
+    const head = t.insertRow(); ["From", "To", "Amount", "Date", "State"].forEach((h) => { const c = document.createElement("th"); c.textContent = h; head.append(c); });
+    g.edges.forEach((e) => {
+      const r = t.insertRow();
+      [nodeLabel(g, e.src), nodeLabel(g, e.dst), money(e.amount), e.date || "", e.kind === "target" ? (e.held ? "held" : "pending") : "completed"]
+        .forEach((v) => { r.insertCell().textContent = v; });
+    });
+  }
+
+  async function poll() {
+    if (pasted) return;
+    try {
+      const r = await fetch(URL_CHAIN, { cache: "no-store", credentials: "same-origin" });
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      const txt = await r.text();
+      const g = JSON.parse(txt);
+      if (txt !== lastJSON) { lastJSON = txt; render(g); }
+      setStatus(g.status === "unavailable" ? "Nessie unavailable · showing seeded values" : "live · updates every 3 s",
+                g.status === "unavailable" ? "warn" : "live");
+      $("updated").textContent = "Updated " + new Date().toLocaleTimeString();
+    } catch (err) {
+      setStatus("hub not reachable · paste JSON below", "warn");
+      $("paste").open = true;
+    }
+  }
+
+  $("render").addEventListener("click", () => {
+    try {
+      const g = JSON.parse($("json").value);
+      pasted = true; render(g); setStatus("showing pasted JSON", "warn");
+    } catch (e) { setStatus("that isn't valid JSON", "warn"); }
+  });
+  $("resume").addEventListener("click", () => { pasted = false; lastJSON = ""; poll(); });
+
+  poll();
+  setInterval(poll, 3000);
+})();
+</script>
+</body>
+</html>

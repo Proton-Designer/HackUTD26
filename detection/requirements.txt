@@ -1,0 +1,7 @@
+httpx
+fastapi
+pydantic
+numpy
+websockets
+nvidia-riva-client
+faster-whisper

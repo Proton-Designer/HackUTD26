@@ -1,0 +1,74 @@
+# 03 — Scam landscape, scripts and synthetic-data seeds
+**Research date: 2026-11-07 | Data are from different reporting systems and MUST NOT be combined as one national total.**
+
+## TL;DR — use first
+1. Open with the FTC's **$15.9 billion in 2025 reported fraud losses**; attribute it clearly to FTC Consumer Sentinel reports.
+2. Demonstrate **package, fake bank alert, toll and task/job** scenarios—these overlap the FTC's five leading text-scam narratives.
+3. Build all 12 scam families as *synthetic templates* with benign counterexamples and adversarial edits; never use real victims' messages.
+4. Report separate **FTC** and **FBI IC3** numbers; they represent distinct reporting streams and may overlap.
+5. Treat public datasets as optional inspiration; check license and remove private identifiers before use.
+
+## A. Primary-source numbers and limits
+
+| Source | Exact supported evidence | Build / pitch use |
+|---|---|---|
+| **FTC 2025 fraud-report data** — [March 2026 testimony](https://www.ftc.gov/news-events/news/press-releases/2026/03/ftc-testifies-joint-economic-committee-agencys-efforts-combat-fraud) | Consumer Sentinel received approximately **3 million fraud reports and $15.9B reported losses in 2025** versus ~$12B in 2024. Reports are not a census and underreporting is possible. | Slide 1: “Americans reported losing $15.9B to fraud in 2025 (FTC).” |
+| **FTC impersonation 2025** — [June 2026 press](https://www.ftc.gov/news-events/news/press-releases/2026/06/ftc-data-show-people-reported-losing-3-point-5-billion-imposter-scams-2025) | **More than $3.5B** reported in imposter scam losses in 2025. | Justifies protecting the moment a purported bank, carrier or government official asks for action. |
+| **FTC 2025 social-media scams** — [2026 Data Spotlight](https://ftc.gov/news-events/data-visualizations/data-spotlight/2026/04/reported-losses-scams-social-media-eight-times-higher-2020) | Nearly **30% of people reporting a money loss** said a scam started on social media; **$2.1B** reported losses involving this contact method. | Explain why scam intelligence should cross channels. |
+| **FTC 2024 top text scams** — [April 2025 Data Spotlight](https://www.ftc.gov/news-events/data-visualizations/data-spotlight/2025/04/top-text-scams-2024) | Text scam reports were led by **(1) package-delivery problems, (2) bogus job opportunities, (3) fake bank fraud alerts, (4) unpaid tolls, (5) wrong-number messages**. FTC reported **$470M** in 2024 losses that started with text messages. The top five comprised about half of 1,000 manually coded narratives; **individual category percentages UNVERIFIED**. | Pick the first three live demos from these five. Do not invent per-type shares. |
+| **FTC 2025 contact methods** — [May 2026 consumer alert](https://consumer.ftc.gov/consumer-alerts/2026/05/how-are-scammers-trying-reach-you) | Text messaging is frequently reported as an initial contact method; social media generates high reported dollar losses. | Cross-channel prototype narrative. Detailed 2025 per-channel percentages **UNVERIFIED**. |
+| **FBI IC3 2025** — [FBI 2026 release](https://www.fbi.gov/news/press-releases/cryptocurrency-and-ai-scams-bilk-americans-of-billions), [full IC3 report](https://www.fbi.gov/file-repository/2025_ic3report.pdf) | Roughly **1.0 million complaints** and **nearly $21B** in reported cybercrime losses; AI/crypto-related fraud prominent. **Not comparable 1:1 with FTC**. | Provide a corroborating *separate* risk indicator with FBI attribution. |
+| **FTC older adults 2025** — [Oct 2026 report release](https://www.ftc.gov/news-events/news/press-releases/2026/10/ftc-issues-annual-report-congress-agencys-actions-protect-older-adults) | FTC highlights severe fraud harms to older adults and estimates losses could be much greater than reported; survey/model estimates are **NOT the same as reported Consumer Sentinel dollars**. | Show optional elder-friendly mode: large buttons, pause, family/caregiver verification. |
+| **GASA State of Scams US 2026** — [GASA report page](https://gasa.org/knowledge-base/reports/state-of-scams-in-in-the-united-states-of-america-2026) | International survey-based perspective; precise headline percentages depend on sampling/denominators and may require access. **FULL REPORT MAY REQUIRE REGISTRATION; PAYWALL/ACCESS STATUS UNVERIFIED**. | Secondary motivation slide only after full report verified; avoid blending survey prevalence with FTC reported losses. |
+| **UK Finance 2026 annual fraud report (covering 2025)** — [UK Finance 2026 commentary](https://www.ukfinance.org.uk/news-and-insight/blog/fraud-threat-has-changed-so-must-industrys-response), [report](https://www.ukfinance.org.uk/system/files/2026-06/UK%20Finance%20Fraud%20Report%202026.pdf) | UK **authorized push payment (APP)** losses around **£576.4M in 2025**. Banking interventions need to address *authorized but manipulated* payments. | Pitch a human-approved protective pause, not just detecting unauthorized account access. |
+| **Ofcom / ACMA** — [Ofcom scam guidance](https://www.ofcom.org.uk/phones-and-broadband/scam-calls-and-messages), [ACMA scams](https://www.acma.gov.au/scams) | Regulators address scam calls/texts and sender/caller trust; fresh 2025-26 exact country figures **UNVERIFIED** in this research pass. | Regulatory precedent for cross-channel warning; omit numeric claims unless reconfirmed. |
+
+**Specific missing FTC artifact:** An FTC **Consumer Sentinel Data Book specifically for calendar 2025**, with complete top categories, payment-method totals and losses-by-age tables, was **not confirmed** from the [official reports index](https://www.ftc.gov/enforcement/consumer-sentinel-network/reports) at research time. The 2025 *Do Not Call* Data Book is **a different dataset**. **UNVERIFIED:** requested exact 2025 top-contact/payment tables and age-wise amounts. Use individually published FTC 2025 summary releases instead. [FTC National Do Not Call book](https://ftc.gov/reports/national-do-not-call-registry-data-book-fiscal-year-2025).
+
+## B. Twelve synthetic scam scripts — opener -> escalation -> demanded payment -> red flags
+All openers below are **original paraphrased synthetic examples**, not exact real consumer messages. Each scenario should have (1) a *benign look-alike*, (2) a subtle scam, and (3) a blatant scam. Sources for patterns: [FTC top text scams](https://www.ftc.gov/news-events/data-visualizations/data-spotlight/2025/04/top-text-scams-2024), [FTC consumer scam advice](https://consumer.ftc.gov/scams), [AARP Fraud Watch](https://www.aarp.org/money/scams-fraud/), [BBB Scam Tracker](https://www.bbb.org/scamtracker).
+
+| Scam scenario | Typical synthetic opener | Escalation | Requested payment / sensitive action | Red flags; exact agent intervention |
+|---|---|---|---|---|
+| **1. Package-delivery issue** | “Your parcel cannot be delivered until an address fee is resolved.” | Link to carrier-lookalike, asks re-enter card and address. | Small “redelivery” fee; card details. | Unsolicited link, short time limit, odd domain. **Check domain; open independently typed carrier site; do not click.** |
+| **2. Unpaid toll** | “Your toll account has a $6 overdue balance; pay today to avoid penalty.” | Threat of license suspension or collections; shortened link. | Card / bank payment on spoofed site. | Urgency, unfamiliar authority and domain. **Verify through official toll account.** |
+| **3. Fake bank fraud alert** | “Was your $950 transaction yours? Reply NO immediately.” | Callback by “fraud desk”; “safe account” transfer or OTP request. | Instant transfer, login, one-time passcode. | Bank won't ask to move money to “secure” it. **Freeze simulated transfer; call number printed on card.** |
+| **4. Wrong-number / relationship investment (“pig butchering”)** | “Hi, I think we met at the conference—are you Alex?” | Friendly rapport over days/weeks, personal trust, investment platform. | Crypto deposit / withdrawal “tax”. | Rapid off-platform move, guaranteed profits, fake balances. **Explain manipulation, preserve evidence, avoid transfer.** |
+| **5. Job or task scam** | “Earn $200 daily completing remote rating tasks, no experience.” | Small initial payment then asks to “unlock” tasks. | Crypto or prepaid deposit; ID document. | Must pay to get paid, unverifiable recruiter. **Pause deposit; verify job on official careers site.** |
+| **6. Government impersonation** | “Your tax account is frozen; call us within the hour.” | Threat of arrest / benefit suspension and spoofed caller ID. | Gift cards, crypto, wire or credentials. | Secrecy + threats; gov cannot be authenticated by caller ID. **Consult agency's official site.** |
+| **7. Tech support scam** | “Your laptop has critical viruses; call urgent support.” | Remote desktop access, fabricated diagnosis, refund pretext. | Support fee, bank login, remote control. | Pop-up phone number, remote access request. **Close popup; no remote session.** |
+| **8. Romance scam** | “I feel a connection; can we move to private chat?” | Trust cultivation, then travel/medical emergency or investment. | Wire, gift cards, crypto. | Refuses meeting, repeated emergencies. **Nonjudgmental check and independent identity verification.** |
+| **9. Grandparent / AI voice clone** | “Grandma, it's me; I'm in trouble and need help right now.” | Familiar voice, secrecy, fake attorney/police pressure. | Wire, crypto, cash courier. | Do not rely on voice likeness. **Hang up and call a trusted existing number or family passphrase.** |
+| **10. Marketplace overpayment** | “I accidentally paid extra; please refund the difference.” | Fake check/receipt, pressure to refund before funds settle. | P2P payment, gift cards. | Overpayment, fake bank screenshots. **Verify settled funds in bank app before action.** |
+| **11. Crypto investment** | “Our AI strategy guarantees returns; join an exclusive pool.” | Fake dashboard, small “profits,” escalating deposits. | Wallet transfer, upfront withdrawal charge. | Guaranteed high returns, no independent exchange. **Warn transfers often irreversible; no new deposit.** |
+| **12. QR phishing / quishing** | “Scan this QR to validate parking/payment.” | QR takes user to spoofed payment/login site. | Card, credentials, MFA. | Sticker-over-sticker QR, unknown final URL. **Preview decoded URL; inspect domain before opening.** |
+
+**Use in build:** Give each scenario a synthetic, reproducible event sequence: `message_received -> extracted_evidence -> tool_calls -> confidence_explanation -> proposed_action -> human_confirmation -> mocked_receipt -> recovery_options`. Include obvious *legitimate* bank alerts and genuine delivery reminders as negative controls.
+
+## C. Voice cloning / AI-enabled fraud
+
+- **FBI IC3 2025 summary** — [FBI press release](https://www.fbi.gov/news/press-releases/cryptocurrency-and-ai-scams-bilk-americans-of-billions). FBI highlights AI-enhanced impersonation and crypto fraud alongside rising reported cybercrime losses. **Use:** show simulated voice-clone emergency: the model should *never* declare a known voice authentic solely from a clip.
+- **FTC impersonation advice** — [consumer alerts hub](https://consumer.ftc.gov/scams). Social-engineering tactics are often more predictive than media authenticity alone. **Use:** a trusted callback / predefined family phrase is actionable even when the voice-analysis model is uncertain.
+- **Independent quantified prevalence of AI voice cloning in US scams 2025–26:** **UNVERIFIED**; distinguish anecdotal examples from national incidence estimates.
+
+## D. Public data seeds and licenses
+
+| Dataset / location | Contents and license status | Use / privacy caveat |
+|---|---|---|
+| **UCI SMS Spam Collection** — [UCI official page](https://archive.ics.uci.edu/dataset/228/sms+spam+collection) | ~5.6k labeled spam/ham SMS, mixed original sources. **LICENSE: page-specific terms must be checked; commercial redistribution permission UNVERIFIED.** | Baseline formatting and benign-negative classes; old general spam not equivalent to modern scams. |
+| **Mishra & Soni SMS phishing corpus** — [Mendeley Data](https://data.mendeley.com/datasets/f45bkkt8pr/1), [NLM dataset catalog](https://datasetcatalog.nlm.nih.gov/dataset?q=0001449541) | Multi-label ham/spam/smishing corpus; license listed as **CC BY 4.0** in dataset catalog, verify dataset version. | Seed smishing structures with attribution; manually remove any contact details before training/eval. |
+| **Kaggle smishing and SMS spam collections** — [Kaggle datasets search](https://www.kaggle.com/datasets?search=smishing) | Many unrelated uploads; **no universal Kaggle license**. Individual files could be restricted or repackaged; precise selected dataset and license **UNVERIFIED**. | Only download an explicitly permissively licensed named version. |
+| **Jose Nazario phishing corpus** — [original collection](https://www.monkey.org/~jose/phishing/) | Historic phishing emails/sites; **current download availability and license UNVERIFIED**. May include sensitive message content. | Extract broad writing patterns, not literal victim data. |
+| **PhishTank phishing feeds** — [project](https://phishtank.org/) | Community-reported phishing URLs; **API/feed accessibility and reuse licensing UNVERIFIED**; indicators decay quickly. | Use validated harmless placeholder domains instead of live dangerous URLs in user-facing demo. |
+| **OpenPhish community feed** — [feed page](https://openphish.com/phishing_feeds.html) | Public regularly refreshed malicious URL indicators; feed use terms apply. | Derive aggregate domain/risk features, do not open URLs or redistribute feed without permission. |
+
+## E. Synthetic evaluation generation recipe
+
+1. Start with **12 scam types x 5 variants = 60 scam examples**, including benign-looking wording, typo substitutions, translations and prompt-injection attacks.
+2. Add **60 benign near-misses**: legitimate delivery verification, invoice with no external link, actual bank fraud alert, family emergency, marketplace sale, job offer without fees, real charity asks.
+3. Hold back **40** of the 120 generated examples as final unseen test set. Fix templates first; prevent train/test leakage by splitting by scenario template, not only exact text.
+4. Hand-label `ground_truth`, `scenario`, `channel`, `requested_action`, `urgency`, `risk_evidence`, `approved_safeguard`; do not fabricate API evidence.
+5. Report recall per scenario and false positives on benign look-alikes separately. **Synthetic results measure a demo benchmark, not real-world fraud-detection accuracy.**
+
+## How to discuss source uncertainty
+“**According to consumer reports to the FTC**” ≠ “all people lost exactly this amount.” “**From FBI IC3 complaints**” ≠ “additional losses to add to FTC.” “**Synthetic evaluation**” ≠ “deployed carrier-level detection.” These distinctions are credibility advantages in judging.

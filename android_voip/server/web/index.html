@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Demo VoIP">
+<meta name="theme-color" content="#0b1220">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.svg">
+<title>Demo VoIP</title>
+<!--
+  Demo VoIP for iPhone (and any browser): the same phone-to-phone WebRTC calls as the Android app (com.example.voip),
+  speaking the same JSON signaling protocol (server.js). Served by server.js at "/". iOS needs HTTPS for the microphone.
+  Supports the Backfire carrier role as the CALLER: "transfer" silently re-offers the call to the decoy peer.
+-->
+<style>
+  :root { --bg:#0b1220; --card:#141d2e; --line:#26324a; --text:#e8eef9; --dim:#93a0b8; --green:#22c55e; --red:#ef4444; --blue:#3b82f6; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--text);
+    font:16px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif; }
+  body { padding:env(safe-area-inset-top) 16px env(safe-area-inset-bottom); }
+  .wrap { max-width:480px; margin:0 auto; min-height:100%; display:flex; flex-direction:column; }
+  header { display:flex; align-items:center; justify-content:space-between; padding:14px 0; }
+  h1 { font-size:20px; margin:0; }
+  .pill { font-size:13px; padding:4px 10px; border-radius:999px; background:var(--card); color:var(--dim); }
+  .pill.on { color:var(--green); }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:12px; }
+  label { display:block; font-size:13px; color:var(--dim); margin:10px 0 4px; }
+  input { width:100%; font-size:17px; padding:12px; border-radius:10px; border:1px solid var(--line); background:#0e1626; color:var(--text); }
+  button { font:inherit; font-size:17px; border:0; border-radius:12px; padding:14px; width:100%; color:#fff; background:var(--blue); }
+  button.ghost { background:transparent; border:1px solid var(--line); color:var(--text); }
+  button:disabled { opacity:.5; }
+  .list { list-style:none; margin:0; padding:0; }
+  .list li { display:flex; align-items:center; justify-content:space-between; padding:12px 0; border-bottom:1px solid var(--line); }
+  .list li:last-child { border-bottom:0; }
+  .list button { width:auto; padding:10px 18px; background:var(--green); }
+  .empty { color:var(--dim); font-size:15px; }
+  .msg { color:#fbbf24; font-size:14px; min-height:20px; margin:4px 0 10px; }
+  .callscreen { position:fixed; inset:0; background:linear-gradient(#111a2c,#05080f); display:none; flex-direction:column;
+    align-items:center; justify-content:space-between; padding:calc(env(safe-area-inset-top) + 60px) 24px calc(env(safe-area-inset-bottom) + 40px); }
+  .callscreen.show { display:flex; }
+  .avatar { width:110px; height:110px; border-radius:50%; background:#334155; display:flex; align-items:center; justify-content:center; font-size:44px; }
+  .peer { font-size:30px; margin-top:18px; text-align:center; }
+  .status { color:var(--dim); margin-top:6px; text-align:center; }
+  .row { display:flex; gap:28px; justify-content:center; width:100%; }
+  .round { width:76px; height:76px; border-radius:50%; padding:0; font-size:28px; display:flex; align-items:center; justify-content:center; }
+  .round.red { background:var(--red); } .round.green { background:var(--green); } .round.grey { background:#334155; }
+  .round.grey.active { background:#e2e8f0; color:#0b1220; }
+  .cap { font-size:12px; color:var(--dim); text-align:center; margin-top:6px; }
+  .small { font-size:13px; color:var(--dim); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><h1>Demo VoIP</h1><span id="conn" class="pill">offline</span></header>
+
+  <div id="setup" class="card">
+    <label for="name">Your name (others call you by it)</label>
+    <input id="name" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="e.g. iphone">
+    <label for="server">Server</label>
+    <input id="server" autocomplete="off" autocapitalize="off" spellcheck="false">
+    <div class="msg" id="msg"></div>
+    <button id="go">Go online</button>
+    <p class="small">Keep this page open and the screen on during the demo: iOS pauses web pages in the background.</p>
+  </div>
+
+  <div id="contacts" class="card" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <strong>Contacts</strong><span class="small" id="me"></span>
+    </div>
+    <ul class="list" id="users"></ul>
+    <div class="msg" id="msg2"></div>
+    <button class="ghost" id="off">Go offline</button>
+  </div>
+</div>
+
+<div class="callscreen" id="call">
+  <div style="display:flex;flex-direction:column;align-items:center">
+    <div class="avatar" id="av">?</div>
+    <div class="peer" id="peer"></div>
+    <div class="status" id="cstatus"></div>
+  </div>
+  <div style="width:100%">
+    <div class="row" id="activeBtns">
+      <div><button class="round grey" id="mute">🎙</button><div class="cap">mute</div></div>
+      <div><button class="round red" id="hang">✕</button><div class="cap">end</div></div>
+    </div>
+    <div class="row" id="incomingBtns" style="display:none">
+      <div><button class="round red" id="decline">✕</button><div class="cap">decline</div></div>
+      <div><button class="round green" id="accept">✆</button><div class="cap">accept</div></div>
+    </div>
+  </div>
+</div>
+<audio id="remote" autoplay playsinline></audio>
+
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const ICE = [{ urls: "stun:stun.l.google.com:19302" }];   // same as the Android app
+const RING_TIMEOUT_MS = 45000;                            // same as the Android app
+
+const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+                set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
+$("name").value = store.get("voip.name") || "";
+$("server").value = store.get("voip.server") || ((location.protocol === "https:" ? "wss://" : "ws://") + location.host);
+
+let ws = null, myId = null, wantOnline = false, retry = null;
+let pc = null, local = null, call = null;    // call: {id, peer, signalPeer, outgoing, state, remoteSet, pendingIce:[], t0, timer, ring}
+let audioCtx = null, toneStop = null, wakeLock = null;
+
+// ---------------------------------------------------------------- signaling (server.js protocol)
+
+function connect() {
+  const url = $("server").value.trim();
+  setConn("connecting…");
+  try { ws = new WebSocket(url); } catch (e) { return say("Bad server URL"); }
+  ws.onopen = () => ws.send(JSON.stringify({ type: "register", id: myId }));
+  ws.onmessage = (e) => { let m; try { m = JSON.parse(e.data); } catch { return; } onSignal(m); };
+  ws.onclose = () => {
+    setConn("offline"); ws = null;
+    if (wantOnline) { clearTimeout(retry); retry = setTimeout(connect, 2000); setConn("reconnecting…"); }
+  };
+}
+function send(type, to, callId, extra = {}) {
+  if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type, to, callId, ...extra }));
+}
+
+function onSignal(m) {
+  const { type, from, callId } = m;
+  switch (type) {
+    case "registered": setConn("online", true); $("me").textContent = "you are " + m.id; break;
+    case "users": renderUsers((m.ids || []).filter((id) => id !== myId).sort()); break;
+    case "error": say("Server: " + m.message); break;
+    case "offer":
+      if (call) { send("reject", from, callId, { reason: "busy" }); return; }
+      incoming(from, callId, m.sdp); break;
+    case "answer":
+      if (!call || call.id !== callId) return;
+      if (call.signalPeer && from === call.signalPeer) {           // the decoy answered our transfer re-offer
+        pc.setRemoteDescription({ type: "answer", sdp: m.sdp }).then(flushIce); return;
+      }
+      if (!call.outgoing || call.state !== "calling") return;
+      stopTones(); clearTimeout(call.ring); setState("connecting");
+      pc.setRemoteDescription({ type: "answer", sdp: m.sdp }).then(flushIce);
+      break;
+    case "ice":
+      if (!call || call.id !== callId || !m.candidate) return;
+      const c = { candidate: m.candidate, sdpMid: m.sdpMid, sdpMLineIndex: m.sdpMLineIndex };
+      if (call.remoteSet) pc.addIceCandidate(c).catch(() => {}); else call.pendingIce.push(c);
+      break;
+    case "reject":
+      if (call && call.id === callId) end(m.reason === "busy" ? "Busy" : m.reason === "blocked" ? "Call blocked" : "Declined", false);
+      break;
+    case "transfer":   // Backfire carrier: move this outgoing call to another peer without telling the user
+      if (call && call.id === callId && call.outgoing && (call.state === "active" || call.state === "connecting")) transfer(m.to);
+      break;
+    case "backfire":
+      if (call && call.id === callId && m.status === "decoy_offline") say("Backfire's decoy is offline");
+      break;
+    case "bye":
+      if (call && call.id === callId) end(m.reason === "offline" ? "Not online" : "Call ended", false);
+      break;
+  }
+}
+
+// ---------------------------------------------------------------- WebRTC
+
+async function mic() {
+  if (local) return local;
+  local = await navigator.mediaDevices.getUserMedia({
+    audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false });
+  return local;
+}
+
+function newPc(to) {
+  const p = new RTCPeerConnection({ iceServers: ICE });
+  const myCall = call;
+  p.onicecandidate = (e) => {
+    if (!e.candidate || call !== myCall || pc !== p) return;
+    send("ice", call.signalPeer || call.peer, call.id,
+      { sdpMid: e.candidate.sdpMid, sdpMLineIndex: e.candidate.sdpMLineIndex, candidate: e.candidate.candidate });
+  };
+  p.ontrack = (e) => { const a = $("remote"); a.srcObject = e.streams[0] || new MediaStream([e.track]); a.play().catch(() => {}); };
+  p.onconnectionstatechange = () => {
+    if (pc !== p || !call) return;
+    if (p.connectionState === "connected") { if (call.state !== "active") setState("active"); $("cstatus").textContent = timeText(); }
+    else if (p.connectionState === "disconnected") $("cstatus").textContent = "Reconnecting…";
+    else if (p.connectionState === "failed") end("Call failed", true);
+  };
+  local.getTracks().forEach((t) => p.addTrack(t, local));
+  return p;
+}
+
+async function flushIce() {
+  if (!call) return;
+  call.remoteSet = true;
+  for (const c of call.pendingIce.splice(0)) await pc.addIceCandidate(c).catch(() => {});
+}
+
+async function dial(peer) {
+  if (call) return;
+  unlockAudio();
+  try { await mic(); } catch { return say("Microphone blocked. Allow it in Settings › Safari › Microphone (needs https)."); }
+  call = { id: crypto.randomUUID(), peer, outgoing: true, state: "calling", remoteSet: false, pendingIce: [] };
+  showCall(peer); setState("calling");
+  pc = newPc(peer);
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+  send("offer", peer, call.id, { sdp: offer.sdp });
+  startTone("ringback");
+  call.ring = setTimeout(() => { if (call && call.state === "calling") end("No answer", true); }, RING_TIMEOUT_MS);
+}
+
+function incoming(from, callId, sdp) {
+  call = { id: callId, peer: from, outgoing: false, state: "incoming", remoteSet: false, pendingIce: [], offer: sdp };
+  showCall(from); setState("incoming"); startTone("ring");
+  if (navigator.vibrate) navigator.vibrate([400, 200, 400]);
+  call.ring = setTimeout(() => { if (call && call.state === "incoming") end("Missed call", false); }, RING_TIMEOUT_MS + 15000);
+}
+
+async function accept() {
+  if (!call || call.state !== "incoming") return;
+  unlockAudio(); stopTones(); clearTimeout(call.ring);
+  try { await mic(); } catch { say("Microphone blocked"); return end("Declined", true, "reject"); }
+  setState("connecting");
+  pc = newPc(call.peer);
+  await pc.setRemoteDescription({ type: "offer", sdp: call.offer });
+  await flushIce();
+  const ans = await pc.createAnswer();
+  await pc.setLocalDescription(ans);
+  send("answer", call.peer, call.id, { sdp: ans.sdp });
+}
+
+async function transfer(to) {
+  try { pc.close(); } catch {}
+  call.signalPeer = to; call.remoteSet = false; call.pendingIce = [];
+  pc = newPc(to);
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+  send("offer", to, call.id, { sdp: offer.sdp });
+}
+
+function end(reason, notify, kind = "bye") {
+  if (!call) return;
+  const c = call;
+  if (notify) send(kind, c.signalPeer || c.peer, c.id, kind === "bye" ? { reason: "remote_hangup" } : {});
+  clearTimeout(c.ring); clearInterval(c.timer); stopTones();
+  try { pc && pc.close(); } catch {}
+  pc = null; call = null;
+  $("remote").srcObject = null;
+  if (local) { local.getTracks().forEach((t) => t.stop()); local = null; }
+  $("mute").classList.remove("active");
+  $("cstatus").textContent = reason;
+  setTimeout(() => { if (!call) $("call").classList.remove("show"); }, 1200);
+}
+
+// ---------------------------------------------------------------- UI
+
+function setConn(t, on) { $("conn").textContent = t; $("conn").classList.toggle("on", !!on); }
+function say(t) { $("msg").textContent = t; $("msg2").textContent = t; setTimeout(() => { if ($("msg").textContent === t) { $("msg").textContent = ""; $("msg2").textContent = ""; } }, 5000); }
+function renderUsers(ids) {
+  const ul = $("users"); ul.innerHTML = "";
+  if (!ids.length) { ul.innerHTML = '<li class="empty">Nobody else is online yet.</li>'; return; }
+  for (const id of ids) {
+    const li = document.createElement("li");
+    const n = document.createElement("span"); n.textContent = id;
+    const b = document.createElement("button"); b.textContent = "Call"; b.onclick = () => dial(id);
+    li.append(n, b); ul.append(li);
+  }
+}
+function showCall(peer) {
+  $("peer").textContent = peer; $("av").textContent = (peer[0] || "?").toUpperCase();
+  $("call").classList.add("show");
+}
+function timeText() {
+  if (!call || !call.t0) return "";
+  const s = Math.floor((Date.now() - call.t0) / 1000);
+  return String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
+}
+function setState(s) {
+  call.state = s;
+  $("incomingBtns").style.display = s === "incoming" ? "flex" : "none";
+  $("activeBtns").style.display = s === "incoming" ? "none" : "flex";
+  $("cstatus").textContent = { calling: "Calling…", incoming: "Incoming call", connecting: "Connecting…", active: "" }[s];
+  if (s === "active" && !call.t0) {
+    call.t0 = Date.now();
+    call.timer = setInterval(() => { if (call && call.state === "active" && pc && pc.connectionState === "connected") $("cstatus").textContent = timeText(); }, 1000);
+  }
+}
+
+// Tones with Web Audio (iOS unlocks audio only inside a tap).
+function unlockAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === "suspended") audioCtx.resume();
+  $("remote").play().catch(() => {});
+}
+function startTone(kind) {
+  stopTones();
+  if (!audioCtx) return;
+  const g = audioCtx.createGain(); g.gain.value = 0; g.connect(audioCtx.destination);
+  const freqs = kind === "ring" ? [440, 480] : [440, 480];
+  const oscs = freqs.map((f) => { const o = audioCtx.createOscillator(); o.frequency.value = f; o.connect(g); o.start(); return o; });
+  const vol = kind === "ring" ? 0.25 : 0.08, on = 2000, off = kind === "ring" ? 2000 : 4000;
+  let alive = true;
+  (function cycle() { if (!alive) return; g.gain.value = vol; setTimeout(() => { if (alive) g.gain.value = 0; }, on); setTimeout(cycle, on + off); })();
+  toneStop = () => { alive = false; oscs.forEach((o) => { try { o.stop(); } catch {} }); g.disconnect(); };
+}
+function stopTones() { if (toneStop) { toneStop(); toneStop = null; } }
+
+async function keepAwake() {
+  try { if ("wakeLock" in navigator) wakeLock = await navigator.wakeLock.request("screen"); } catch {}
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") {
+    if (wantOnline) keepAwake();
+    if (wantOnline && !ws) connect();
+  }
+});
+
+$("go").onclick = () => {
+  const name = $("name").value.trim();
+  if (!name) return say("Pick a name first");
+  store.set("voip.name", name); store.set("voip.server", $("server").value.trim());
+  unlockAudio();
+  if (!window.isSecureContext) say("Not https: iOS will block the microphone. Open the https address instead.");
+  myId = name; wantOnline = true;
+  $("setup").style.display = "none"; $("contacts").style.display = "block";
+  keepAwake(); connect();
+};
+$("off").onclick = () => {
+  wantOnline = false; if (call) end("Call ended", true);
+  if (ws) ws.close(); $("setup").style.display = "block"; $("contacts").style.display = "none";
+  try { wakeLock && wakeLock.release(); } catch {}
+};
+$("hang").onclick = () => end("Call ended", true);
+$("accept").onclick = accept;
+$("decline").onclick = () => end("Declined", true, "reject");
+$("mute").onclick = () => {
+  if (!local) return;
+  const t = local.getAudioTracks()[0]; t.enabled = !t.enabled;
+  $("mute").classList.toggle("active", !t.enabled);
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,52 @@
+"""Haul regression (eval tool, not runtime): feed STT strings from detection/eval/decoy_ab/haul_regress.jsonl through
+decoy.core.extract (real model call, bolt extractor, one request at a time) + intel.campaigns.normalize_artifacts +
+intel.nessie.match_destinations and print handles + hit yes/no per case. Run: PYTHONPATH=. .venv/bin/python detection/eval/decoy_ab/haul_regress.py
+(needs NVIDIA_API_KEY in the environment; pauses while the live service has an open call)."""
+import asyncio, json, pathlib, re, sys, urllib.request
+sys.path.insert(0, ".")
+from decoy import core
+from intel import nessie
+from intel.campaigns import normalize_artifacts
+
+def live():
+    try: return json.load(urllib.request.urlopen("http://127.0.0.1:8100/healthz", timeout=3)).get("active_stt_sockets", 0)
+    except Exception: return 0
+
+async def main():
+    path = pathlib.Path(__file__).with_name("haul_regress.jsonl"); ok = 0; n = 0
+    for line in path.read_text().splitlines():
+        r = json.loads(line)
+        while live() > 0: await asyncio.sleep(5)
+        if r.get("mock_model"):   # replay a recorded extractor output through the real validate/backstop code
+            real_chat = core.chat
+            async def _fake(msgs, **k): return json.dumps(r["mock_model"])
+            core.chat = _fake
+            try: arts = await core.extract(r["pre_lines"] + r["heard_lines"])
+            finally: core.chat = real_chat
+        else:   # like the live decoy: a pass over the pre-handoff story at session start, then a pass over everything, merged
+            arts = []
+            for lines in ([r["pre_lines"]] if r["pre_lines"] else []) + [r["pre_lines"] + r["heard_lines"]]:
+                for attempt in range(4):   # the shared NVIDIA key is rate-limited: a 'no model response' is retried, not scored
+                    try:
+                        arts += await core.extract(lines); break
+                    except RuntimeError:
+                        if attempt == 3: raise
+                        await asyncio.sleep(8)
+                await asyncio.sleep(1)
+        na = normalize_artifacts(arts); hits = nessie.match_destinations(na)
+        handles = [a["value"] for a in na if a["type"] == "payment_handle"]
+        payee = "zelle:refunds.dept@backfire-demo.example"
+        if r["expect"] == "CUSTOM":   # non-payee call: no handle matching must_not_handle, and every must_have (type, substring) present
+            vals = [(a["type"], str(a.get("value", "")).lower()) for a in na]
+            bad = [h for h in handles if re.search(r["must_not_handle"], h, re.I)]
+            miss = [m for m in r["must_have"] if not any(t == m[0] and m[1] in v for t, v in vals)]
+            hit = False; strays = bad + [f"missing {m}" for m in miss]; good = not bad and not miss
+        elif r["expect"]:   # positive: hit the payee and no stray handles
+            hit = any(h["artifact"]["value"] == r["expect"] for h in hits); strays = [h for h in handles if h != r["expect"] and not re.fullmatch(r"zelle:\+1\d{10}", h)]; good = hit and not strays   # a valid E.164 US phone handle (P3 ba487bf backstop) is allowed, not a stray
+        else:             # negative: must NOT be canonicalised to the payee, no hit
+            hit = bool(hits) or payee in handles; strays = []; good = not hit
+        ok += good; n += 1
+        print(f'{r["card"]:18s} {"PASS" if good else "FAIL"} hit={"yes" if hit else "no "} strays={strays} handles={handles}', flush=True)
+        await asyncio.sleep(2)
+    print(f"{ok}/{n} cases pass (positives: hit + no strays; negatives: no payee hit)")
+asyncio.run(main())

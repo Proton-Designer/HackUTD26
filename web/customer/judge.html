@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Backfire · Judge card</title>
+<link rel="icon" type="image/png" href="assets/backfire-favicon.png">
+<style>
+:root{--bg:#0e1116;--fg:#fff;--mut:#aab3c0;--ok:#147a38;--warn:#ffb020;--pink:#dc1675;font-size:24px}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:-apple-system,"Segoe UI",Roboto,sans-serif;min-height:100dvh}
+main{max-width:1100px;margin:0 auto;padding:24px 20px 40px;display:flex;flex-direction:column;gap:22px}
+.tag{align-self:flex-start;background:var(--warn);color:#000;font-weight:800;padding:6px 14px;border-radius:10px;font-size:.8rem}
+h1{margin:0;font-size:2.4rem}
+.lockup{display:block;height:clamp(44px,9vw,84px);width:auto;max-width:100%;align-self:flex-start}
+.line{background:#171c25;border:3px solid var(--ok);border-radius:24px;padding:22px;text-align:center}
+.line small{display:block;color:var(--mut);font-size:.9rem}
+#num{white-space:nowrap;font-size:clamp(1.2rem,6.4vw,5rem);font-weight:900;letter-spacing:.02em;font-variant-numeric:tabular-nums;word-break:break-word}
+#num.pending{color:var(--mut);font-size:clamp(1.6rem,6vw,3rem)}
+h2{margin:0;font-size:1.6rem}
+.how{font-size:1.15rem;line-height:1.4;margin:0;color:#dfe5ee}
+.card{background:#171c25;border:2px solid #2b3442;border-radius:24px;padding:22px}
+.card h3{margin:0 0 4px;font-size:1.5rem}.card .who{color:var(--mut);margin:0 0 14px}
+ol{margin:0;padding-left:1.4em;display:flex;flex-direction:column;gap:14px}
+ol li{font-size:clamp(1.1rem,4.6vw,1.45rem);line-height:1.35;font-weight:600}
+.pay{margin-top:18px;border-top:2px dashed #3a4556;padding-top:14px}.pay b{display:block;color:var(--mut);font-size:.85rem;font-weight:700;margin-bottom:6px}
+.pay p{margin:0;font-size:1.3rem;font-weight:600}
+.opt{color:var(--mut);font-size:1rem;margin:14px 0 0}
+.last{display:inline-block;margin-left:8px;background:var(--pink);color:#fff;font-size:.7rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:2px 10px;border-radius:99px;vertical-align:middle}
+.todo{background:#1d2431;border:2px solid #2a3242;border-radius:16px;padding:14px 18px;font-size:1.05rem;line-height:1.4;margin:0}
+</style>
+</head>
+<body>
+<main>
+  <img class="lockup" src="assets/backfire-lockup.png" alt="Backfire">
+  <span class="tag">Synthetic scenario</span>
+  <h1>You are the scammer</h1>
+  <section class="line" aria-live="polite">
+    <small>Call the scam line</small>
+    <div id="num">+1 (469) 908-8594</div>
+  </section>
+  <p class="todo"><b>Call +1 (469) 908-8594</b> with caller ID on, in English, and read all 3 lines. Wait for “hello,” then read one line at a time and pause so <span id="custName">the customer</span> can answer. Everything here is made up. No real people.</p>
+  <article class="card" id="card">
+    <h3>Judge card</h3>
+    <p class="who">You are: the fraud team at the customer's bank</p>
+    <ol>
+      <li>“Hi, this is the fraud team at your bank. Someone's draining your account right now. To protect your savings, you need to move them to a safe account. And don't tell anyone at the branch.”</li>
+      <li>“Our secure line is 1-888-555-0123, and the transfer portal is backfire-demo dot example.”</li>
+      <li>“Open your banking app and send the $1,800 by Zelle to refunds dot dept at backfire dash demo dot example. That's the safe account.” <span class="last">Say it last</span></li>
+    </ol>
+  </article>
+</main>
+<script>
+(() => {
+  "use strict";
+  // The scam line is fixed on this card; ?line= can override it for a different number.
+  const fmt = n => { const d = String(n).replace(/\D/g, ""); const t = d.length === 11 && d[0] === "1" ? d.slice(1) : d; return t.length === 10 ? `+1 (${t.slice(0, 3)}) ${t.slice(3, 6)}-${t.slice(6)}` : String(n); };
+  const line = new URLSearchParams(location.search).get("line");
+  if (line) { document.getElementById("num").textContent = fmt(line); document.querySelector(".todo b").textContent = "Call " + fmt(line); }
+  fetch("/demo/status?format=json").then(r => r.json()).then(s => { const n = s && s.flags && s.flags.CUSTOMER_NAME, el = document.getElementById("custName"); if (typeof n === "string" && n.trim() && el) el.textContent = n.trim(); }).catch(() => {});   // CUSTOMER_NAME (hub flag); default text stays "the customer"
+})();
+</script>
+</body>
+</html>

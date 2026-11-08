@@ -1,0 +1,65 @@
+#!/usr/bin/env python3
+"""Phone-free demo call, one command (no Telnyx). Hub must run with SIM_MODE=1 and P2 reachable.
+  scripts/demo_call [--reset] [--hub http://127.0.0.1:8000] [--from +15555550123] [--wav logs/sim_scam.wav | --script irs]
+Streams the SAME WAV the hub serves at GET /demo/caller.wav (DEMO_CALLER_WAV or $LOGDIR/sim_scam.wav) via scripts/sim_call.py, so Maria's page
+and the fake caller stay in sync. eng3 (or you) taps the on-screen button after the alert. Prints a timeline (seconds from call start) when done.
+--reset first POSTs /demo/reset (local only: clears blocklist/events, re-seeds)."""
+import argparse, asyncio, json, os, pathlib, subprocess, sys, time, urllib.request
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+SHOW = ("call.incoming", "call.routed", "call.answered", "alert.fired", "user.action", "handoff.started", "handoff.restored", "call.ended",
+        "intel.agent", "blocklist.updated", "injection.denied")
+SHORT = ("from", "decision", "by", "level", "action", "ended_by", "duration_s", "engine", "number", "scope", "s", "band", "scam_type")
+
+async def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--reset", action="store_true"); ap.add_argument("--hub", default="http://127.0.0.1:8000")
+    ap.add_argument("--from", dest="frm", default="+15555550123"); ap.add_argument("--wav"); ap.add_argument("--script")
+    ap.add_argument("--wait-intel", type=int, default=45, help="seconds to wait after call.ended for the intel block")
+    a = ap.parse_args()
+    if a.reset:
+        r = urllib.request.Request(a.hub + "/demo/reset", b"", method="POST")
+        try: print("reset:", urllib.request.urlopen(r, timeout=10).status)
+        except urllib.error.HTTPError as e:
+            sys.exit("reset refused: a call is live on the hub (409). Wait for it to end, or run scripts/reset_demo <hub> --force" if e.code == 409 else f"reset failed ({e}); run it on the hub machine (loopback only)")
+        except Exception as e: sys.exit(f"reset failed ({e}); run it on the hub machine (loopback only)")
+    logs = pathlib.Path(os.environ.get("LOGDIR") or "logs"); logs = logs if logs.is_absolute() else ROOT / logs
+    tf = logs / "tunnel_url.txt"; tunnel = tf.read_text().strip() if tf.is_file() else None
+    print("PHONE TEST (Maria's phone, optional; skip for a screen-only run)")
+    print(f"  1. Open {(tunnel + '/app/') if tunnel else 'the tunnel URL + /app/ (start scripts/run_hub; it writes logs/tunnel_url.txt)'} on the phone")
+    print("  2. Pair once with the DEVICE PIN (DEVICE_PIN in .env, else logs/device_pin.txt; also printed by run_hub). Then allow sound.")
+    print("  3. Expected timeline (seconds from call start, typical): 0 incoming + routed to LIVE_GUARD; ~1-3 Maria's page rings, tap Answer;")
+    print("     ~8-20 two beeps + red alert on the scammer's ask; tap 'Scammer Get Scammed' -> decoy takes the caller;")
+    print("     then the decoy talks until the caller hangs up (~60 s of audio), and ~10-45 s after the end the intel block appears.")
+    print("  The final TIMELINE below shows what actually happened. Reset between runs: scripts/reset_demo (or --reset).\n")
+    import websockets
+    t0 = time.time(); evs = []; ended = asyncio.Event(); blocked = asyncio.Event(); sid = {}
+    async def listen():
+        async with websockets.connect(a.hub.replace("http", "ws", 1) + "/events") as ws:
+            async for m in ws:
+                e = json.loads(m)
+                if e["type"] == "call.incoming" and not sid: sid["id"] = e["call_id"]
+                if sid and e.get("call_id") == sid["id"] and e["type"] in SHOW:
+                    evs.append((time.time(), e))
+                    if e["type"] == "call.ended": ended.set()
+                    if e["type"] == "blocklist.updated": blocked.set()
+    lt = asyncio.create_task(listen()); await asyncio.sleep(0.5)
+    cmd = [sys.executable, str(ROOT / "scripts" / "sim_call.py"), "--from", a.frm, "--hub", a.hub]
+    if a.wav: cmd += ["--wav", a.wav]
+    elif a.script: cmd += ["--script", a.script]
+    print("calling:", " ".join(cmd[1:]), "(tap the button on Maria's page after the alert)")
+    p = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT)
+    out = (await p.communicate())[0].decode()
+    for l in out.splitlines():
+        if not l.startswith("  hub event"): print(l)
+    try: await asyncio.wait_for(blocked.wait(), a.wait_intel)
+    except asyncio.TimeoutError: print(f"(no blocklist.updated within {a.wait_intel}s: no tap/handoff, or intel still running)")
+    lt.cancel()
+    if not evs: print("no events seen"); return 1
+    base = evs[0][0]; print("\nTIMELINE (s from call start)")
+    for t, e in evs:
+        d = e["data"]; print(f"{t - base:6.1f}  {e['type']:<18} " + " ".join(f"{k}={d[k]}" for k in SHORT if k in d and not isinstance(d[k], (list, dict))))
+    return 0
+
+if __name__ == "__main__":
+    sys.exit(asyncio.run(main()))

@@ -1,0 +1,7 @@
+fastapi
+uvicorn[standard]
+httpx
+numpy
+nvidia-riva-client
+websockets
+# plus: ffmpeg on PATH (decodes webm/ogg/mp4/wav recordings for /voice/enroll); detection/ (P2) for speech-to-text

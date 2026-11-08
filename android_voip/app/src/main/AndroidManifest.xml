@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+
+    <!-- Only apps signed with the same key as this app can receive call audio. -->
+    <permission
+        android:name="com.example.voip.permission.CALL_AUDIO"
+        android:label="Receive VoIP call audio"
+        android:protectionLevel="signature" />
+
+    <application
+        android:name=".VoipApp"
+        android:icon="@android:drawable/sym_action_call"
+        android:label="Demo VoIP"
+        android:theme="@android:style/Theme.Material.Light.NoActionBar"
+        android:usesCleartextTraffic="true">
+
+        <activity
+            android:name=".ui.MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Keeps the signaling connection and the microphone available while a call is possible. -->
+        <service
+            android:name=".call.CallService"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
+
+        <!-- Other apps bind here to receive live call audio (see :export-api). -->
+        <service
+            android:name=".export.AudioExportService"
+            android:exported="true"
+            android:permission="com.example.voip.permission.CALL_AUDIO">
+            <intent-filter>
+                <action android:name="com.example.voip.export.BIND_AUDIO" />
+            </intent-filter>
+        </service>
+    </application>
+</manifest>

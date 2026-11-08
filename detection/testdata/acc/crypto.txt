@@ -1,0 +1,1 @@
+["I am from the Coinbase security team. Your account was hacked, you need to move funds to a safe wallet now."]

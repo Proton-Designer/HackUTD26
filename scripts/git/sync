@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# Get everyone's latest work and publish yours, safely. Run it often (before starting work, after every working commit).
+#   bash scripts/git/sync          fetch → rebase your commits onto origin/<branch> (autostash) → push, retrying up to 3x
+#   bash scripts/git/sync --pull   only fetch + rebase (get teammates' work), don't push
+# Never force-pushes. Uncommitted changes are kept (autostash). Commit with explicit paths first: git add <your files> && git commit -m "P#: ..."
+set -u
+cd "$(git rev-parse --show-toplevel 2>/dev/null)" || { echo "not in a git repo"; exit 1; }
+br=$(git rev-parse --abbrev-ref HEAD)
+[ "$br" = HEAD ] && { echo "sync: detached HEAD. Run: git checkout finalized-idea-backfire"; exit 1; }
+if [ -d "$(git rev-parse --git-path rebase-merge)" ] || [ -d "$(git rev-parse --git-path rebase-apply)" ]; then
+  echo "sync: a rebase is in progress. Resolve conflicts, git add <files>, git rebase --continue (or git rebase --abort), then re-run."; exit 2
+fi
+PULL_ONLY=0; [ "${1:-}" = "--pull" ] || [ "${1:-}" = "--pull-only" ] && PULL_ONLY=1
+guard() {  # refuse to publish things that break the team
+  local bad="" f sz
+  for f in $(git diff --name-only "origin/$br..HEAD" 2>/dev/null); do
+    case "$f" in
+      .env|*/.env|*.pem|*.key|*credentials*) bad="$bad\n  secret-looking file: $f";;
+      BOARD.md) [ "$(git log -1 --format=%an "origin/$br..HEAD" -- BOARD.md)" != "" ] && bad="$bad\n  BOARD.md is edited only by the Discord bot";;
+    esac
+    if [ -f "$f" ]; then sz=$(wc -c < "$f" | tr -d ' '); [ "${sz:-0}" -gt 5000000 ] && bad="$bad\n  file over 5 MB: $f"; fi
+  done
+  if [ -n "$bad" ]; then
+    printf "sync: NOT pushing. Fix these in your commits first (git reset --soft origin/$br, unstage, recommit):$bad\n"; return 1
+  fi
+}
+for i in 1 2 3; do
+  git fetch -q origin "$br" 2>/dev/null || { echo "sync: can't reach GitHub (offline?). Your commits are safe locally; retry soon."; exit 1; }
+  if ! git rebase -q --autostash "origin/$br" >/dev/null 2>&1; then
+    files=$(git diff --name-only --diff-filter=U | tr '\n' ' ')
+    echo "sync: REBASE CONFLICT in: ${files:-?}"
+    echo "  Fix each file keeping BOTH sides' intent (it's usually another pipeline's addition next to yours), then:"
+    echo "  git add <files> && git rebase --continue && bash scripts/git/sync"
+    echo "  Stuck? git rebase --abort (back to where you were) and message the file's owner: bash scripts/comms/send <P#> \"conflict in <file>\" \"...\""
+    exit 2
+  fi
+  ahead=$(git rev-list --count "origin/$br..HEAD")
+  if [ "$PULL_ONLY" = 1 ]; then echo "sync: rebased onto origin/$br @ $(git rev-parse --short "origin/$br") ($ahead local commit(s) not pushed)"; exit 0; fi
+  [ "$ahead" != 0 ] && { guard || exit 5; }
+  behind_note="$(git log -1 --format='%h %an: %s' "origin/$br" | cut -c1-70)"
+  if [ "$ahead" = 0 ]; then echo "sync: up to date with origin/$br @ $(git rev-parse --short HEAD)  (latest: $behind_note)"; exit 0; fi
+  if git push -q origin "HEAD:$br" 2>/dev/null; then
+    echo "sync: pushed $ahead commit(s) → origin/$br @ $(git rev-parse --short HEAD)"; exit 0
+  fi
+  sleep $((i * 2))   # someone pushed in between: fetch + rebase again
+done
+echo "sync: push rejected 3x (busy branch). Run bash scripts/git/sync again."; exit 1

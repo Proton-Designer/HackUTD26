@@ -1,0 +1,56 @@
+"""#127: playbook classifier, targets, bail signals (no network)."""
+import sys
+sys.path.insert(0, ".")
+from decoy import playbooks as PB
+
+
+def test_classify_cards():
+    assert PB.classify(["Hi, this is the fraud team at your bank.", "Someone's draining your account right now."]) == "bank"
+    assert PB.classify(["This is Officer Daniel Brooks with the IRS Enforcement Division.", "There is a warrant for your arrest."]) == "irs_gov"
+    assert PB.classify(["Good evening! I'm Michael with Apex Digital Assets.", "Our crypto platform gets 30 percent returns."]) == "crypto"
+    assert PB.classify(["Hi, this is Kevin from Microsoft Windows support.", "Your computer has a virus."]) == "tech_support"
+    assert PB.classify(["Grandma, it's me, I'm in jail.", "Please don't tell mom, I need bail."]) == "grandparent"
+    assert PB.classify(["Hello, how are you today?"]) == "generic"
+
+
+def test_reclassify_needs_clear_lead():
+    lines = ["Hi, this is the fraud team at your bank.", "Someone's draining your account right now."]
+    assert PB.classify(lines + ["A police officer will call you."], "bank") == "bank"       # one stray word: stay
+    # card 8 'bank plus police' is still a bank cash-out: stays bank
+    assert PB.classify(lines + ["This is Detective Ray Daniels, police. Don't tell the branch."], "bank") == "bank"
+    # a real change of story switches
+    assert PB.classify(lines + ["Actually your computer is hacked, I'm with Microsoft support.",
+                                "Install AnyDesk so our technician can remove the virus and malware."], "bank") == "tech_support"
+
+
+def test_missing_and_note():
+    arts = [{"kind": "callback_phone", "value": "+18885550123"}, {"kind": "domain", "value": "backfire-demo.example"}]
+    assert PB.missing("bank", arts)[0] == "payment_handle"
+    early = PB.note("bank", [], 6, money_talk=False)       # #131: nothing about payment before the caller brings it up
+    assert "payment" not in early.lower().replace("payment, apps", "") and "bank" not in early.lower()
+    n = PB.note("bank", arts, 4, money_talk=True)
+    assert "callback_phone" in n and "payment app" in n and "About 4 turns left" in n and '"' not in n   # no verbatim lines
+    assert PB.missing("bank", arts + [{"kind": "payment_handle", "rail": "zelle", "id": "x@y.z"}]) == ["impersonated_org"]
+    assert PB.MONEY_TALK.search("Send the $1,800 by Zelle") and not PB.MONEY_TALK.search("Someone's draining your account right now.")
+
+
+def test_bail_signals():
+    assert PB.SUSPICION.search("Wait, are you a robot? Who is this really?")
+    assert PB.SUSPICION.search("Is this a recording?")
+    assert not PB.SUSPICION.search("Open your banking app and send the money by Zelle.")
+    assert PB.HOSTILE.search("Listen you idiot, just do it")
+    assert PB.REFUSAL.search("Why do you need to know that?") and PB.REFUSAL.search("I won't tell you that.")
+    assert not PB.REFUSAL.search("Just do what I tell you, I already told you.")   # pressure, not a refusal (P2 #134)
+    assert not PB.SUSPICION.search("This call is recorded. Our automated system flagged your account.")   # scammer's own script
+    assert not PB.REFUSAL.search("Our secure line is 1-888-555-0123.")
+    assert set(PB.GOODBYES) >= {"got_payment_details", "time_cap", "no_progress", "suspicion", "hostile", "refused", "silence"}
+
+
+def test_p2_labels():   # #142 live eb66fef0: P2 label 'gift_card' gave 'generic'
+    assert PB.map_label("gift_card") == "irs_gov" and PB.map_label("irs impersonation") == "irs_gov"
+    assert PB.map_label("tech support") == "tech_support" and PB.map_label("crypto_investment") == "crypto"
+    assert PB.map_label("grandparent") == "grandparent" and PB.map_label("bank fraud dept") == "bank"
+    assert PB.map_label("utility_shutoff") == "utility" and PB.map_label("social security") == "ssa_medicare"
+    assert PB.map_label("") is None and PB.map_label("unknown thing") is None
+    # the label is the starting type; vague lines don't flip it
+    assert PB.classify(["Hello, are you there?", "Listen to me carefully."], PB.map_label("gift_card")) == "irs_gov"

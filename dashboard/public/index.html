@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent Ops · Backfire</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<canvas id="stars" aria-hidden="true"></canvas>
+<div class="vignette" aria-hidden="true"></div>
+
+<header id="top">
+  <div class="brand">
+    <div class="logo" aria-hidden="true">
+      <svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="17" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="5 4"/><circle cx="20" cy="20" r="9" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="20" cy="20" r="3.5" fill="currentColor"/></svg>
+    </div>
+    <div class="brand-text">
+      <div class="kicker">AGENT OPS</div>
+      <div class="project" id="project">Backfire · HackUTD 2026</div>
+    </div>
+    <span class="badge demo" id="modeBadge">DEMO</span>
+  </div>
+
+  <div class="times">
+    <div class="clock-block">
+      <div class="clock mono" id="clock">--:--:--</div>
+      <div class="sub" id="clockSub">America/Chicago</div>
+    </div>
+    <div class="clock-block countdown" id="cdBlock">
+      <div class="clock mono" id="countdown">--:--:--</div>
+      <div class="sub" id="cdSub">UNTIL SUBMISSION · SUN 9:00 AM</div>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="num mono" id="stAgents">0</div><div class="lbl">AGENTS</div></div>
+    <div class="stat"><div class="num mono" id="stMachines">0</div><div class="lbl">MACHINES</div></div>
+    <div class="stat"><div class="num mono" id="stRate">0</div><div class="lbl">MSGS/HR</div></div>
+    <div class="stat"><div class="num mono" id="stThreads">0</div><div class="lbl">THREADS</div></div>
+    <div class="health" id="health" title="">
+      <span class="dot" id="healthDot"></span>
+      <div class="health-text"><div class="h1" id="healthText">GITHUB</div><div class="h2 mono" id="healthSub">--</div></div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="panel lanes-panel">
+    <div class="panel-title"><span>PIPELINES</span><span class="pt-sub" id="lanesSub"></span></div>
+    <div id="lanes" class="lanes"></div>
+  </section>
+
+  <section class="panel graph-panel">
+    <div class="panel-title"><span>MESSAGE NETWORK</span><span class="pt-sub mono" id="graphSub">0 total</span></div>
+    <div class="graph-wrap" id="graphWrap"><canvas id="graph"></canvas></div>
+    <div class="legend">
+      <span><i class="lg working"></i>working</span>
+      <span><i class="lg idle"></i>idle</span>
+      <span><i class="lg blocked"></i>blocked</span>
+      <span><i class="lg offline"></i>offline</span>
+    </div>
+  </section>
+
+  <section class="panel feed-panel">
+    <div class="panel-title"><span>LIVE FEED</span><span class="pt-sub" id="feedSub"><span class="mono" id="connLbl">...</span></span></div>
+    <div id="feed" class="feed"></div>
+    <div class="empty" id="feedEmpty">Waiting for messages…</div>
+  </section>
+</main>
+
+<div class="hint mono">F fullscreen · R replay · D details</div>
+<script src="/static/app.js"></script>
+</body>
+</html>

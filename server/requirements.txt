@@ -1,0 +1,6 @@
+cryptography
+fastapi
+httpx
+pytest
+uvicorn[standard]
+websockets

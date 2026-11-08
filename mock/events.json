@@ -1,0 +1,529 @@
+{
+ "version": 1,
+ "note": "ts are RELATIVE seconds from call start; replayer adds a base. Synthetic data only.",
+ "calls": [
+  {
+   "call_id": "c_demo_irs",
+   "title": "IRS gift-card scam -> alert -> Scammer Get Scammed",
+   "events": [
+    {
+     "type": "call.incoming",
+     "call_id": "c_demo_irs",
+     "ts": 0.0,
+     "data": {
+      "from": "+15555550142",
+      "to": "+15555550100",
+      "attestation": "C",
+      "scam_id_score": 0.71
+     }
+    },
+    {
+     "type": "call.routed",
+     "call_id": "c_demo_irs",
+     "ts": 0.2,
+     "data": {
+      "decision": "LIVE_GUARD",
+      "reason": "Caller ID not verified"
+     }
+    },
+    {
+     "type": "call.answered",
+     "call_id": "c_demo_irs",
+     "ts": 3.0,
+     "data": {
+      "by": "maria"
+     }
+    },
+    {
+     "type": "transcript.caller",
+     "call_id": "c_demo_irs",
+     "ts": 6.0,
+     "data": {
+      "utterance_id": "u1",
+      "text": "This is Officer Daniels with the IRS, there is a warrant in your name.",
+      "is_final": false
+     }
+    },
+    {
+     "type": "transcript.caller",
+     "call_id": "c_demo_irs",
+     "ts": 8.0,
+     "data": {
+      "utterance_id": "u1",
+      "text": "This is Officer Daniels with the IRS, there is a warrant in your name.",
+      "is_final": true
+     }
+    },
+    {
+     "type": "risk.update",
+     "call_id": "c_demo_irs",
+     "ts": 8.5,
+     "data": {
+      "s": 0.55,
+      "band": "watch",
+      "asks": [],
+      "scam_type": "irs_gift_card",
+      "stage": "pretext",
+      "impersonates": "IRS",
+      "addresses_ai_system": false,
+      "why_chips": [
+       "Claims to be IRS"
+      ],
+      "engine": "cloud"
+     }
+    },
+    {
+     "type": "transcript.caller",
+     "call_id": "c_demo_irs",
+     "ts": 14.0,
+     "data": {
+      "utterance_id": "u2",
+      "text": "You must pay today with gift cards and tell no one.",
+      "is_final": true
+     }
+    },
+    {
+     "type": "risk.update",
+     "call_id": "c_demo_irs",
+     "ts": 14.6,
+     "data": {
+      "s": 0.93,
+      "band": "high",
+      "asks": [
+       "gift_card",
+       "secrecy"
+      ],
+      "scam_type": "irs_gift_card",
+      "stage": "payment",
+      "impersonates": "IRS",
+      "addresses_ai_system": false,
+      "why_chips": [
+       "Asks for gift cards",
+       "Claims to be IRS",
+       "Secrecy"
+      ],
+      "engine": "cloud"
+     }
+    },
+    {
+     "type": "alert.fired",
+     "call_id": "c_demo_irs",
+     "ts": 14.8,
+     "data": {
+      "level": "first",
+      "why_chips": [
+       "Asks for gift cards",
+       "Claims to be IRS",
+       "Secrecy"
+      ]
+     }
+    },
+    {
+     "type": "user.action",
+     "call_id": "c_demo_irs",
+     "ts": 19.0,
+     "data": {
+      "action": "scammer_get_scammed"
+     }
+    },
+    {
+     "type": "handoff.started",
+     "call_id": "c_demo_irs",
+     "ts": 19.2,
+     "data": {
+      "restore_deadline": 49.2
+     }
+    },
+    {
+     "type": "call.answered",
+     "call_id": "c_demo_irs",
+     "ts": 19.8,
+     "data": {
+      "by": "decoy"
+     }
+    },
+    {
+     "type": "decoy.turn",
+     "call_id": "c_demo_irs",
+     "ts": 21.0,
+     "data": {
+      "speaker": "decoy",
+      "text": "Sorry, I lost you there for a second.",
+      "latency_ms": 900
+     }
+    },
+    {
+     "type": "decoy.turn",
+     "call_id": "c_demo_irs",
+     "ts": 24.0,
+     "data": {
+      "speaker": "scammer",
+      "text": "Go buy Apple gift cards and read me the codes.",
+      "latency_ms": 0
+     }
+    },
+    {
+     "type": "decoy.turn",
+     "call_id": "c_demo_irs",
+     "ts": 27.0,
+     "data": {
+      "speaker": "decoy",
+      "text": "Okay, which store should I go to? How do I send them to you?",
+      "latency_ms": 1100
+     }
+    },
+    {
+     "type": "decoy.fake_value",
+     "call_id": "c_demo_irs",
+     "ts": 33.0,
+     "data": {
+      "kind": "gift_card_code",
+      "value": "CANARY-GC-4471-0003"
+     }
+    },
+    {
+     "type": "decoy.turn",
+     "call_id": "c_demo_irs",
+     "ts": 38.0,
+     "data": {
+      "speaker": "scammer",
+      "text": "Call me back on 555-0177 or go to irs-refund-desk.example and pay there.",
+      "latency_ms": 0
+     }
+    },
+    {
+     "type": "artifacts.extracted",
+     "call_id": "c_demo_irs",
+     "ts": 41.0,
+     "data": {
+      "artifacts": [
+       {
+        "kind": "callback_phone",
+        "value": "+15555550177"
+       },
+       {
+        "kind": "domain",
+        "value": "irs-refund-desk.example"
+       },
+       {
+        "kind": "gift_card_brand",
+        "value": "Apple"
+       },
+       {
+        "kind": "impersonated_org",
+        "value": "IRS"
+       },
+       {
+        "kind": "script_tags",
+        "value": [
+         "irs",
+         "warrant",
+         "gift_card"
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "type": "intel.lookup",
+     "call_id": "c_demo_irs",
+     "ts": 43.0,
+     "data": {
+      "artifact_kind": "domain",
+      "value": "irs-refund-desk.example",
+      "result": {
+       "registered_days_ago": 3,
+       "registrar": "Example Registrar (synthetic)"
+      },
+      "source": "RDAP (mock)"
+     }
+    },
+    {
+     "type": "intel.action",
+     "call_id": "c_demo_irs",
+     "ts": 45.0,
+     "data": {
+      "action_id": "act_1",
+      "kind": "number_block_network",
+      "target": "+15555550142",
+      "status": "queued",
+      "simulated": true
+     }
+    },
+    {
+     "type": "campaign.updated",
+     "call_id": "c_demo_irs",
+     "ts": 45.5,
+     "data": {
+      "campaign_id": "camp_irs_01",
+      "indicators": [
+       "irs-refund-desk.example",
+       "+15555550177"
+      ],
+      "numbers": [
+       "+15555550142"
+      ]
+     }
+    },
+    {
+     "type": "call.ended",
+     "call_id": "c_demo_irs",
+     "ts": 60.0,
+     "data": {
+      "ended_by": "caller",
+      "duration_s": 60.0
+     }
+    },
+    {
+     "type": "blocklist.updated",
+     "call_id": "c_demo_irs",
+     "ts": 60.2,
+     "data": {
+      "number": "+15555550142",
+      "scope": "her",
+      "undo_token": "undo_c_demo_irs"
+     }
+    },
+    {
+     "type": "voice.enrolled",
+     "call_id": "c_onboard",
+     "ts": -60.0,
+     "data": {
+      "voice_id": "v_demo_maria",
+      "consent_version": "v1"
+     }
+    },
+    {
+     "type": "voice.deleted",
+     "call_id": "c_onboard",
+     "ts": -30.0,
+     "data": {
+      "voice_id": "v_demo_maria"
+     }
+    }
+   ]
+  },
+  {
+   "call_id": "c_demo_bank",
+   "title": "Legit bank fraud-department call, no alert (+ restore example)",
+   "events": [
+    {
+     "type": "call.incoming",
+     "call_id": "c_demo_bank",
+     "ts": 0.0,
+     "data": {
+      "from": "+15555550188",
+      "to": "+15555550100",
+      "attestation": "A",
+      "scam_id_score": 0.05
+     }
+    },
+    {
+     "type": "call.routed",
+     "call_id": "c_demo_bank",
+     "ts": 0.1,
+     "data": {
+      "decision": "LIVE_GUARD",
+      "reason": "Not in her trusted list"
+     }
+    },
+    {
+     "type": "call.answered",
+     "call_id": "c_demo_bank",
+     "ts": 2.5,
+     "data": {
+      "by": "maria"
+     }
+    },
+    {
+     "type": "transcript.caller",
+     "call_id": "c_demo_bank",
+     "ts": 6.0,
+     "data": {
+      "utterance_id": "u1",
+      "text": "Hi, this is the fraud department at your bank. We saw a charge and want to confirm it was you. I will not ask for any codes.",
+      "is_final": true
+     }
+    },
+    {
+     "type": "risk.update",
+     "call_id": "c_demo_bank",
+     "ts": 6.6,
+     "data": {
+      "s": 0.18,
+      "band": "low",
+      "asks": [],
+      "scam_type": "legit_bank_fraud",
+      "stage": "opening",
+      "impersonates": "bank",
+      "addresses_ai_system": false,
+      "why_chips": [
+       "Verified business number",
+       "No payment ask"
+      ],
+      "engine": "cloud"
+     }
+    },
+    {
+     "type": "transcript.caller",
+     "call_id": "c_demo_bank",
+     "ts": 14.0,
+     "data": {
+      "utterance_id": "u2",
+      "text": "If you are unsure, hang up and call the number on the back of your card.",
+      "is_final": true
+     }
+    },
+    {
+     "type": "risk.update",
+     "call_id": "c_demo_bank",
+     "ts": 14.5,
+     "data": {
+      "s": 0.1,
+      "band": "low",
+      "asks": [],
+      "scam_type": "legit_bank_fraud",
+      "stage": "closing",
+      "impersonates": "bank",
+      "addresses_ai_system": false,
+      "why_chips": [
+       "Offers to hang up and call back"
+      ],
+      "engine": "cloud"
+     }
+    },
+    {
+     "type": "handoff.restored",
+     "call_id": "c_demo_bank",
+     "ts": 30.0,
+     "data": {
+      "restore_deadline": 35.0
+     }
+    },
+    {
+     "type": "call.ended",
+     "call_id": "c_demo_bank",
+     "ts": 45.0,
+     "data": {
+      "ended_by": "caller",
+      "duration_s": 45.0
+     }
+    }
+   ]
+  },
+  {
+   "call_id": "c_demo_crypto",
+   "title": "Crypto scam -> alert -> hang up",
+   "events": [
+    {
+     "type": "call.incoming",
+     "call_id": "c_demo_crypto",
+     "ts": 0.0,
+     "data": {
+      "from": "+15555550163",
+      "to": "+15555550100",
+      "attestation": "none",
+      "scam_id_score": 0.62
+     }
+    },
+    {
+     "type": "call.routed",
+     "call_id": "c_demo_crypto",
+     "ts": 0.2,
+     "data": {
+      "decision": "LIVE_GUARD",
+      "reason": "Caller ID not verified"
+     }
+    },
+    {
+     "type": "call.answered",
+     "call_id": "c_demo_crypto",
+     "ts": 3.0,
+     "data": {
+      "by": "maria"
+     }
+    },
+    {
+     "type": "transcript.caller",
+     "call_id": "c_demo_crypto",
+     "ts": 7.0,
+     "data": {
+      "utterance_id": "u1",
+      "text": "I am from the Coinbase security team. Your account was hacked, you need to move funds to a safe wallet now.",
+      "is_final": false
+     }
+    },
+    {
+     "type": "risk.update",
+     "call_id": "c_demo_crypto",
+     "ts": 8.0,
+     "data": {
+      "s": 0.88,
+      "band": "high",
+      "asks": [
+       "crypto",
+       "remote_app"
+      ],
+      "scam_type": "crypto_recovery",
+      "stage": "pressure",
+      "impersonates": "Coinbase",
+      "addresses_ai_system": false,
+      "why_chips": [
+       "Asks to move crypto",
+       "Remote app request",
+       "Claims to be Coinbase"
+      ],
+      "engine": "cloud"
+     }
+    },
+    {
+     "type": "alert.fired",
+     "call_id": "c_demo_crypto",
+     "ts": 8.2,
+     "data": {
+      "level": "first",
+      "why_chips": [
+       "Asks to move crypto",
+       "Remote app request",
+       "Claims to be Coinbase"
+      ]
+     }
+    },
+    {
+     "type": "user.action",
+     "call_id": "c_demo_crypto",
+     "ts": 12.0,
+     "data": {
+      "action": "hang_up"
+     }
+    },
+    {
+     "type": "call.ended",
+     "call_id": "c_demo_crypto",
+     "ts": 12.5,
+     "data": {
+      "ended_by": "maria",
+      "duration_s": 12.5
+     }
+    },
+    {
+     "type": "injection.denied",
+     "call_id": "c_demo_crypto",
+     "ts": 13.0,
+     "data": {
+      "attempted_target": "+15555550199",
+      "reason": "Untrusted value, no corroboration, human approval required"
+     }
+    },
+    {
+     "type": "guardrail.tripped",
+     "call_id": "c_demo_crypto",
+     "ts": 14.0,
+     "data": {
+      "rule": "decoy_no_real_data"
+     }
+    }
+   ]
+  }
+ ]
+}

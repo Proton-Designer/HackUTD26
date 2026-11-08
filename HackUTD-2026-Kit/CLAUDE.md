@@ -71,8 +71,9 @@ For idea choice, scope cuts, architecture and pitch structure, say "We choose X 
 - Never invent facts, user stories, quotes or numbers. Use placeholders the team must fill.
 
 ## 6. Event specifics (TEAM FILLS from separate research; max ~300 tokens; blank = unknown)
-- H0 clock time: ____  Hacking ends: ____  Judging window: ____
-- Devpost registration: ____ (past: Sat 11:00 PM)  Final submit: ____ (past: Sun 12:00 PM) [Seed: A, §A2]
-- Minutes per visit: ____  Finalists: Y/N, ____ min  Theme: ____
-- Sponsor tracks (name | wants | judge | prize): ____
-- MLH prizes in play: ____
+- H0 clock time: Sat Nov 7, 12:00 PM CT  Hacking ends: Sun 12:00 PM (assumed = final submit; not published)  Judging window: Sun 1:00-4:00 PM, ECSW + ECSS (site); info desk says a big lecture hall, room/table TBD
+- Devpost registration: Sat 11:00 PM (initial)  Final submit: Sun 12:00 PM (we submit 11:30) [zeroday.hackutd.co]
+- Minutes per visit: about 4 total (info desk confirmed the total only; the 2 demo / 1 Q&A / 1 travel split is the kit's estimate from past HackUTD events)  Finalists: none, one judging round (info desk, 00:20)  Theme: Zero Day
+- Closing: Sun 5:00-6:00 PM, ATEC Auditorium
+- Sponsor tracks (name | wants | judge | prize): T-Mobile Safe Signal | protect customers before/during/after, beyond classification, honest confidence, privacy by design, synthetic data only | creativity, impact, usability, security+privacy, detection quality | prize TBD (ask booth) ;; NVIDIA | Nemotron beyond a chatbot: multi-step agents, tool integration, real-world use | 1st: 2x RTX 5080 + $200 Brev; 2nd: 1x RTX 5080 + $200 Brev + swag
+- MLH prizes in play: ____ (check Devpost prize list)

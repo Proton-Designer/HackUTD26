@@ -1,0 +1,1 @@
+["Hi, this is the fraud department at your bank. We saw a charge and want to confirm it was you. I will not ask for any codes.", "If you are unsure, hang up and call the number on the back of your card."]

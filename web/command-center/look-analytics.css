@@ -1,0 +1,240 @@
+/*
+ * Optional light look for the command center (opt-in: ?look=analytics).
+ * After the layout language of Andika Wiraputra's "Sales Analytics Dashboard" on Dribbble
+ * (dribbble.com/shots/26811370): soft color wash, big white rounded cards, one near-black pill,
+ * hatched bar columns with one highlighted bar, a segmented half-gauge, pastel status chips.
+ * Brand swap: the shot's black focal bar becomes T-Mobile magenta. Same rules as styles.css:
+ * meaning never by color alone, 4.5:1 text contrast, band words instead of percentages.
+ * Loaded after styles.css; it only overrides tokens and surfaces, never markup or behavior.
+ */
+@property --p { syntax: '<number>'; inherits: true; initial-value: 0; }
+
+:root.look-analytics {
+  --bg: #f2f3f5;
+  --surface: #ffffff;
+  --surface-2: #f5f6f8;
+  --line: #e7e9ed;
+  --text: #121417;
+  --text-2: #4a515c;          /* 8.3:1 on white */
+  --text-3: #687080;          /* 4.9:1 on white, 4.6:1 on --surface-2 */
+  --accent: #e20074;          /* 4.9:1 on white */
+  --accent-text: #c4006a;
+  --accent-tint: rgba(226, 0, 116, 0.08);
+  --decoy: #7a3cff;
+  --decoy-text: #5b21d6;
+  --decoy-tint: rgba(122, 60, 255, 0.09);
+  --danger: #e0313f;
+  --danger-text: #c01f2e;
+  --danger-tint: rgba(224, 49, 63, 0.09);
+  --ok: #16a34a;
+  --ok-text: #15803d;
+  --warn: #b45309;            /* amber text has to be dark on white: 5.0:1 */
+  --warn-tint: rgba(245, 158, 11, 0.14);
+  --nv: #4d7c0f;              /* NVIDIA green, darkened for white */
+  --map-victim: #7d8ff0;
+  --map-edge: #cfd4dc;
+  --map-cash: #f59e0b;
+  --radius: 20px;
+  --ink: #111214;             /* the shot's black pill */
+  --shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 6px 20px rgba(16, 24, 40, 0.05);
+  color-scheme: light;
+}
+
+/* ---------- page: color wash, one floating frame ---------- */
+.look-analytics body {
+  background:
+    radial-gradient(900px 520px at -5% -10%, rgba(254, 46, 137, 0.16), transparent 60%),
+    radial-gradient(900px 620px at 105% 0%, rgba(34, 197, 94, 0.13), transparent 60%),
+    radial-gradient(800px 500px at 50% 120%, rgba(122, 60, 255, 0.07), transparent 60%),
+    #eef0f2;
+}
+.look-analytics .app {
+  height: calc(100vh - 24px); margin: 12px;
+  padding: var(--s4) var(--s5) var(--s3);
+  border-radius: 28px;
+  background: rgba(248, 249, 250, 0.82);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.9), 0 24px 60px rgba(16, 24, 40, 0.10);
+  backdrop-filter: blur(18px);
+}
+
+/* ---------- header: black-circle logo + dark wordmark, black pill for the current view ---------- */
+.look-analytics .logo-flame {
+  height: 36px; width: 36px; padding: 7px 9px; object-fit: contain;
+  background: var(--ink); border-radius: 50%; box-shadow: 0 4px 10px rgba(17, 18, 20, 0.25);
+}
+.look-analytics .logo-word { filter: invert(1); height: 18px; margin-left: 4px; }
+.look-analytics .idle-brand img { filter: invert(1) hue-rotate(180deg); }
+.look-analytics .views { background: #fff; border-radius: 999px; padding: 4px; box-shadow: inset 0 0 0 1px var(--line), var(--shadow); }
+.look-analytics .views button { border-radius: 999px; padding: 6px 18px; }
+.look-analytics .views button[aria-selected="true"] {
+  background: linear-gradient(180deg, #2c2f35, var(--ink)); color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 4px 12px rgba(17, 18, 20, 0.25);
+}
+.look-analytics .views button:focus-visible, .look-analytics .follow:focus-visible { outline-color: var(--accent); }
+.look-analytics .pill { background: #fff; text-transform: none; letter-spacing: 0; font-weight: 700; }
+.look-analytics .pill.sim { color: var(--warn); background: #fff6e6; border-color: #f8dcaa; }
+.look-analytics .engine, .look-analytics .source { background: #fff; border-radius: 999px; box-shadow: inset 0 0 0 1px var(--line); }
+.look-analytics .follow { border-radius: 999px; background: #fff; }
+
+/* ---------- cards ---------- */
+.look-analytics .panel, .look-analytics .campaign, .look-analytics .hero-main {
+  background: var(--surface); border-radius: var(--radius); box-shadow: inset 0 0 0 1px #eceef1, var(--shadow);
+}
+.look-analytics .panel h2 {
+  align-items: center; padding-top: var(--s4);
+  font-size: var(--f16); letter-spacing: -0.01em; text-transform: none; color: var(--text);
+}
+.look-analytics .panel h2 > span::before {
+  content: ""; display: inline-block; vertical-align: middle; margin: -4px 10px -2px 0;
+  width: 30px; height: 30px; border-radius: 50%;
+  background: #fff var(--ico, none) center / 16px no-repeat; box-shadow: inset 0 0 0 1px var(--line);
+}
+.look-analytics #p-risk      { --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23121417' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M22 12h-4l-3 9L9 3l-3 9H2'/%3E%3C/svg%3E"); }
+.look-analytics #p-feed      { --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23121417' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z'/%3E%3C/svg%3E"); }
+.look-analytics #p-artifacts { --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23121417' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E"); }
+.look-analytics #p-pipeline  { --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23121417' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='6' height='6' rx='1'/%3E%3Crect x='15' y='15' width='6' height='6' rx='1'/%3E%3Cpath d='M6 9v3a3 3 0 0 0 3 3h6'/%3E%3C/svg%3E"); }
+.look-analytics #p-trace     { --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23121417' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01'/%3E%3C/svg%3E"); }
+.look-analytics #p-queue     { --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23121417' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='m8.5 12 2.5 2.5 4.5-5'/%3E%3C/svg%3E"); }
+.look-analytics #p-auto, .look-analytics #p-payoff { --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23121417' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M13 2 4 14h7l-1 8 9-12h-7l1-8z'/%3E%3C/svg%3E"); }
+.look-analytics #p-denied    { --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23121417' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='m5.7 5.7 12.6 12.6'/%3E%3C/svg%3E"); }
+
+.look-analytics #p-map       { --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23121417' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='6' cy='19' r='3'/%3E%3Ccircle cx='18' cy='5' r='3'/%3E%3Cpath d='M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15'/%3E%3C/svg%3E"); }
+/* money trail: the shot's KPI tiles, with the delta-style chip */
+.look-analytics .mt-tile { background: #fff; border-radius: 14px; box-shadow: inset 0 0 0 1px var(--line); padding: 10px 14px; }
+.look-analytics .mt-tile .mt-chip { padding: 1px 8px; border-radius: 999px; background: var(--surface-2); }
+.look-analytics .mt-tile.held { background: linear-gradient(180deg, #ebf8f0, #fff 70%); box-shadow: inset 0 0 0 1px rgba(22, 163, 74, 0.3); }
+.look-analytics .mt-tile.held .mt-chip { background: var(--ok); color: #fff; }
+.look-analytics .mt-tile.pending { background: linear-gradient(180deg, #ffeef6, #fff 70%); box-shadow: inset 0 0 0 1px rgba(226, 0, 116, 0.3); }
+.look-analytics .mt-tile.pending .mt-chip { background: var(--accent-tint); }
+
+/* ---------- hero: the "Total Profit Overview" card ---------- */
+.look-analytics .hero-main { background: linear-gradient(120deg, #fff0f6 0%, #ffffff 45%, #effaf3 100%); border-left: 0; }
+.look-analytics .hero.alert .hero-main { background: linear-gradient(120deg, #ffe1ef 0%, #ffffff 60%); box-shadow: inset 0 0 0 1.5px rgba(226, 0, 116, 0.35), var(--shadow); }
+.look-analytics .hero.win .hero-main { background: linear-gradient(120deg, #def5e6 0%, #ffffff 60%); box-shadow: inset 0 0 0 1.5px rgba(22, 163, 74, 0.35), var(--shadow); }
+.look-analytics .headline { letter-spacing: -0.02em; }
+.look-analytics .headline em { color: var(--accent-text); }
+
+/* the 5-step rail as the shot's bar columns: hatched = not yet, white = done, magenta = now */
+.look-analytics .rail { gap: 2px var(--s2); }
+.look-analytics .rail .phase { border-bottom: 0; }
+.look-analytics .rail .step {
+  border-radius: 14px; padding: 10px 12px 9px; min-height: 58px; color: var(--text-3);
+  background: repeating-linear-gradient(135deg, #eef0f3 0 5px, #f9fafb 5px 10px);
+  box-shadow: inset 0 0 0 1px #e9ebef;
+}
+.look-analytics .rail .step.done { background: #fff; color: var(--text); box-shadow: inset 0 0 0 1px #e9ebef, var(--shadow); }
+.look-analytics .rail .step.done b::before {
+  content: "✓"; display: inline-grid; place-items: center; width: 18px; height: 18px; margin-right: 6px; vertical-align: 1px;
+  border-radius: 50%; background: var(--ok); color: #fff; font-size: 11px; letter-spacing: 0;
+}
+.look-analytics .rail .step.now {
+  color: #fff;
+  background: repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0 6px, transparent 6px 12px), linear-gradient(180deg, #f0168a, #c4006a);
+  box-shadow: 0 10px 22px rgba(226, 0, 116, 0.32);
+}
+.look-analytics .app[data-view="story"] .rail .step.showing { box-shadow: inset 0 0 0 2px var(--ink), var(--shadow); }
+.look-analytics .app[data-view="story"] .rail .step.now.showing { box-shadow: inset 0 0 0 2px #fff, 0 10px 22px rgba(226, 0, 116, 0.32); }
+
+/* campaign: the "Sales Number / Total Revenue" tiles, deltas as green chips */
+.look-analytics .campaign .big { letter-spacing: -0.02em; }
+.look-analytics .campaign .delta { display: inline-block; margin-top: 4px; padding: 1px 8px; border-radius: 999px; background: var(--ok); color: #fff; font-size: var(--f12); }
+.look-analytics .status-tag { border-radius: 999px; padding: 1px 10px; background: #fff6e6; color: var(--warn); }
+.look-analytics .status-tag.confirmed { background: #e8f6ed; color: var(--ok-text); box-shadow: none; }
+
+/* ---------- risk: the "Sales Performance" half-gauge, with a band word instead of a percentage ---------- */
+.look-analytics .app .risk { display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; gap: var(--s3) var(--s5); transition: --p 0.9s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.look-analytics .score { align-items: center; text-align: center; min-width: 0; flex: 0 0 auto; }
+.look-analytics .risk-right { flex: 1 1 200px; }
+.look-analytics .meter { display: none; }
+.look-analytics .gauge {
+  --g: #c9ced6;
+  --deg: round(calc(var(--p) * 1.8deg), 10deg);
+  display: block; width: calc(var(--f20) * 13); aspect-ratio: 2 / 1;
+  background: conic-gradient(from -89.2deg at 50% 100%, var(--g) 0deg var(--deg), #e9ebef var(--deg) 180deg, transparent 180deg);
+  mask: radial-gradient(circle farthest-side at 50% 100%, transparent 61.5%, #000 62%, #000 99.3%, transparent 100%),
+        repeating-conic-gradient(from -89.2deg at 50% 100%, #000 0deg 8.4deg, transparent 8.4deg 10deg);
+  mask-composite: intersect;
+}
+.look-analytics .risk.cool .gauge { --g: var(--ok); }
+.look-analytics .risk.warm .gauge { --g: #f59e0b; }
+.look-analytics .risk.hot .gauge { --g: var(--danger); }
+.look-analytics .score .band { font-size: var(--f20); line-height: 1.1; margin-top: calc(var(--f20) * -1.45); }
+.look-analytics .score .num { margin-top: 6px; }
+.look-analytics .alert-tag { border-radius: 999px; padding: 2px 10px; }
+.look-analytics .chip { background: #fff; box-shadow: inset 0 0 0 1px var(--line); }
+.look-analytics .chip.ai { background: #fff6e6; box-shadow: inset 0 0 0 1px #f8dcaa; }
+
+/* ---------- call feed ---------- */
+.look-analytics .line .txt { border-radius: 16px; background: var(--surface-2); }
+.look-analytics .line.decoy .txt { background: var(--decoy-tint); }
+
+/* ---------- lists: the "Recent Transaction" table feel, pastel status chips ---------- */
+.look-analytics .art { background: #fff; border-radius: 14px; border-left: 0; box-shadow: inset 0 0 0 1px var(--line); }
+.look-analytics .art.hit { background: linear-gradient(180deg, #fff3f4, #fff 55%); box-shadow: inset 0 0 0 1px rgba(224, 49, 63, 0.35); }
+.look-analytics .art.conflict { background: linear-gradient(180deg, #fff8ea, #fff 55%); box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.4); }
+.look-analytics .act { background: #fff; border-radius: 16px; box-shadow: inset 0 0 0 1px var(--line); }
+.look-analytics .act .bub { border-radius: 50%; background: var(--surface-2); }
+.look-analytics .act .bub.shield, .look-analytics .act .bub.money { background: #e3f5e9; }
+.look-analytics .act .bub.net { background: #e6efff; }
+.look-analytics .act.money { background: linear-gradient(90deg, #ebf8f0, #fff 60%); box-shadow: inset 0 0 0 1px rgba(22, 163, 74, 0.35); }
+.look-analytics .act.reject { background: linear-gradient(90deg, #ffe8f2, #fff 60%); box-shadow: inset 0 0 0 1px rgba(226, 0, 116, 0.3); }
+.look-analytics .applied { justify-self: end; padding: 4px 12px; border-radius: 999px; background: #e8f6ed; text-align: center; }
+.look-analytics .btn-approve { border-radius: 999px; border-width: 1.5px; border-color: #d5d9df; background: #fff; }
+.look-analytics .btn-approve.primary { background: linear-gradient(180deg, #f0168a, #d1006c); border-color: transparent; color: #fff; box-shadow: 0 8px 18px rgba(226, 0, 116, 0.3); }
+.look-analytics .btn-approve:focus-visible { outline-color: var(--ink); }
+.look-analytics .den .tag { border-radius: 999px; padding: 0 8px; background: #fdecee; color: var(--danger-text); }
+.look-analytics .den.poisoning .tag { background: #fff6e6; color: var(--warn); box-shadow: none; }
+.look-analytics .pn { background: #fff; border-radius: 14px; box-shadow: inset 0 0 0 1px var(--line); }
+.look-analytics .pn.now { box-shadow: inset 0 0 0 2px var(--accent), 0 6px 16px rgba(226, 0, 116, 0.18); }
+.look-analytics .pout span { border-radius: 999px; padding: 3px 10px; }
+.look-analytics .pout .ok { background: #e8f6ed; }
+.look-analytics .pout .wait { background: #fff6e6; }
+.look-analytics .pout .no { background: #fdecee; }
+
+/* ---------- footer ---------- */
+.look-analytics .privacy { background: #fff; border-radius: 999px; padding: 5px 14px 5px 6px; box-shadow: inset 0 0 0 1px var(--line); }
+.look-analytics .tl-btn { background: #fff; border-radius: 999px; box-shadow: inset 0 0 0 1px var(--line); }
+.look-analytics .tl-fill { background: var(--ink); }
+
+/* motion: the arrival flash has to be visible on white */
+.look-analytics .fresh { animation-name: arrive-light; }
+.look-analytics .line.fresh { border-radius: 14px; }
+.look-analytics .act.fresh { animation-name: drop; }
+@keyframes arrive-light { from { background-color: rgba(226, 0, 116, 0.10); } }
+
+/* the "Everything" view packs the risk card into a narrow column: smaller gauge and band word */
+.look-analytics .app[data-view="all"] .gauge { width: calc(var(--f20) * 10.5); }
+.look-analytics .app[data-view="all"] .score .band { font-size: var(--f16); margin-top: calc(var(--f16) * -1.4); }
+
+@media (max-width: 960px) {
+  .look-analytics .app { height: auto; min-height: calc(100vh - 24px); }
+}
+@media (max-width: 560px) {
+  .look-analytics .app { margin: 0; border-radius: 0; padding: var(--s3) var(--s4); }
+}
+
+/* ---------- Capital One co-brand (?brand=capitalone): navy replaces T-Mobile magenta; red stays for danger ---------- */
+:root.look-analytics.brand-c1 {
+  --accent: #004977;          /* Capital One navy, 9.6:1 on white */
+  --accent-text: #004977;
+  --accent-tint: rgba(0, 73, 119, 0.08);
+}
+.brand-c1.look-analytics body {
+  background:
+    radial-gradient(900px 520px at -5% -10%, rgba(0, 73, 119, 0.14), transparent 60%),
+    radial-gradient(900px 620px at 105% 0%, rgba(208, 48, 39, 0.08), transparent 60%),
+    #eef1f4;
+}
+.brand-c1.look-analytics .logo-flame { background: #004977; }
+.brand-c1.look-analytics .hero-main { background: linear-gradient(120deg, #eaf2f9 0%, #ffffff 45%, #effaf3 100%); }
+.brand-c1.look-analytics .hero.alert .hero-main { background: linear-gradient(120deg, #dde9f4 0%, #ffffff 60%); box-shadow: inset 0 0 0 1.5px rgba(0, 73, 119, 0.35), var(--shadow); }
+.brand-c1.look-analytics .rail .step.now {
+  background: repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0 6px, transparent 6px 12px), linear-gradient(180deg, #0a5f93, #00365a);
+  box-shadow: 0 10px 22px rgba(0, 73, 119, 0.32);
+}
+.brand-c1.look-analytics .app[data-view="story"] .rail .step.now.showing { box-shadow: inset 0 0 0 2px #fff, 0 10px 22px rgba(0, 73, 119, 0.32); }
+.brand-c1.look-analytics .mt-tile.pending { background: linear-gradient(180deg, #eaf2f9, #fff 70%); box-shadow: inset 0 0 0 1px rgba(0, 73, 119, 0.3); }
+.brand-c1 .po-btn { background: linear-gradient(180deg, #0a5f93, #004977); box-shadow: 0 6px 18px rgba(0, 73, 119, 0.3); }
+.look-analytics .mt-tile.flagged { background: linear-gradient(180deg, #fdecee, #fff 70%); box-shadow: inset 0 0 0 1px rgba(224, 49, 63, 0.35); }
+.look-analytics .mt-tile.flagged .mt-chip { background: var(--danger); color: #fff; }
+.look-analytics .mt-svg .mt-name.mt-flagged { fill: var(--danger-text); }
