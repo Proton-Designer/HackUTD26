@@ -33,6 +33,34 @@ Risk H: only slow speech pushes it past 20 s; the alert point is the code ask, n
 Prototype fix (NOT pushed): rule floor 0.60 (the "watch" band, not an alert) on "your bank / fraud team" + "suspicious/unauthorized charge". Offline text check over 160 rows (data/eval/scripts + extra_rows + heldout_v2): 0 of 74 benign rows match, 1 of 86 scam rows match, so it buys nothing on the sets and could not be scored properly (no held-out bank-notice rows). It would turn a legitimate "suspicious charge" call into a yellow band. Not recommended; full run_eval/hardneg was not run for it.
 Not done: one run each, TTS voice is one voice (Mia), no real judge voices or accents, no Riva-vs-whisper split, LLM not re-run for the fix.
 
+### TASK-095 repeat: demo card x 3 runs x 2 voices, and the final v3 bank cards
+Alert = seconds after the judge's first word; HEAD b2eb56f, same method (scratch P2 :8104, local engine, hub dead). Runs differ in noise seed only (TTS audio is cached, so the range is small).
+
+| Card | Voice | Runs (s) | Median | Fires on |
+|---|---|---|---|---|
+| Trimmed demo card (pitch/script.md, 3 lines) | Mia | 7.4 / 7.4 / 7.3 | 7.4 | line 1 |
+| Trimmed demo card | Jason | 9.4 / 9.5 / 9.4 | 9.4 | line 1 |
+| Full Card 2 verbatim (7 lines) | Mia | 19.8 / 19.7 / 19.7 | 19.7 | line 3 (code ask) |
+| Full Card 2 verbatim | Jason | 21.8 / 21.7 / 21.7 | 21.7 | line 3 |
+| Card 2 with the code ask moved to line 2 | Mia | 12.7 / 12.7 / 12.7 | 12.7 | line 2 (7 s earlier than the original order) |
+
+Final judge cards `data/script-cards-v3-bank.md` (e95611f, 10 cards, 5 lines + payment step each), voice Mia, 1 run each:
+
+| Card | Alert | Line fired | Note |
+|---|---|---|---|
+| 1 Safe account | 15.1 | 3 (code ask) | |
+| 2 Zelle reversal | 14.5 | 3 | |
+| 3 Deposit sent by mistake | **42.3** | 6 = payment step | RISK: no code/secrecy ask before payment |
+| 4 New device login | 14.1 | 3 | |
+| 5 Inside job | 21.5 | 5 ("move $1,800") | slightly over 20 s |
+| 6 Screen share | 10.6 | 2 | |
+| 7 Bounced check | 21.9 | 5 ("Pay it now") | slightly over 20 s |
+| 8 Bank plus police | 17.9 | 4 | |
+| 9 Pre-approved loan | **28.7** | 6 = payment step | RISK: line 5 "don't mention at the branch" did not fire |
+| 10 Account verification | 16.8 | 4 | |
+
+Range 10.6-42.3 s, median 17.4 s; every card alerts (no silent card); 3 and 9 alert only at the payment step. Suggested one-line edits (UNTESTED, card owner decides; prefer the lines that fire on other cards): card 3 line 3 -> "I'm texting you a six-digit code to freeze it, read it to me."; card 9 line 3 -> "...fee of $1,800, sent by Zelle before we release the funds, and don't tell the branch."; cards 5 and 7: add "read me the six-digit code" to line 3. Not done: 2nd voice for v3 cards (shared NVIDIA key saturated, lead said one voice), edited cards not re-run, 1 run per card.
+
 ## Not covered
 - Hub fallback detector (server/fallback_detect.py) takes caller transcripts from voip/Telnyx transcription, which this private stack does not have, so drill 4 does not show it covering a dead P2 (covered by server/tests/test_fallback.py only).
 - Real 429 responses from NVIDIA, real Cloudflare tunnel churn, a hub restart under a real PSTN call, a P1 relay that reconnects after P2 dies.
