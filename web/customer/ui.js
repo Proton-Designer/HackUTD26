@@ -78,7 +78,7 @@
       state.blocked.push({ number: d.number, reason: "Caught after Scammer Get Scammed", undo_token: d.undo_token });
     if (ev.type === "call.ended") state.calls++;
     if ((ev.type === "blocklist.updated" || ev.type === "call.ended") && !$("protView").hidden) setTimeout(renderProtection, 0);   // live update while she is looking at the log
-    if (ev.type === "voice.enrolled") { state.voiceId = d.voice_id; store.set("voice", d.voice_id); }
+    if (ev.type === "voice.enrolled" && d.voice_id) { state.voiceId = d.voice_id; store.set("voice", d.voice_id); }
     if (ev.type === "voice.deleted") { state.voiceId = null; store.set("voice", null); }
   };
 
@@ -153,9 +153,13 @@
     $("recStatus").textContent = "Saving…"; $("recSave").disabled = true;
     try {
       let voice_id;
-      if (HUB) voice_id = (await hub("POST", "/voice/enroll", { recording: await b64(b), mime: (b.type || "audio/webm").split(";")[0], consent_version: CONSENT_VERSION })).voice_id;
+      if (HUB) { const r = await hub("POST", "/voice/enroll", { recording: await b64(b), mime: (b.type || "audio/webm").split(";")[0], consent_version: CONSENT_VERSION }); voice_id = r && r.voice_id; }
       else voice_id = "v_simulated_" + Math.random().toString(36).slice(2, 8);   // no hub configured: simulated
-      if (!voice_id) throw new Error("no voice_id");
+      if (!voice_id) {                                      // {voice_id:null, fallback:"synthetic"}: the voice service is not connected. Never claim she is enrolled.
+        state.voiceId = null; store.set("voice", null);
+        toDns("Your voice wasn't saved; Backfire will use a synthetic voice. You can try again later in Protection.");
+        return;
+      }
       state.voiceId = voice_id; store.set("voice", voice_id);
       toDns("Your voice is saved" + (HUB ? "" : " (simulated)") + ". Backfire is on. You can delete your voice any time in Protection.");
     } catch (e) { console.log("[backfire] enroll failed", String(e)); $("recStatus").textContent = "That didn't save. Press Save again, or record again."; $("recSave").disabled = false; }
