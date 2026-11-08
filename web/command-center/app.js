@@ -47,6 +47,10 @@
   // Contract bands as words, never a bare percentage ("honest confidence")
   const BAND = { low: 'Low risk', watch: 'Watch', high: 'Likely scam', critical: 'Scam' };
   const ASK_PHRASE = { otp: 'a one-time code', card: 'a card number', ssn: 'a Social Security number', gift_card: 'gift cards', crypto: 'crypto', wire: 'a wire transfer', p2p: 'a P2P payment', remote_app: 'remote access to the phone', secrecy: 'secrecy' };
+  // An alert stays an alert while P2 reports a high/critical band, even when it holds s lower (#103)
+  const isHot = r => !!r && (r.s >= 0.8 || ['high', 'critical'].includes(String(r.band || '').toLowerCase()));
+  // What the gauge shows: the score, or the call's peak while the alert is held
+  const shownPct = r => pct(isHot(r) ? Math.max(r.s, r.peak || 0) : r.s);
   const bandWord = r => BAND[String(r.band || '').toLowerCase()] || (r.s >= 0.95 ? 'Scam' : r.s >= 0.8 ? 'Likely scam' : r.s >= 0.4 ? 'Watch' : 'Low risk');
   // STIR/SHAKEN level in T-Mobile's words
   const ATTEST = { A: 'Caller Verified', B: 'caller ID partly verified', C: 'caller ID not verified', NONE: 'no caller ID check' };
@@ -444,14 +448,15 @@
     'risk.update'(e, d, c) {
       focusOn(c);
       const prev = c.risk;
-      c.risk = { s: num(d.s) || 0, band: d.band || '', asks: arr(d.asks), type: d.scam_type || '', stage: d.stage || '', imp: d.impersonates || '', ai: !!d.addresses_ai_system, why: arr(d.why_chips), prevPct: prev ? pct(prev.s) : 0 };
+      c.risk = { s: num(d.s) || 0, band: d.band || '', asks: arr(d.asks), type: d.scam_type || '', stage: d.stage || '', imp: d.impersonates || '', ai: !!d.addresses_ai_system, why: arr(d.why_chips), prevPct: prev ? shownPct(prev) : 0 };
+      if (isHot(c.risk)) c.risk.peak = Math.max(prev && prev.peak || 0, c.risk.s);
       if (d.engine) S.engine = String(d.engine).toLowerCase();
       if (d.model) S.model = String(d.model);
       const p = pct(c.risk.s);
       const word = bandWord(c.risk);
       if (c.risk.s >= 0.5) stage('detect', word.toLowerCase());
       if (!c.handoff && !S.stage.extract) {
-        if (c.risk.s >= 0.8) {
+        if (isHot(c.risk)) {
           // Lead with what he asked for, in plain words; the score stays small in the Risk panel
           const ask = c.risk.asks.find(a => a !== 'secrecy') || c.risk.asks[0];
           const what = ask ? `he's asking for ${ASK_PHRASE[ask] || humanize(ask)}` : c.risk.why[0] ? lcFirst(c.risk.why[0]) : 'scam pattern';
@@ -868,7 +873,7 @@
       const el = $('engine');
       if (!el) return; // engine and source pills are off the screen
       const model = S.model;
-      if (S.engine === 'local') { el.className = 'engine local'; el.innerHTML = `<b>LOCAL</b><span>${esc(model || 'Nemotron Nano 4B')} · laptop GPU, stands in for the phone</span>`; }
+      if (S.engine === 'local') { el.className = 'engine local'; el.innerHTML = `<b>LOCAL</b><span>${esc(model || 'Nemotron Nano 4B')} · our server, laptop GPU</span>`; }
       else if (S.engine === 'cloud') { el.className = 'engine cloud'; el.innerHTML = `<b>CLOUD</b><span>${esc(model || 'Nemotron')} · NVIDIA-hosted</span>`; }
       else { el.className = 'engine'; el.innerHTML = '<b>ENGINE</b><span>waiting for detector</span>'; }
       renderSource();
@@ -1034,8 +1039,11 @@
           + '<div class="risk-right"><div class="meter"><i></i></div><div class="meta">Only the caller\'s words are scored, never the customer\'s</div></div></div>';
         return;
       }
-      const p = pct(r.s);
-      const tone = r.s >= 0.8 ? 'hot' : r.s >= 0.4 ? 'warm' : 'cool';
+      const p = shownPct(r);
+      const tone = isHot(r) ? 'hot' : r.s >= 0.4 ? 'warm' : 'cool';
+      // P2 holds s at 0.60 after a hard-ask alert (so the customer isn't restored into a scam) while the band stays
+      // high/critical: that is a hold, not a measurement, so the score number is replaced by "alert held".
+      const held = isHot(r) && r.s < 0.8;
       const meta = [cap(humanize(r.type)), r.stage ? `stage: ${humanize(r.stage)}` : '', r.imp ? `impersonates ${r.imp}` : ''].filter(Boolean).join(' · ');
       const aiInWhy = r.why.some(w => /\bAI\b/.test(w));
       const chips = r.why.map(w => `<span class="chip">${esc(w)}</span>`).join('')
@@ -1043,7 +1051,7 @@
       const asks = r.asks.length ? `<div class="asks">Asks for ${r.asks.map(a => `<b>${esc(ASK[a] || humanize(a))}</b>`).join(' · ')}</div>` : '';
       // --p drives the half-gauge in the analytics look (look-analytics.css); the default look ignores it
       body.innerHTML = `<div class="risk ${tone}" style="--p:${r.prevPct}">`
-        + `<div class="score"><div class="gauge" aria-hidden="true"></div><span class="band">${tone === 'hot' ? '⚠ ' : ''}${esc(bandWord(r))}</span><span class="num">detector score ${r.s.toFixed(2)}</span></div>`
+        + `<div class="score"><div class="gauge" aria-hidden="true"></div><span class="band">${tone === 'hot' ? '⚠ ' : ''}${esc(bandWord(r))}</span><span class="num">${held ? 'alert held for this call' : `detector score ${r.s.toFixed(2)}`}</span></div>`
         + '<div class="risk-right">'
         + (c.alert ? '<span class="alert-tag">Two beeps sent</span>' : '')
         + `<div class="meter"><i style="width:${r.prevPct}%"></i></div>`
@@ -1077,8 +1085,8 @@
       // Always-visible privacy strip: short labels, the detail is in the tooltip
       const rows = [
         ['Caller audio only', "The customer's voice is never processed"],
-        ['No audio stored', 'Processed in memory; only scammer infrastructure is kept'],
-        local ? ['Local model', 'Nemotron Nano 4B on a laptop GPU, standing in for the phone'] : ['Cloud model', 'NVIDIA-hosted Nemotron'],
+        ['No audio kept', 'Caller audio is transcribed by NVIDIA-hosted speech-to-text and not saved; short text snippets stay in a local log'],
+        local ? ['Local model', 'Nemotron Nano 4B on our server (laptop GPU); NVIDIA-hosted Nemotron is the fallback'] : ['Cloud model', 'NVIDIA-hosted Nemotron'],
         v === 'clone' ? ['Consented voice', `The customer's clone, consent ${S.voice && S.voice.consent ? S.voice.consent : 'on file'}, deletable`]
           : v === 'synthetic' ? ['Synthetic voice', 'No voice clone kept'] : null,
         ['Synthetic data', 'No real customer data anywhere in this demo'],
