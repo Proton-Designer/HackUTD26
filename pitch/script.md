@@ -23,7 +23,7 @@ look-alike legit calls wrongly flagged (our rules-only fallback, no AI: 26 of 33
 **On screen only:** scammers spotted the AI as a bot in about 1 in 20 calls (slide 5); "Tricks aimed at
 the AI: 13 of 13 vs 9 of 13" (slide 8 table).
 
-**Never say:** "Scammer get scammed" before the Approve click (it's the payoff line; the phone's button label says it, so don't show or read the button); "Maria", "her voice" (say "their voice"); "instant" or "real-time" (say "about 12 to 15 seconds
+**Never say:** "Scammer get scammed" before the Approve click (it's the payoff line; the button is called Fire Back); "Maria", "her voice" (say "their voice"); "instant" or "real-time" (say "about 12 to 15 seconds
 in"); "100%"; "on device" or "nothing leaves the phone" (on this path detection runs on our server, and
 speech-to-text uses NVIDIA-hosted Riva); "we held the money" (Nessie cancels the pending transfer: say
 "stopped"); "real bank" (it is Capital One's Nessie sandbox with mock data); "scammers stay on for 54
@@ -41,7 +41,7 @@ minutes" (longest call, not typical); "no carrier turns scam calls into intellig
 | 0:13 | 2 Persona | Rayan | "Picture someone you love, 78. The phone rings, and caller ID says it's their bank. A man says someone is draining the account, they need to move their savings to a safe account, and they shouldn't tell anyone at the branch. Four times as many older adults lost $10,000 or more to this kind of call in 2024 as in 2020." |
 | 0:28 | 3 Stakes | Rayan | "When a scam starts with a phone call, people over 60 lose a median of $3,000. On social media, $599. The phone is where it costs the most." |
 | 0:40 | 4 Gap | Rayan | "Everything T-Mobile does today judges the number before the phone rings. Once a scammer gets through, nothing helps during the call." |
-| 0:52 | 5 Caller Beware | Rayan | "So we flipped it: Caller Beware. With Backfire, the customer taps one button and an AI in their own voice takes over. It only ever listens to the caller. And scammers do keep talking to AI: TPG Telecom in Australia sent more than 280,000 scam calls to AI 'victims'." |
+| 0:52 | 5 Caller Beware | Rayan | "So we flipped it: Caller Beware. With Backfire, the customer taps Fire Back and an AI in their own voice takes over. It only ever listens to the caller. And scammers do keep talking to AI: TPG Telecom in Australia sent more than 280,000 scam calls to AI 'victims'." |
 | 1:10 | 6 Follow the money | Rayan | "Scammers change numbers for pennies, but not where the money goes. The decoy's job is to get his payout account. Capital One stops the transfer and flags that account; T-Mobile warns anyone who dials his callback number. Let's show you. Ayman's the scammer." |
 | 1:30 | Demo | All | See the demo block below. The command center does the talking from about 2:30. |
 | 3:00 | 7 How it works | Ayman | "The hard part was letting an AI talk to a scammer without the scammer turning it against the customer. The detector and the decoy only hear the caller and have no tools. A separate Nemotron agent sees only what the decoy extracted, runs real lookups, and only proposes actions. Plain code applies what affects only the customer, like stopping their own transfer, and queues anything bank-wide or network-wide for one human click." |
@@ -61,7 +61,7 @@ Card for Ayman (same scam as slide 2; Card 2, "Bank Fraud Department", trimmed):
 | 1 | Ayman dials (469) 908-8594 from his phone, caller ID on, on speaker. The customer's phone rings full screen. | Live call view: "Ringing the customer with Live Guard on" |
 | 2 | Kareem taps **Answer** (do not let it ring out: no answer rejects the call) and says, in his normal voice: "Hello?" | |
 | 3 | Ayman reads line 1. Nobody else talks while the call is live. | Caller-only transcript scrolls; risk gauge climbs |
-| 4 | Two beeps, about 12 to 15 seconds in. Kareem taps the big middle button (the hand-off; don't show the judge its label or say it), puts the phone face down, raises both hands. | "The customer handed the call to Backfire" |
+| 4 | Two beeps, about 12 to 15 seconds in. Kareem shows the judge the three buttons, taps **Fire Back**, puts the phone face down, raises both hands. | "The customer tapped Fire Back" |
 | 5 | The AI, in Kareem's voice: "Sorry, I lost you there for a second," then asks how to pay. | Banner: "The scammer is talking to the decoy in the customer's voice" |
 | 6 | Ayman reads the payment line, then the Zelle line. The decoy repeats it back slowly, then says goodbye and hangs up by itself. | |
 | 7 | Rayan, while intel runs (5 to 15 s): "Kareem's been off that call since his hands went up. Backfire only ever listened to the caller. That was a Nemotron decoy in his voice, and it just got the scammer's payout account." | Screen moves to **Money trail** by itself; Capital One lockup appears |
@@ -84,7 +84,7 @@ is mock, and the bank-wide flag is a simulated payload."
 
 ## 60-second version (tired or late judges)
 1. "Backfire: T-Mobile customers hand a scam call to an AI decoy that stops the payout and blocks the scammer."
-2. Live: answer, two beeps, tap the hand-off button, hands up.
+2. Live: answer, two beeps, tap Fire Back, hands up.
 3. Decoy in the customer's voice gets the Zelle address. Pause two seconds on the Money trail.
 4. "$1,800 stopped, the mule account flagged with one click. Scammer get scammed. What would you like to see?"
 

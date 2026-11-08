@@ -5,7 +5,7 @@ line, customer on the Backfire web app). Every simulated part is labelled on scr
 say "the customer". Same claims as the deck and `pitch/script.md`; nothing here that the deck doesn't say.
 
 **What to capture (raw clips):**
-- A. Customer's phone screen recording (iPhone or Android, web app): ringing, Answer, Live Guard, two beeps, the three buttons, tap the hand-off button (frame it so the button label isn't readable: the phrase is saved for the end).
+- A. Customer's phone screen recording (iPhone or Android, web app): ringing, Answer, Live Guard, two beeps, the three buttons, tap Fire Back.
 - B. Scammer's side: Ayman on speaker reading Card 2 (line 1, payment line, Zelle line). Audio matters more than video.
 - C. Command center screen recording (1920x1080, browser full screen, no bookmarks bar): the whole call from ring to "Scammer get scammed. He got $0.", including the Approve click.
 - D. The callback: Ayman calls again and it never rings (phone screen stays idle; command center shows "rejected before it rang").
@@ -20,7 +20,7 @@ Voiceover: Rayan, one take per section, quiet room, phone ~20 cm away.
 | 0:08 to 0:20 | Deck slide 3 still ($3,000 vs $599), then slide 4 (the gap) | "When a scam starts with a phone call, people over 60 lose a median of $3,000. And once a scam call gets through, nothing on the phone helps during the call." |
 | 0:20 to 0:30 | Title card: "Backfire. Caller Beware." Small line: "T-Mobile Safe Signal · NVIDIA Nemotron · Capital One Nessie" | "So we built Backfire. On a scam call, the caller is the one who should worry." |
 | 0:30 to 0:50 | Split: phone (A) left, command center Live call view (C) right. Caller transcript scrolls, risk gauge climbs, two beeps. | "This is a real call on a real phone line. Backfire hears only the caller's side. A Nemotron model scores what he says, and about twelve to fifteen seconds in, the customer hears two quiet beeps." |
-| 0:50 to 1:02 | Close on the phone: thumb taps the big middle button (label out of focus or cropped), phone goes face down. | "One tap. An AI decoy takes over the call in the customer's own voice, with their consent. The customer is off the line." |
+| 0:50 to 1:02 | Close on the phone: thumb taps Fire Back, phone goes face down. | "One tap on Fire Back. An AI decoy takes over the call in the customer's own voice, with their consent. The customer is off the line." |
 | 1:02 to 1:15 | Command center: decoy turns in purple; audio of the decoy asking how to pay and Ayman reading the Zelle line (B). | "The decoy stalls, plays along, and does one job: get his payout account. Here, a Zelle address he calls the 'safe account'." |
 | 1:15 to 1:35 | Command center switches to the Money trail by itself (Capital One lockup). Hold 2 s on "$1,800 stopped before it reached the scammer", then the map: 7 victims into one mule account. | "In Capital One's Nessie sandbox, that stops the customer's pending $1,800 transfer. And that 'safe account' already took $18,100 from seven other people." |
 | 1:35 to 1:45 | Cursor clicks "Approve · flag this account". Banner: "Scammer get scammed. He got $0." Mule tagged Flagged. | "One analyst click flags it for every customer. He got nothing." |

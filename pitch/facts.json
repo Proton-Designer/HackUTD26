@@ -16,7 +16,7 @@
    "kind": "nemotron"
   },
   {
-   "label": "Customer hands the call to Backfire",
+   "label": "Customer taps Fire Back",
    "kind": "input"
   },
   {
@@ -96,7 +96,7 @@
   "flip_line": "Not the caller picking up. The caller who dialed.",
   "flip_buttons": [
    "Continue",
-   "Hand it to Backfire",
+   "Fire Back",
    "Hang up"
   ],
   "flip_caption": "One tap hands the scammer to an AI that talks in their voice.",
