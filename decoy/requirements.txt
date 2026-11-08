@@ -4,4 +4,5 @@ httpx
 numpy
 nvidia-riva-client
 websockets
+faster-whisper   # detection/stt.py's STT fallback when Riva/NVIDIA fails; without it the live decoy logged 'No module named faster_whisper' on every call (DEV_ANALYSIS risk 3)
 # plus: ffmpeg on PATH (decodes webm/ogg/mp4/wav recordings for /voice/enroll); detection/ (P2) for speech-to-text

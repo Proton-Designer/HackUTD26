@@ -485,3 +485,20 @@ def test_f7_normal_routed_call_skips_p2_but_still_fans_to_listeners(monkeypatch)
         return p2
     p2 = run(go())
     assert sum(1 for m in p2 if m.get("event") == "media") == 10         # P2 saw LIVE_GUARD + fail-open calls, never the trusted one
+
+
+def test_listen_refusal_is_logged_with_a_reason(caplog):
+    """Live 09:46/09:54: uvicorn logged only '403 Forbidden' for an unpaired spectator page knocking on /listen at handoff (7x per call).
+    The hub now says why before closing, so the log is diagnosable: not authorized vs unknown call."""
+    import logging, pytest
+    from server import bus
+    bus.publish("call.incoming", "LR1", {"from": "+15555550123", "to": "+15555550100"})
+    remote = TestClient(app)
+    with caplog.at_level(logging.WARNING, logger="server.relay"):
+        with pytest.raises(Exception):
+            with remote.websocket_connect("/listen/LR1"): pass                       # remote, no token
+        with pytest.raises(Exception):
+            with lw(TestClient(app, base_url="http://127.0.0.1:8000", client=("127.0.0.1", 5000)), "/listen/never-seen-LR"): pass   # loopback console, unknown call
+    msgs = [r.getMessage() for r in caplog.records if "refused" in r.getMessage()]
+    assert any("LR1" in m and "not authorized" in m for m in msgs), msgs
+    assert any("never-se" in m and "unknown call id" in m for m in msgs), msgs

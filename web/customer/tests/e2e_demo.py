@@ -244,6 +244,15 @@ def main():
             pg.evaluate("""id => BF.deliver({type: "call.ended", call_id: id, ts: new Date().toISOString(), data: {ended_by: "caller"}})""", fk)
             time.sleep(0.5); summ = pg.inner_text("#summary")
             check("9", "summary keeps red flags from every alert (IRS, gift cards, SSN)", all(x in summ for x in ("IRS", "gift cards", "SSN")), summ.replace("\n", " | ")[:160])
+            # 9b. live 09:46/09:54: a /listen handshake the hub refuses (403 -> close 1006, never opened) must not be retried 6x with backoff; one retry, then stop
+            fk2 = "e2e-ls-" + os.urandom(3).hex()
+            pg.evaluate("""id => { window.__wsOpens = []; const O = window.WebSocket; window.__WS0 = O;
+              window.WebSocket = function (u, pr) { if (!/\\/listen\\//.test(String(u))) return new O(u, pr); const w = { url: String(u), readyState: 3, close() {}, send() {} }; window.__wsOpens.push(Date.now());
+                setTimeout(() => { w.onerror && w.onerror({}); w.onclose && w.onclose({ code: 1006 }); }, 20); return w; };
+              const t = new Date().toISOString(); for (const [type, data] of [["call.incoming", {from: "+15555550125"}], ["call.routed", {decision: "LIVE_GUARD"}], ["call.answered", {}], ["handoff.started", {}]]) BF.deliver({type, call_id: id, ts: t, data}); }""", fk2)
+            time.sleep(6.5); opens = pg.evaluate("window.__wsOpens.length"); state = pg.evaluate("BF.decoyStats.state")
+            pg.evaluate("""id => { BF.deliver({type: "call.ended", call_id: id, ts: new Date().toISOString(), data: {ended_by: "caller"}}); window.WebSocket = window.__WS0; }""", fk2)
+            check("9", "refused /listen handshake: at most 2 attempts in 6.5 s (was 7), state 'refused'", 1 <= opens <= 2 and state == "refused", f"opens={opens} state={state}")
             pg.evaluate("BF.view('protView')"); time.sleep(0.4)
             if pg.locator("#guardToggle").is_visible():
                 pg.click("#guardToggle"); time.sleep(0.3)

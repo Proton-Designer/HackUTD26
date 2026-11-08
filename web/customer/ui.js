@@ -69,7 +69,7 @@
     $("blockedEmpty").hidden = state.blocked.length > 0;
     $("callsCount").textContent = state.calls; $("blockedCount").textContent = state.blocked.length; renderDns(); $("statCalls").textContent = state.calls; $("statBlocked").textContent = state.blocked.length;
     $("guardState").textContent = state.guardOn ? "On. Backfire is watching the caller's side of calls from numbers it doesn't know." : "Off. Calls are not being checked.";
-    $("guardToggle").textContent = state.guardOn ? "Turn Live Guard off" : "Turn Live Guard on";
+    $("guardToggle").setAttribute("aria-checked", String(!!state.guardOn));   // UI review 3: a real switch (role=switch), not a text button
     $("voiceState").textContent = state.voiceNote ? state.voiceNote : state.voiceId ? "Set up. Backfire keeps only a short voice sample, used only if you press Fire Back." + (HUB ? "" : " (Simulated)") : "No voice profile.";
     $("voiceDelete").hidden = !state.voiceId; $("voiceSetup").hidden = !!state.voiceId; paintHome();
     applyGuard();

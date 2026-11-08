@@ -215,6 +215,40 @@ def canon_handle(v) -> str:
     return f"{rail}:{hid}" if rail else hid
 
 
+def _lev(a: str, b: str) -> int:
+    prev = list(range(len(b) + 1))
+    for i, ca in enumerate(a, 1):
+        cur = [i]
+        for j, cb in enumerate(b, 1):
+            cur.append(min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (ca != cb)))
+        prev = cur
+    return prev[-1]
+
+
+def handles_match(heard, payee) -> bool:
+    """Tolerant payee match for STT-garbled handles (dev risk 6: no Zelle hold seen live). Exact canonical match first; else same rail
+    (a missing rail on the heard side is fine), the domains equal once dots/dashes are dropped ('backfire demo dot example' lost its dash),
+    and the local parts equal once separators are dropped or within a small edit distance ('refund stepped' for 'refunds dept').
+    Only ever compared against the customer's own known payee, so a near-miss costs nothing but a reversible hold."""
+    h, p = canon_handle(heard), canon_handle(payee)
+    if h == p:
+        return True
+    def split(v):
+        rail, hid = (v.split(":", 1) if re.match(r"^[a-z]+:", v) else ("", v))
+        if "@" not in hid:
+            return rail, None, None
+        local, dom = hid.rsplit("@", 1)
+        return rail, re.sub(r"[.\-_\s]", "", local), re.sub(r"[.\-_\s]", "", dom)
+    hr, hl, hd = split(h); pr, pl, pd = split(p)
+    if hl is None or pl is None or not hd or hd != pd or (hr and pr and hr != pr):
+        return False
+    if hl == pl:
+        return True
+    n = max(len(hl), len(pl))
+    limit = 0 if n < 6 else 2 if n < 10 else max(3, round(n * 0.3))   # 'refundstepped' vs 'refundsdept' is 4 edits over 13 chars
+    return _lev(hl, pl) <= limit
+
+
 def match_destinations(arts: list[dict]) -> list[dict]:
     """Artifacts (normalized by campaigns.normalize_artifacts) that point at a known mock payee.
     payment_handle: normalized rail:id. bank: account-number hash, else last4."""
@@ -222,7 +256,7 @@ def match_destinations(arts: list[dict]) -> list[dict]:
     for d in destinations():
         for a in arts:
             if a["type"] == "payment_handle":
-                ok = canon_handle(a.get("value")) == canon_handle(dest_key(d))
+                ok = handles_match(a.get("value"), dest_key(d))
             elif a["type"] == "bank":
                 ok = bool(d.get("bank_hash")) and str(a.get("value", "")).lower() == str(d["bank_hash"]).lower() or \
                      bool(d.get("bank_last4")) and str(a.get("last4") or "") == str(d["bank_last4"])

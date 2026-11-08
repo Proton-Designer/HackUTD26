@@ -101,15 +101,14 @@ def test_coalesce_one_in_flight():
     assert n["max"] == 1 and n["i"] <= 2
 
 def test_fast_path_alerts_before_llm_returns():
-    import time
-    t0 = {}
+    order = []   # ordering, not a wall-clock bound: a busy box must not make this flaky
     async def emit(t, c, d):
-        if t == "alert.fired": t0["alert"] = time.time()
+        if t == "alert.fired": order.append("alert")
     async def slow(cid, text, meta, engine):
-        await asyncio.sleep(0.4); t0["llm"] = time.time(); return R(0.3)
+        await asyncio.sleep(0.4); order.append("llm"); return R(0.3)
     m = alert.AlertMachine(emit=emit, detect=slow)
     asyncio.run(m.on_final("c", {"text": "You must pay today with gift cards and tell no one"}))
-    assert t0["alert"] < t0["llm"] - 0.3          # fired from rule floor, not after the LLM
+    assert order.index("alert") < order.index("llm")          # fired from rule floor, not after the LLM
     # same-window floor: LLM saying 0.3 does not lower the emitted s; the next window scores fresh
     ev = []
     async def emit2(t, c, d): ev.append((t, d))

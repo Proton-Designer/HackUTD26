@@ -7,7 +7,7 @@ voip/ (eng2) owns the Telnyx WS and calls (all async, none ever raises, none blo
 Env: P2_STT_URL (e.g. ws://host:port -> WS /stt/{call_id}), P3_DECOY_URL (e.g. wss://host -> WSS /decoy/{call_id}; unset -> built-in
 stand-in persona /decoy-standin/{call_id} (voip/persona.py) on this hub, port HUB_PORT or 8000; DECOY_STANDIN=echo -> /decoy-echo/{call_id}). In-process P2 hook: relay.feed_audio_hook = fn(call_id, frame_dict).
 Fail open: connection errors are logged and dropped; queues are bounded (full -> drop frame)."""
-import asyncio, json, logging, os, pathlib, time
+import asyncio, json, logging, os, pathlib, re, time
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 log = logging.getLogger("hub.relay")
@@ -391,6 +391,14 @@ def _known_call(call_id) -> bool:
     except Exception:
         return False
 
+def _refusal(ok: bool, call_id: str) -> str:
+    """Why a /listen or /talk handshake is being refused (for the log; never the token)."""
+    if not ok:
+        return "not authorized (no/invalid device token, not loopback): an unpaired page should not open this socket"
+    if not re.fullmatch(r"[A-Za-z0-9_.:-]{1,80}", call_id):
+        return "bad call id"
+    return "unknown call id"
+
 def _identity(ws: WebSocket) -> str:
     """Who is connecting, for replace-on-reconnect: a paired device token (hashed), the hub token, or the local console. Never logs the token."""
     import hashlib
@@ -488,6 +496,7 @@ async def talk(ws: WebSocket, call_id: str):
     except Exception:
         enabled = False
     if not ok or not re.fullmatch(r"[A-Za-z0-9_.:-]{1,80}", call_id) or not _known_call(call_id) or not enabled:
+        log.warning("talk %s refused: %s", call_id[:8], _refusal(ok, call_id) if (not ok or not _known_call(call_id)) else "talk not enabled for this call (mode or ended)")
         await ws.close(code=1008); return
     ident = _identity(ws)
     old = _TALKERS.get(call_id)
@@ -563,6 +572,7 @@ async def listen(ws: WebSocket, call_id: str):
     import re
     ok, proto = _listen_authorized(ws)
     if not ok or not re.fullmatch(r"[A-Za-z0-9_.:-]{1,80}", call_id) or not _known_call(call_id):
+        log.warning("listen %s refused: %s", call_id[:8], _refusal(ok, call_id))   # uvicorn logs a close-before-accept only as '403 Forbidden': say why
         await ws.close(code=1008); return
     ident = _identity(ws)
     await _replace_listeners(call_id, ident, "listen")
