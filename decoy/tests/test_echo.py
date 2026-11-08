@@ -34,3 +34,10 @@ def test_strip_note_echo_live_shapes():   # #135 shapes P2 saw on the bolt fallb
     assert strip_note_echo("Okay, I'm listening. Have: None.") == "Okay, I'm listening."
     assert strip_note_echo("I have a pen, go ahead.") == "I have a pen, go ahead."
     assert strip_note_echo("I've got my card here. What do I need to type?") == "I've got my card here. What do I need to type?"
+
+
+def test_fragmentish():   # #141 live: 'That pause for' / 'I am the IRS...' then the rest a second later
+    from decoy.app import fragmentish
+    assert fragmentish("That pause for") and fragmentish("I am the IRS...") and fragmentish("Okay.")
+    assert not fragmentish("Open your banking app and send the money by Zelle.")
+    assert not fragmentish("Did you send it yet? We need to hurry.")

@@ -309,6 +309,13 @@ EMAIL = re.compile(r"[a-z0-9._%+-]+@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}")
 STT_EXPANSIONS = {"department": "dept", "departments": "dept", "customer service": "customerservice"}
 
 
+def handle_ok(i: str) -> bool:
+    """#141: a payment id is an email, a +1 phone, a $cashtag, an @handle or one plain username token; never placeholder
+    words like 'scammer email'."""
+    return bool(EMAIL.fullmatch(i) or re.fullmatch(r"\+1\d{10}", i) or re.fullmatch(r"[$@][A-Za-z0-9._-]{2,30}", i)
+                or re.fullmatch(r"[A-Za-z0-9._-]{3,30}", i))
+
+
 def norm_email(e: str) -> str:
     e = e.lower().strip().strip(".,;:!?")
     if "@" in e:   # a space inside the local part is a spoken dot ('refunds department@...' -> 'refunds.department@...')
@@ -381,6 +388,12 @@ ZELLE_HEARD = re.compile(r"\b(by|via|through|with|using|on|in|send it|sent it)\s
 
 
 DEPT_HEARD = re.compile(r"\b([a-z0-9]+)(?:\s+dot)?\s+department(?=\s+at\s+\S+\s+(?:dot|dash)\b)", re.I)   # only in an address
+
+
+_STOP = r"(?:to|it|the|send|sent|is|my|your|by|via|zelle|and|or|me|us|at|that|this|address|account|on|in|of|for|dot|dash|hyphen|underscore)"
+SPOKEN_EMAIL = re.compile(r"(?<!dot )(?<![.@-])\b((?:(?!" + _STOP + r"\b)[a-z0-9]+\s+)?(?!" + _STOP + r"\b)[a-z0-9]+)\s+at\s+"
+                          r"((?:(?!" + _STOP + r"\b)[a-z0-9-]+\s+){0,2}(?!" + _STOP + r"\b)[a-z0-9-]+)\s+dot\s+"
+                          r"(com|net|org|io|co|us|info|biz|example)\b")
 
 
 def fix_zelle(t: str) -> str:
@@ -472,11 +485,16 @@ async def extract(lines: list[str]) -> list[dict]:
     t = " " + joined.lower() + " "
     for word, sym in ((r"\s+dot\s+", "."), (r"\s+at\s+", "@"), (r"\s+(?:dash|hyphen)\s+", "-"), (r"\s+underscore\s+", "_")):
         t = re.sub(word, sym, t)   # spoken separators only; real sentence punctuation keeps its space
-    emails = [norm_email(e) for e in re.findall(r"[a-z0-9._%+-]+@[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}(?![a-z0-9-])", t)]
+    # #141: multi-word spoken emails ('scammer email at you do scam dot com' -> scammeremail@youdoscam.com)
+    spoken_emails = [norm_email(re.sub(r"\s+", "", m.group(1)) + "@" + re.sub(r"\s+", "", m.group(2)) + "." + m.group(3))
+                     for m in SPOKEN_EMAIL.finditer(re.sub(r"\s+(?:dash|hyphen)\s+", "-", joined.lower()))]
+    emails = spoken_emails + [norm_email(e) for e in re.findall(r"[a-z0-9._%+-]+@[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}(?![a-z0-9-])", t)]
     for a in out:
         if a["kind"] == "payment_handle" and "@" not in a["id"]:
             frag = norm_local(re.sub(r"\s+", ".", a["id"].strip()))
-            full = next((e for e in emails if e.split("@")[0].endswith(frag) or frag.endswith(e.split("@")[0])), None)
+            loose = re.sub(r"[^a-z0-9]", "", frag)
+            full = next((e for e in emails if e.split("@")[0].endswith(frag) or frag.endswith(e.split("@")[0])
+                         or (len(loose) >= 5 and re.sub(r"[^a-z0-9]", "", e.split("@")[0]) == loose)), None)
             if full:
                 a["id"] = full
         elif a["kind"] == "payment_handle" and "@" in a["id"].lstrip("@"):
@@ -513,6 +531,7 @@ async def extract(lines: list[str]) -> list[dict]:
         if v and not any(a.get("kind") == "payment_handle" and a.get("id") == v["id"] for a in out):
             out.append(v)
     out = canon_known(out, t)
+    out = [a for a in out if a.get("kind") != "payment_handle" or handle_ok(str(a.get("id", "")))]   # #141
     seen, uniq = set(), []
     for a in out:   # the rebuild/backstop can make two identical handles
         key = json.dumps(a, sort_keys=True)

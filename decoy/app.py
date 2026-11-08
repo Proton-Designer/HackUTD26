@@ -48,7 +48,10 @@ STT_TIMEOUT_S, LLM_TIMEOUT_S = 6.0, 7.0
 # Turn-taking (Ayman, real call adad65a0: "often speaks out of turn"). P2's 450 ms end-of-speech is tuned for fast
 # detection; callers pause longer than that mid-sentence on PSTN, so the decoy waits longer before it takes its turn,
 # and holds a ready reply while the caller is still talking (re-thinking if they added something).
-DECOY_ENDPOINT_MS = int(__import__("os").environ.get("DECOY_ENDPOINT_MS", "800"))
+DECOY_ENDPOINT_MS = int(__import__("os").environ.get("DECOY_ENDPOINT_MS", "1000"))   # #141: 800 split callers mid-sentence
+# #141: a short or unfinished caller line ('That pause for', 'I am the IRS...') usually has more coming. Before speaking a
+# reply to it, wait up to this long for the rest; if more arrives we re-think over the whole thing (one reply, not two).
+FRAGMENT_GRACE_S = float(__import__("os").environ.get("DECOY_FRAGMENT_GRACE_S", "0.6"))
 HOLD_MAX_S = 4.0           # longest we hold a ready reply for a caller who keeps talking
 REDO_MAX = 2               # re-think at most twice per turn when the caller adds more
 # Polite wrap-up (P1/Ayman, #86 e): once we have how they get paid (handle / site / wallet) plus one more artifact type,
@@ -219,6 +222,12 @@ NOTE_ECHO = __import__("re").compile(
     r"\s*([\[(]\s*(private|hidden|note|steer)[^\])]*[\])]?|hidden context\b|private (steering )?note\b|steering note\b|"
     r"\b(already got|have|got|still need|need|turns left)\s*:|about \d+ turns left\b).*$",
     __import__("re").I | __import__("re").S)
+
+
+def fragmentish(text: str) -> bool:
+    """A caller line that probably isn't finished: few words, a trailing ellipsis/comma, or no end punctuation."""
+    t = (text or "").strip()
+    return len(t.split()) <= 4 or t.endswith(("...", "…", ",", "-")) or not t.endswith((".", "?", "!"))
 
 
 def strip_note_echo(t: str | None) -> str | None:
@@ -641,6 +650,11 @@ class Session:
                         log.warning("LLM retry failed: %s", type(e).__name__)
                 llm_ms = int((time.monotonic() - t0) * 1000)
                 await self.hold_floor()
+                if fragmentish(heard) and not self.pending:
+                    t_g = time.monotonic() + FRAGMENT_GRACE_S
+                    while self.active and time.monotonic() < t_g and not self.pending and not self.caller_talking():
+                        await asyncio.sleep(0.05)
+                    await self.hold_floor()
                 if self.pending and redo < REDO_MAX:
                     # they said more while we were thinking: answer everything they said, not a stale fragment
                     redo += 1

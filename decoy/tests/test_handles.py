@@ -102,3 +102,12 @@ def test_zelle_phone_backstop(monkeypatch):   # #140 FYI: model dropped the scam
     ids = _run(monkeypatch, L, [{"kind": "payment_handle", "rail": "zelle", "id": "refunds.department"}])
     assert sorted(ids) == sorted([H, "+19207856782"])
     assert _run(monkeypatch, ["Call our office at 214 555 0199 about your Zelle problem."], []) == []   # number not after Zelle
+
+
+def test_garbage_and_spoken_email_4ad7e15e(monkeypatch):   # #141 live: paypal 'scammer email', domain 'scam.com'
+    ids = _run(monkeypatch, ["Send it by PayPal to scammer email at you do scam dot com."],
+               [{"kind": "payment_handle", "rail": "paypal", "id": "scammer email"}])
+    assert ids == ["scammeremail@youdoscam.com"]
+    assert _run(monkeypatch, ["Just send it, okay?"], [{"kind": "payment_handle", "rail": "paypal", "id": "scammer email"}]) == []
+    assert _run(monkeypatch, ["Venmo me at jake-smith."], [{"kind": "payment_handle", "rail": "venmo", "id": "jake-smith"}]) == ["jake-smith"]
+    assert _run(monkeypatch, ["Cash App me, dollar sign bigmoney."], [{"kind": "payment_handle", "rail": "cashapp", "id": "$bigmoney"}]) == ["$bigmoney"]
