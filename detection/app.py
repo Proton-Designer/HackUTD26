@@ -1,5 +1,6 @@
 """P2 detection service. Run: .venv/bin/uvicorn detection.app:app --port 8100"""
 import importlib, logging, os
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from . import auth, health, stream, stt
 
@@ -8,7 +9,36 @@ log = logging.getLogger("p2.app")
 from . import alert
 alert.install()
 auth.warn_if_open()
-app = FastAPI(title="Backfire P2 detection", lifespan=alert.lifespan)
+def _warm_stt():
+    """Build the STT stack (Riva client + Whisper preload thread) before the first call. Blocking; run in a thread."""
+    s = stt.get_stt()
+    if s.__class__.__name__ == "WhisperSTT":      # P2_STT=whisper: its model loads lazily, so push one silent half-second through it now
+        import asyncio, numpy as np
+        asyncio.run(s.transcribe(np.zeros(4000, dtype="<i2")))
+    return s
+
+async def warmup_stt():
+    """Fail-open background warmup (P2_STT_WARMUP=0 disables): never raises, never blocks startup or /healthz."""
+    if os.environ.get("P2_STT_WARMUP", "1") == "0":
+        return
+    try:
+        import asyncio
+        await asyncio.to_thread(_warm_stt)
+        log.info("stt warmup done")
+    except Exception as e:
+        log.warning("stt warmup failed (%s); STT will build at the first call", type(e).__name__)
+
+@asynccontextmanager
+async def _lifespan(a):
+    import asyncio
+    task = asyncio.create_task(warmup_stt())
+    try:
+        async with alert.lifespan(a):
+            yield
+    finally:
+        task.cancel()
+
+app = FastAPI(title="Backfire P2 detection", lifespan=_lifespan)
 app.include_router(stream.router)
 try:  # eng1's /detect router; guarded so the app runs before it exists
     app.include_router(importlib.import_module("detection.router").router)

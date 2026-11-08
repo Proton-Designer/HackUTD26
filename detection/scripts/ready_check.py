@@ -17,7 +17,7 @@ def check_health(h):
     add("llama reachable (local_reachable)", e.get("local_reachable") is True, f"local_reachable={e.get('local_reachable')} probe_ms={e.get('local_probe_ms')}", "start llama: detection/engines/run_local_llm.sh in backfire-p2-eng:llama")
     add("cloud breaker closed", br.get("state") == "closed", f"state={br.get('state')} retry_in_s={br.get('retry_in_s')}", "NVIDIA key throttled; local is primary so OK for the demo, wait for the half-open probe", warn=True)
     add("STT primary not bypassed", st.get("primary_bypassed") is False, f"backend={st.get('backend')} bypassed={st.get('primary_bypassed')} failures={st.get('primary_failures')}", "Riva failing: Whisper fallback is in use (slower); check NVIDIA key/network", warn=True)
-    add("whisper fallback loaded", st.get("whisper_fallback_loaded") is True, f"loaded={st.get('whisper_fallback_loaded')}", "wait for the preload (~10 s after start) or restart p2svc", warn=True)
+    add("whisper fallback loaded", st.get("whisper_fallback_loaded") is True, f"loaded={st.get('whisper_fallback_loaded')}", "warmup runs ~10-15 s after start (P2_STT_WARMUP=1); if it stays unloaded, restart p2svc and check the log for 'stt warmup failed'", warn=True)
     n = h.get("active_stt_sockets")
     add("no active STT sockets", n == 0, f"active_stt_sockets={n}", "a call is in progress: do not run anything heavy; re-check after it ends", warn=True)
     return out
