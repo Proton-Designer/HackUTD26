@@ -97,6 +97,20 @@ def link_sighting(store, call_id: str, artifacts, calling_number: str | None = N
             if _jaccard(tags, json.loads(c["script_tags"] or "[]")) >= sim_threshold and json.loads(c["stages"] or "[]") == stages:
                 cid, via = c["id"], "script match + same stage sequence"
                 break
+    # One call = one campaign. If this call was already linked (e.g. the no-artifact fallback ran before a slow
+    # extractor's haul), reuse that campaign, or fold it into the one the haul's strong indicator points to when it
+    # holds nothing but this call.
+    prior = store.q("SELECT DISTINCT campaign_id FROM sightings WHERE call_id=?", call_id)
+    pcid = prior[0]["campaign_id"] if prior else None
+    if pcid and cid is None:
+        cid, via = pcid, via or "same call"
+    elif pcid and cid != pcid:
+        others = store.q("SELECT 1 FROM sightings WHERE campaign_id=? AND call_id<>?", pcid, call_id)
+        if not others:
+            store.x("UPDATE sightings SET campaign_id=? WHERE campaign_id=?", cid, pcid)
+            store.x("UPDATE OR IGNORE indicators SET campaign_id=? WHERE campaign_id=?", cid, pcid)
+            store.x("DELETE FROM indicators WHERE campaign_id=?", pcid)
+            store.x("DELETE FROM campaigns WHERE id=?", pcid)
     new = cid is None
     now = time.time()
     org = next((a["value"] for a in arts if a["type"] == "impersonated_org"), None)
@@ -114,7 +128,8 @@ def link_sighting(store, call_id: str, artifacts, calling_number: str | None = N
         store.x("INSERT OR IGNORE INTO indicators VALUES(?,?,?,?,?,?)", "calling_number", norm_phone(calling_number), cid, 0, call_id, now)
     if hits:
         store.x("UPDATE campaigns SET conflict=1 WHERE id=?", cid)
-    store.x("INSERT INTO sightings(campaign_id,call_id,calling_number,carrier,day,created) VALUES(?,?,?,?,?,?)",
+    if not store.q("SELECT 1 FROM sightings WHERE call_id=? AND campaign_id=?", call_id, cid):  # one per call
+      store.x("INSERT INTO sightings(campaign_id,call_id,calling_number,carrier,day,created) VALUES(?,?,?,?,?,?)",
             cid, call_id, norm_phone(calling_number or ""), carrier or "unknown", day or date.today().isoformat(), now)
 
     sights = store.q("SELECT calling_number, carrier, day FROM sightings WHERE campaign_id=?", cid)

@@ -287,3 +287,46 @@ def test_intel_key_override(monkeypatch):
     assert agent._api_key() == "shared"
     monkeypatch.setenv("INTEL_NVIDIA_API_KEY", "intel-only")
     assert agent._api_key() == "intel-only"
+
+
+def test_late_artifacts_after_fallback_still_run(tmp_path, monkeypatch):
+    """#86 a: extractor slower than the 20 s grace -> fallback ran; the late haul must still run (once)."""
+    import time as _t
+    from intel import api
+    s = Store(str(tmp_path / "late.db"))
+    ev = []
+    api.configure(store=s, emit=cap(ev), llm=mock_llm, tools=fixture_tools())
+    monkeypatch.setattr(api, "GRACE_S", 0.05)
+    api.observe({"type": "call.incoming", "call_id": "L1", "data": {"from": JUDGE_NUMBER, "to": "+1 469 908 8594"}})
+    api.observe({"type": "handoff.started", "call_id": "L1", "data": {}})
+    api.observe({"type": "call.ended", "call_id": "L1", "data": {"ended_by": "decoy"}})
+    for _ in range(50):
+        if s.is_blocked(JUDGE_NUMBER)[0]:
+            break
+        _t.sleep(0.02)
+    api.observe({"type": "artifacts.extracted", "call_id": "L1",
+                 "data": {"artifacts": [{"kind": "wallet", "chain": "BTC", "addr": WALLET}]}})
+    api.observe({"type": "artifacts.extracted", "call_id": "L1",               # duplicate haul: ignored
+                 "data": {"artifacts": [{"kind": "wallet", "chain": "BTC", "addr": WALLET}]}})
+    for _ in range(100):
+        if any(e["type"] == "intel.lookup" and e["data"].get("artifact_kind") == "wallet" for e in ev):
+            break
+        _t.sleep(0.02)
+    _t.sleep(0.2)
+    assert sum(1 for e in ev if e["type"] == "intel.plan") == 2                # fallback + late haul, not 3
+    assert len(s.q("SELECT * FROM sightings WHERE call_id='L1'")) == 1          # one sighting per call
+
+
+def test_customer_own_number_never_a_target(store, events):
+    """#86 b: echo puts the customer's own number in the haul as a callback; never looked up, linked or actioned."""
+    me = "+1 469 908 8594"
+    haul = [{"kind": "callback_phone", "value": "469-908-8594"}, {"kind": "callback_phone", "value": "1-888-555-0123"}]
+    agent.run("echo", haul, store, calling_number=JUDGE_NUMBER, customer_number=me, carrier="y",
+              tools=fixture_tools(), llm=mock_llm, emit=cap(events))
+    plan = [e["data"] for e in events if e["type"] == "intel.plan"][0]
+    assert "echo" in plan.get("dropped", "") and all("9088594" not in str(st["arg"]) for st in plan["steps"])
+    assert not store.q("SELECT * FROM indicators WHERE value='4699088594'")
+    assert not store.q("SELECT * FROM callback_warnings WHERE number='4699088594'")
+    ctx = gate.Context(calling_number=JUDGE_NUMBER, customer_number=me, campaign_id="c", campaign_status="confirmed")
+    d = gate.decide([{"kind": "callback_protection_warning", "target": "(469) 908-8594"}], ctx)
+    assert d[0]["outcome"] == "denied" and "customer's own number" in d[0]["reason"]

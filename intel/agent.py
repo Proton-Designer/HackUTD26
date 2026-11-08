@@ -144,9 +144,15 @@ def default_tools() -> dict:
 
 def run(call_id: str, artifacts, store, calling_number: str | None = None, attestation: str | None = None,
         carrier: str | None = None, stages: list[str] | None = None, llm=None, tools: dict | None = None,
-        emit=L.emit, use_llm: bool = True, llm_label: str = "nemotron", use_bank: bool = True) -> dict:
+        emit=L.emit, use_llm: bool = True, llm_label: str = "nemotron", use_bank: bool = True,
+        customer_number: str | None = None) -> dict:
     """Process one decoy haul. `llm(messages) -> str` is injectable; default calls Nemotron 3 Super."""
     arts = normalize_artifacts(artifacts)
+    # Echo guard: in talk mode the customer's/decoy's voice leaks into the caller track, so the extractor can capture
+    # the customer's OWN number. It's never a lookup, a campaign indicator or an action target.
+    cust = L.norm_phone(customer_number) if customer_number else None
+    dropped = [a for a in arts if cust and a["type"] in ("callback_phone", "calling_number") and key(a) == cust]
+    arts = [a for a in arts if a not in dropped]
     tools = tools or default_tools()
     plan: list[tuple[str, str]] = []
     for a in arts:
@@ -162,7 +168,8 @@ def run(call_id: str, artifacts, store, calling_number: str | None = None, attes
     bank_hits = N.match_destinations(arts) if use_bank else []
     emit("intel.plan", call_id, {"steps": [{"tool": t, "arg": v} for t, v in plan] +
                                           [{"tool": "nessie", "arg": N.dest_key(h["dest"])} for h in bank_hits],
-                                 "inputs": "typed artifacts only (raw transcript never read)"})
+                                 "inputs": "typed artifacts only (raw transcript never read)",
+                                 **({"dropped": "customer's own number (echo of the customer's voice)"} if dropped else {})})
 
     # Parallel: a dead/slow public API costs one timeout, not the sum. Order (and the trace) stays the plan's.
     with ThreadPoolExecutor(max_workers=max(1, min(8, len(plan) + len(bank_hits)))) as pool:
@@ -219,7 +226,8 @@ def run(call_id: str, artifacts, store, calling_number: str | None = None, attes
     emit("intel.proposals", call_id, {"engine": engine, "actions": proposals})
 
     vals = {key(a) for a in arts if a["type"] not in ("script_tag", "instruction_to_ai")}
-    ctx = gate.Context(calling_number=calling_number, campaign_id=camp["campaign_id"], campaign_status=camp["status"],
+    ctx = gate.Context(calling_number=calling_number, customer_number=cust, campaign_id=camp["campaign_id"],
+                       campaign_status=camp["status"],
                        artifact_values=vals, allowlist_hits=hits, attestation=attestation,
                        bank_transfer_ids={t["id"] for _, r, tr in bank if r.get("status") == "ok" for t in tr},
                        bank_payees={N.dest_key(h["dest"]) for h, r, _ in bank if r.get("status") == "ok"})

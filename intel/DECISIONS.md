@@ -68,3 +68,12 @@
   it, and created one, which left 2 pending (reproduced locally). Fix: the reset hook runs under a process lock, and after
   creating its transfer it re-lists and deletes any other pending demo transfer, so the next reset also cleans up a
   cross-process race. acceptance N4 now retries once and says whether a None is "not found" or Nessie unreachable.
+
+## Hardening (#86, 2026-11-08 05:05)
+- Late haul: if the no-artifact fallback already ran (extractor slower than INTEL_EXTRACT_GRACE), a later
+  artifacts.extracted still runs once; a duplicate haul is ignored. One call = one campaign: the fallback's
+  calling-number-only campaign is folded into the haul's campaign (only when it holds nothing but this call), and a
+  call never adds a second sighting.
+- Echo guard: in talk mode the customer's voice leaks into the caller track, so the extractor can capture the
+  customer's OWN number. intel drops any callback/calling-number artifact equal to call.incoming.to before lookups and
+  campaign linking (reported in intel.plan.dropped), and the gate denies any action targeting it (defense in depth).

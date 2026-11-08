@@ -33,6 +33,7 @@ class Ingest(BaseModel):
     scammer_transcript: str | None = None   # accepted for the contract, never read (agent sees typed artifacts only)
     artifacts: list | dict = []
     calling_number: str | None = None        # ask P1 to include this (needed to block the caller)
+    customer_number: str | None = None       # the protected customer's own number: never a target (echo guard)
     attestation: str | None = None
     carrier: str | None = None
 
@@ -40,6 +41,7 @@ class Ingest(BaseModel):
 @router.post("/ingest")
 def ingest(body: Ingest):
     return agent.run(body.call_id, body.artifacts, _store(), calling_number=body.calling_number,
+                     customer_number=body.customer_number,
                      attestation=body.attestation, carrier=body.carrier, llm=_cfg["llm"], tools=_cfg["tools"],
                      emit=_cfg["emit"], use_llm=_cfg["use_llm"])
 
@@ -127,15 +129,21 @@ _calls_lock = threading.Lock()
 
 
 def _run_bg(call_id: str, artifacts) -> None:
+    kind = "artifacts" if artifacts else "fallback"
     with _calls_lock:
         c = _calls.setdefault(call_id, {})
-        if c.get("ingested") or c.get("legit"):  # legit: Maria restored, caller looked legitimate -> enforce nothing
+        if c.get("legit"):  # legit: the customer was restored, caller looked legitimate -> enforce nothing
             return
-        c["ingested"] = True
+        # A real haul always runs once, even after the no-artifact fallback already ran for a slow extractor
+        # (otherwise late artifacts were dropped: no lookups, no hold). The fallback never runs after a haul.
+        if c.get("ingested") == "artifacts" or (kind == "fallback" and c.get("ingested")):
+            return
+        c["ingested"] = kind
 
     def work():
         try:
-            agent.run(call_id, artifacts, _store(), calling_number=c.get("from"), attestation=c.get("attestation"),
+            agent.run(call_id, artifacts, _store(), calling_number=c.get("from"), customer_number=c.get("to"),
+                      attestation=c.get("attestation"),
                       carrier=c.get("carrier"), llm=_cfg["llm"], tools=_cfg["tools"], emit=_cfg["emit"],
                       use_llm=_cfg["use_llm"])
         except Exception:  # fail open: intel never breaks the call path
@@ -157,7 +165,8 @@ def observe(ev: dict) -> None:
             return
         if t == "call.incoming":
             with _calls_lock:
-                _calls[cid] = {"from": d.get("from"), "attestation": d.get("attestation"), "carrier": d.get("carrier")}
+                _calls[cid] = {"from": d.get("from"), "to": d.get("to"), "attestation": d.get("attestation"),
+                               "carrier": d.get("carrier")}
         elif t == "handoff.started" or (t == "call.answered" and d.get("by") == "decoy"):
             with _calls_lock:
                 _calls.setdefault(cid, {})["decoy"] = True

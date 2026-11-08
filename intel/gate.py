@@ -45,6 +45,7 @@ class Context:
     artifact_values: set = field(default_factory=set)   # normalized values extracted from the call
     allowlist_hits: set = field(default_factory=set)    # normalized allowlist matches
     attestation: str | None = None
+    customer_number: str | None = None                   # the protected customer's own number: never a target
     bank_transfer_ids: set = field(default_factory=set)  # her pending transfers found by the Nessie lookup (code)
     bank_payees: set = field(default_factory=set)        # payout destinations matched by code to a mock payee
 
@@ -65,7 +66,9 @@ def decide(proposals: list[dict], ctx: Context) -> list[dict]:
                         "scope": scope or ("network" if kind in NETWORK_QUEUE else "her")})
 
         dest_allow = _norm(p.get("destination_allow_key")) if p.get("destination_allow_key") else None
-        if tgt and tgt in hits:
+        if ctx.customer_number and tgt == norm_phone(ctx.customer_number):
+            d("denied", "target is the customer's own number (echo of the customer's voice?), never actioned")
+        elif tgt and tgt in hits:
             d("not_actioned", "attempted_poisoning: target is a verified business (allowlist match)")
         elif dest_allow and dest_allow in hits:
             d("not_actioned", "attempted_poisoning: payout destination is a verified business (allowlist match)")
