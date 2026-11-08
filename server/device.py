@@ -1,7 +1,7 @@
 """TASK-014: per-device pairing PIN. Protects /protection-log, /protection-log/undo, /user/action, and voip's /voip/webrtc-token.
 Fail closed. Localhost is allowed only for DIRECT loopback requests: anything that came through the tunnel/proxy (cloudflared connects
 from 127.0.0.1 but adds cf-/x-forwarded headers) is treated as remote. HUB_TOKEN (service secret) is also accepted."""
-import hashlib, logging, os, pathlib, secrets, time
+import hashlib, logging, os, pathlib, secrets, threading, time
 from fastapi import APIRouter, Body, HTTPException, Request
 from . import db
 
@@ -9,6 +9,7 @@ log = logging.getLogger("hub.device")
 router = APIRouter()
 PIN = os.environ.get("DEVICE_PIN") or "".join(secrets.choice("0123456789") for _ in range(6))
 PROXY_HEADERS = ("cf-connecting-ip", "cf-ray", "x-forwarded-for", "x-forwarded-host", "forwarded", "x-real-ip")
+_lock = threading.Lock()
 _fails: dict = {}   # ip -> [timestamps]
 MAX_FAILS, WINDOW_S, GLOBAL_FAILS = 5, 60, 30   # per-IP and across all IPs (defeats header-rotation)
 
@@ -53,14 +54,17 @@ def require_device(request: Request):
 @router.post("/pair")
 def pair(request: Request, body: dict = Body(...)):
     ip, now = _ip(request), time.time()
-    fails = [t for t in _fails.get(ip, []) if now - t < WINDOW_S]
-    allf = sum(1 for v in _fails.values() for t in v if now - t < WINDOW_S)
-    if len(fails) >= MAX_FAILS or allf >= GLOBAL_FAILS:
-        raise HTTPException(429, "too many attempts; wait a minute")
-    if not secrets.compare_digest(str(body.get("pin", "")), PIN):
-        fails.append(now); _fails[ip] = fails
-        raise HTTPException(401, "wrong code")
-    _fails.pop(ip, None)
+    ok = secrets.compare_digest(str(body.get("pin", "")), PIN)
+    with _lock:   # check-and-record is atomic (sync endpoints run in a threadpool)
+        fails = [t for t in _fails.get(ip, []) if now - t < WINDOW_S]
+        allf = sum(1 for v in _fails.values() for t in v if now - t < WINDOW_S)
+        # direct-local requests (the operator at the console) skip the global cap so a remote flood can't lock out pairing entirely
+        if len(fails) >= MAX_FAILS or (allf >= GLOBAL_FAILS and not is_direct_local(request)):
+            raise HTTPException(429, "too many attempts; wait a minute")
+        if not ok:
+            fails.append(now); _fails[ip] = fails
+            raise HTTPException(401, "wrong code")
+        _fails.pop(ip, None)
     tok = secrets.token_urlsafe(24)
     _ensure_table(); db.q("INSERT INTO device_tokens VALUES(?,?)", (_hash(tok), now))
     return {"device_token": tok}

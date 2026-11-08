@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# Point the Telnyx Call Control app + credential connection webhooks at the current tunnel. DRY RUN by default; --apply PATCHes (lead runs).
+# Usage: scripts/point_telnyx [--apply] [--url https://xxxx.trycloudflare.com]     needs TELNYX_API_KEY in env (never printed).
+set -u
+cd "$(dirname "$0")/.."
+APPLY=0; URL=""
+while [ $# -gt 0 ]; do case "$1" in --apply) APPLY=1;; --url) URL="${2:-}"; shift;; *) echo "usage: $0 [--apply] [--url URL]"; exit 2;; esac; shift; done
+[ -z "$URL" ] && URL=$(cat logs/tunnel_url.txt 2>/dev/null)
+case "$URL" in https://*) ;; *) echo "no https tunnel URL (run scripts/run_hub first, or pass --url)"; exit 1;; esac
+HOOK="${URL%/}/telnyx/webhook"
+APP=3088437325215040882; CONN=3088441327981954669
+declare -a TARGETS=("call_control_applications/$APP" "credential_connections/$CONN")
+BODY="{\"webhook_event_url\":\"$HOOK\"}"
+echo "webhook URL: $HOOK"
+if [ "$APPLY" != 1 ]; then
+  echo "DRY RUN (add --apply to send):"
+  for t in "${TARGETS[@]}"; do
+    echo "curl -sS -X PATCH https://api.telnyx.com/v2/$t -H 'Authorization: Bearer ***REDACTED***' -H 'Content-Type: application/json' -d '$BODY'"
+  done
+  exit 0
+fi
+[ -z "${TELNYX_API_KEY:-}" ] && { echo "TELNYX_API_KEY not set"; exit 1; }
+rc=0
+for t in "${TARGETS[@]}"; do
+  code=$(curl -sS -m 15 -o /dev/null -w '%{http_code}' -X PATCH "https://api.telnyx.com/v2/$t" -H "Authorization: Bearer $TELNYX_API_KEY" -H 'Content-Type: application/json' -d "$BODY")
+  echo "PATCH $t -> HTTP $code"; [ "$code" = 200 ] || rc=1
+done
+echo "stored URLs:"
+for t in "${TARGETS[@]}"; do
+  got=$(curl -sS -m 15 "https://api.telnyx.com/v2/$t" -H "Authorization: Bearer $TELNYX_API_KEY" | python3 -c 'import sys,json
+try: print(json.load(sys.stdin)["data"].get("webhook_event_url"))
+except Exception as e: print("unreadable:", type(e).__name__)')
+  [ "$got" = "$HOOK" ] && echo "  OK   $t  $got" || { echo "  MISMATCH $t  $got"; rc=1; }
+done
+exit $rc

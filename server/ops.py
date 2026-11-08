@@ -90,7 +90,7 @@ def status(app):
     except Exception:
         counts = {"error": "db unavailable"}
     return {"hub": "up", "pipelines": names,
-            "flags": {"DEMO_MODE": os.environ.get("DEMO_MODE") == "1", "HUB_TOKEN_set": bool(os.environ.get("HUB_TOKEN"))},
+            "flags": {"DEMO_MODE": os.environ.get("DEMO_MODE") == "1", "FALLBACK": os.environ.get("FALLBACK") == "1", "SIM_MODE": os.environ.get("SIM_MODE") == "1", "HUB_TOKEN_set": bool(os.environ.get("HUB_TOKEN"))},
             "db": counts, "latency": latency_summary()["metrics"]}
 
 def status_html(s):
