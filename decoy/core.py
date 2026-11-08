@@ -354,6 +354,13 @@ def norm_local(local: str) -> str:
     return ".".join(STT_EXPANSIONS.get(p, p) for p in local.lower().split("."))
 
 
+def art_key(a: dict) -> str:
+    """Dedupe key for an artifact: exact JSON, except names (remote_app, gift_card_brand, impersonated_org) compare case- and space-insensitively."""
+    if a.get("kind") in ("remote_app", "gift_card_brand", "impersonated_org"):
+        return a["kind"] + ":" + re.sub(r"[\s\-_.]", "", str(a.get("value", "")).lower())
+    return json.dumps(a, sort_keys=True)
+
+
 def validate(a: dict) -> dict | None:
     s = lambda k: str(a.get(k) or "").strip()[:200]  # noqa: E731
     k = a.get("kind")
@@ -385,7 +392,10 @@ def validate(a: dict) -> dict | None:
             hid = "+1" + d
         return {"kind": k, "rail": rail, "id": hid} if rail and hid else None
     if k in ("gift_card_brand", "remote_app", "impersonated_org"):
-        return {"kind": k, "value": s("value")} if 2 <= len(s("value")) <= 60 else None
+        v = s("value")
+        if k == "remote_app":   # P2 #151 live 6587cbca: 'AnyDesk' and 'any desk' were two artifacts; one canonical spelling per app
+            v = next((name for pat, name in REMOTE_APPS if re.fullmatch(pat.replace("\\b", ""), v.lower().strip()) or name.lower().replace(" ", "") == v.lower().replace(" ", "")), v)
+        return {"kind": k, "value": v} if 2 <= len(v) <= 60 else None
     if k == "script_tags" and isinstance(a.get("value"), list):
         return {"kind": k, "value": [str(x)[:40] for x in a["value"][:8]]}
     if k == "instruction_to_ai" and s("text"):
@@ -560,8 +570,8 @@ async def extract(lines: list[str]) -> list[dict]:
     out = canon_known(out, t)
     out = [a for a in out if a.get("kind") != "payment_handle" or handle_ok(str(a.get("id", "")))]   # #141
     seen, uniq = set(), []
-    for a in out:   # the rebuild/backstop can make two identical handles
-        key = json.dumps(a, sort_keys=True)
+    for a in out:   # the rebuild/backstop can make two identical handles; names differing only in case/spaces are one artifact
+        key = art_key(a)
         if key not in seen:
             seen.add(key); uniq.append(a)
     out = uniq

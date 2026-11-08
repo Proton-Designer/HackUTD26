@@ -58,6 +58,17 @@ REDO_MAX = 2               # re-think at most twice per turn when the caller add
 # Polite wrap-up (P1/Ayman, #86 e): once we have how they get paid (handle / site / wallet) plus one more artifact type,
 # play along for a few more turns, then say goodbye and close; the hub hangs up the caller (ended_by=decoy).
 STRONG_KINDS = {"payment_handle", "domain", "url", "wallet"}
+# P2 #151 (live 6587cbca): 'got_payment_details' fired on impersonated_org + remote_app and cut the call short. A wrap needs a real
+# destination (where the money or the victim goes) plus a second concrete type; the org name and a remote-access app are not that.
+DEST_KINDS = STRONG_KINDS | {"bank", "gift_card_brand", "callback_phone"}
+
+
+def wrap_ready(kinds: set, scam: str) -> bool:
+    """True when the haul justifies the 'got all of that written down' goodbye (pure; see merge())."""
+    top = PB.PLAYBOOKS.get(scam, PB.PLAYBOOKS["generic"])["targets"][0]
+    have = {"site" if k in ("domain", "url") else k for k in kinds}
+    concrete = {k for k in kinds if k and k != "impersonated_org"}
+    return bool(kinds & DEST_KINDS) and bool(kinds & STRONG_KINDS or (top in have and top in DEST_KINDS | {"site"})) and len(concrete) >= 2
 WRAP_TURNS = int(__import__("os").environ.get("DECOY_WRAP_TURNS", "3"))
 # #138: with the pre-handoff context the payment details can be in hand at Fire Back, and the wrap-up ended a live call
 # 13 s after handoff. Keep the decoy on at least this long before a got_payment_details goodbye (other bails unaffected).
@@ -544,15 +555,13 @@ class Session:
             if self.ours(a):
                 log.info("haul %s: dropped our own fake value (%s)", self.call_id, a.get("kind"))
                 continue
-            k = json.dumps(a, sort_keys=True)
+            k = core.art_key(a)
             if k not in self.arts:
                 self.arts[k] = a; new += 1
         if new:
             self.new_art_turn, self.new_art_t = self.caller_turns, time.monotonic()
         kinds = {a.get("kind") for a in self.arts.values()}
-        top = PB.PLAYBOOKS[self.scam]["targets"][0]
-        got_top = top in PB.have(list(self.arts.values()))
-        if self.wrap_at is None and (kinds & STRONG_KINDS or got_top) and len(kinds) >= 2:
+        if self.wrap_at is None and wrap_ready(kinds, self.scam):
             self.wrap_at = self.turns + WRAP_TURNS
             log.info("haul %s: payment details + %d types (%s); wrapping up after %d more turns", self.call_id,
                      len(kinds), ",".join(sorted(k for k in kinds if k)), WRAP_TURNS)

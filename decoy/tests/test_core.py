@@ -117,3 +117,31 @@ def test_chat_records_which_model_answered(monkeypatch):   # P2 #151: live log c
     delays.update({"nvidia/prim": 1.0, "nvidia/fb": 0.0})            # primary too slow: fallback answers
     assert asyncio.run(core.chat([])) == "Reply from nvidia/fb" and core.LAST_CHAT["model"] == "fb" and core.LAST_CHAT["hedged"] is True
     assert 0 <= core.LAST_CHAT["ms"] < 1000
+
+
+def test_remote_app_one_artifact_per_app(monkeypatch):   # P2 #151 live 6587cbca: 'AnyDesk' + 'any desk' in one haul
+    import asyncio, json
+    from decoy import core
+    assert core.validate({"kind": "remote_app", "value": "any desk"})["value"] == "AnyDesk"
+    assert core.validate({"kind": "remote_app", "value": "Team Viewer"})["value"] == "TeamViewer"
+    assert core.validate({"kind": "remote_app", "value": "SomeOtherTool"})["value"] == "SomeOtherTool"
+    assert core.art_key({"kind": "remote_app", "value": "Any Desk"}) == core.art_key({"kind": "remote_app", "value": "anydesk"})
+    assert core.art_key({"kind": "payment_handle", "rail": "zelle", "id": "a@b.c"}) != core.art_key({"kind": "payment_handle", "rail": "venmo", "id": "a@b.c"})
+    async def fake_chat(*a, **k):
+        return json.dumps({"artifacts": [{"kind": "impersonated_org", "value": "Microsoft"}, {"kind": "remote_app", "value": "AnyDesk"},
+                                         {"kind": "remote_app", "value": "any desk"}]})
+    monkeypatch.setattr(core, "chat", fake_chat)
+    arts = asyncio.run(core.extract(["Download any desk so I can fix your computer, this is Microsoft support."]))
+    assert [a["value"] for a in arts if a["kind"] == "remote_app"] == ["AnyDesk"], arts
+
+
+def test_wrap_needs_a_real_destination():   # P2 #151 live 6587cbca: wrapped on impersonated_org + remote_app, no handle/destination
+    from decoy.app import wrap_ready
+    assert not wrap_ready({"impersonated_org", "remote_app"}, "tech_support")
+    assert not wrap_ready({"impersonated_org", "remote_app"}, "generic")
+    assert not wrap_ready({"impersonated_org", "gift_card_brand"}, "irs_gov")        # one concrete type is not 'all of that'
+    assert not wrap_ready({"remote_app", "callback_phone"}, "tech_support")          # callback alone is not a strong/top destination here
+    assert wrap_ready({"payment_handle", "callback_phone"}, "bank")
+    assert wrap_ready({"gift_card_brand", "callback_phone"}, "irs_gov")              # top target of the playbook + a second concrete type
+    assert wrap_ready({"domain", "gift_card_brand", "impersonated_org"}, "bank")
+    assert wrap_ready({"remote_app", "domain"}, "tech_support")
