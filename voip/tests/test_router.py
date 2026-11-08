@@ -824,8 +824,8 @@ def test_F7_listen_mode_streams_even_normal_routed_calls(monkeypatch):
 
 
 def test_F13_decoy_crash_in_listen_mode_restores_instead_of_hanging_up(monkeypatch):
-    monkeypatch.setenv("MARIA_LEG", "talk"); calls = _no_telnyx(monkeypatch); fr = FakeRelay(); monkeypatch.setattr(R, "_hub_relay", lambda: fr)
-    sid = "sess-F13-crash-12345"; st = _state(sim=False, conf=False); st.pop("maria_ccid"); st.update(listen=True, handed_off=True, restore_deadline=time.time() - 100); R.CALLS[sid] = st
+    monkeypatch.setenv("MARIA_LEG", "talk"); calls = _no_telnyx(monkeypatch); fr = FakeRelay(); monkeypatch.setattr(R, "_hub_relay", lambda: fr); monkeypatch.setattr(R, "HAUL_GRACE_S", 0.2)
+    sid = "sess-F13-crash-12345"; st = _state(sim=False, conf=False); st.pop("maria_ccid"); st.update(listen=True, handed_off=True, restore_deadline=time.time() - 100, last_risk=(0.1, time.time())); R.CALLS[sid] = st
     asyncio.run(R._decoy_lost(sid))                                  # decoy died with no haul, even after the restore window
     assert st["ended"] is False and st["restored"] is True and ("stop_decoy", sid) in fr.calls
     assert "handoff.restored" in [e["type"] for e in bus.history if e["call_id"] == sid] and "hangup" not in calls
@@ -867,3 +867,18 @@ def test_F20_clear_sent_on_handoff_and_restore(monkeypatch):
         R.LOOP = asyncio.get_running_loop(); assert await R.handoff(sid); n1 = len(sent); assert await R.restore(sid); return n1
     n1 = asyncio.run(go())
     assert n1 == 1 and sent[0] == {"event": "clear"} and len(sent) == 2 and sent[1] == {"event": "clear"} and not st["talk_q"]
+
+
+def test_F13_security_high_or_unknown_risk_is_never_restored_after_a_decoy_crash(monkeypatch):
+    monkeypatch.setenv("MARIA_LEG", "talk"); calls = _no_telnyx(monkeypatch); fr = FakeRelay(); monkeypatch.setattr(R, "_hub_relay", lambda: fr); monkeypatch.setattr(R, "HAUL_GRACE_S", 0.2)
+    for name, last in (("high", (0.92, time.time())), ("unknown", None)):
+        sid = f"sess-F13-sec-{name}-12"; st = _state(sim=False, conf=False); st.pop("maria_ccid"); st.update(listen=True, handed_off=True)
+        if last: st["last_risk"] = last
+        R.CALLS[sid] = st; asyncio.run(R._decoy_lost(sid))
+        assert st["ended"] is True and not st.get("restored") and "hangup" in calls          # hang up + ended_by decoy (hub blocklists)
+        assert [e for e in bus.history if e["call_id"] == sid][-1]["data"]["ended_by"] == "decoy"
+    # the haul landing a moment after the stream closed (two channels, race) counts as a polite wrap-up, not a crash
+    sid = "sess-F13-race-1234567"; st = _state(sim=False, conf=False); st.pop("maria_ccid"); st.update(listen=True, handed_off=True, last_risk=(0.1, time.time())); R.CALLS[sid] = st
+    async def go():
+        t = asyncio.create_task(R._decoy_lost(sid)); await asyncio.sleep(0.05); st["haul_seen"] = True; await t
+    asyncio.run(go()); assert st["ended"] is True and not st.get("restored")

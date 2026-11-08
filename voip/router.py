@@ -465,6 +465,7 @@ async def webrtc_token(req: Request):
 # ---------------- TASK-008: handoff (Scammer Get Scammed) ----------------
 RESTORE_WINDOW_S = int(os.environ.get("VOIP_RESTORE_S", "30"))
 RESTORE_LOW_S = float(os.environ.get("RESTORE_LOW_S", "30"))   # demo: 10
+HAUL_GRACE_S = float(os.environ.get("VOIP_HAUL_GRACE_S", "1.5"))
 RESTORE_BELOW = 0.50   # risk s below this = "looks legitimate"
 LAST_RISK_MAX_AGE_S = float(os.environ.get("RESTORE_LAST_MAX_AGE_S", "30"))   # a last score older than this does not start the low clock at handoff
 LOOP = None   # event loop, captured from the webhook so sync bus observers can schedule work
@@ -657,11 +658,19 @@ async def _decoy_lost(sid):
     st = CALLS.get(sid)
     if not st or st["ended"] or st.get("restored"): return
     if listen_mode() and st.get("handed_off") and not st.get("haul_seen"):
-        # F13: the decoy died BEFORE delivering its haul (a polite wrap-up always publishes artifacts first): there is no Maria leg to fall back to
-        # but there is the customer's page, so hand the call back instead of hanging up on the caller and blocklisting on a crash.
-        st["crash_restore"] = True
-        log.warning("decoy lost before any haul for %s: restoring the customer (listen/talk) instead of hanging up", sid[:8])
-        await restore(sid, force=True); return
+        for _ in range(int(HAUL_GRACE_S * 10)):   # the haul (artifacts.extracted) and the stream close travel on different channels: give the haul a moment to land
+            if st.get("haul_seen") or st["ended"]: break
+            await asyncio.sleep(0.1)
+    if listen_mode() and st.get("handed_off") and not st.get("haul_seen") and not st["ended"]:
+        # F13: the decoy died BEFORE delivering its haul: there is no Maria leg but there is the customer's page, so hand the call back instead of hanging up
+        # on the caller. SECURITY: only when the last known risk is LOW; a high or unknown score keeps the old behaviour (hang up + blocklist), so a scam
+        # caller is never reconnected to the victim because the decoy crashed.
+        lr = st.get("last_risk")
+        if lr and lr[0] < RESTORE_BELOW:
+            st["crash_restore"] = True
+            log.warning("decoy lost before any haul for %s (last risk %.2f low): restoring the customer instead of hanging up", sid[:8], lr[0])
+            await restore(sid, force=True); return
+        log.warning("decoy lost before any haul for %s with %s risk: ending the call as before", sid[:8], "no" if not lr else "high")
     st["ended"] = True; LIMITER.release(sid)
     sim = st.get("sim", False)
     for k in ("caller_ccid", "maria_ccid"):
