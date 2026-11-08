@@ -26,7 +26,7 @@ and then blocks them network-wide.
 | E | **Call connects** | Normal call screen + "Live Guard on" | live (PSTN; customer on web page, talk mode) | built (WebRTC app-to-app) |
 | F | **Caller-only audio** | Only the caller's side is analysed; customer audio never leaves | live (Telnyx inbound track -> hub -> P2) | built (AIDL export on the phone) |
 | G | **Speech to text** | Live transcript of the caller | live (P2: Riva + Whisper fallback, ~0.25 s) | built (Vosk on the phone) |
-| H | **Detection** | Scam score + reasons | live (P2 local Nemotron Nano 4B on GPU: alert at +12.5 s on a real call) | built (Nemotron 3 Nano 4B on the phone, ~1-3 s per check) |
+| H | **Detection** | Scam score + reasons | live (P2 local Nemotron Nano 4B on GPU: alert at +12.5 s on a real call) | built (Nemotron 3 Nano 4B on the phone; P3-measured on a Galaxy S22: ~0.8-1.8 s per check + ~1-3 s to read a new utterance; not measured by P2) |
 | I | **Alert** | Two beeps only she hears, why-chips, Continue / Scammer Get Scammed / Hang up | live | built |
 | J | **Handoff** | Customer leaves; decoy takes the caller with no gap | live (hub relay -> P3 server decoy) | built (decoy runs on the phone, injected in place of the mic) |
 | K | **Decoy** | Speaks AS the customer (clone voice), no persona, stalls, drives toward payment details, guardrails, fake values from code, barge-in | live (P3 server decoy: 1.1 s median reply, 3 clears / 46 s call) | built (cloud Nemotron + Magpie on the phone, on-device TTS fallback) |
