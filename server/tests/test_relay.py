@@ -272,8 +272,9 @@ def test_talk_auth_one_talker_and_frames_reach_voip(monkeypatch):
     c = TestClient(app, base_url="http://127.0.0.1:8000", client=("127.0.0.1", 5000))
     with remote.websocket_connect("/talk/T1", subprotocols=["bf-device", tok]) as ws:
         assert ws.accepted_subprotocol == "bf-device"
-        with pytest.raises(Exception):                                                    # second talker refused
-            with remote.websocket_connect("/talk/T1", subprotocols=["bf-device", tok]) as w2: w2.send_text("{}"); w2.receive_text()
+        tok2 = remote.post("/pair", json={"pin": device.PIN}).json()["device_token"]       # a DIFFERENT device
+        with pytest.raises(Exception):                                                    # second talker (other device) refused
+            with remote.websocket_connect("/talk/T1", subprotocols=["bf-device", tok2]): pass
         ws.send_text(json.dumps({"payload": f}))
         ws.send_bytes(b"\xff" * 160)                                                      # binary 20 ms frame
         ws.send_text(json.dumps({"payload": base64.b64encode(b"\xff" * 960).decode()}))   # 6 frames in one message
@@ -316,3 +317,43 @@ def test_talk_frames_dropped_while_decoy_active(monkeypatch):
         ws.send_text(f)
     time.sleep(0.2)
     assert len(got) == 1
+
+
+def test_talk_reconnect_from_same_device_replaces_old_socket(monkeypatch):
+    import base64, json, time
+    from server import device
+    got = _talk_setup(monkeypatch)
+    f = json.dumps({"payload": base64.b64encode(b"\xff" * 160).decode()})
+    remote = TestClient(app)
+    tok = remote.post("/pair", json={"pin": device.PIN}).json()["device_token"]
+    with remote.websocket_connect("/talk/T1", subprotocols=["bf-device", tok]) as old:
+        old.send_text(f)
+        with remote.websocket_connect("/talk/T1", subprotocols=["bf-device", tok]) as new:   # same device: replaces, not refused
+            time.sleep(0.2)
+            new.send_text(f); new.send_text(f)
+            time.sleep(0.3)
+            msg = old.receive()
+            assert msg["type"] == "websocket.close" and msg["code"] == 1000                  # old socket closed with 1000
+    time.sleep(0.2)
+    assert len(got) == 3 and not relay._TALKERS
+
+
+def test_listen_reconnect_from_same_device_replaces_and_frees_slot(monkeypatch):
+    import time, pytest
+    from server import bus, device
+    remote = TestClient(app)
+    tok = remote.post("/pair", json={"pin": device.PIN}).json()["device_token"]
+    bus.publish("call.incoming", "L7", {"from": "+15555550123", "to": "+15555550100", "attestation": "C", "scam_id_score": 0.8})
+    from contextlib import ExitStack
+    c = TestClient(app, base_url="http://127.0.0.1:8000", client=("127.0.0.1", 5000))
+    with ExitStack() as st:
+        a = st.enter_context(remote.websocket_connect("/listen/L7", subprotocols=["bf-device", tok]))
+        st.enter_context(lw(c, "/listen/L7")); st.enter_context(lw(c, "/listen/L7"))      # local console holds two more: cap reached
+        assert relay.listener_count() == 3
+        with remote.websocket_connect("/listen/L7", subprotocols=["bf-device", tok]) as b:   # reconnect at the cap: replaces, not 403/1013
+            time.sleep(0.2)
+            assert a.receive()["type"] == "websocket.close"
+            assert relay.listener_count() == 3
+            tok2 = remote.post("/pair", json={"pin": device.PIN}).json()["device_token"]
+            with pytest.raises(Exception):                                                # a different device at the cap is still refused
+                with remote.websocket_connect("/listen/L7", subprotocols=["bf-device", tok2]): pass

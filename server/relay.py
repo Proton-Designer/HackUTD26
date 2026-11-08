@@ -312,6 +312,32 @@ def _known_call(call_id) -> bool:
     except Exception:
         return False
 
+def _identity(ws: WebSocket) -> str:
+    """Who is connecting, for replace-on-reconnect: a paired device token (hashed), the hub token, or the local console. Never logs the token."""
+    import hashlib
+    from . import device
+    protos = [p.strip() for p in ws.headers.get("sec-websocket-protocol", "").split(",") if p.strip()]
+    for t in [ws.headers.get("x-device-token")] + [p for p in protos if p != "bf-device"]:
+        if t and device._valid(t):
+            return "dev:" + hashlib.sha256(t.encode()).hexdigest()[:10]
+    if device.is_direct_local(ws):
+        return "local"
+    return "hub"
+
+_LIDENT: dict = {}    # id(queue) -> (ident, ws) for each live /listen socket
+
+async def _replace_listeners(call_id, ident, kind):
+    """A reconnect from the same device replaces its old /listen sockets for this call (frees the slot at once)."""
+    for q in list(_LQ.get(call_id, ())):
+        ident0, ws0 = _LIDENT.get(id(q), (None, None))
+        if ident0 == ident and ident.startswith("dev:"):   # only a paired device replaces itself; local/hub tabs are separate listeners (cap applies)
+            _LQ[call_id].discard(q); _LIDENT.pop(id(q), None)
+            try: q.put_nowait(None)
+            except Exception: pass
+            try: await ws0.close(1000)
+            except Exception: pass
+            log.warning("%s %s: replaced by a new connection from the same device", kind, call_id[:8])
+
 def _listen_authorized(ws: WebSocket):
     """Direct loopback (no token needed), x-hub-token == HUB_TOKEN, or a paired device token. Browsers can't set headers and the token must
     not be in the URL, so the client opens new WebSocket(url, ['bf-device', <token>]): Sec-WebSocket-Protocol 'bf-device, <token>'.
@@ -334,7 +360,7 @@ def _listen_authorized(ws: WebSocket):
 # --- WS /talk/{call_id}: two-way Maria for role-play demos. One talker per call; her PCMU goes ONLY to voip's uplink injector
 # (voip.router.maria_uplink(call_id, pcmu_bytes)), never to P2/P3, never stored or logged. Dropped while the decoy is on the line.
 TALK_FPS = 60
-_TALKERS: set = set()
+_TALKERS: dict = {}   # call_id -> (ident, ws)
 
 def _decoy_on(call_id) -> bool:
     s = _S.get(call_id)
@@ -376,18 +402,28 @@ async def talk(ws: WebSocket, call_id: str):
         enabled = False
     if not ok or not re.fullmatch(r"[A-Za-z0-9_.:-]{1,80}", call_id) or not _known_call(call_id) or not enabled:
         await ws.close(code=1008); return
-    if call_id in _TALKERS:
-        await ws.close(code=1013); return            # one talker per call
-    _TALKERS.add(call_id)
+    ident = _identity(ws)
+    old = _TALKERS.get(call_id)
+    if old is not None:
+        if old[0] != ident:
+            log.warning("talk %s refused: another device is already talking", call_id[:8])
+            await ws.close(code=1013); return        # one talker per call, and it is not you
+        _TALKERS.pop(call_id, None)                  # same device reconnecting: its old socket is replaced
+        try: await old[1].close(1000)
+        except Exception: pass
+        log.warning("talk %s: replaced the old socket from the same device", call_id[:8])
+    _TALKERS[call_id] = (ident, ws)
     sent = dropped = 0
+    reason = "client closed"
     try:
         await ws.accept(subprotocol=proto)
+        log.warning("talk %s accepted (%s)", call_id[:8], ident)
         tokens, last, n = float(TALK_FPS), time.monotonic(), 0
         while True:
             try:
                 m = await asyncio.wait_for(ws.receive(), LISTEN_IDLE_S)
             except asyncio.TimeoutError:
-                break
+                reason = "idle timeout"; break
             if m.get("type") == "websocket.disconnect":
                 break
             b64 = None
@@ -402,7 +438,7 @@ async def talk(ws: WebSocket, call_id: str):
                     b64 = None
             n += 1
             if n % 25 == 0 and _call_ended(call_id):
-                break
+                reason = "call ended"; break
             frames = max(1, len(base64.b64decode(b64)) // 160) if b64 else 1
             now = time.monotonic()
             tokens = min(float(TALK_FPS), tokens + (now - last) * TALK_FPS); last = now
@@ -415,10 +451,11 @@ async def talk(ws: WebSocket, call_id: str):
             except Exception:
                 dropped += 1                           # fail open: never raises into the call
     except Exception:
-        pass
+        reason = "socket error"
     finally:
-        _TALKERS.discard(call_id)
-        log.info("talk %s ended: msgs_sent=%d dropped=%d", call_id[:8], sent, dropped)
+        if _TALKERS.get(call_id, (None, None))[1] is ws:   # a replacement may already own the slot
+            _TALKERS.pop(call_id, None)
+        log.warning("talk %s closed (%s): msgs_sent=%d dropped=%d", call_id[:8], reason, sent, dropped)
 
 
 @router.websocket("/listen/{call_id}")
@@ -427,12 +464,17 @@ async def listen(ws: WebSocket, call_id: str):
     ok, proto = _listen_authorized(ws)
     if not ok or not re.fullmatch(r"[A-Za-z0-9_.:-]{1,80}", call_id) or not _known_call(call_id):
         await ws.close(code=1008); return
+    ident = _identity(ws)
+    await _replace_listeners(call_id, ident, "listen")
     if listener_count() >= MAX_LISTENERS:
+        log.warning("listen %s refused: %d listeners already (max %d)", call_id[:8], listener_count(), MAX_LISTENERS)
         await ws.close(code=1013); return          # try again later: at most 3 listeners
     q = asyncio.Queue(100)
-    _LQ.setdefault(call_id, set()).add(q)
+    _LQ.setdefault(call_id, set()).add(q); _LIDENT[id(q)] = (ident, ws)
+    reason = "client closed"
     try:
         await ws.accept(subprotocol=proto)
+        log.warning("listen %s accepted (%s)", call_id[:8], ident)
         async def _drain():                         # notice the browser going away
             try:
                 while True: await ws.receive_text()
@@ -443,9 +485,9 @@ async def listen(ws: WebSocket, call_id: str):
             while not gone.done():
                 try: msg = await asyncio.wait_for(q.get(), 0.5)
                 except asyncio.TimeoutError:
-                    if time.time() - idle > LISTEN_IDLE_S: break      # a stale listener must not hold one of the 3 slots forever
+                    if time.time() - idle > LISTEN_IDLE_S: reason = "idle timeout"; break      # a stale listener must not hold one of the 3 slots forever
                     continue
-                if msg is None: break                                  # call/relay session closed
+                if msg is None: reason = "call ended or replaced"; break                                  # call/relay session closed
                 idle = time.time()
                 await asyncio.wait_for(ws.send_text(msg), 1)   # a listener that cannot take a frame within 1 s is dropped
         finally:
@@ -453,5 +495,6 @@ async def listen(ws: WebSocket, call_id: str):
     except Exception:
         pass
     finally:
-        _LQ.get(call_id, set()).discard(q)
+        _LQ.get(call_id, set()).discard(q); _LIDENT.pop(id(q), None)
         if not _LQ.get(call_id): _LQ.pop(call_id, None)
+        log.warning("listen %s closed (%s)", call_id[:8], reason)
