@@ -76,6 +76,24 @@ def _paths(routes, prefix=""):
             out.append(prefix + r.path)
     return out
 
+def _nvidia_key_set():
+    """True/False only, never the value. Same lookup intel uses (env, else repo .env)."""
+    try:
+        from intel import agent
+        return bool(agent._api_key())
+    except Exception:
+        return bool(os.environ.get("NVIDIA_API_KEY"))
+
+def _intel_engine():
+    """What intel will use for its next investigation: nemotron model id (key present), template (no key / LLM off), or None if intel isn't mounted."""
+    try:
+        from intel import api, agent
+    except Exception:
+        return None
+    if not api._cfg.get("use_llm", True) or not _nvidia_key_set():
+        return "template"
+    return "nemotron:" + str(agent.MODEL)
+
 def status(app):
     paths = _paths(app.routes)
     names = {}
@@ -90,7 +108,7 @@ def status(app):
     except Exception:
         counts = {"error": "db unavailable"}
     return {"hub": "up", "pipelines": names,
-            "flags": {"DEMO_MODE": os.environ.get("DEMO_MODE") == "1", "FALLBACK": os.environ.get("FALLBACK") == "1", "SIM_MODE": os.environ.get("SIM_MODE") == "1", "FALLBACK_DETECT": os.environ.get("FALLBACK_DETECT") == "1", "HUB_TOKEN_set": bool(os.environ.get("HUB_TOKEN"))},
+            "flags": {"DEMO_MODE": os.environ.get("DEMO_MODE") == "1", "FALLBACK": os.environ.get("FALLBACK") == "1", "SIM_MODE": os.environ.get("SIM_MODE") == "1", "FALLBACK_DETECT": os.environ.get("FALLBACK_DETECT") == "1", "NVIDIA_API_KEY_set": _nvidia_key_set(), "intel_engine": _intel_engine(), "HUB_TOKEN_set": bool(os.environ.get("HUB_TOKEN"))},
             "db": counts, "latency": latency_summary()["metrics"]}
 
 def status_html(s):

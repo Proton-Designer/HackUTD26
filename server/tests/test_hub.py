@@ -112,6 +112,19 @@ def test_demo_reset_and_replay_need_device_or_local(monkeypatch):
     monkeypatch.delenv("HUB_TOKEN")
     assert local.post("/demo/reset").status_code == 200        # operator at the console
 
+def test_status_reports_key_presence_never_value(monkeypatch):
+    import intel.agent as ia
+    c = TestClient(app, client=("127.0.0.1", 5000))
+    monkeypatch.setattr(ia, "_api_key", lambda: None)
+    f = c.get("/demo/status").json()["flags"]
+    assert f["NVIDIA_API_KEY_set"] is False and f["intel_engine"] == "template"
+    monkeypatch.setattr(ia, "_api_key", lambda: "nvapi-SECRETVALUE")
+    monkeypatch.setitem(__import__("intel.api", fromlist=["_cfg"])._cfg, "use_llm", True)   # fixture runs with LLM off
+    r = c.get("/demo/status")
+    f = r.json()["flags"]
+    assert f["NVIDIA_API_KEY_set"] is True and f["intel_engine"].startswith("nemotron:")
+    assert "SECRETVALUE" not in r.text
+
 def test_token_required(monkeypatch):
     import server.main as m
     monkeypatch.setattr(m, "HUB_TOKEN", "s3")
@@ -217,15 +230,20 @@ def _wait(cond, secs=5):
         time.sleep(0.05)
     return False
 
-def test_intel_mounted_blocks_after_artifacts_and_undo_works():
+def test_intel_mounted_blocks_after_artifacts_and_undo_works(monkeypatch):
     import server.main as M
     assert M.intel_api is not None
+    # hermetic: never let a real NVIDIA key (env or repo .env) trigger a live Nemotron call; template mode only
+    monkeypatch.delenv("NVIDIA_API_KEY", raising=False)
+    import intel.agent as ia
+    monkeypatch.setattr(ia, "_api_key", lambda: None)
+    M.intel_api._cfg["use_llm"] = False
     c = paired(); n = "+15555550177"
     assert routing.decide(n)["decision"] == "LIVE_GUARD"
     bus.publish("call.incoming", "i1", {"from": n, "to": "+15555550100", "attestation": "C", "scam_id_score": 0.8})
     bus.publish("handoff.started", "i1", {"restore_deadline": 1.0})
     bus.publish("artifacts.extracted", "i1", {"artifacts": [{"kind": "callback_phone", "value": "+15555550166"}, {"kind": "impersonated_org", "value": "IRS"}]})
-    assert _wait(lambda: routing.decide(n)["decision"] == "BLOCKED_BACKFIRE"), "intel did not block the caller"
+    assert _wait(lambda: routing.decide(n)["decision"] == "BLOCKED_BACKFIRE", 20), "intel did not block the caller"
     assert any(e["type"].startswith("intel.") or e["type"] == "blocklist.updated" for e in bus.history if e["call_id"] in ("i1", None))
     log = c.get("/protection-log").json()
     row = next(r for r in log["blocked"] if r["number"] == n)
