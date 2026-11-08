@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Backfire Command Center</title>
+  <link rel="icon" href="data:,">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -11,7 +12,7 @@
     <header class="top">
       <div class="brand">
         <span class="logo">BACKFIRE</span>
-        <span class="title">T-Mobile scam intel command center</span>
+        <span class="title">T-Mobile command center</span>
       </div>
       <div class="top-right">
         <span class="pill sim">Simulated carrier network</span>
@@ -21,11 +22,11 @@
       </div>
     </header>
 
-    <section class="hero" id="hero">
+    <section class="hero" id="hero" aria-live="polite">
       <div class="hero-main">
-        <div id="headline" class="headline">Waiting for a call</div>
-        <div id="subline" class="subline"></div>
-        <ol id="rail" class="rail"></ol>
+        <h1 id="headline" class="headline">Waiting for a call</h1>
+        <p id="subline" class="subline"></p>
+        <div id="rail" class="rail" role="list" aria-label="Progress"></div>
       </div>
       <div id="campaign" class="campaign"></div>
     </section>
@@ -33,7 +34,7 @@
     <main class="grid">
       <div class="col">
         <section class="panel" id="p-risk">
-          <h2><span>Risk</span><small id="risk-meta">caller side only</small></h2>
+          <h2><span>Risk</span><small id="risk-meta">scores the caller's words only</small></h2>
           <div class="body"></div>
         </section>
         <section class="panel grow" id="p-feed">
@@ -44,16 +45,12 @@
 
       <div class="col">
         <section class="panel grow-2" id="p-artifacts">
-          <h2><span>What the decoy extracted</span><small>verified with real lookups</small></h2>
+          <h2><span>What the decoy extracted</span><small>checked against public records</small></h2>
           <div class="body"></div>
         </section>
         <section class="panel grow" id="p-trace">
-          <h2><span>Agent trace</span><small id="trace-meta">Nemotron 3 Super · typed artifacts only, never transcripts</small></h2>
+          <h2><span>Agent trace</span><small id="trace-meta">Nemotron · typed artifacts only, never transcripts</small></h2>
           <div class="body mono"></div>
-        </section>
-        <section class="panel" id="p-attest">
-          <h2><span>Privacy</span><span class="pill sim">Simulated attestation</span></h2>
-          <div class="body"></div>
         </section>
       </div>
 
@@ -63,7 +60,7 @@
           <div class="body"></div>
         </section>
         <section class="panel grow" id="p-auto">
-          <h2><span>Applied automatically</span><small>only affects Maria, or only adds a warning</small></h2>
+          <h2><span>Done automatically</span><small>affects only Maria, or only warns</small></h2>
           <div class="body"></div>
         </section>
         <section class="panel grow" id="p-denied">
@@ -73,11 +70,17 @@
       </div>
     </main>
 
-    <footer class="timeline">
-      <button id="tl-play" class="tl-btn" title="Pause / play (Space)" aria-label="Pause or play"></button>
-      <button id="tl-restart" class="tl-btn" title="Restart (R)" aria-label="Restart">&#8634;</button>
-      <div id="tl-bar" class="tl-bar"><div id="tl-ticks" class="tl-ticks"></div><div id="tl-fill" class="tl-fill"></div></div>
-      <span id="tl-text" class="tl-text"></span>
+    <footer class="foot">
+      <div id="p-attest" class="privacy" aria-label="Privacy">
+        <span class="pill sim">Simulated attestation</span>
+        <div class="body"></div>
+      </div>
+      <div class="timeline">
+        <button id="tl-play" class="tl-btn" title="Pause / play (Space)" aria-label="Pause or play"></button>
+        <button id="tl-restart" class="tl-btn" title="Restart (R)" aria-label="Restart">&#8634;</button>
+        <div id="tl-bar" class="tl-bar"><div id="tl-ticks" class="tl-ticks"></div><div id="tl-fill" class="tl-fill"></div></div>
+        <span id="tl-text" class="tl-text"></span>
+      </div>
     </footer>
   </div>
 

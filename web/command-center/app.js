@@ -27,7 +27,7 @@
   // P4a's kind names (intel/gate.py), plus P1's mock name and older aliases
   const KIND = {
     block_caller_for_customer: 'Block caller for Maria', link_campaign: 'Link to campaign, block its numbers before ring',
-    callback_protection_warning: 'Add callback number to Callback Protection', network_number_block: 'Block calling number network-wide',
+    callback_protection_warning: 'Add callback number to Scam Callback Protection', network_number_block: 'Block calling number network-wide',
     number_block_network: 'Block calling number network-wide', dns_block_registrar_report: 'DNS block + registrar abuse report',
     exchange_freeze_request: 'Exchange freeze request for the wallet', ftc_ic3_packet: 'FTC + IC3 report packet',
     mark_number_safe: 'Mark number safe', add_trusted_contact: 'Add trusted contact', unblock_number: 'Unblock number', allowlist_add: 'Add to allowlist',
@@ -39,7 +39,18 @@
   const TRUST_ASK = { mark_number_safe: t => `Mark ${t} as safe`, add_trusted_contact: t => `Add ${t} as a trusted contact`, unblock_number: t => `Unblock ${t}`, allowlist_add: t => `Allowlist ${t}` };
   const ENDED_BY = { maria: 'Maria', caller: 'the caller', decoy: 'the decoy', system: 'the system', scammer: 'the scammer', network_reject: 'the network' };
   const ROUTE = { NORMAL: 'rang normally', LIVE_GUARD: 'Live Guard on', BLOCKED_BACKFIRE: 'blocked before ring' };
-  const STAGES = [['detect', 'Detect'], ['handoff', 'Hand off'], ['extract', 'Extract'], ['verify', 'Verify'], ['burn', 'Burn'], ['immune', 'Immune']];
+  // Five steps (the kit caps a demo path at five), grouped in the brief's own words: during, after, before the next ring.
+  // 'extract' is tracked separately but shown inside Verify.
+  const STAGES = [['detect', 'Detect'], ['handoff', 'Hand off'], ['verify', 'Verify'], ['burn', 'Block'], ['immune', 'Immune']];
+  const PHASES = [['During the call', 1, 3], ['After the call', 3, 5], ['Before the next ring', 5, 6]];
+  // Contract bands as words, never a bare percentage ("honest confidence")
+  const BAND = { low: 'Low risk', watch: 'Watch', high: 'Likely scam', critical: 'Scam' };
+  const ASK_PHRASE = { otp: 'her one-time code', card: 'her card number', ssn: 'her Social Security number', gift_card: 'gift cards', crypto: 'crypto', wire: 'a wire transfer', p2p: 'a P2P payment', remote_app: 'remote access to her phone', secrecy: 'secrecy' };
+  const bandWord = r => BAND[String(r.band || '').toLowerCase()] || (r.s >= 0.95 ? 'Scam' : r.s >= 0.8 ? 'Likely scam' : r.s >= 0.4 ? 'Watch' : 'Low risk');
+  // STIR/SHAKEN level in T-Mobile's words
+  const ATTEST = { A: 'Caller Verified', B: 'caller ID partly verified', C: 'caller ID not verified', NONE: 'no caller ID check' };
+  const attestWords = a => ATTEST[String(a || 'none').toUpperCase()] || `attestation ${a}`;
+  const TAGLINE = 'T-Mobile customers hand a live scam call to an AI decoy that <em>exposes and blocks the scammer.</em>';
   const CALL_EVENTS = new Set(['call.incoming', 'call.routed', 'call.answered', 'call.ended', 'transcript.caller', 'risk.update', 'alert.fired', 'user.action', 'handoff.started', 'handoff.restored', 'decoy.turn', 'decoy.fake_value', 'guardrail.tripped']);
 
   // ---------- helpers ----------
@@ -114,10 +125,11 @@
       trace: [], traceCall: null, proposed: new Set(), inputLogged: new Set(), agent: null,
       actions: new Map(), actOrder: [],
       blocks: [], rejects: [],
-      campaigns: new Map(), campaignId: null, immunityShown: 0,
+      campaigns: new Map(), campaignId: null, immunityShown: 0, immunityBase: null,
       denied: [],
       stage: {},
-      head: { text: 'Waiting for a call', sub: 'Live Guard is on. Backfire only ever hears the caller.', tone: '' },
+      // Idle is never blank: the tagline, word for word as on the slides and Devpost
+      head: { text: TAGLINE, sub: 'Live Guard is on and waiting for a call to the scam line. It only ever hears the caller.', tone: '' },
       flashSeq: 0,
     };
   }
@@ -303,13 +315,21 @@
     if (approval === 'analyst') return 'queued';
     return 'proposed';
   }
+  // When an action arrives without a scope (P1's mock), infer it from the kind instead of defaulting to "Maria only"
+  function inferScope(kind) {
+    const k = String(kind || '').toLowerCase();
+    if (/network|dns|freeze|ftc|ic3|report|registrar/.test(k)) return 'network';
+    if (/campaign/.test(k)) return 'campaign';
+    if (/callback_protection/.test(k)) return 'all_customers';
+    return 'her';
+  }
   function normAction(d, callId) {
     const status = normStatus(d.status, d.approval);
     const kind = String(d.kind || d.type || 'action');
     return {
       id: String(d.action_id || d.id || `act-${S.seq}`), call: callId,
       kind, label: d.label || d.title || KIND[kind] || cap(humanize(kind)),
-      target: d.target ?? d.value ?? '', scope: d.scope || '', approval: d.approval || '',
+      target: d.target ?? d.value ?? '', scope: d.scope || inferScope(kind), approval: d.approval || '',
       status, gate: d.gate_status || '', simulated: d.simulated !== false, evidence: arr(d.evidence),
       expiry: d.expiry || d.expires_in || (d.payload && d.payload.body && d.payload.body.expiresInDays ? `${d.payload.body.expiresInDays} days` : ''),
       undo: d.undo_token || '', reason: d.reason || d.rule || '',
@@ -323,7 +343,7 @@
       c.attestation = d.attestation ?? c.attestation; c.scamId = num(d.scam_id_score ?? c.scamId);
       if (!S.focus) focusOn(c);
       const sid = Number.isFinite(c.scamId) ? ` · Scam ID ${c.scamId.toFixed(2)} (simulated)` : '';
-      head(`Incoming call from <em>${esc(fmtPhone(c.from))}</em>`, `Caller ID attestation ${c.attestation || 'none'}${sid}`, '');
+      head(`Incoming call from <em>${esc(fmtPhone(c.from))}</em>`, `${cap(attestWords(c.attestation))}${sid}`, '');
       dirty('feed');
     },
     'call.routed'(e, d, c) {
@@ -370,13 +390,16 @@
       if (d.engine) S.engine = String(d.engine).toLowerCase();
       if (d.model) S.model = String(d.model);
       const p = pct(c.risk.s);
-      if (c.risk.s >= 0.5) stage('detect', `${p}%${c.risk.band ? ' ' + c.risk.band : ''}`);
+      const word = bandWord(c.risk);
+      if (c.risk.s >= 0.5) stage('detect', word.toLowerCase());
       if (!c.handoff && !S.stage.extract) {
         if (c.risk.s >= 0.8) {
-          const asks = c.risk.asks.map(a => `asks for ${(ASK[a] || humanize(a)).toLowerCase()}`);
-          head(`Scam detected: <em>${p}%</em>`, [cap(humanize(c.risk.type)), ...asks].filter(Boolean).join(' · '), 'alert');
+          // Lead with what he asked for, in plain words; the score stays small in the Risk panel
+          const ask = c.risk.asks.find(a => a !== 'secrecy') || c.risk.asks[0];
+          const what = ask ? `he's asking for ${ASK_PHRASE[ask] || humanize(ask)}` : c.risk.why[0] ? lcFirst(c.risk.why[0]) : 'scam pattern';
+          head(`${esc(word)}: <em>${esc(what)}</em>`, c.risk.why.join(' · '), 'alert');
         } else {
-          head(`Live Guard listening · risk <em>${p}%</em>`, c.risk.why.join(' · ') || 'Caller side only', '');
+          head(`Live Guard is listening · <em>${esc(word.toLowerCase())}</em>`, c.risk.why.join(' · ') || 'Caller side only', '');
         }
       }
       dirty('risk', 'header', 'attest');
@@ -582,7 +605,8 @@
       S.campaigns.set(id, cmp); S.campaignId = id;
       if (prev.status !== cmp.status || !prev.id) {
         const via = cmp.linkedVia ? ` · linked via ${esc(cmp.linkedVia)}` : '';
-        trace('plan', 'CAMPAIGN', `${esc(id)} <span class="res">· ${esc(cmp.status)} · ${esc(cmp.sightings ?? '?')} sightings${via}</span>`);
+        const seen = cmp.sightings != null ? ` · ${esc(cmp.sightings)} sightings` : '';
+        trace('plan', 'CAMPAIGN', `${esc(id)} <span class="res">· ${esc(cmp.status)}${seen}${via}</span>`);
       }
       if (cmp.immunity > 0) stage('immune', `${fmtCompact(cmp.immunity)} blocked for all`);
       dirty('campaign');
@@ -774,13 +798,18 @@
         hero.classList.remove('flash'); void hero.offsetWidth; hero.classList.add('flash');
         clearTimeout(flashTimer); flashTimer = setTimeout(() => hero.classList.remove('flash'), 2200);
       }
+      const stOf = k => (k === 'verify' ? S.stage.verify || S.stage.extract : S.stage[k]);
       let now = -1;
-      STAGES.forEach(([k], i) => { if (S.stage[k]) now = i; });
-      $('rail').innerHTML = STAGES.map(([k, label], i) => {
-        const st = S.stage[k];
+      STAGES.forEach(([k], i) => { if (stOf(k)) now = i; });
+      const phases = PHASES.map(([label, a, b]) => `<div class="phase" style="grid-column:${a} / ${b}">${label}</div>`).join('');
+      const steps = STAGES.map(([k, label], i) => {
+        const st = stOf(k);
+        const sub = k === 'verify' && S.stage.extract && S.stage.verify ? `${S.stage.extract.sub} · ${S.stage.verify.sub}` : st ? st.sub : '';
         const cls = !st ? '' : i === now ? 'now' : 'done';
-        return `<li class="${cls}"><span class="n">${i + 1}</span><b>${label}</b><span>${esc(st ? st.sub : '')}</span></li>`;
+        const state = !st ? 'not yet' : i === now ? 'current step' : 'done';
+        return `<div class="step ${cls}" role="listitem" data-n="${i + 1}" aria-label="${esc(`${label}: ${state}`)}"><b>${label}</b><span>${esc(sub)}</span></div>`;
       }).join('');
+      $('rail').innerHTML = phases + steps;
     },
 
     campaign() {
@@ -788,23 +817,26 @@
       const c = S.campaigns.get(S.campaignId);
       if (!c) {
         el.className = 'campaign';
-        el.innerHTML = '<div class="k"><span>Campaign</span></div><div class="name" style="color:var(--faint)">None linked yet</div>'
-          + '<div class="facts">Calls are linked by wallet, website, callback number and script, never by calling number alone.</div>'
-          + '<div class="k" style="margin-top:6px"><span>Immunity</span></div><div class="immrow"><div class="big" style="color:var(--faint)">0</div><div class="biglabel">customers protected from this campaign</div></div>';
+        el.innerHTML = '<div class="k"><span>Campaign</span></div><div class="name" style="color:var(--text-3)">None linked yet</div>'
+          + '<div class="facts" title="Calls are linked by wallet, website, callback number and script, never by calling number alone.">Linked by wallet, website, callback number, script</div>'
+          + '<div class="k" style="margin-top:6px"><span>Immunity</span></div><div class="immrow"><div class="big" style="color:var(--text-3)">0</div><div class="biglabel">numbers and indicators blocked or warned for every Backfire user</div></div>';
         return;
       }
+      if (S.immunityBase == null) S.immunityBase = c.immunity; // "compared to what?": the count when this screen first saw the campaign
+      const gained = c.immunity - S.immunityBase;
       el.className = 'campaign on';
       const st = c.status.toLowerCase();
       const sightings = c.sightings != null ? `${c.sightings} sightings${c.independent != null && c.independent !== c.sightings ? ` (${c.independent} independent)` : ''}` : '';
-      const facts = [sightings, c.numbers != null ? `${c.numbers} calling numbers` : '', c.indicators.length ? `strong: ${c.indicators.join(', ')}` : ''].filter(Boolean).join(' · ');
+      const facts = [c.id, sightings, c.numbers != null ? `${c.numbers} calling numbers` : '', c.indicators.length ? `strong: ${c.indicators.join(', ')}` : ''].filter(Boolean).join(' · ');
       const name = c.name || (c.linkedVia ? `Linked via ${c.linkedVia}` : cap(humanize(c.type)) || 'Scam campaign');
       const poison = c.poisoning ? ' · <span class="poison">poisoning attempt seen</span>' : '';
-      el.innerHTML = `<div class="k"><span>Campaign ${esc(c.id)}</span><span class="status-tag ${esc(st)}">${esc(st)}</span></div>`
+      el.innerHTML = `<div class="k"><span>Campaign</span><span class="status-tag ${esc(st)}">${st === 'confirmed' ? '✓ ' : ''}${esc(st)}</span></div>`
         + `<div class="name" title="${esc(name)}">${esc(name)}</div>`
         + `<div class="facts" title="${esc(facts)}">${esc(facts)}${poison}</div>`
         + `<div class="k" style="margin-top:6px"><span>Immunity</span>${c.immSim ? '<span class="pill sim">Simulated</span>' : ''}</div>`
         + `<div class="immrow"><div class="big" id="imm">${fmtInt(S.immunityShown)}</div>`
-        + `<div class="biglabel">${esc(c.immLabel || 'numbers and indicators now blocked or warned for every Backfire user')}</div></div>`;
+        + `<div class="biglabel">${esc(c.immLabel || 'numbers and indicators now blocked or warned for every Backfire user')}`
+        + `${gained > 0 ? `<br><span class="delta">+${fmtInt(gained)} since this screen opened</span>` : ''}</div></div>`;
       countUp(c.immunity);
     },
 
@@ -813,21 +845,21 @@
       const c = focusCall();
       const r = c && c.risk;
       if (!r) {
-        body.innerHTML = '<div class="risk"><div class="score"><b>&ndash;</b><span class="band">no score</span></div>'
-          + '<div class="risk-right"><div class="meter"><i></i></div><div class="meta">Scores the caller\'s words only</div></div></div>';
+        body.innerHTML = '<div class="risk"><div class="score"><span class="band">No call</span><span class="num">waiting for the caller to speak</span></div>'
+          + '<div class="risk-right"><div class="meter"><i></i></div><div class="meta">Only the caller\'s words are scored, never Maria\'s</div></div></div>';
         return;
       }
       const p = pct(r.s);
-      const tone = r.s >= 0.8 ? 'hot' : r.s >= 0.5 ? 'warm' : 'cool';
+      const tone = r.s >= 0.8 ? 'hot' : r.s >= 0.4 ? 'warm' : 'cool';
       const meta = [cap(humanize(r.type)), r.stage ? `stage: ${humanize(r.stage)}` : '', r.imp ? `impersonates ${r.imp}` : ''].filter(Boolean).join(' · ');
       const aiInWhy = r.why.some(w => /\bAI\b/.test(w));
       const chips = r.why.map(w => `<span class="chip">${esc(w)}</span>`).join('')
         + (r.ai && !aiInWhy ? '<span class="chip ai">Talking to the AI system</span>' : '');
       const asks = r.asks.length ? `<div class="asks">Asks for ${r.asks.map(a => `<b>${esc(ASK[a] || humanize(a))}</b>`).join(' · ')}</div>` : '';
       body.innerHTML = `<div class="risk ${tone}">`
-        + `<div class="score"><b>${p}<small>%</small></b><span class="band">${esc(r.band || tone)}</span></div>`
+        + `<div class="score"><span class="band">${tone === 'hot' ? '⚠ ' : ''}${esc(bandWord(r))}</span><span class="num">detector score ${r.s.toFixed(2)}</span></div>`
         + '<div class="risk-right">'
-        + (c.alert ? '<span class="alert-tag">Alert sent · two beeps</span>' : '')
+        + (c.alert ? '<span class="alert-tag">Two beeps sent</span>' : '')
         + `<div class="meter"><i style="width:${r.prevPct}%"></i></div>`
         + `${asks}<div class="meta" title="${esc(meta)}">${esc(meta)}</div></div></div>`
         + (chips ? `<div class="chips">${chips}</div>` : '');
@@ -840,7 +872,7 @@
       const c = focusCall();
       if (!c) { $('feed-meta').textContent = ''; body.innerHTML = empty('No call yet. Call the scam line to start.'); return; }
       const route = ROUTE[c.decision] || humanize(c.decision).toLowerCase();
-      $('feed-meta').textContent = [`${fmtPhone(c.from) || 'unknown'} → Maria`, route, c.attestation ? `attestation ${c.attestation}` : ''].filter(Boolean).join(' · ');
+      $('feed-meta').textContent = [`${fmtPhone(c.from) || 'unknown'} → Maria`, route, c.attestation ? attestWords(c.attestation) : ''].filter(Boolean).join(' · ');
       if (!c.feed.length) { body.innerHTML = empty('Ringing. Only the caller\'s side will appear here.'); return; }
       body.innerHTML = `<div class="feed">${c.feed.map(l => lineHtml(l)).join('')}</div>`;
       body.scrollTop = body.scrollHeight;
@@ -850,16 +882,16 @@
       const body = bodyOf('attest');
       const local = S.engine === 'local';
       const v = voiceState();
+      // Always-visible privacy strip: short labels, the detail is in the tooltip
       const rows = [
         ['Caller audio only', "Maria's voice is never processed"],
-        local ? ['On device', 'Nemotron 3 Nano 4B, no audio leaves the phone'] : ['Enclave attested', 'NVIDIA GPU in confidential-computing mode'],
-        local ? null : ['Image hash matches', 'sha256:9f2c41…e41a, the published build'],
-        ['Nothing kept', 'In memory only; scammer infrastructure is all we store'],
-        v === 'clone' ? ['Decoy voice', `Maria's clone, consent ${S.voice && S.voice.consent ? S.voice.consent : 'on file'}, deletable`]
-          : v === 'synthetic' ? ['Decoy voice', 'Synthetic voice (no clone consent)'] : null,
+        ['No audio stored', 'Processed in memory; only scammer infrastructure is kept'],
+        local ? ['On-device model', 'Nemotron 3 Nano 4B on the phone; no audio leaves it'] : ['Enclave attested', 'NVIDIA GPU in confidential-computing mode; image hash sha256:9f2c41…e41a matches the published build'],
+        v === 'clone' ? ['Consented voice', `Maria's clone, consent ${S.voice && S.voice.consent ? S.voice.consent : 'on file'}, deletable`]
+          : v === 'synthetic' ? ['Synthetic voice', 'No voice clone kept'] : null,
+        ['Synthetic data', 'No real customer data anywhere in this demo'],
       ].filter(Boolean);
-      if (rows.length > 4) rows.splice(rows.findIndex(r => r[0] === 'Nothing kept'), 1); // keep the consent row
-      body.innerHTML = `<div class="attest">${rows.map(([k, t]) => `<span class="ok">✓</span><span class="v" title="${esc(k + ': ' + t)}"><b>${esc(k)}</b> · ${esc(t)}</span>`).join('')}</div>`;
+      body.innerHTML = rows.map(([k, t]) => `<span class="item" title="${esc(t)}"><span class="ok">✓</span><b>${esc(k)}</b></span>`).join('');
     },
 
     artifacts() {
@@ -895,10 +927,12 @@
       const waiting = items.filter(a => a.status === 'queued').length;
       $('queue-meta').textContent = waiting ? `${waiting} waiting · one click each` : items.length ? 'all approved' : 'analyst one-click';
       if (!items.length) { body.innerHTML = empty('Network-wide and external actions wait here for one analyst click.'); return; }
+      // Exactly one filled button on the screen: the first action still waiting
+      const primary = (items.find(a => a.status === 'queued') || {}).id;
       body.innerHTML = items.map(a => {
         const right = a.status === 'applied'
           ? `<div class="applied">✓ Simulated: applied<small>${esc(a.note ? 'local only' : 'network action')}</small></div>`
-          : `<button class="btn-approve" data-approve="${esc(a.id)}"${a.ui === 'approving' ? ' disabled' : ''}>${a.ui === 'approving' ? 'Approving…' : 'Approve'}</button>`;
+          : `<button class="btn-approve${a.id === primary ? ' primary' : ''}" data-approve="${esc(a.id)}"${a.ui === 'approving' ? ' disabled' : ''}>${a.ui === 'approving' ? 'Approving…' : 'Approve'}</button>`;
         const meta = [fmtVal(a.target), scopeLabel(a.scope), a.expiry ? `${a.expiry} expiry` : '', a.evidence[0] || ''].filter(Boolean).join(' · ');
         const why = a.evidence.length ? `Evidence: ${a.evidence.join('; ')}` : meta;
         return `<div class="q${a.status === 'applied' ? ' done' : ''}${fresh('queue', a.seq)}" title="${esc(why)}"><div class="lbl">${esc(a.label)}</div>${right}`
@@ -920,22 +954,25 @@
         let tgt = fmtVal(a.target);
         if (/campaign/.test(a.kind) && live.length) tgt += ` · blocks ${live.map(b => fmtPhone(b.number)).join(', ')} before ring`;
         if (a.status === 'held' && a.reason) tgt += ` · ${a.reason}`;
+        const forHer = scopeKey(a.scope) === 'her';
         rows.push({
           seq: a.seq, cls: a.status === 'held' ? 'held' : undone ? 'undone' : '', ic: a.status === 'held' ? '⏸' : '✓',
           label: a.status === 'held' ? `Held: ${a.label}` : a.label, tgt, scope: scopeLabel(a.scope),
-          undo: undone ? 'undone' : a.undo || (blocks[0] && blocks[0].undo) || '',
+          // Maria's side of it, in her words: it's in her protection log and she can undo it there
+          undo: undone ? 'undone' : forHer && (a.undo || blocks.length) ? 'her-log' : '',
         });
       }
       const BL = { her: ['Blocked for Maria', 'Maria only'], campaign: ['Blocked before ring for Backfire users', 'Backfire users'], network: ['Blocked network-wide (simulated)', 'All customers'] };
       for (const b of S.blocks) {
         if (used.has(b)) continue;
-        rows.push({ seq: b.seq, cls: b.active ? '' : 'undone', ic: '✓', label: BL[b.scope][0], tgt: `${fmtPhone(b.number)}${b.reason ? ` · ${b.reason}` : ''}`, scope: BL[b.scope][1], undo: b.active ? b.undo : 'undone' });
+        rows.push({ seq: b.seq, cls: b.active ? '' : 'undone', ic: '✓', label: BL[b.scope][0], tgt: `${fmtPhone(b.number)}${b.reason ? ` · ${b.reason}` : ''}`, scope: BL[b.scope][1], undo: !b.active ? 'undone' : b.scope === 'her' ? 'her-log' : '' });
       }
       for (const r of S.rejects) rows.push({ seq: r.seq, cls: 'reject', ic: '⛔', label: 'Callback rejected before it rang', tgt: `${fmtPhone(r.number)}${r.reason ? ` · ${r.reason}` : ''}`, scope: 'Maria only', undo: '' });
-      if (!rows.length) { body.innerHTML = empty('Blocks for Maria, campaign links and Callback Protection warnings land here with no human in the loop.'); return; }
+      if (!rows.length) { body.innerHTML = empty('Blocks for Maria, campaign links and Scam Callback Protection warnings land here with no human in the loop.'); return; }
       rows.sort((x, y) => y.seq - x.seq);
+      const UNDO = { undone: 'Maria undid this', 'her-log': "in Maria's protection log · she can undo" };
       body.innerHTML = `<div class="list">${rows.map(r => `<div class="act ${r.cls}${fresh('auto', r.seq)}"><span class="ic">${r.ic}</span><span class="lbl">${esc(r.label)}</span><span class="scope">${esc(r.scope)}</span>`
-        + `<span class="tgt" title="${esc(r.tgt)}">${esc(r.tgt)}${r.undo ? ` <span class="undo">· ${r.undo === 'undone' ? 'undone by Maria' : `undo ${esc(r.undo)}`}</span>` : ''}</span></div>`).join('')}</div>`;
+        + `<span class="tgt" title="${esc(r.tgt)}">${esc(r.tgt)}${r.undo ? ` <span class="undo">· ${UNDO[r.undo]}</span>` : ''}</span></div>`).join('')}</div>`;
     },
 
     denied() {
@@ -980,9 +1017,26 @@
     const cls = l.ok ? l.verdict : 'err';
     const lat = Number.isFinite(num(l.latency)) ? `<span class="ms">${Math.round(num(l.latency))} ms</span>` : '';
     const tool = IS_CHAIN.test(l.tool) && l.result.chain ? `${l.result.chain} chain` : (TOOL[l.tool] || l.tool);
+    // Meaning never by color alone: an icon goes with every verdict
+    const icon = !l.ok ? '' : { bad: '⚠', conflict: '⛔', ok: '✓' }[l.verdict] || '';
+    const link = verifyUrl(l);
+    const verify = link ? ` <a class="verify" href="${esc(link)}" target="_blank" rel="noopener noreferrer" title="Open the public record">verify ↗</a>` : '';
     return `<div class="lk ${cls}${fresh('artifacts', l.seq)}"><div class="row"><span class="tool">${esc(tool)}</span>${lat}${src}</div>`
-      + `<div class="sum">${esc(l.ok ? l.summary : cap(String(l.error || 'lookup unavailable')))}</div>`
-      + `${l.detail ? `<div class="det">${esc(l.detail)}</div>` : ''}</div>`;
+      + `<div class="sum">${icon ? `<span class="ic" aria-hidden="true">${icon}</span>` : ''}${esc(l.ok ? l.summary : cap(String(l.error || 'lookup unavailable')))}</div>`
+      + `${l.detail || verify ? `<div class="det">${esc(l.detail)}${verify}</div>` : ''}</div>`;
+  }
+  // "Let the judge verify one claim": link a real lookup to the same public record it came from.
+  // Fixed public hosts only (never the scammer's own site); the value is URL-encoded.
+  function verifyUrl(l) {
+    if (!isLive() || !l.real || !l.ok || l.value == null) return '';
+    const v = encodeURIComponent(String(l.value).trim());
+    if (/rdap|whois/.test(l.tool)) return `https://rdap.org/domain/${v}`;
+    if (IS_CHAIN.test(l.tool)) {
+      const chain = String(l.result.chain || l.result.unit || '').toUpperCase();
+      if (chain === 'ETH') return `https://eth.blockscout.com/address/${v}`;
+      return `https://blockstream.info/address/${v}`;
+    }
+    return '';
   }
 
   let countTimer = 0;
