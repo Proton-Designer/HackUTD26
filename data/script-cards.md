@@ -1,6 +1,6 @@
 # Backfire: Judge Script Cards
 
-**How to use (read this once):** You are the scammer. Call the scam line, wait for "hello," then read your card out loud, one line at a time. Pause after each line and let the customer answer. **Read the whole card, at least through the one-time-code request (line 3).** When you reach the payment step, give the callback number, website and wallet exactly as written. Blanks (____) are filled in by the team before judging.
+**How to use (read this once):** You are the scammer. Call the scam line, wait for "hello," then read your card out loud, one line at a time. Pause after each line and let the customer answer. **Use the Judge card (3 lines, read all of them). If you read the full Card 2 instead, read at least through the one-time-code request (line 3).** When you reach the payment step, give the callback number, website and wallet exactly as written. Blanks (____) are filled in by the team before judging.
 
 All scripts are synthetic. No real people.
 
