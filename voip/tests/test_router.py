@@ -784,7 +784,7 @@ def test_auto_answer_env_and_sip_mode_keep_the_old_behaviour(monkeypatch):
     assert [c[0] for c in calls] == ["answer"]
 
 def test_sim_ringing_drops_media_until_answered_and_hello_waits(monkeypatch):
-    _ring_setup(monkeypatch); monkeypatch.setattr(R, "_hub_relay", lambda: FakeRelay()); fr = R._hub_relay(); monkeypatch.setattr(R, "direct_local", lambda c: True)
+    _ring_setup(monkeypatch); fr = FakeRelay(); monkeypatch.setattr(R, "_hub_relay", lambda: fr); monkeypatch.setattr(R, "direct_local", lambda c: True)
     sid = "sess-ring-sim-1234567"; st = _state(sim=True); st.update(token="tok", ringing=True); R.CALLS[sid] = st
     frame = json.dumps({"event": "media", "media": {"track": "inbound", "payload": base64.b64encode(b"\xff" * 160).decode()}})
     app = FastAPI(); app.include_router(R.router)
