@@ -46,7 +46,8 @@
     decoyStop(); dcid = cid; if (!BF.sim || !cid) return;
     let tok = null; try { tok = BF.deviceToken && BF.deviceToken(); } catch (e) {}
     try {
-      lws = new WebSocket(HUB.replace(/^http/, "ws") + "/listen/" + encodeURIComponent(cid) + (tok ? "?t=" + encodeURIComponent(tok) : ""));
+      const url = HUB.replace(/^http/, "ws") + "/listen/" + encodeURIComponent(cid);   // token travels as a subprotocol, never in the URL
+      lws = tok ? new WebSocket(url, ["bf-device", tok]) : new WebSocket(url);
       stats.state = "connecting";
       lws.onopen = () => { stats.state = "open"; };
       lws.onmessage = m => { let j; try { j = JSON.parse(m.data); } catch (e) { return; } if (j && j.track === "decoy" && j.payload) { if (!stats.frames) decoyLabel(true); decoyPlay(j.payload); } };
