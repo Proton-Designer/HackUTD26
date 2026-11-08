@@ -24,7 +24,9 @@ log = logging.getLogger("p3.voice")
 GRPC = "grpc.nvcf.nvidia.com:443"
 ZEROSHOT_FN = os.environ.get("MAGPIE_ZEROSHOT_FUNCTION_ID", "55cf67bf-600f-4b04-8eac-12ed39537a08")
 MULTI_FN = os.environ.get("MAGPIE_MULTI_FUNCTION_ID", "877104f7-e885-42b9-8de8-f6e4c6303969")
-SYNTH_VOICE = os.environ.get("DECOY_SYNTH_VOICE", "Magpie-Multilingual.EN-US.Aria.Calm")
+# Fallback when no clone is enrolled. Default: deepest male EN-US voice at normal pace (median F0 ~95 Hz); also valid:
+# Jason.Calm (~106 Hz, slower), Ray.Calm, Jason.Neutral, Leo.* (higher). Previous default (female): Aria.Calm.
+SYNTH_VOICE = os.environ.get("DECOY_SYNTH_VOICE", "Magpie-Multilingual.EN-US.Ray.Neutral")
 TTS_RATE = 22050
 VOICES = pathlib.Path(os.environ.get("DECOY_VOICES_DIR", pathlib.Path(__file__).parent / "voices"))
 PROMPT_MIN_S, PROMPT_MAX_S = 3.0, 8.0
