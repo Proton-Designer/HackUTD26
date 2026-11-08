@@ -20,7 +20,7 @@ def test_restarts_missing_service_window_and_reports_new_tunnel_url(tmp_path):
             def log_message(self,*a): pass
         http.server.HTTPServer(("127.0.0.1",{port}),H).serve_forever()"""))
     (tmp_path / "tun.sh").write_text("echo 'x https://fake-new-one.trycloudflare.com y' >> " + str(tmp_path / "tun.log") + "; sleep 120\n")
-    env = dict(os.environ, WD_SESSION=sess, WD_PORT=str(port), WD_TICK_S="1", WD_TUN_EVERY="2", WD_FAILS="3", WD_MAX_TICKS="14",
+    env = dict(os.environ, WD_SESSION=sess, WD_PORT=str(port), WD_TICK_S="1", WD_TUN_EVERY="2", WD_FAILS="3", WD_MAX_TICKS="14", WD_LLAMA="0",     # never probe/restart the real llama window from a test
                WD_LOG=str(tmp_path / "wd.log"), WD_URL_FILE=str(tmp_path / "url.txt"), WD_TUN_LOG=str(tmp_path / "tun.log"),
                WD_SVC_CMD=f"{sys.executable} {tmp_path/'svc.py'}", WD_TUN_CMD=f"bash {tmp_path/'tun.sh'}",
                WD_TUNNEL_URL="http://127.0.0.1:1")          # dead tunnel

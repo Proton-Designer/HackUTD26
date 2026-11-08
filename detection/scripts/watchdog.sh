@@ -21,7 +21,12 @@ TUNNEL=${WD_TUNNEL_URL:-}; [ -z "$TUNNEL" ] && [ -s "$URLF" ] && TUNNEL=$(head -
 say() { echo "$(date '+%F %T') $*" | tee -a "$LOG"; }
 health() { curl -s -m 5 -o "$1" -w '%{http_code}' "$2/healthz" 2>/dev/null; }     # prints http code (000 = refused/timeout)
 active() { grep -o '"active_stt_sockets": *[0-9]*' "$1" 2>/dev/null | grep -o '[0-9]*$' | head -1; }
-bare() { case "$(tmux display -p -t "$SESS:$SVCW" '#{pane_current_command}' 2>/dev/null)" in bash|zsh|sh|fish|dash|"") return 0;; *) return 1;; esac; }
+idle_pane() {   # $1 session:window -> 0 if the pane's shell has NO child process (really idle). pane_current_command alone lies: run.sh / WSL interop show as "bash"
+  local pid; pid=$(tmux display -p -t "$1" '#{pane_pid}' 2>/dev/null); [ -z "$pid" ] && return 0
+  [ -z "$(pgrep -P "$pid" 2>/dev/null)" ] && case "$(tmux display -p -t "$1" '#{pane_current_command}' 2>/dev/null)" in bash|zsh|sh|fish|dash|"") return 0;; esac
+  return 1
+}
+bare() { idle_pane "$SESS:$SVCW"; }
 win_exists() { tmux list-windows -t "$SESS" -F '#{window_name}' 2>/dev/null | grep -qx "$1"; }
 start_in() {   # $1 window  $2 command: recreate window if missing, else type into the bare shell
   if win_exists "$1"; then tmux send-keys -t "$SESS:$1" "cd $ROOT && $2" Enter
@@ -34,7 +39,8 @@ restart_svc() {
 }
 restart_tunnel() {
   say "TUNNEL RESTART: $TUNNEL failed x$TFAIL while local OK"
-  tmux kill-window -t "$SESS:$TUNW" 2>/dev/null; : > "$TLOG"; start_in "$TUNW" "$TUN_CMD"
+  win_exists "$TUNW" && { tmux send-keys -t "$SESS:$TUNW" C-c; sleep 2; }   # never kill-window: only interrupt the process in a window we may not have created
+  : > "$TLOG"; start_in "$TUNW" "$TUN_CMD"
   local u="" i; for i in $(seq 1 30); do u=$(grep -o 'https://[a-z0-9-]*\.trycloudflare\.com' "$TLOG" 2>/dev/null | head -1); [ -n "$u" ] && break; sleep 1; done
   if [ -z "$u" ]; then say "TUNNEL: no URL after 30 s, will retry at the next failure"; return; fi
   echo "$u" > "$URLF"; TFAIL=0
@@ -49,10 +55,7 @@ LLFAIL=0; LLAST=0; LHOLD=0
 restart_llama() {
   say "!!!! LLAMA RESTART: $LLAMA_URL/health failed x$LLFAIL -> $LCMD in $LSESS:$LWIN !!!!"
   if tmux list-windows -t "$LSESS" -F '#{window_name}' 2>/dev/null | grep -qx "$LWIN"; then
-    case "$(tmux display -p -t "$LSESS:$LWIN" '#{pane_current_command}' 2>/dev/null)" in
-      bash|zsh|sh|fish|dash|"") ;;
-      *) tmux send-keys -t "$LSESS:$LWIN" C-c; sleep 3;;      # hung/dead server process: interrupt, then relaunch in the same pane
-    esac
+    idle_pane "$LSESS:$LWIN" || { tmux send-keys -t "$LSESS:$LWIN" C-c; sleep 3; }      # hung/dead server process: interrupt, then relaunch in the same pane
     tmux send-keys -t "$LSESS:$LWIN" "cd $ROOT && $LCMD" Enter
   elif tmux has-session -t "$LSESS" 2>/dev/null; then tmux new-window -d -t "$LSESS" -n "$LWIN" -c "$ROOT" "$LCMD"
   else tmux new-session -d -s "$LSESS" -n "$LWIN" -c "$ROOT" "$LCMD"; fi
