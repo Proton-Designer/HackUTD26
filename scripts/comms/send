@@ -38,7 +38,7 @@ case "${1:-}" in
   P1|P2|P3|P4|P4a|P4b|ALL)
     need $# 2; to="$1"; subj="$2"; body="$(body_of "${3:-}")"
     [ "$to" = "$FROM" ] && { echo "That's you ($FROM). Pick another pipeline." >&2; exit 1; }
-    url=$(gh api "repos/$REPO/issues" -f title="[$FROM→$to] $subj" -f body="${body}$(sig)" \
+    url=$(gh api "repos/$REPO/issues" -f title="[${FROM}→${to}] $subj" -f body="${body}$(sig)" \
           -f "labels[]=to:$to" -f "labels[]=from:$FROM" --jq '.html_url')
     echo "sent: $url";;
   *) sed -n '2,9p' "$0"; exit 1;;
