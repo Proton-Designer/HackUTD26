@@ -33,6 +33,9 @@ RELAYS: dict[str, Relay] = {}
 MAX_STREAM_FRAMES = 50 * 60 * 10  # 10 min of 20 ms frames
 
 def sim_mode() -> bool: return os.environ.get("SIM_MODE") == "1"
+def listen_mode() -> bool:
+    """MARIA_LEG=listen: never dial Maria's SIP leg (no Telnyx dial/conference calls); her page just listens. Default 'sip'."""
+    return os.environ.get("MARIA_LEG", "sip").strip().lower() == "listen"
 PROXY_HEADERS = ("cf-connecting-ip", "cf-ray", "x-forwarded-for", "x-forwarded-host", "forwarded", "x-real-ip")
 def direct_local(conn) -> bool:
     """Same rule as server.device.is_direct_local: loopback peer AND no proxy/tunnel headers (cloudflared connects from 127.0.0.1 but adds them)."""
@@ -153,7 +156,11 @@ async def on_answered(p):
     sid, st, role = _who(p)
     if not st: return
     sim = st.get("sim", False)
-    if role == "caller":
+    if role == "caller" and listen_mode():
+        st["listen"] = True; st["maria_answered"] = True   # no conference, no Maria dial: the UI flows as if she answered
+        emit("call.answered", sid, {"by": "maria", "via": "listen"})
+        log.warning("MARIA_LEG=listen: not dialing Maria for %s (answer + caller stream only)", sid[:8])
+    elif role == "caller":
         conf = await _safe(telnyx.create_conference(st["caller_ccid"], f"bf-{sid[:12]}"), "create_conference", sim)
         st["conf_id"] = ((conf or {}).get("data") or {}).get("id")
         frm = os.environ.get("TELNYX_FROM_NUMBER") or os.environ.get("TELNYX_SCAM_LINE") or st["from"]  # UNVERIFIED which 'from' Telnyx accepts for SIP dial
@@ -246,6 +253,7 @@ async def media(ws: WebSocket, call_id: str, t: str = ""):
         k = str(frame.get("event", "?")) if isinstance(frame, dict) else "?"; sent[k] = sent.get(k, 0) + 1
         if k == "media" and sent[k] == 1: log.warning("first decoy->caller media frame sent on %s", call_id[:8])
     st["send_to_caller"] = send_to_caller
+    hello = asyncio.create_task(_listen_hello(call_id, send_to_caller)) if st.get("listen") else None
     try:
         if hub: await _maybe_await(hub.open(call_id, send_to_caller, on_decoy_lost=_decoy_lost))
         else:
@@ -269,12 +277,30 @@ async def media(ws: WebSocket, call_id: str, t: str = ""):
             except Exception as e: log.warning("relay frame error (ignored): %s", e)
     except (WebSocketDisconnect, RuntimeError): pass
     finally:
+        if hello: hello.cancel()
         st.pop("send_to_caller", None); log.warning("media WS closed %s frames_in=%s frames_to_caller=%s", call_id[:8], stats, sent)
         try:
             if hub: await _maybe_await(hub.close(call_id))
             elif local: await local.close()
         except Exception: pass
         RELAYS.pop(call_id, None)
+
+async def _listen_hello(sid, send):
+    """MARIA_LEG=listen: play a short pre-recorded 'Hello? ... Yes?' (SIMULATED synthetic voice) to the caller once, then silence.
+    Fail open: no audio / any error just means silence."""
+    try:
+        st = CALLS.get(sid)
+        f = await asyncio.get_running_loop().run_in_executor(None, _persona.generate_hello)
+        if not f: log.warning("listen hello: no audio available (say/ffmpeg missing?); silent"); return
+        await asyncio.sleep(0.4)
+        data = f.read_bytes()
+        for k in range(0, len(data), _persona.FRAME_BYTES):
+            if not st or st["ended"] or st.get("handed_off"): return   # the decoy owns the caller's ears once it starts
+            await send({"event": "media", "media": {"payload": base64.b64encode(data[k:k + _persona.FRAME_BYTES]).decode()}})
+            await asyncio.sleep(0.02)
+    except asyncio.CancelledError: raise
+    except Exception as e:
+        log.warning("listen hello skipped (fail open): %s", e)
 
 async def _maybe_await(x):
     if asyncio.iscoroutine(x) or isinstance(x, asyncio.Future): return await x
@@ -444,7 +470,8 @@ async def restore(sid):
     sim = st.get("sim", False)
     st["restored"] = True
     await _stop_decoy(sid)
-    if st.get("maria_alive", True) and st.get("maria_ccid"):
+    if st.get("listen"): pass   # MARIA_LEG=listen: nothing to rejoin, stopping the decoy is the restore
+    elif st.get("maria_alive", True) and st.get("maria_ccid"):
         if st.get("conf_id"): await _safe(telnyx.join_conference(st["conf_id"], st["maria_ccid"]), "rejoin maria", sim)
     else:   # her leg is gone: ring her again; on_answered(role=maria) joins her to the conference
         conn, to = os.environ.get("TELNYX_CALL_CONTROL_APP_ID"), maria_sip_uri()   # POST /calls needs the Call Control App id (live: cred-connection id -> 422 10015)

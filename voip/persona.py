@@ -39,6 +39,22 @@ def generate_lines(force=False) -> list[pathlib.Path]:
         if f.is_file() and f.stat().st_size >= FRAME_BYTES: out.append(f)
     return out
 
+HELLO_TEXT = "Hello? ... Yes?"
+
+def generate_hello(force=False):
+    """MARIA_LEG=listen greeting: raw PCMU 8 kHz in lines_dir()/hello.ulaw (generated once). None when say/ffmpeg are unavailable."""
+    f = lines_dir() / "hello.ulaw"
+    if force or not f.is_file() or f.stat().st_size < FRAME_BYTES:
+        if not (shutil.which("say") and shutil.which("ffmpeg")): return None
+        aiff = f.with_suffix(".aiff")
+        try:
+            subprocess.run(["say", "-v", "Samantha", "-r", "140", "-o", str(aiff), HELLO_TEXT], check=True, capture_output=True)
+            subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(aiff), "-ar", "8000", "-ac", "1", "-f", "mulaw", str(f)], check=True)
+        except Exception as e:
+            log.warning("hello line not generated: %s", e); return None
+        finally: aiff.unlink(missing_ok=True)
+    return f if f.is_file() and f.stat().st_size >= FRAME_BYTES else None
+
 def standin_mode() -> str:
     return "echo" if os.environ.get("DECOY_STANDIN", "persona").strip().lower() == "echo" else "persona"
 

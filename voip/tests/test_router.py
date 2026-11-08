@@ -394,3 +394,48 @@ def test_script_timeline_spans_wav(tmp_path, monkeypatch):
     assert tl[0][0] == 0 and tl[-1][0] < 20 and [t for t, _ in tl] == sorted(t for t, _ in tl)
     monkeypatch.setenv("DEMO_SCRIPT_TEXT", "One. Two words. Three.")
     assert [x for _, x in R._script_timeline()] == ["One.", "Two words.", "Three."]
+
+
+def _no_telnyx(monkeypatch):
+    calls = []
+    def mk(n):
+        async def f(*a, **k): calls.append(n); return {"data": {}}
+        return f
+    for n in ("create_conference", "dial", "join_conference", "leave_conference", "hangup"): monkeypatch.setattr(telnyx, n, mk(n))
+    return calls
+
+def test_listen_mode_never_dials_or_bridges(monkeypatch):
+    monkeypatch.setenv("MARIA_LEG", "listen"); monkeypatch.setenv("TELNYX_CALL_CONTROL_APP_ID", "c"); monkeypatch.setenv("TELNYX_SIP_USER", "u")
+    calls = _no_telnyx(monkeypatch); fr = FakeRelay(); monkeypatch.setattr(R, "_hub_relay", lambda: fr); monkeypatch.setattr(R, "RESTORE_LOW_S", 99)
+    sid = "sess-listen-1234567"; st = _state(sim=False, conf=False); st.pop("maria_ccid"); R.CALLS[sid] = st
+    async def go():
+        R.LOOP = asyncio.get_running_loop()
+        await R.on_answered({"call_session_id": sid, "call_control_id": "v3:caller1234567", "client_state": R._cs(sid=sid, role="caller")})
+        assert await R.handoff(sid) is True and await R.restore(sid) is True
+    asyncio.run(go())
+    assert calls == []                                            # no create_conference / dial / join / leave in listen mode
+    ev = [e for e in bus.history if e["call_id"] == sid]
+    ans = [e for e in ev if e["type"] == "call.answered"]
+    assert len(ans) == 1 and ans[0]["data"] == {"by": "maria", "via": "listen"}
+    assert [e["type"] for e in ev if e["type"].startswith("handoff")] == ["handoff.started", "handoff.restored"]
+    assert ("stop_decoy", sid) in fr.calls                       # restore just stops the decoy
+
+def test_sip_mode_default_still_bridges(monkeypatch):
+    monkeypatch.delenv("MARIA_LEG", raising=False); monkeypatch.setenv("TELNYX_CALL_CONTROL_APP_ID", "c"); monkeypatch.setenv("TELNYX_SIP_USER", "u")
+    calls = _no_telnyx(monkeypatch)
+    sid = "sess-sipmode-1234567"; R.CALLS[sid] = _state(sim=False, conf=False)
+    asyncio.run(R.on_answered({"call_session_id": sid, "call_control_id": "v3:caller1234567", "client_state": R._cs(sid=sid, role="caller")}))
+    assert "create_conference" in calls and "dial" in calls
+
+def test_listen_hello_plays_once_then_silence(tmp_path, monkeypatch):
+    f = tmp_path / "hello.ulaw"; f.write_bytes(b"\xff" * 160 * 5)
+    monkeypatch.setattr(R._persona, "generate_hello", lambda force=False: f)
+    got = []
+    async def send(fr): got.append(fr)
+    sid = "sess-hello-1234567"; R.CALLS[sid] = _state(sim=False)
+    asyncio.run(R._listen_hello(sid, send))
+    assert len(got) == 5 and all(g["event"] == "media" for g in got)
+    got.clear(); R.CALLS[sid]["handed_off"] = True
+    asyncio.run(R._listen_hello(sid, send)); assert got == []     # decoy owns the line once handed off
+    monkeypatch.setattr(R._persona, "generate_hello", lambda force=False: None)
+    R.CALLS[sid]["handed_off"] = False; asyncio.run(R._listen_hello(sid, send)); assert got == []   # no audio -> silent, no error

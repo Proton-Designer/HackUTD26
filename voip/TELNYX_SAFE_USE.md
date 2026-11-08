@@ -43,3 +43,6 @@ The hub itself also originates one API call per live call: `POST /v2/calls` with
 - Block symptom: `401 10009 ... marked as blocked` (any endpoint) or `D17 ... termination call is blocked`.
 - Safe read of what happened: the hub log (`logs/hub-eng2-live.log` style) and webhook events; do not poll Telnyx REST.
 - Guards in code: `voip/telnyx.py::dial_allowed`, `voip/test_call.py` (`BACKFIRE_ALLOW_PSTN_OUTBOUND`), SIM webhooks loopback-only (`voip/router.py::direct_local`).
+
+## MARIA_LEG=listen (no Telnyx dial calls at all)
+`MARIA_LEG=listen` (default `sip`): on a live inbound call the hub only answers + starts the caller stream. It does **not** create a conference or dial Maria's SIP leg (zero `POST /v2/calls`, no conference calls); `call.answered {by:"maria", via:"listen"}` is emitted at once so the UI flows, the caller hears a short synthetic "Hello? ... Yes?" (`voip/persona.py::generate_hello`, cached in `logs/decoy_lines/hello.ulaw`) then silence, handoff starts the decoy as usual, and restore just stops the decoy (no re-dial). Use it while Maria's WebRTC login is rejected or while the "does the SIP-URI dial count as outbound" question is open.
