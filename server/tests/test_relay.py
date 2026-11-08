@@ -132,3 +132,67 @@ def test_p2_connect_and_close_logged_with_frames_sent(monkeypatch, caplog):
     with caplog.at_level(logging.WARNING, logger="hub.relay"):
         run(go("ws://127.0.0.1:1"))      # never connects
     assert any("frames_sent=0 connected=False" in r.getMessage() for r in caplog.records)
+
+
+def test_listen_fans_out_caller_and_decoy_tagged_and_is_gated(monkeypatch):
+    from server import device
+    c = TestClient(app, client=("127.0.0.1", 5000))
+    remote = TestClient(app)
+    async def go_decoy():
+        async def h3(ws):
+            async for m in ws:
+                d = json.loads(m)
+                if d["event"] == "media":
+                    await ws.send(json.dumps({"event": "media", "media": {"payload": "REVDT1k="}}))
+        s3, port3 = await _server(h3)
+        monkeypatch.setenv("P3_DECOY_URL", f"ws://127.0.0.1:{port3}"); monkeypatch.delenv("P2_STT_URL", raising=False)
+        async def back(f): pass
+        await relay.open("L1", back)
+        await relay.caller_frame("L1", {"event": "start", "stream_id": "S", "start": {}})
+        await relay.start_decoy("L1")
+        await relay.caller_frame("L1", fr(1))
+        await asyncio.sleep(0.3)
+        await relay.close("L1"); s3.close()
+    # remote without a token: refused; with a bad token: refused
+    import pytest
+    for kw in ({}, {"headers": {"x-device-token": "nope"}}):
+        with pytest.raises(Exception):
+            with remote.websocket_connect("/listen/L1", **kw): pass
+    # fan-out: use the loop that runs the TestClient portal
+    with c.websocket_connect("/listen/L1") as ws:
+        relay._fan("L1", "caller", fr(7)); relay._fan("L1", "decoy", {"event": "media", "media": {"payload": "REVDT1k="}})
+        relay._fan("L1", "caller", {"event": "media", "media": {}})          # no payload: ignored
+        a, b = json.loads(ws.receive_text()), json.loads(ws.receive_text())
+        assert a == {"track": "caller", "payload": fr(7)["media"]["payload"]}   # exactly {track, payload}: nothing else leaves the hub
+        assert b == {"track": "decoy", "payload": "REVDT1k="}
+    assert relay.listener_count() == 0                                        # cleaned up on disconnect
+    # paired device via subprotocol (browser path)
+    tok = remote.post("/pair", json={"pin": device.PIN}).json()["device_token"]
+    with remote.websocket_connect("/listen/L1", subprotocols=["bf-device", tok]) as ws:
+        assert ws.accepted_subprotocol == "bf-device"                         # token itself is never echoed
+        relay._fan("L1", "caller", fr(2)); assert json.loads(ws.receive_text())["track"] == "caller"
+    with pytest.raises(Exception):                                            # token without the bf-device marker, or a wrong token
+        with remote.websocket_connect("/listen/L1", subprotocols=[tok]): pass
+    with pytest.raises(Exception):
+        with remote.websocket_connect("/listen/L1", subprotocols=["bf-device", "wrong"]): pass
+    lq = asyncio.Queue(50); relay._LQ["L1"] = {lq}                              # real relay path: caller frame in, decoy frame back
+    run(go_decoy()); relay._LQ.pop("L1")
+    got = []
+    while not lq.empty(): got.append(json.loads(lq.get_nowait()))
+    assert {"track": "caller", "payload": fr(1)["media"]["payload"]} in got and {"track": "decoy", "payload": "REVDT1k="} in got
+
+def test_listen_max_three_and_slow_drop(monkeypatch):
+    c = TestClient(app, client=("127.0.0.1", 5000))
+    from contextlib import ExitStack
+    with ExitStack() as st:
+        for _ in range(3): st.enter_context(c.websocket_connect("/listen/L2"))
+        assert relay.listener_count() == 3
+        import pytest
+        with pytest.raises(Exception):
+            with c.websocket_connect("/listen/L2"): pass                      # 4th refused
+    assert relay.listener_count() == 0
+    # a full per-listener queue drops frames instead of blocking the relay
+    q = asyncio.Queue(2); relay._LQ["L3"] = {q}
+    for i in range(10): relay._fan("L3", "caller", fr(i))
+    assert q.qsize() == 2
+    relay._LQ.pop("L3")

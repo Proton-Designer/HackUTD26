@@ -5,7 +5,7 @@ voip/ (eng2) owns the Telnyx WS and calls (all async, none ever raises, none blo
   await relay.start_decoy(call_id) -> bool    connect to P3, send connected+start, then relay both ways
   await relay.stop_decoy(call_id); await relay.close(call_id)
 Env: P2_STT_URL (e.g. ws://host:port -> WS /stt/{call_id}), P3_DECOY_URL (e.g. wss://host -> WSS /decoy/{call_id}; unset -> built-in
-echo decoy /decoy-echo/{call_id} on this hub, port HUB_PORT or 8000). In-process P2 hook: relay.feed_audio_hook = fn(call_id, frame_dict).
+stand-in persona /decoy-standin/{call_id} (voip/persona.py) on this hub, port HUB_PORT or 8000; DECOY_STANDIN=echo -> /decoy-echo/{call_id}). In-process P2 hook: relay.feed_audio_hook = fn(call_id, frame_dict).
 Fail open: connection errors are logged and dropped; queues are bounded (full -> drop frame)."""
 import asyncio, json, logging, os, time
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
@@ -31,6 +31,26 @@ class _Session:
         self.p2_task = asyncio.create_task(_p2_pump(self))
         self.decoy_active = False; self.d_ws = None; self.d_q = None; self.d_tasks = []
         self.n = 0; self.sent_t = {}; self.dropped = 0
+
+# --- WS /listen/{call_id}: judges hear the caller + decoy audio in the phone-free demo. Caller inbound track and decoy->caller frames only
+# (Maria's audio never enters the relay). Text frames: {"track":"caller"|"decoy","payload": PCMU 8k base64} (20 ms each).
+MAX_LISTENERS = 3
+_LQ: dict = {}   # call_id -> set of per-listener bounded queues
+
+def _fan(call_id, track, frame):
+    qs = _LQ.get(call_id)
+    if not qs:
+        return
+    payload = (frame.get("media") or {}).get("payload")
+    if not payload:
+        return
+    msg = json.dumps({"track": track, "payload": payload})
+    for q in list(qs):
+        try: q.put_nowait(msg)
+        except asyncio.QueueFull: pass   # slow listener: drop the frame; the listener loop closes it if its socket stalls
+
+def listener_count():
+    return sum(len(v) for v in _LQ.values())
 
 def _put(q, item, s):
     try:
@@ -85,6 +105,8 @@ async def caller_frame(call_id, frame):
             s.header = [h for h in s.header if h.get("event") != ev] + [frame]
             if ev == "start":
                 s.stream_id = frame.get("stream_id") or (frame.get("start") or {}).get("stream_id")
+        if ev == "media":
+            _fan(call_id, "caller", frame)
         if feed_audio_hook:
             try: feed_audio_hook(call_id, frame)
             except Exception: log.exception("feed_audio_hook failed")
@@ -153,7 +175,8 @@ async def start_decoy(call_id):
         return True
     import websockets
     port = os.environ.get("HUB_PORT", "8000")
-    url = _url("P3_DECOY_URL", f"/decoy/{call_id}", f"ws://127.0.0.1:{port}/decoy-echo/{call_id}")
+    _kind = "echo" if os.environ.get("DECOY_STANDIN", "persona").strip().lower() == "echo" else "standin"
+    url = _url("P3_DECOY_URL", f"/decoy/{call_id}", f"ws://127.0.0.1:{port}/decoy-{_kind}/{call_id}")
     try:
         ws = await asyncio.wait_for(websockets.connect(url), 3)
         sid = s.stream_id or "relay-" + call_id
@@ -192,6 +215,8 @@ async def _d_recv(s):
             ev = f.get("event")
             if ev not in ("media", "clear", "mark"):
                 continue
+            if ev == "media":
+                _fan(s.call_id, "decoy", f)
             if ev == "media" and "t" in s.sent_t:
                 _lat("relay_decoy_rtt_ms", s.call_id, (time.time() - s.sent_t.pop("t")) * 1000)
             try:
@@ -260,3 +285,53 @@ async def decoy_echo(ws: WebSocket, call_id: str):
                 await ws.send_text(json.dumps({"event": "media", "media": {"payload": m["media"]["payload"]}}))
     except (WebSocketDisconnect, ValueError):
         pass
+
+
+def _listen_authorized(ws: WebSocket):
+    """Direct loopback (no token needed), x-hub-token == HUB_TOKEN, or a paired device token. Browsers can't set headers and the token must
+    not be in the URL, so the client opens new WebSocket(url, ['bf-device', <token>]): Sec-WebSocket-Protocol 'bf-device, <token>'.
+    Returns (ok, subprotocol_to_accept_with)."""
+    import secrets
+    from . import device
+    protos = [p.strip() for p in ws.headers.get("sec-websocket-protocol", "").split(",") if p.strip()]
+    sub = "bf-device" if "bf-device" in protos else None
+    if device.is_direct_local(ws):
+        return True, sub
+    hub = os.environ.get("HUB_TOKEN")
+    if hub and secrets.compare_digest(ws.headers.get("x-hub-token", ""), hub):
+        return True, sub
+    if device._valid(ws.headers.get("x-device-token")):
+        return True, sub
+    if sub and any(device._valid(p) for p in protos if p != "bf-device"):
+        return True, sub
+    return False, None
+
+@router.websocket("/listen/{call_id}")
+async def listen(ws: WebSocket, call_id: str):
+    import re
+    ok, proto = _listen_authorized(ws)
+    if not ok or not re.fullmatch(r"[A-Za-z0-9_.:-]{1,80}", call_id):
+        await ws.close(code=1008); return
+    if listener_count() >= MAX_LISTENERS:
+        await ws.close(code=1013); return          # try again later: at most 3 listeners
+    q = asyncio.Queue(100)
+    _LQ.setdefault(call_id, set()).add(q)
+    try:
+        await ws.accept(subprotocol=proto)
+        async def _drain():                         # notice the browser going away
+            try:
+                while True: await ws.receive_text()
+            except Exception: pass
+        gone = asyncio.create_task(_drain())
+        try:
+            while not gone.done():
+                try: msg = await asyncio.wait_for(q.get(), 0.5)
+                except asyncio.TimeoutError: continue
+                await asyncio.wait_for(ws.send_text(msg), 1)   # a listener that cannot take a frame within 1 s is dropped
+        finally:
+            gone.cancel()
+    except Exception:
+        pass
+    finally:
+        _LQ.get(call_id, set()).discard(q)
+        if not _LQ.get(call_id): _LQ.pop(call_id, None)
