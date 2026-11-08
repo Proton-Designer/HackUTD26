@@ -329,3 +329,22 @@ def test_canon_handle_matches_stt_spellings():   # P2 #137: 'dept' heard as 'dep
         assert canon_handle(v) == want, v
     for v in ["zelle:refunds.depot@backfire-demo.example", "zelle:payments.department@backfire-demo.example", "zelle:refunds dot dept"]:
         assert canon_handle(v) != want, v
+
+
+def test_handles_match_tolerates_stt_garbling(monkeypatch):   # dev risk 6: the Zelle line as a phone STT hears it must still hold the $1,800
+    from intel import nessie
+    from intel.nessie import handles_match
+    payee = "zelle:refunds.dept@backfire-demo.example"
+    for v in ["zelle:refunds.dept@backfire-demo.example", "refunds dot dept at backfire dash demo dot example",
+              "zelle:refunds department at backfire demo dot example",          # dash dropped
+              "zelle:refund stepped at backfire dash demo dot example",         # 'refunds dept' heard as 'refund stepped'
+              "zelle:refunds.depot@backfire-demo.example", "zelle:refunds-dept@backfiredemo.example", "refunds.dept@backfire.demo.example"]:
+        assert handles_match(v, payee), v
+    for v in ["zelle:payments.department@backfire-demo.example", "venmo:refunds.dept@backfire-demo.example",   # other local part / other rail
+              "zelle:refunds.dept@backfire-demo.com", "zelle:refunds dot dept", "", None, "zelle:9205551234"]:
+        assert not handles_match(v, payee), v
+    monkeypatch.setattr(nessie, "destinations", lambda: [{"rail": "zelle", "id": "refunds.dept@backfire-demo.example", "nessie_payee_account_id": "x"}])
+    arts = [{"type": "payment_handle", "value": "zelle:refunds department at backfire demo dot example"}, {"type": "domain", "value": "backfire-demo.example"}]
+    hits = nessie.match_destinations(arts)
+    assert len(hits) == 1 and hits[0]["artifact"] is arts[0]
+    assert nessie.match_destinations([{"type": "payment_handle", "value": "paypal:someone@example.com"}]) == []

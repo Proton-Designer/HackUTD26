@@ -10,7 +10,7 @@ Written by the dev (Fable) session for the P1 lead. Live demo folder was only RE
 | 10:50 | **Task 1 done: this report** | — | — |
 | 11:20 | **Task 3 done: UI round-3 safe items** (one primary color = the brand pink for every primary action/on-state, green only on Answer, red only destructive, amber only risk; Live Guard is a real `role=switch` in the card title row, same id `guardToggle`; landscape alert (812x375) is two columns: title/tag/chips left, Fire Back / Continue / Hang up right, all buttons on screen: measured bottoms 282 px of 375) | next commit | e2e **50** pass (one run had step 6 `blocklist.updated` time out at 12 s with no code change: intel agent latency, rerun 50/50; flagged below as risk 11); screenshots at 375, 390, 812x375 in the dev scratchpad (`ui3/`) |
 | 11:35 | **Task 4, small customer-app items shipped**: per-call reset of the mic/decoy diag counters (risk 9), audio contexts resumed when the page becomes visible again (risk 2), `faster-whisper` added to `decoy/requirements.txt` (risk 3; install on the live machine is the lead's call). Risk 7 re-classified as preflight's own check. | next commit | e2e 50 pass |
-| | **Task 4, waiting for the lead's OK** on the two larger items: (1) shared AudioContext + AudioWorklet mic (risk 1b, needs an on-phone test), (2) tolerant Zelle handle match in intel (risk 6) | | |
+| 10:55 | Lead's answer: risk 1b (shared AudioContext / AudioWorklet mic) is **skipped before judging**; risk 6 done if small. **Task 4, tolerant Zelle match done** (`intel/nessie.py handles_match`: exact canonical match, else same rail + domain equal with dots/dashes dropped + local part equal or within a small edit distance; `match_destinations` uses it). Demo-day rule for risk 1 stays: reload the customer page before each judged call. | next commit | intel **45** pass (new test: 7 STT variants hold, 7 non-matches refused), server 117, e2e unchanged |
 
 ## Top 10 remaining risks for the judged demo (ranked)
 
@@ -59,8 +59,8 @@ Written by the dev (Fable) session for the P1 lead. Live demo folder was only RE
 **Fix:** keep; make the intel LLM timeout + rules fallback explicit (lead's call) and raise the e2e wait to 20 s so the suite is a reliable gate.
 
 ## Task 4 candidates (low risk, high value; waiting for the lead's OK)
-1. **Risk 1b**: shared AudioContext + AudioWorklet mic in the customer app (customer app only, but touches the live audio path: needs one on-phone test before promotion).
-2. **Risk 6**: tolerant Zelle handle match in `intel/nessie.py` (dash/dot-insensitive domain, 2-edit local part) with tests on the STT variants above.
+1. ~~Risk 1b: shared AudioContext + AudioWorklet mic~~ skipped before judging (lead, 10:49). Mitigation = reload the page before each judged call + the watchdog already in the code.
+2. ~~Risk 6: tolerant Zelle handle match~~ done (dev, with tests).
 3. ~~Risk 3: `faster-whisper` in `decoy/requirements.txt`~~ done (dev); live machine still needs `decoy/.venv/bin/pip install faster-whisper` (lead).
 4. ~~Risk 7~~ explained (preflight's own check).
 5. ~~Risk 9: per-call reset of diag counters~~ done (dev).
