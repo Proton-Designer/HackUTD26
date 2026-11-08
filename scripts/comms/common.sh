@@ -5,7 +5,7 @@ ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 # Main worktree (so subagents in git worktrees share identity + state with the main checkout)
 MAIN_ROOT="$(git worktree list --porcelain 2>/dev/null | sed -n '1s/^worktree //p')"; [ -z "$MAIN_ROOT" ] && MAIN_ROOT="$ROOT"
 ID_FILE="$ROOT/.backfire-pipeline"; [ -f "$ID_FILE" ] || ID_FILE="$MAIN_ROOT/.backfire-pipeline"
-STATE_DIR="$(git rev-parse --git-common-dir 2>/dev/null || echo .git)/backfire-comms"
+STATE_DIR="$(cd "$ROOT" && git rev-parse --git-common-dir 2>/dev/null || echo .git)/backfire-comms"   # resolve from ROOT: from a subfolder git returns a path relative to $PWD
 case "$STATE_DIR" in /*|[A-Za-z]:*) ;; *) STATE_DIR="$ROOT/$STATE_DIR";; esac
 mkdir -p "$STATE_DIR" 2>/dev/null
 
