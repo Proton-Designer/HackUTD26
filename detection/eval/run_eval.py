@@ -145,6 +145,8 @@ def pipeline_fingerprint(engine: str) -> str:
         parts.append(_sha(prompt.SYSTEM_PROMPT))
     except Exception:
         parts.append("noprompt")
+    if engine == "local":
+        parts.append(f"terse={os.environ.get('LOCAL_TERSE', '1')} mt={os.environ.get('LOCAL_MAX_TOKENS', '220')}")
     parts.append(os.environ.get("LOCAL_MODEL", "") if engine == "local" else os.environ.get("NVIDIA_MODEL", os.environ.get("CLOUD_MODEL", "")))
     for f in ("detect.py", "schema.py", "engines/cloud.py", "engines/local.py"):
         if engine == "prodrules" and f.startswith("engines/"):
@@ -210,6 +212,31 @@ async def _pipeline_score(engine: str, call_id: str, window_text: str) -> dict:
     return {**out, "fallback": not probe["ok"]}
 
 
+LIVE_HEALTH = os.environ.get("LIVE_HEALTH_URL", "http://127.0.0.1:8100/healthz")
+_idle = {"t": 0.0}
+
+
+async def wait_live_idle():
+    """RULES-CARD guard: the shared llama-server serves live calls. Before every model call, pause while the live P2
+    reports active_stt_sockets>0 (checked at most every 2 s). Unreachable live service = idle. Disable: EVAL_NO_LIVE_GUARD=1."""
+    if os.environ.get("EVAL_NO_LIVE_GUARD") == "1":
+        return
+    import httpx
+    while True:
+        if time.monotonic() - _idle["t"] < 2:
+            return
+        try:
+            async with httpx.AsyncClient(timeout=2) as c:
+                n = int((await c.get(LIVE_HEALTH)).json().get("active_stt_sockets", 0))
+        except Exception:
+            n = 0
+        if n <= 0:
+            _idle["t"] = time.monotonic()
+            return
+        print(f"live call active ({n} stt sockets): eval paused", flush=True)
+        await asyncio.sleep(3)
+
+
 async def score_window(engine: str, call_id: str, window_text: str, *, cache: dict, fp: str,
                        limiter: RateLimiter | None, scorer=None, cache_file=None) -> dict:
     """Returns {"s","asks","ms","cached"}. scorer overrides the pipeline (used by tests)."""
@@ -228,6 +255,8 @@ async def score_window(engine: str, call_id: str, window_text: str, *, cache: di
     else:
         if limiter:
             await limiter.wait()
+        if engine == "local":
+            await wait_live_idle()
         for attempt in range(3):  # model failures (timeout/429) are retried, never cached
             t0 = time.perf_counter()
             d = await (scorer or _pipeline_score)(engine, call_id, window_text)

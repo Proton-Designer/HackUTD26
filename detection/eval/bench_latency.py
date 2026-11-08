@@ -10,7 +10,7 @@ import time
 
 import httpx
 
-from .run_eval import WINDOW_LINES, load_rows
+from .run_eval import WINDOW_LINES, load_rows, wait_live_idle
 
 
 def windows(n: int) -> list[str]:
@@ -34,6 +34,7 @@ async def run_level(url: str, engine: str, conc: int, wins: list[str], tag: str)
         async def worker():
             nonlocal bad
             for i, w in it:
+                await wait_live_idle()
                 t0 = time.perf_counter()
                 try:
                     r = await c.post(url, json={"call_id": f"bench_{tag}", "window_text": f"[ref {tag}-{conc}-{i}] {w}", "metadata": {}, "engine": engine})
