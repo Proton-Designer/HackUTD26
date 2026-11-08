@@ -274,3 +274,6 @@ details.keep>summary{cursor:pointer}
 details.keep>summary::after{content:"";width:10px;height:10px;margin-left:auto;border-right:2px solid var(--mut);border-bottom:2px solid var(--mut);transform:rotate(45deg);transition:transform .15s ease}
 details.keep[open]>summary::after{transform:rotate(-135deg)}
 input[type=checkbox]{accent-color:var(--ok)}
+
+/* mic watchdog: a frozen mic asks for one tap */
+.mic.pulse{animation:micpulse 1s ease-in-out infinite;box-shadow:0 0 0 0 rgba(255,255,255,.6)}@keyframes micpulse{50%{box-shadow:0 0 0 10px rgba(255,255,255,0)}}
