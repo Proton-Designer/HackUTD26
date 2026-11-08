@@ -61,7 +61,7 @@ and then blocks them network-wide.
 7. **Turn-taking fix (from Ayman's call):** the decoy sometimes speaks out of turn: tune end-of-speech wait + barge-in for PSTN (P3).
 
 ## Decisions so far
-Evan's answers (04:58, via P3): D1 = Telnyx primary (judge dials the real number), Android VoIP = offline fallback. D2 = web app on a phone for the customer (talk mode). D3 = keep the paths separate; present Android as the on-device variant (same hub, bus and command center). D4 = separate voice stores per client (web -> hub /voice/enroll -> P3 server store; Android keeps its on-phone enrollment). Ayman asked (04:51) to integrate both into one; D3/D4 pending Ayman's confirmation.
+Evan's answers (04:58, via P3): D1 = Telnyx primary (judge dials the real number), Android VoIP = offline fallback. D2 = web app on a phone for the customer (talk mode). D3 = keep the paths separate; present Android as the on-device variant (same hub, bus and command center). D4 = separate voice stores per client (web -> hub /voice/enroll -> P3 server store; Android keeps its on-phone enrollment). FINAL (Ayman 04:59): Telnyx + the Backfire MOBILE WEB APP (installable PWA; desktop also works). The best of Evan's native UX is ported into the web app (full-screen ringing, ringtone/vibration, in-call screen, wake lock). Android VoIP stays the on-device variant / offline fallback; D3 and D4 = separate, as Evan proposed.
 
 ## Open decisions (Ayman + Evan)
 - D1: Primary judged path: Telnyx number (recommended: judge uses their own phone) or Android VoIP.
