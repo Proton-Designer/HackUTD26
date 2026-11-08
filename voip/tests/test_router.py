@@ -348,3 +348,45 @@ def test_persona_ws_only_for_local_relay_and_known_calls(tmp_path, monkeypatch):
             with cl.websocket_connect(path, headers=hdr or {}): pass
     assert persona._active == 0
     with local.websocket_connect("/decoy-standin/sess-persona-known") as ws: assert json.loads(ws.receive_text())["event"] == "media"
+
+
+def _fb_setup(monkeypatch, sid):
+    import asyncio
+    from server import fallback_detect as fd
+    monkeypatch.setenv("SIM_MODE", "1"); monkeypatch.delenv("FALLBACK_DETECT", raising=False); monkeypatch.delenv("NVIDIA_API_KEY", raising=False)
+    monkeypatch.setattr(fd, "_llm", None); fd._calls.pop(sid, None)
+    monkeypatch.setattr(R, "P2_WAIT_S", 0.3); monkeypatch.setattr(R, "_script_timeline", lambda: [(0.0, "This is the fraud department at your bank."), (0.4, "Then buy gift cards and read me the numbers on the back, right now.")])
+    R.CALLS[sid] = {"sim": True, "ended": False, "t0": time.time(), "caller_ccid": "c", "from": "+1"}
+    return asyncio, fd
+
+def test_sim_p2_fallback_alerts_when_p2_silent(monkeypatch):
+    sid = "fbsess-silent-0001"; asyncio, fd = _fb_setup(monkeypatch, sid)
+    asyncio.run(R._p2_fallback(sid))
+    ev = [e for e in bus.history if e["call_id"] == sid]
+    assert [e["type"] for e in ev if e["type"] == "alert.fired"] == ["alert.fired"]
+    assert any(e["type"] == "risk.update" and e["data"]["engine"] == "fallback" for e in ev)
+    assert any(e["type"] == "transcript.caller" for e in ev)
+
+def test_sim_p2_fallback_stops_when_p2_arrives(monkeypatch):
+    sid = "fbsess-p2live-0002"; asyncio, fd = _fb_setup(monkeypatch, sid)
+    async def go():
+        R.LOOP = asyncio.get_running_loop(); t = asyncio.create_task(R._p2_fallback(sid)); await asyncio.sleep(0.1)
+        R._on_bus({"type": "risk.update", "call_id": sid, "data": {"s": 0.4, "engine": "p2"}})   # real P2 within the wait window
+        await t
+    asyncio.run(go())
+    assert not [e for e in bus.history if e["call_id"] == sid and e["data"].get("engine") == "fallback"]
+    assert not [e for e in bus.history if e["call_id"] == sid and e["type"] == "alert.fired"]
+
+def test_sim_p2_fallback_never_for_real_calls(monkeypatch):
+    sid = "fbsess-real-0003"; asyncio, fd = _fb_setup(monkeypatch, sid)
+    R.CALLS[sid]["sim"] = False
+    asyncio.run(R._p2_fallback(sid))
+    assert not [e for e in bus.history if e["call_id"] == sid]
+
+def test_script_timeline_spans_wav(tmp_path, monkeypatch):
+    import wave
+    w = tmp_path / "s.wav"
+    with wave.open(str(w), "wb") as f: f.setnchannels(1); f.setsampwidth(2); f.setframerate(8000); f.writeframes(b"\0\0" * 8000 * 20)
+    monkeypatch.setenv("DEMO_CALLER_WAV", str(w))
+    tl = R._script_timeline()
+    assert tl[0][0] == 0 and len(tl) >= 4 and tl[-1][0] < 20 and [t for t, _ in tl] == sorted(t for t, _ in tl)

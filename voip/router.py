@@ -163,7 +163,9 @@ async def on_answered(p):
         r = await _safe(telnyx.dial({"connection_id": conn, "to": to, "from": frm,
                                      "client_state": _cs(sid=sid, role="maria"), "timeout_secs": 40}), "dial maria", sim)
         st["maria_ccid"] = ((r or {}).get("data") or {}).get("call_control_id")
-        if sim: emit("call.answered", sid, {"by": "maria"}); st["maria_answered"] = True  # simulator has no Maria leg
+        if sim:
+            emit("call.answered", sid, {"by": "maria"}); st["maria_answered"] = True  # simulator has no Maria leg
+            asyncio.create_task(_p2_fallback(sid))
     elif role == "maria":
         st["maria_answered"] = True; st["maria_alive"] = True
         if st.get("conf_id"): await _safe(telnyx.join_conference(st["conf_id"], p["call_control_id"], start_conference_on_enter=True), "join maria", sim)
@@ -327,6 +329,54 @@ async def handoff(sid):
 
 DEMO_HAUL_DELAY_S = float(os.environ.get("DEMO_HAUL_DELAY_S", "8"))
 
+# ---- SIM_MODE only: demo resilience when P2 is down. Feed the known script text (the sentences scripts/make_scam_wav.sh voiced into
+# logs/sim_scam.wav, timed across the WAV's length) into server/fallback_detect so the hub itself emits transcript.caller + risk.update
+# (engine "fallback") + alert.fired. Stops the moment a real P2 event arrives. Never runs for real (non-sim) calls.
+P2_WAIT_S = float(os.environ.get("PHONEFREE_P2_WAIT_S", "6"))
+DEFAULT_SCRIPT = ("This is the fraud department at your bank. Your account has been compromised. To protect your money you must act now. "
+                  "Please read me the six digit code we just texted you, and do not tell anyone, including the bank staff. "
+                  "Then buy gift cards and read me the numbers on the back.")
+
+def _script_timeline():
+    """[(offset_s, sentence)] spread over the caller WAV's duration by character share (fallback 14 chars/s)."""
+    text = os.environ.get("DEMO_SCRIPT_TEXT") or DEFAULT_SCRIPT
+    sents = [x.strip() for x in re.split(r"(?<=[.!?])\s+", text) if x.strip()]
+    dur = None
+    try:
+        import pathlib, wave
+        w = pathlib.Path(os.environ.get("DEMO_CALLER_WAV") or (pathlib.Path(os.environ.get("LOGDIR") or "logs") / "sim_scam.wav"))
+        with wave.open(str(w)) as f: dur = f.getnframes() / f.getframerate()
+    except Exception:
+        pass
+    total = sum(len(x) for x in sents) or 1
+    dur = dur or total / 14.0
+    out, acc = [], 0
+    for x in sents:
+        out.append((dur * acc / total, x)); acc += len(x)
+    return out
+
+async def _p2_fallback(sid):
+    """Fail open: any error here only means no fallback alert."""
+    try:
+        st = CALLS.get(sid)
+        if not (st and st.get("sim") and sim_mode()) or os.environ.get("PHONEFREE_FALLBACK", "1") == "0": return
+        t0 = time.time()
+        while time.time() - t0 < P2_WAIT_S:
+            await asyncio.sleep(0.25)
+            if st["ended"] or st.get("p2_seen"): return
+        if st["ended"] or st.get("p2_seen"): return
+        os.environ.setdefault("FALLBACK_DETECT", "1")   # SIM_MODE only; fallback_detect is off by default
+        from server import fallback_detect as fd
+        log.warning("sim: no P2 event %.0fs after answer for %s -> script-text fallback detector", P2_WAIT_S, sid[:8])
+        for off, line in _script_timeline():
+            while time.time() - t0 < off:
+                await asyncio.sleep(0.2)
+                if st["ended"] or st.get("p2_seen"): return
+            if st["ended"] or st.get("p2_seen"): return
+            await fd.ingest(sid, line, True, "inbound")
+    except Exception:
+        log.exception("sim p2 fallback failed (fail open)")
+
 def _publish_demo_haul(sid):
     """SIM_MODE + no P3_DECOY_URL only (echo stand-in): publish P3's artifacts.extracted from intel's demo config, once per call, never after a restore.
     Fail open: intel missing/failing never affects the call."""
@@ -415,6 +465,8 @@ def _on_bus(ev):
     try:
         if LOOP is None or ev["call_id"] not in CALLS: return
         t, d, sid = ev["type"], ev["data"], ev["call_id"]
+        if (t == "risk.update" and d.get("engine") != "fallback") or (t == "transcript.caller" and not str(d.get("utterance_id", "")).startswith("fb_")):
+            CALLS[sid]["p2_seen"] = True   # a real P2 event: the sim fallback detector stops
         if t == "user.action":
             if d.get("action") == "scammer_get_scammed": asyncio.run_coroutine_threadsafe(handoff(sid), LOOP)
             elif d.get("action") == "hang_up": asyncio.run_coroutine_threadsafe(_maria_hangup(sid), LOOP)
