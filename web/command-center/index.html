@@ -9,6 +9,11 @@
     // Always load the newest files: fixes land all night, and a cached copy on the demo laptop would hide them.
     window.__v = Date.now();
     document.write('<link rel="stylesheet" href="styles.css?v=' + window.__v + '">');
+    // Light look (after a Dribbble sales dashboard) is the default; ?look=dark brings back the original magenta on dark.
+    if (!/[?&]look=dark\b/.test(location.search)) {
+      document.documentElement.classList.add('look-analytics');
+      document.write('<link rel="stylesheet" href="look-analytics.css?v=' + window.__v + '">');
+    }
   </script>
   <noscript><link rel="stylesheet" href="styles.css"></noscript>
 </head>
@@ -24,6 +29,7 @@
         <button role="tab" data-view="story" title="Only what's happening now, big (key 1)">Story</button>
         <button role="tab" data-view="agent" title="The intel agent's full trace (key 2)">Agent</button>
         <button role="tab" data-view="all" title="Every panel at once (key 3)">Everything</button>
+        <button role="tab" data-view="money" title="Where the scam money goes: victims, mule account, cash-out (key 4)">Money trail</button>
       </nav>
       <div class="top-right">
         <button id="follow" class="follow" hidden>Pinned · back to live</button>
@@ -88,6 +94,10 @@
     </section>
     <section class="panel" id="p-auto">
       <h2><span>Done automatically</span><small>affects only Maria, or only warns</small></h2>
+      <div class="body"></div>
+    </section>
+    <section class="panel" id="p-map">
+      <h2><span>Money trail</span><small id="map-meta">P4a network map · Capital One Nessie sandbox, simulated accounts</small></h2>
       <div class="body"></div>
     </section>
     <section class="panel" id="p-denied">

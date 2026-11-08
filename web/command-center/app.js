@@ -907,12 +907,116 @@
       countUp(c.immunity);
     },
 
+    // Money trail: victims -> mule account -> cash-out, with Maria's transfer pending or held. Every node and
+    // amount is labelled (color is never the only cue); drawn at the card's real pixel size so text stays readable.
+    map() {
+      const body = bodyOf('map');
+      if (!body || !$('grid').contains(body)) return; // parked: no size to draw at
+      const d = CHAIN.data;
+      const src = CHAIN.live ? 'live · updates every 3 s' : CHAIN.at ? `last update ${fmtTime(CHAIN.at)} · hub not answering` : 'saved snapshot · hub not reachable';
+      $('map-meta').textContent = d ? `${src} · Capital One Nessie sandbox, synthetic people and accounts` : 'Capital One Nessie sandbox, synthetic people and accounts';
+      if (!d) { body.innerHTML = empty('Loading the money trail from the hub…'); return; }
+
+      const node = id => d.nodes.find(n => n.id === id) || { label: id };
+      const first = n => esc(String(n.label || n.id || '').replace(/\s*\(.*\)\s*$/, '').split(/\s+/)[0]);
+      const day = s => { const t = new Date(`${s}T12:00:00`); return Number.isNaN(+t) ? '' : t.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); };
+      const amt = e => fmtMoney(+e.amount || 0) + (e.date && day(e.date) ? ` · ${day(e.date)}` : '');
+      const maria = d.edges.find(e => e.kind === 'target');
+      const victims = d.edges.filter(e => e.kind === 'victim');
+      const outs = d.edges.filter(e => e.kind === 'cashout');
+      const left = (maria ? [maria] : []).concat(victims);
+      const inTotal = Number(d.mule_total_in) || victims.reduce((s, e) => s + (+e.amount || 0), 0);
+      const outTotal = Number(d.mule_total_out) || outs.reduce((s, e) => s + (+e.amount || 0), 0);
+
+      const tile = (k, v, chip, cls) => `<div class="mt-tile ${cls || ''}"><span class="k">${k}</span><b>${v}</b>${chip ? `<span class="mt-chip">${chip}</span>` : ''}</div>`;
+      const tiles = tile(`Paid in by ${victims.length} victims`, fmtMoney(inTotal), 'to one mule account')
+        + tile('Moved to cash-out', fmtMoney(outTotal), `${outs.length} transfers`)
+        + (!maria ? '' : maria.held ? tile('Held by Backfire', fmtMoney(maria.amount), "✓ Maria's transfer", 'held')
+          : tile("Maria's transfer", fmtMoney(maria.amount), 'pending · Backfire is listening', 'pending'));
+      const summary = `${victims.length} victims paid ${fmtMoney(inTotal)} into a simulated mule account, which moved ${fmtMoney(outTotal)} to a cash-out account.`
+        + (maria ? ` Maria's ${fmtMoney(maria.amount)} transfer is ${maria.held ? 'held by Backfire' : 'pending'}.` : '');
+      body.innerHTML = `<div class="mt-stats">${tiles}</div><svg class="mt-svg" role="img" aria-label="${esc(summary)}"></svg>`;
+
+      // ---- geometry, in real pixels ----
+      const svg = body.querySelector('svg');
+      const W = Math.max(360, svg.clientWidth), H = Math.max(220, svg.clientHeight);
+      const f14 = parseFloat(getComputedStyle(body).getPropertyValue('--f14')) || 14;
+      const f12 = parseFloat(getComputedStyle(body).getPropertyValue('--f12')) || 12;
+      const longest = Math.max(5, ...left.map(e => first(node(e.src)).length));
+      const padL = Math.ceil(longest * f14 * 0.62) + 14;
+      const top = f12 + 14, bot = f12 + 10;
+      const step = left.length > 1 ? (H - top - bot) / (left.length - 1) : 0;
+      const maxL = Math.max(1, ...left.map(e => +e.amount || 0));
+      const rMax = Math.max(8, Math.min(17, step * 0.36));
+      const rOf = a => 5 + (rMax - 5) * Math.sqrt((+a || 0) / maxL);
+      const xL = padL + rMax;
+      const xC = W - Math.max(f14 * 5.5, 70);
+      const xM = xL + (xC - xL) * 0.5;
+      const yM = (top + H - bot) / 2 - f14;
+      const rM = Math.max(18, Math.min(34, H * 0.085)), rC = Math.max(15, Math.min(28, H * 0.07));
+      const bez = (p, t) => { const u = 1 - t; return [0, 1].map(i => u * u * u * p[0][i] + 3 * u * u * t * p[1][i] + 3 * u * t * t * p[2][i] + t * t * t * p[3][i]); };
+      const path = p => `M${p[0]} C${p[1]} ${p[2]} ${p[3]}`.replace(/(\d+\.\d)\d+/g, '$1');
+      const tag = (x, y, text, cls) => { const w = text.length * f12 * 0.62 + 18, h = f12 + 10; return `<g class="mt-tag ${cls}"><rect x="${x - w / 2}" y="${y - h / 2}" width="${w}" height="${h}" rx="${h / 2}"/><text x="${x}" y="${y + f12 * 0.36}" text-anchor="middle">${esc(text)}</text></g>`; };
+      const out = [];
+
+      // victims and Maria -> mule (lines first, nodes on top)
+      left.forEach((e, i) => {
+        const y = top + i * step, r = rOf(e.amount);
+        const end = [xM - rM - 2, yM + (y - yM) * 0.18];
+        const p = [[xL + r, y], [xL + (end[0] - xL) * 0.55, y], [end[0] - (end[0] - xL) * 0.3, end[1]], end];
+        if (e.kind === 'target') {
+          const mid = bez(p, 0.5);
+          if (e.held) {
+            out.push(`<path class="mt-held" d="${path(p)}" pathLength="100" stroke-dasharray="46 100" style="stroke-width:3px"/>`,
+              `<path class="mt-cut" d="${path(p)}" pathLength="100" stroke-dasharray="0 54 46 0" style="stroke-width:2px"/>`,
+              tag(mid[0], mid[1], `✂ HELD ${fmtMoney(e.amount)}`, 'held')); // the tag sits on the cut
+          } else {
+            out.push(`<path class="mt-pending" d="${path(p)}" style="stroke-width:2.5px"/>`, tag(mid[0], mid[1], `${fmtMoney(e.amount)} · PENDING`, 'pending'));
+          }
+        } else {
+          out.push(`<path class="mt-edge" d="${path(p)}" style="stroke-width:${(1.2 + 3.3 * (+e.amount || 0) / maxL).toFixed(1)}px"/>`,
+            `<text class="mt-amt" x="${xL + r + 10}" y="${y - 5}">${esc(amt(e))}</text>`);
+        }
+      });
+      // mule -> cash-out, fanned out so each transfer reads on its own
+      const maxO = Math.max(1, ...outs.map(e => +e.amount || 0));
+      const spread = Math.min(46, H * 0.12);
+      outs.forEach((e, i) => {
+        const bend = (i - (outs.length - 1) / 2) * spread * 2;
+        const a = [xM + rM + 2, yM], b = [xC - rC - 7, yM];
+        const p = [a, [a[0] + (b[0] - a[0]) * 0.3, yM + bend], [b[0] - (b[0] - a[0]) * 0.3, yM + bend], b];
+        const m = bez(p, 0.5);
+        out.push(`<path class="mt-cash" d="${path(p)}" marker-end="url(#mt-arrow)" style="stroke-width:${(1.5 + 3 * (+e.amount || 0) / maxO).toFixed(1)}px"/>`,
+          `<text class="mt-amt" x="${m[0]}" y="${m[1] + (bend < 0 ? -7 : bend > 0 ? f12 + 4 : -7)}" text-anchor="middle">${esc(amt(e))}</text>`);
+      });
+      // nodes + labels
+      left.forEach((e, i) => {
+        const y = top + i * step, r = rOf(e.amount), n = node(e.src);
+        if (e.kind === 'target') {
+          out.push(`<circle class="mt-ring" cx="${xL}" cy="${y}" r="${r + 4}"/><circle class="mt-n-maria" cx="${xL}" cy="${y}" r="${r}"/>`,
+            `<text class="mt-name mt-maria" x="${xL - r - 9}" y="${y + f14 * 0.36}" text-anchor="end">Maria</text>`);
+        } else {
+          out.push(`<circle class="mt-n-victim" cx="${xL}" cy="${y}" r="${r}"/>`,
+            `<text class="mt-name" x="${xL - r - 9}" y="${y + f14 * 0.36}" text-anchor="end">${first(n)}</text>`);
+        }
+      });
+      out.push(`<circle class="mt-n-mule" cx="${xM}" cy="${yM}" r="${rM}"/>`,
+        `<text class="mt-name" x="${xM}" y="${yM + rM + f14 + 6}" text-anchor="middle">Mule account</text>`,
+        `<text class="mt-sub" x="${xM}" y="${yM + rM + f14 + f12 + 11}" text-anchor="middle">Simulated · in ${fmtMoney(inTotal)} · out ${fmtMoney(outTotal)}</text>`,
+        `<circle class="mt-n-cash" cx="${xC}" cy="${yM}" r="${rC}"/>`,
+        `<text class="mt-name" x="${xC}" y="${yM + rC + f14 + 6}" text-anchor="middle">Cash-out</text>`,
+        `<text class="mt-sub" x="${xC}" y="${yM + rC + f14 + f12 + 11}" text-anchor="middle">Simulated · ${fmtMoney(Number((d.nodes.find(n => n.role === 'cashout') || {}).total_in) || outTotal)}</text>`,
+        `<text class="mt-sub" x="${W}" y="${H - 2}" text-anchor="end">Money flows left to right · line thickness = amount</text>`);
+      svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+      svg.innerHTML = '<defs><marker id="mt-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mt-arrowhead"/></marker></defs>' + out.join('');
+    },
+
     risk() {
       const body = bodyOf('risk');
       const c = focusCall();
       const r = c && c.risk;
       if (!r) {
-        body.innerHTML = '<div class="risk"><div class="score"><span class="band">No call</span><span class="num">waiting for the caller to speak</span></div>'
+        body.innerHTML = '<div class="risk"><div class="score"><div class="gauge" aria-hidden="true"></div><span class="band">No call</span><span class="num">waiting for the caller to speak</span></div>'
           + '<div class="risk-right"><div class="meter"><i></i></div><div class="meta">Only the caller\'s words are scored, never Maria\'s</div></div></div>';
         return;
       }
@@ -923,15 +1027,17 @@
       const chips = r.why.map(w => `<span class="chip">${esc(w)}</span>`).join('')
         + (r.ai && !aiInWhy ? '<span class="chip ai">Talking to the AI system</span>' : '');
       const asks = r.asks.length ? `<div class="asks">Asks for ${r.asks.map(a => `<b>${esc(ASK[a] || humanize(a))}</b>`).join(' · ')}</div>` : '';
-      body.innerHTML = `<div class="risk ${tone}">`
-        + `<div class="score"><span class="band">${tone === 'hot' ? '⚠ ' : ''}${esc(bandWord(r))}</span><span class="num">detector score ${r.s.toFixed(2)}</span></div>`
+      // --p drives the half-gauge in the analytics look (look-analytics.css); the default look ignores it
+      body.innerHTML = `<div class="risk ${tone}" style="--p:${r.prevPct}">`
+        + `<div class="score"><div class="gauge" aria-hidden="true"></div><span class="band">${tone === 'hot' ? '⚠ ' : ''}${esc(bandWord(r))}</span><span class="num">detector score ${r.s.toFixed(2)}</span></div>`
         + '<div class="risk-right">'
         + (c.alert ? '<span class="alert-tag">Two beeps sent</span>' : '')
         + `<div class="meter"><i style="width:${r.prevPct}%"></i></div>`
         + `${asks}<div class="meta" title="${esc(meta)}">${esc(meta)}</div></div></div>`
         + (chips ? `<div class="chips">${chips}</div>` : '');
       const bar = body.querySelector('.meter i');
-      setTimeout(() => { bar.style.width = `${p}%`; }, 30);
+      const riskEl = body.querySelector('.risk');
+      setTimeout(() => { bar.style.width = `${p}%`; riskEl.style.setProperty('--p', p); }, 30);
     },
 
     feed() {
@@ -1241,7 +1347,38 @@
     'story:call': { cols: [1.6, 1], stacks: [[['p-feed', 1]], [['p-risk', 1]]] },
     'story:evidence': { cols: [1.3, 1], stacks: [[['p-artifacts', 1]], [['p-pipeline', 0], ['p-trace', 1]]] },
     'story:act': { cols: [1.1, 1], stacks: [[['p-auto', 1]], [['p-queue', 0], ['p-denied', 1]]] },
+    // P4a's network map (/intel/map on the hub) next to what we did and what waits for a click
+    money: { cols: [2.1, 1], stacks: [[['p-map', 1]], [['p-auto', 1], ['p-queue', 0]]] },
   };
+  // Money trail: P4a's read-only GET /intel/chain (Capital One Nessie sandbox, synthetic), drawn here in the screen's own style.
+  // Polled every 3 s only while the view is open. Kept outside S, so "Clear for next judge" doesn't blank it.
+  const CHAIN = { data: null, live: false, at: 0, timer: 0, busy: false };
+  async function pollChain() {
+    if (CHAIN.busy || VIEW.name !== 'money') return;
+    CHAIN.busy = true;
+    try {
+      const r = await fetch(`${MODE.base || CFG.server || TEAM_HUB}/intel/chain`, { cache: 'no-store' });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const d = await r.json();
+      if (!d || !Array.isArray(d.nodes) || !Array.isArray(d.edges)) throw new Error('unexpected /intel/chain shape');
+      Object.assign(CHAIN, { data: d, live: true, at: Date.now() });
+    } catch (err) {
+      // hub not reachable (offline replay): the saved snapshot in fixture.js, labelled as a snapshot; live data that stops is labelled stale
+      if (!CHAIN.at && window.BACKFIRE_CHAIN) CHAIN.data = window.BACKFIRE_CHAIN;
+      CHAIN.live = false;
+    } finally {
+      CHAIN.busy = false;
+      dirty('map');
+    }
+  }
+  function ensureMap() {
+    if (!CHAIN.timer) {
+      CHAIN.timer = setInterval(pollChain, 3000);
+      if (window.ResizeObserver) new ResizeObserver(() => dirty('map')).observe(bodyOf('map'));
+    }
+    pollChain();
+    dirty('map');
+  }
   const VIEW = { name: 'story', pinned: null, key: '', shown: '', shownAt: 0 };
   const ORDER = { call: 0, evidence: 1, act: 2 };
   const DWELL_MS = 8000; // each chapter stays up long enough to point at before the story moves on
@@ -1291,6 +1428,7 @@
       }
       grid.appendChild(col);
     }
+    if (key === 'money') ensureMap();
     grid.classList.remove('enter'); void grid.offsetWidth; grid.classList.add('enter');
     dirty('feed', 'trace', 'hero'); // moved panels lose their scroll position; re-render scrolls them to the newest line
   }
@@ -1405,7 +1543,7 @@
   document.addEventListener('keydown', ev => {
     if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
     if (ev.target.closest && ev.target.closest('input, textarea')) return;
-    const view = { 1: 'story', 2: 'agent', 3: 'all' }[ev.key];
+    const view = { 1: 'story', 2: 'agent', 3: 'all', 4: 'money' }[ev.key];
     if (view) { setView(view); return; }
     if (ev.key === 'Escape' && VIEW.pinned) { VIEW.pinned = null; layout(); return; }
     if (ev.target.closest && ev.target.closest('button')) return; // Space/Enter on a focused button presses it

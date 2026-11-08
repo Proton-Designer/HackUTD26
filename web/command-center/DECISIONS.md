@@ -28,6 +28,12 @@ One line each: chose X because Y.
 - **Panels are moved, not duplicated:** one set of panel elements; each view's layout in `app.js` places them in columns. Renderers find them by id, wherever they sit.
 - **CSS and JS load with a timestamp query** so a cached copy on the demo laptop can't hide a fix pushed during the night.
 
+- **Money trail view (key 4), drawn here from P4a's `GET /intel/chain`, not an iframe of `/intel/map`.** The embedded page was dark, had its own headline and only fit by shrinking it to ~60%; drawing it ourselves keeps the light look, our type scale at real pixel size, and labels on every node and amount. Three tiles on top (paid in by victims, moved to cash-out, held by Backfire / Maria's transfer pending), then victims → mule → cash-out with Maria's line dashed while pending and cut with "✂ HELD $X" once held. Polled every 3 s only while the view is open (CORS is open on that route). Hub not reachable: a saved snapshot in `fixture.js`, labelled "saved snapshot"; stale live data is labelled "hub not answering".
+
+## Look (light by default, 2026-11-08 03:50, Rayan's pick)
+- **Light look after Andika Wiraputra's "Sales Analytics Dashboard" on Dribbble** (`look-analytics.css`, loaded after `styles.css`): soft pink-to-mint wash, one floating frame, big white rounded cards with an icon chip per title, the black pill for the current view, the rail as hatched bar columns with the current step in textured magenta (the shot's black bar, swapped to T-Mobile magenta), risk as a segmented half-gauge with the band word inside (never a percentage), pastel status chips, green delta chips. `?look=dark` keeps the original.
+- **Same rules hold in light:** text tokens re-picked for ≥4.5:1 on white (amber text darkened to #b45309, NVIDIA green to #4d7c0f), meaning never by color alone, Simulated labels unchanged. The white wordmark is inverted to near-black; the flame sits in a black circle.
+
 ## Brand
 - **The team logo (flame + "Backfire" + "Caller beware.") is cut into transparent PNGs in `assets/`** (flame, wordmark, lockup, 64 px favicon), from the team's logo image, so it sits cleanly on our panels and needs no web font.
 - **Header: flame + wordmark. Idle Story screen: the full lockup**, so the table reads "Backfire" from across the room before a call starts. Favicon = the flame.

@@ -32,6 +32,10 @@
   --warn: #ffb020;           /* simulated, poisoning, held */
   --warn-tint: rgba(255, 176, 32, 0.12);
   --nv: #76b900;             /* NVIDIA: engine badge only */
+  /* money trail diagram */
+  --map-victim: #8fa3ff;
+  --map-edge: #3a4354;
+  --map-cash: #ffb347;
 
   /* type scale and spacing (12/14/16/20/24/32, 4/8/12/16/24) */
   --f12: 12px; --f14: 14px; --f16: 16px; --f20: 20px; --f24: 24px; --f32: 32px;
@@ -216,6 +220,7 @@ h1, h2, p { margin: 0; }
 .risk.hot .score .band { color: var(--danger-text); }
 .risk.warm .score .band { color: var(--warn); }
 .risk-right { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; padding-top: 2px; }
+.gauge { display: none; } /* only the analytics look (look-analytics.css) draws the half-gauge */
 .meter { height: 8px; border-radius: 99px; background: var(--surface-2); overflow: hidden; }
 .meter i { display: block; height: 100%; width: 0; border-radius: 99px; background: var(--text-3); transition: width 0.6s ease-out; }
 .risk.warm .meter i { background: var(--warn); }
@@ -389,6 +394,39 @@ h1, h2, p { margin: 0; }
 .plog { margin-top: var(--s3); padding-top: var(--s2); border-top: 1px solid var(--line); font-family: var(--mono); font-size: var(--f12); color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .plog .pk { color: var(--nv); font-weight: 700; margin-right: 6px; }
 .plog .res { color: var(--text-3); }
+
+/* ---------- money trail (P4a's /intel/chain, drawn here) ---------- */
+#p-map .body { display: flex; flex-direction: column; gap: var(--s3); overflow: hidden; min-height: 300px; }
+.mt-stats { flex: 0 0 auto; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s2); }
+.mt-tile { min-width: 0; display: flex; flex-direction: column; gap: 2px; padding: var(--s2) var(--s3); border-radius: 10px; background: var(--surface-2); }
+.mt-tile .k { font-size: var(--f12); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mt-tile b { font-size: var(--f24); line-height: 1.15; }
+.mt-chip { align-self: flex-start; max-width: 100%; font-size: var(--f12); font-weight: 700; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mt-tile.held b, .mt-tile.held .mt-chip { color: var(--ok-text); }
+.mt-tile.pending b, .mt-tile.pending .mt-chip { color: var(--accent-text); }
+.mt-svg { flex: 1 1 auto; display: block; width: 100%; min-height: 200px; overflow: visible; }
+.mt-svg text { font-family: var(--sans); fill: var(--text); }
+.mt-name { font-size: var(--f14); font-weight: 700; }
+.mt-svg .mt-sub, .mt-svg .mt-amt { font-size: var(--f12); fill: var(--text-2); }
+.mt-name, .mt-sub, .mt-amt { paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
+.mt-svg .mt-maria { fill: var(--accent-text); }
+.mt-edge { fill: none; stroke: var(--map-edge); stroke-linecap: round; }
+.mt-cash { fill: none; stroke: var(--map-cash); stroke-linecap: round; }
+.mt-arrowhead { fill: var(--map-cash); }
+.mt-pending { fill: none; stroke: var(--accent); stroke-dasharray: 7 6; animation: mtflow 1.1s linear infinite; }
+@keyframes mtflow { to { stroke-dashoffset: -13; } }
+.mt-held { fill: none; stroke: var(--ok); stroke-linecap: round; }
+.mt-cut { fill: none; stroke: var(--map-edge); opacity: 0.8; }
+.mt-n-victim { fill: var(--map-victim); }
+.mt-n-maria { fill: var(--accent); }
+.mt-ring { fill: none; stroke: var(--accent); stroke-width: 1.5px; opacity: 0.45; }
+.mt-n-mule { fill: var(--danger); }
+.mt-n-cash { fill: var(--map-cash); }
+.mt-tag rect { fill: var(--ok); }
+.mt-svg .mt-tag text { fill: #fff; font-size: var(--f12); font-weight: 700; }
+.mt-tag.pending rect { fill: var(--surface); stroke: var(--accent); stroke-width: 1.5px; }
+.mt-svg .mt-tag.pending text { fill: var(--accent-text); }
+@media (prefers-reduced-motion: reduce) { .mt-pending { animation: none; } }
 
 .den { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px var(--s2); align-items: baseline; }
 .den + .den { margin-top: var(--s2); padding-top: var(--s2); border-top: 1px solid var(--line); }
