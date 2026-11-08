@@ -14,7 +14,7 @@ ROOT=$PWD; mkdir -p logs
 SESS=${WD_SESSION:-backfire-p2}; SVCW=${WD_SVC_WIN:-p2svc}; TUNW=${WD_TUN_WIN:-p2tunnel}
 PORT=${WD_PORT:-8100}; TICK=${WD_TICK_S:-20}; TUN_EVERY=${WD_TUN_EVERY:-3}; FAILS=${WD_FAILS:-3}; MAXT=${WD_MAX_TICKS:-0}
 URLF=${WD_URL_FILE:-logs/p2_tunnel_url.txt}; TLOG=${WD_TUN_LOG:-logs/p2-tunnel.log}; LOG=${WD_LOG:-logs/watchdog.log}
-SVC_CMD=${WD_SVC_CMD:-"LOCAL_MODEL=${LOCAL_MODEL:-nemotron-nano-4b} ${HUB_URL:+HUB_URL=$HUB_URL }P2_PORT=$PORT bash detection/scripts/run.sh"}
+SVC_CMD=${WD_SVC_CMD:-"${P2_ENGINE:+P2_ENGINE=$P2_ENGINE }LOCAL_MODEL=${LOCAL_MODEL:-nemotron-nano-4b} ${HUB_URL:+HUB_URL=$HUB_URL }P2_PORT=$PORT bash detection/scripts/run.sh"}
 TUN_CMD=${WD_TUN_CMD:-"P2_PORT=$PORT bash detection/scripts/tunnel.sh"}
 TUNNEL=${WD_TUNNEL_URL:-}; [ -z "$TUNNEL" ] && [ -s "$URLF" ] && TUNNEL=$(head -1 "$URLF")
 [ -z "$TUNNEL" ] && TUNNEL="https://holding-whether-directories-voting.trycloudflare.com"
