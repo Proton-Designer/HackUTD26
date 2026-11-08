@@ -16,6 +16,7 @@ Home for everything about the idea the team is building. Last updated Nov 7, 202
 | `BACKFIRE_MASTER_CONTEXT.md` | **Everything in one file** |
 | `01_ARCHITECTURE.md` | **Architecture v2 (decisions locked):** routing, components, agents and trust boundaries, state machine, call flows, sequence diagram, UX, intel model, privacy, latency, the two implementations, evaluation, demo build |
 | `06_OPEN_QUESTIONS_FOR_TEAM.md` | **Decision log** (rounds 1–4) + what's still open |
+| `07_EXECUTION_PLAN.md` | **Execution plan:** 4 parallel pipelines aligned to `BOARD.md` (Evan: call + AI engine · Ayman: server + intel · Rayan: command center + story · Kareem: data + eval), checkpoints to the 11:30 submission, contracts, demo path, scope sheet, architecture → step traceability |
 | `02_PROBLEM_AND_POSITIONING.md` | Prompt, insight, why it's T-Mobile's problem, key numbers, persona, pitch lines |
 | `03_TMOBILE_EXISTING_PROTECTIONS.md` | Everything T-Mobile already offers, what it doesn't, competitors |
 | `04_PRIVACY_LEGAL_TRUST.md` | Consent, voice-clone safeguards, the decoy's legal line, trust stats |
@@ -28,7 +29,8 @@ Home for everything about the idea the team is building. Last updated Nov 7, 202
 - ✅ Problem, audience (older woman) and positioning locked
 - ✅ Architecture v2 locked: Live Guard, auto-blocking of confirmed and campaign-linked numbers, customer-triggered decoy in a cloned voice, split enforcement, two implementations (cloud confidential computing + local 4B)
 - ⏳ Open: N12 (weekly summary); verifications and booth questions (architecture §17–18)
-- ⏳ Next: synthetic test set, demo script, build
+- ✅ Execution plan: `07_EXECUTION_PLAN.md`
+- ⏳ Next: Phase 0 contracts (all 4), then the 4 pipelines in parallel
 
 ## Related research
 - `../Research/05_Target_Analysis/`: goal decision, top-4 audiences

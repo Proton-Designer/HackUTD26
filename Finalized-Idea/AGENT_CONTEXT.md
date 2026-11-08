@@ -8,6 +8,7 @@ You are helping a HackUTD 2026 team (UT Dallas, Nov 7–8, 2026) build **Backfir
 1. `01_ARCHITECTURE.md`: the system design. Follow it; don't redesign silently.
 2. `06_OPEN_QUESTIONS_FOR_TEAM.md`: product decisions. **Do not assume answers to open questions.** If a task depends on one, ask, or use the "Suggested" default and say so.
 3. `04_PRIVACY_LEGAL_TRUST.md`: hard rules the code must respect.
+4. `07_EXECUTION_PLAN.md` + the root `BOARD.md` (board wins): your lane, steps, the contract in `contracts/events.md` + `mock/events.json`, and the checkpoints. Only edit your own folders; only Ayman changes contracts.
 
 ## Non-negotiables (enforce in code and in reviews)
 - Never process the **customer's** audio. Caller side only (Twilio `inbound_track` on the caller's call in the demo).
