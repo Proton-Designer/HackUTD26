@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Backfire · Maria's phone</title>
+<title>Backfire</title>
 <link rel="icon" type="image/png" href="assets/backfire-favicon.png">
 <style>html,body{background:#0d1117;color:#fff}</style>
 <script>
@@ -11,7 +11,7 @@
 if (!Element.prototype.replaceChildren) Element.prototype.replaceChildren = function () { while (this.firstChild) this.removeChild(this.firstChild); for (var i = 0; i < arguments.length; i++) this.append(arguments[i]); };
 (function () {
   function show(m) { try { var p = document.getElementById("crash"); if (!p) { p = document.createElement("pre"); p.id = "crash"; p.style.cssText = "position:fixed;left:0;right:0;bottom:0;margin:0;padding:8px;background:#400;color:#fff;font:12px/1.3 monospace;white-space:pre-wrap;z-index:99;max-height:40vh;overflow:auto"; (document.body || document.documentElement).appendChild(p); } if (p.textContent.length < 600) p.textContent += m + "\n"; } catch (e) {} }
-  var dbg = /[?&]debug\b/.test(location.search);   // handled errors never reach Maria; the red box is for ?debug=1 and only for uncaught exceptions
+  var dbg = /[?&]debug\b/.test(location.search);   // handled errors never reach the customer; the red box is for ?debug=1 and only for uncaught exceptions
   window.addEventListener("error", function (e) { var m = "Error: " + (e.message || "script") + " @" + String(e.filename || "").split("/").pop() + ":" + (e.lineno || ""); if (dbg) show(m); else try { console.log("[backfire]", m); } catch (x) {} });
   window.addEventListener("unhandledrejection", function (e) { try { console.log("[backfire] rejected:", e.reason && e.reason.message || e.reason); } catch (x) {} });
 })();

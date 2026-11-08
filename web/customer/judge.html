@@ -41,7 +41,7 @@ ol li{font-size:1.45rem;line-height:1.35;font-weight:600}
     <small>Call the scam line</small>
     <div id="num" class="pending">Number coming soon</div>
   </section>
-  <p class="how">Call the line, wait for “hello,” then read your card out loud, one line at a time. Pause after each line and let “<span id="custName">Maria</span>” answer. Everything here is made up. No real people.</p>
+  <p class="how">Call the line, wait for “hello,” then read your card out loud, one line at a time. Pause after each line and let <span id="custName">the customer</span> answer. Everything here is made up. No real people.</p>
   <h2>Pick a script</h2>
   <div class="picker" id="picker" role="group" aria-label="Script cards"></div>
   <article class="card" id="card"></article>
@@ -98,7 +98,7 @@ ol li{font-size:1.45rem;line-height:1.35;font-weight:600}
     }
     return null;
   };
-  fetch("/demo/status?format=json").then(r => r.json()).then(s => { const n = s && s.flags && s.flags.CUSTOMER_NAME, el = document.getElementById("custName"); if (typeof n === "string" && el) { if (n) el.textContent = n; else { el.textContent = ""; el.parentNode.textContent = el.parentNode.textContent.replace(/let \u201c\u201d answer\./, "let it answer."); } } }).catch(() => {});   // CUSTOMER_NAME (hub flag); default text stays "Maria"
+  fetch("/demo/status?format=json").then(r => r.json()).then(s => { const n = s && s.flags && s.flags.CUSTOMER_NAME, el = document.getElementById("custName"); if (typeof n === "string" && n.trim() && el) el.textContent = n.trim(); }).catch(() => {});   // CUSTOMER_NAME (hub flag); default text stays "the customer"
   const line = qs.get("line");
   if (line) show(line);
   else if (location.pathname.startsWith("/app")) fetch("/demo/status?format=json").then(r => r.json()).then(s => { const n = dig(s, 0); if (n) show(n); }).catch(() => {});
