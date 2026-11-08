@@ -192,12 +192,16 @@ def demo_status(request: Request, format: str = ""):
         return HTMLResponse(ops.status_html(s))
     return s
 
+_HUB_OWNED_TABLES = {"device_tokens", "confirmed_scammers", "campaign_numbers", "trusted", "calls"}
+
 def _reset_intel():
     if intel_api is None:
         return
     try:
         st = intel_api._store()
         for (name,) in st.db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").fetchall():
+            if name in _HUB_OWNED_TABLES:   # INTEL_DB pointed at the hub DB must never wipe pairing or routing tables
+                continue
             st.x(f"DELETE FROM {name}")
         intel_api._calls.clear()
     except Exception:

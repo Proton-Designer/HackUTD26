@@ -433,3 +433,29 @@ def test_status_maria_leg_flag(monkeypatch):
     assert c.get("/demo/status").json()["flags"]["MARIA_LEG"] == "sip"
     monkeypatch.setenv("MARIA_LEG", "pstn")
     assert c.get("/demo/status").json()["flags"]["MARIA_LEG"] == "pstn"
+
+
+def test_pairing_survives_demo_reset_and_replay():
+    c = paired()
+    tok = c.headers["x-device-token"]
+    assert c.post("/demo/reset").status_code == 200
+    assert c.post("/demo/reset?seed=0").status_code == 200
+    assert c.post("/demo/replay", json={"speed": 1000}).status_code == 200
+    assert device._valid(tok)
+    assert c.get("/trusted").status_code == 200                      # still authorised
+    assert TestClient(app, headers={"x-device-token": tok}).get("/trusted").status_code == 200
+    db.reset_all(); db.reset_all(seed=False)                         # the db layer must not touch device_tokens either
+    assert device._valid(tok)
+
+
+def test_reset_never_deletes_device_tokens_even_if_intel_db_is_the_hub_db(tmp_path):
+    import intel.store as istore
+    from intel import api as iapi
+    p = str(tmp_path / "shared.db")
+    db.configure(p); db.reset_all()
+    st = istore.Store(p); istore._default = st; iapi._cfg["store"] = st
+    c = paired(); tok = c.headers["x-device-token"]
+    assert c.post("/demo/reset").status_code == 200
+    assert device._valid(tok)
+    assert c.get("/trusted").status_code == 200
+    db.configure(":memory:")
