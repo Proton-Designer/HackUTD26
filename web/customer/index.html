@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Backfire · Maria's phone</title>
-<link rel="icon" href="data:,">
+<link rel="icon" type="image/png" href="assets/backfire-favicon.png">
 <style>html,body{background:#0d1117;color:#fff}</style>
 <script>
 // Safety net for phones without dev tools (older iOS Safari): never a blank white page. Shows the first script error on screen and polyfills replaceChildren (Safari < 14).
@@ -20,7 +20,7 @@ if (!Element.prototype.replaceChildren) Element.prototype.replaceChildren = func
 </head>
 <body>
 <main id="phone" data-state="idle">
-  <header class="status"><span id="clock">9:41</span><span class="badge sound" id="sound">🔇 Tap for sound</span><span class="badge guard" id="guard">🛡 Live Guard on</span></header>
+  <header class="status"><img class="flame" src="assets/backfire-flame.png" alt="" width="14" height="21"><span id="clock">9:41</span><span class="badge sound" id="sound">🔇 Tap for sound</span><span class="badge guard" id="guard">🛡 Live Guard on</span></header>
 
   <div id="callView">
   <!-- INCOMING -->
@@ -66,6 +66,7 @@ if (!Element.prototype.replaceChildren) Element.prototype.replaceChildren = func
 
   <!-- PROTECTION LOG -->
   <section id="protView" class="screen left" hidden>
+    <img class="wordmark" src="assets/backfire-wordmark.png" alt="Backfire" width="150" height="25">
     <h1>Protection</h1>
     <div class="card"><h2>Live Guard</h2>
       <p id="guardState" class="sub"></p>
@@ -91,6 +92,7 @@ if (!Element.prototype.replaceChildren) Element.prototype.replaceChildren = func
   <!-- ONBOARDING -->
   <section id="setupView" class="screen left" hidden>
     <div id="step1" class="step">
+      <img class="wordmark" src="assets/backfire-wordmark.png" alt="Backfire" width="180" height="30">
       <h1>Turn on Backfire</h1>
       <p class="body">Backfire helps protect you from scam calls.</p>
       <ul class="plainlist">

@@ -78,3 +78,8 @@ nav#tabs button.on{background:#fff;color:#000;border-color:#fff}
 #recBtn:disabled{opacity:.6}
 
 .note{margin:0;padding:12px 14px;border-radius:14px;background:#1d2a1f;border:2px solid var(--ok);font-size:1.05rem;font-weight:700}.note:empty{display:none}
+
+/* brand */
+.flame{height:21px;width:auto;flex:none;margin-right:-4px}
+.wordmark{height:auto;max-width:60%;align-self:flex-start}
+.status{align-items:center}
