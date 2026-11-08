@@ -59,6 +59,9 @@ def call_nemotron(messages: list[dict], client: httpx.Client | None = None) -> s
     return r.json()["choices"][0]["message"]["content"] or ""
 
 
+LLM_UNTRUSTED_FIELDS = {"destination", "destination_allow_key", "payee_account_id", "amount", "proposer", "rail"}
+
+
 def parse_actions(text: str) -> tuple[str, list[dict]]:
     m = re.search(r"\{.*\}", text, re.S)
     if not m:
@@ -67,7 +70,14 @@ def parse_actions(text: str) -> tuple[str, list[dict]]:
     acts = j.get("actions")
     if not isinstance(acts, list) or not all(isinstance(a, dict) and a.get("kind") and a.get("target") for a in acts):
         raise ValueError("actions must be a list of {kind, target, ...}")
-    return str(j.get("plan", "")), acts
+    # Provenance is set by code, never by the model (its input may be steered by the scammer): drop fields the gate
+    # trusts and stamp target_source "llm" (the claimed value is kept only for the audit trail).
+    clean = []
+    for a in acts:
+        a = {k: v for k, v in a.items() if k not in LLM_UNTRUSTED_FIELDS}
+        a["llm_claimed_source"], a["target_source"] = a.get("target_source"), "llm"
+        clean.append(a)
+    return str(j.get("plan", "")), clean
 
 
 def fallback_actions(arts: list[dict], results: list[dict], camp: dict, calling_number: str | None) -> list[dict]:
@@ -208,7 +218,9 @@ def run(call_id: str, artifacts, store, calling_number: str | None = None, attes
 
     vals = {key(a) for a in arts if a["type"] not in ("script_tag", "instruction_to_ai")}
     ctx = gate.Context(calling_number=calling_number, campaign_id=camp["campaign_id"], campaign_status=camp["status"],
-                       artifact_values=vals, allowlist_hits=hits, attestation=attestation)
+                       artifact_values=vals, allowlist_hits=hits, attestation=attestation,
+                       bank_transfer_ids={t["id"] for _, r, tr in bank if r.get("status") == "ok" for t in tr},
+                       bank_payees={N.dest_key(h["dest"]) for h, r, _ in bank if r.get("status") == "ok"})
     decisions = gate.decide(proposals, ctx)
     applied = gate.apply(decisions, store, call_id, ctx, emit=emit)
     return {"call_id": call_id, "engine": engine, "campaign": camp, "lookups": results, "actions": applied,

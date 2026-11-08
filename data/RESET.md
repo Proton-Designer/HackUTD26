@@ -39,8 +39,8 @@ That's expected until the real domain and wallet are set (env `BACKFIRE_DEMO_DOM
 
 Note: `POST /demo/reset` now seeds intel itself (P1, 79cd0f2) and starts Maria's pending Nessie transfer, so step 2 is
 redundant on the hub (harmless to run). Nessie needs a one-time `python -m intel.seed_nessie` and NESSIE_API_KEY in .env;
-without them the Nessie line says "skipped" and everything else is unchanged. With Nessie the reset takes 0.18-0.31 s (3 s worst
-case if Nessie is unreachable).
+without them the Nessie line says "skipped" and everything else is unchanged. With Nessie the reset takes 0.2-1.1 s and always leaves exactly one pending
+demo transfer (about 3 s worst case if Nessie is unreachable).
 
 ## Timing (must be under 60 s)
 

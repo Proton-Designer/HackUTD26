@@ -45,6 +45,8 @@ class Context:
     artifact_values: set = field(default_factory=set)   # normalized values extracted from the call
     allowlist_hits: set = field(default_factory=set)    # normalized allowlist matches
     attestation: str | None = None
+    bank_transfer_ids: set = field(default_factory=set)  # her pending transfers found by the Nessie lookup (code)
+    bank_payees: set = field(default_factory=set)        # payout destinations matched by code to a mock payee
 
 
 def decide(proposals: list[dict], ctx: Context) -> list[dict]:
@@ -71,11 +73,11 @@ def decide(proposals: list[dict], ctx: Context) -> list[dict]:
             d("denied", "trust change requested by untrusted input; only the customer can do this in her app")
         elif kind in BANK_AUTO:
             d("auto", "customer-scoped: holds only her own pending transfer to the scammer's captured destination", "her") \
-                if p.get("target_source") == "nessie:pending_transfer" \
+                if p.get("target_source") == "nessie:pending_transfer" and str(raw) in ctx.bank_transfer_ids \
                 else d("denied", "bank holds only on transfers code found in her own account (never on supplied ids)")
         elif kind in BANK_QUEUE:
             d("queued", "bank-wide payee flag: one-click analyst approval (simulated)", "network") \
-                if p.get("target_source") == "nessie:payee" \
+                if p.get("target_source") == "nessie:payee" and str(raw).strip().lower() in ctx.bank_payees \
                 else d("denied", "bank-wide flags only on payees matched by code to the captured destination")
         elif kind not in ALL_KINDS:
             d("denied", f"unknown action kind '{kind}'")

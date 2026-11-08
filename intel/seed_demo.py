@@ -37,7 +37,7 @@ def reset(store: Store) -> None:
 
 def start_pending_transfer() -> dict | None:
     """Scripted demo moment: Maria starts a Zelle transfer to the scammer's destination in her banking app.
-    ONE Nessie call, 3 s timeout; skipped silently with no key, no seed (python -m intel.seed_nessie) or any error,
+    Deletes leftover pending demo transfers first (usually none), then ONE POST; 3 s timeouts; skipped silently with no key, no seed (python -m intel.seed_nessie) or any error,
     so /demo/reset stays fast and never fails because of Nessie."""
     try:
         from . import nessie as N
@@ -46,6 +46,12 @@ def start_pending_transfer() -> dict | None:
         maria = (ids or {}).get("maria", {}).get("account_id")
         if not (payee and maria and dest.get("id")):
             return None
+        # Rehearsals: exactly ONE pending demo transfer. Leftovers from resets with no call in between are deleted.
+        old = N.pending_transfers(maria, description_contains=str(dest["id"]), timeout=3)
+        if old["status"] != "ok":
+            return None
+        for t in old["transfers"]:
+            N.request("DELETE", f"/transfers/{t['id']}", timeout=3)
         body = {"transaction_date": date.today().isoformat(), "status": "pending",
                 "amount": int(dest.get("demo_transfer_amount", 1800)), "description": f"Zelle to {dest['id']}"}
         r = N.request("POST", f"/accounts/{maria}/transfers", body=body, params={"payee_id": payee}, timeout=3)

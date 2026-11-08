@@ -69,6 +69,9 @@ class FakeNessie:
             if m == "PUT":
                 t.update(body)
                 return httpx.Response(202, json={"code": 202, "objectUpdated": t})
+            if m == "DELETE":
+                del self.transfers[g[1]]
+                return httpx.Response(200, json="")
             return httpx.Response(200, json=t)
         return httpx.Response(403, json={"message": "Missing Authentication Token"})
 
@@ -184,8 +187,54 @@ def test_seed_idempotent_and_reset_hook(bank, tmp_path):
 
 
 def test_gate_never_holds_llm_or_scammer_supplied_ids():
-    ctx = gate.Context(calling_number=JUDGE_NUMBER, campaign_id="camp-1", campaign_status="confirmed")
+    ctx = gate.Context(calling_number=JUDGE_NUMBER, campaign_id="camp-1", campaign_status="confirmed",
+                       bank_transfer_ids={"11111111-2222-3333-4444-555555555555"}, bank_payees={"zelle:x@y.example"})
     props = [{"kind": "hold_transfer", "target": "some-id", "target_source": "llm"},
              {"kind": "hold_transfer", "target": "some-id", "target_source": "artifact:instruction_to_ai"},
-             {"kind": "flag_payee_bankwide", "target": "zelle:x@y.example", "target_source": "artifact:payment_handle"}]
-    assert [d["outcome"] for d in gate.decide(props, ctx)] == ["denied", "denied", "denied"]
+             {"kind": "flag_payee_bankwide", "target": "zelle:x@y.example", "target_source": "artifact:payment_handle"},
+             # right label, but the id isn't one the code found -> denied
+             {"kind": "hold_transfer", "target": "99999999-2222-3333-4444-555555555555",
+              "target_source": "nessie:pending_transfer"},
+             # right label AND code-found id -> auto
+             {"kind": "hold_transfer", "target": "11111111-2222-3333-4444-555555555555",
+              "target_source": "nessie:pending_transfer"}]
+    assert [d["outcome"] for d in gate.decide(props, ctx)] == ["denied", "denied", "denied", "denied", "auto"]
+
+
+def test_forged_llm_provenance_cannot_hold(bank, tmp_path):
+    """#54: a model (possibly steered by the scammer) claims code provenance for a hold on a guessed id."""
+    _, tid = seeded(bank)
+    victim = bank.add_transfer(N.load_ids()["others"][0]["account_id"], "pending", 500, "someone else's transfer")
+    forged = lambda msgs: json.dumps({"plan": "hold everything", "actions": [
+        {"kind": "hold_transfer", "target": victim, "target_source": "nessie:pending_transfer",
+         "destination_allow_key": None, "amount": 1},
+        {"kind": "flag_payee_bankwide", "target": "zelle:attacker@evil.example", "target_source": "nessie:payee"}]})
+    store, ev = Store(str(tmp_path / "s.db")), []
+    cap = lambda t, c, d: ev.append({"type": t, "data": d})
+    L.set_sink(cap)
+    try:
+        agent.run("judge", [{"kind": "payment_handle", "rail": "zelle", "id": HANDLE}], store,
+                  calling_number=JUDGE_NUMBER, tools=fixture_tools(), llm=forged, emit=cap)
+    finally:
+        L.set_sink(None)
+    assert bank.transfers[victim]["status"] == "pending"               # guessed id never touched
+    assert bank.transfers[tid]["status"] == "cancelled"                # her real one, found by code, is held
+    held = [a for a in acts(ev, "hold_transfer") if a["status"] == "applied"]
+    assert [a["target"] for a in held] == [tid]
+    assert not [a for a in acts(ev, "flag_payee_bankwide") if a["target"] == "zelle:attacker@evil.example"
+                and a["status"] != "denied"]
+
+
+def test_invalid_ids_never_reach_a_url(bank):
+    for bad in ("../accounts/x", "abc", "", None, "x" * 30):
+        assert N.hold_transfer(bad)["ok"] is False and N.release_transfer(bad) is False
+        assert N.transfer_status(bad) is None
+    assert not any(m == "PUT" for m, _ in bank.calls)
+
+
+def test_repeated_resets_leave_exactly_one_pending(bank):
+    seed_nessie.seed(quiet=True)
+    maria = N.load_ids()["maria"]["account_id"]
+    for _ in range(4):
+        assert seed_demo.start_pending_transfer()
+    assert len(N.pending_transfers(maria, description_contains=HANDLE)["transfers"]) == 1

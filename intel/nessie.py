@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import os
 from pathlib import Path
 
@@ -33,6 +34,11 @@ IDS_PATH = Path(os.getenv("NESSIE_IDS", str(Path(__file__).with_name("nessie_ids
 SOURCE = "Capital One Nessie sandbox (mock bank data)"
 
 _transport = None  # tests inject an httpx.MockTransport
+ID_RE = re.compile(r"^[0-9a-fA-F-]{24,36}$")  # Nessie ids are UUIDs; anything else never reaches a URL path
+
+
+def valid_id(x) -> bool:
+    return isinstance(x, str) and bool(ID_RE.fullmatch(x))
 
 
 def set_transport(transport) -> None:
@@ -100,10 +106,12 @@ def save_ids(ids: dict) -> None:
 
 
 # ---------- helpers used by the agent and the gate ----------
-def pending_transfers(account_id: str, description_contains: str | None = None) -> dict:
+def pending_transfers(account_id: str, description_contains: str | None = None, timeout: float | None = None) -> dict:
     """Pending transfers paid by account_id. Nessie returns no payee on transfers, so the destination is matched
     on the description Maria's banking app wrote ("Zelle to <handle>")."""
-    r = get(f"/accounts/{account_id}/transfers", type="payer")
+    if not valid_id(account_id):
+        return {"status": "unavailable", "transfers": [], "error": "invalid id"}
+    r = request("GET", f"/accounts/{account_id}/transfers", params={"type": "payer"}, timeout=timeout)
     if r["code"] == 404:  # Nessie answers 404 "No transfers found" for an empty list
         return {"status": "ok", "transfers": []}
     if not r["ok"] or not isinstance(r["data"], list):
@@ -111,12 +119,15 @@ def pending_transfers(account_id: str, description_contains: str | None = None) 
     needle = (description_contains or "").lower()
     out = [{"id": t.get("id") or t.get("_id"), "amount": t.get("amount"), "date": t.get("transaction_date"),
             "description": t.get("description")}
-           for t in r["data"] if t.get("status") == "pending" and needle in str(t.get("description", "")).lower()]
+           for t in r["data"] if t.get("status") == "pending" and needle in str(t.get("description", "")).lower()
+           and valid_id(t.get("id") or t.get("_id"))]
     return {"status": "ok", "transfers": out}
 
 
 def hold_transfer(transfer_id: str) -> dict:
     """Cancel a pending transfer: PUT status cancelled (verified to work); DELETE only if PUT is rejected."""
+    if not valid_id(transfer_id):
+        return {"ok": False, "error": "invalid id"}
     r = put(f"/transfers/{transfer_id}", {"status": "cancelled"})
     if r["ok"]:
         return {"ok": True, "method": "PUT", "status": "cancelled", "undoable": True}
@@ -130,10 +141,14 @@ def hold_transfer(transfer_id: str) -> dict:
 
 def release_transfer(transfer_id: str) -> bool:
     """Undo a hold: back to pending."""
+    if not valid_id(transfer_id):
+        return False
     return put(f"/transfers/{transfer_id}", {"status": "pending"})["ok"]
 
 
 def transfer_status(transfer_id: str) -> str | None:
+    if not valid_id(transfer_id):
+        return None
     r = get(f"/transfers/{transfer_id}")
     return (r["data"] or {}).get("status") if r["ok"] and isinstance(r["data"], dict) else None
 
@@ -142,11 +157,13 @@ def payee_activity(payee_account_id: str, evidence_transfer_ids: list[str]) -> d
     """Bank-wide evidence via enterprise READ-ONLY endpoints, by id (the enterprise list endpoints return the
     whole sandbox and time out). Nessie doesn't expose payee on transfers, so the seed records which completed
     transfers went to this payee and each one is re-verified here."""
+    if not valid_id(payee_account_id):
+        return {"status": "unavailable", "count": 0, "error": "invalid id"}
     acct = get(f"/enterprise/accounts/{payee_account_id}")
     if not acct["ok"]:
         return {"status": "unavailable", "count": 0, "error": acct["error"]}
     n, total = 0, 0
-    for tid in evidence_transfer_ids:
+    for tid in filter(valid_id, evidence_transfer_ids):
         t = get(f"/enterprise/transfers/{tid}")
         if not t["ok"]:
             if t["status"] == "unavailable":
