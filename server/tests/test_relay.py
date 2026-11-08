@@ -229,3 +229,19 @@ def test_listener_released_when_session_closes():
             await asyncio.sleep(0.8)                  # listener loop sees the end-of-call sentinel and exits
             assert relay.listener_count() == 0
     run(go())
+
+
+def test_listen_live_call_paired_device_from_call_incoming_on():
+    """A live (non-sim) call: a paired remote device may attach as soon as call.incoming is on the bus, before any media stream opens."""
+    import pytest
+    from server import bus, device
+    remote = TestClient(app)
+    tok = remote.post("/pair", json={"pin": device.PIN}).json()["device_token"]
+    with pytest.raises(Exception):                                            # nothing on the bus yet: unknown call refused
+        with remote.websocket_connect("/listen/LIVE1", subprotocols=["bf-device", tok]): pass
+    bus.publish("call.incoming", "LIVE1", {"from": "+15555550123", "to": "+15555550100", "attestation": "C", "scam_id_score": 0.8})
+    assert "LIVE1" not in relay._S                                            # no relay session / media yet
+    with remote.websocket_connect("/listen/LIVE1", subprotocols=["bf-device", tok]) as ws:
+        assert ws.accepted_subprotocol == "bf-device"
+        assert relay.listener_count() == 1
+    assert relay.listener_count() == 0

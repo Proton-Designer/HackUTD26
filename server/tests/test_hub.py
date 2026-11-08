@@ -425,3 +425,11 @@ def test_loopback_bypass_refuses_cross_origin_browser_writes():
     assert db.has("trusted", "+15555550188") and not db.has("trusted", "+15555550123")
     assert local.post("/trusted", json={"number": "+15555550123"}, headers={**h, "origin": "http://127.0.0.1:8000"}).status_code == 200
     assert local.post("/trusted", json={"number": "+15555550124"}, headers=h).status_code == 200   # curl at the console
+
+
+def test_status_maria_leg_flag(monkeypatch):
+    c = TestClient(app, client=("127.0.0.1", 5000))
+    monkeypatch.delenv("MARIA_LEG", raising=False)
+    assert c.get("/demo/status").json()["flags"]["MARIA_LEG"] == "sip"
+    monkeypatch.setenv("MARIA_LEG", "pstn")
+    assert c.get("/demo/status").json()["flags"]["MARIA_LEG"] == "pstn"
