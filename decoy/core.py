@@ -23,7 +23,8 @@ NVIDIA_BASE = os.environ.get("NVIDIA_BASE_URL", "https://integrate.api.nvidia.co
 # lightning (P2's pin) was 429 rate-limited on the shared key during testing; bolt-e4b answered in ~400 ms.
 MODEL = os.environ.get("DECOY_MODEL", "nvidia/nemotron-3.5-super-vl-120b-a12b")   # P1 07:58: 4B bolt garbled replies on real calls
 FALLBACK_MODEL = os.environ.get("DECOY_FALLBACK_MODEL", "nvidia/nemotron-3.5-bolt-e4b")
-PRIMARY_TIMEOUT_S = float(os.environ.get("DECOY_PRIMARY_TIMEOUT_S", "2.5"))
+PRIMARY_TIMEOUT_S = float(os.environ.get("DECOY_PRIMARY_TIMEOUT_S", "3.5"))
+HEDGE_S = float(os.environ.get("DECOY_HEDGE_S", "1.8"))
 
 # #126: P1's draft (follows the caller, no props) + P3 fixes (no app/payee/[NAME] before the caller says it, never
 # claims the money went through, reads details back slightly wrong). Old prompt's stall list made the 4B model parrot
@@ -227,13 +228,22 @@ async def chat(messages: list, max_tokens: int = 90, temperature: float = 0.6, m
     import asyncio
     if model:
         return _cap(await _chat_once(messages, max_tokens, temperature, model))
-    try:
-        out = await asyncio.wait_for(_chat_once(messages, max_tokens, temperature, MODEL), PRIMARY_TIMEOUT_S)
-    except asyncio.TimeoutError:
-        out = None
-        log.warning("chat: primary model slow (> %.1f s), using fallback", PRIMARY_TIMEOUT_S)
-    if not out and FALLBACK_MODEL and FALLBACK_MODEL != MODEL:
-        out = await _chat_once(messages, max_tokens, temperature, FALLBACK_MODEL)
+    # P2 #143: a hard 2.5 s cutover handed 2 live calls in a row to the weak fallback. Hedge instead: if the primary
+    # hasn't answered by HEDGE_S, start the fallback in parallel; use the primary if it lands by PRIMARY_TIMEOUT_S.
+    prim = asyncio.ensure_future(_chat_once(messages, max_tokens, temperature, MODEL))
+    done, _ = await asyncio.wait({prim}, timeout=HEDGE_S)
+    if prim in done and prim.result():
+        return _cap(prim.result())
+    fb = asyncio.ensure_future(_chat_once(messages, max_tokens, temperature, FALLBACK_MODEL)) if FALLBACK_MODEL and FALLBACK_MODEL != MODEL else None
+    if prim not in done:
+        done, _ = await asyncio.wait({prim}, timeout=max(0.1, PRIMARY_TIMEOUT_S - HEDGE_S))
+    out = prim.result() if prim in done else None
+    if out:
+        if fb: fb.cancel()
+        return _cap(out)
+    if not prim.done():
+        prim.cancel(); log.warning("chat: primary model slow (> %.1f s), using fallback", PRIMARY_TIMEOUT_S)
+    out = await fb if fb else None
     return _cap(out)
 
 
