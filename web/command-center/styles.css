@@ -125,8 +125,9 @@ h1, h2, p { margin: 0; }
   border-left: 4px solid var(--line);
 }
 .headline {
-  font-size: clamp(24px, 2.7vw, 40px); font-weight: 700; line-height: 1.15;
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  font-size: clamp(24px, 2.7vw, 40px); font-weight: 700; line-height: 1.25;
+  /* the clamp needs overflow hidden; the bottom padding keeps descenders (g, $, p) inside the clip box */
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; padding-bottom: 0.12em;
 }
 .headline em { font-style: normal; color: var(--accent-text); }
 .subline { color: var(--text-2); font-size: var(--f16); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; min-height: 1.4em; line-height: 1.4; }

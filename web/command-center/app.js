@@ -868,8 +868,8 @@
       const el = $('engine');
       if (!el) return; // engine and source pills are off the screen
       const model = S.model;
-      if (S.engine === 'local') { el.className = 'engine local'; el.innerHTML = `<b>LOCAL</b><span>${esc(model || 'Nemotron 3 Nano 4B')} · on device</span>`; }
-      else if (S.engine === 'cloud') { el.className = 'engine cloud'; el.innerHTML = `<b>CLOUD</b><span>${esc(model || 'Nemotron')} · attested enclave</span>`; }
+      if (S.engine === 'local') { el.className = 'engine local'; el.innerHTML = `<b>LOCAL</b><span>${esc(model || 'Nemotron Nano 4B')} · laptop GPU, stands in for the phone</span>`; }
+      else if (S.engine === 'cloud') { el.className = 'engine cloud'; el.innerHTML = `<b>CLOUD</b><span>${esc(model || 'Nemotron')} · NVIDIA-hosted</span>`; }
       else { el.className = 'engine'; el.innerHTML = '<b>ENGINE</b><span>waiting for detector</span>'; }
       renderSource();
     },
@@ -961,6 +961,7 @@
       const tag = (x, y, text, cls) => { const w = text.length * f12 * 0.62 + 18, h = f12 + 10; return `<g class="mt-tag ${cls}"><rect x="${x - w / 2}" y="${y - h / 2}" width="${w}" height="${h}" rx="${h / 2}"/><text x="${x}" y="${y + f12 * 0.36}" text-anchor="middle">${esc(text)}</text></g>`; };
       const out = [];
       const roomy = step >= f12 * 2.4; // enough height for an amount on every victim row
+      const nf = Math.max(9, Math.min(f14, step * 0.78)); // victim names shrink with the row spacing so they never touch
       const wide = W >= 720;           // enough width for dates next to amounts
       const amtW = e => (wide ? amt(e) : fmtMoney(+e.amount || 0));
 
@@ -990,9 +991,14 @@
       const maxO = Math.max(1, ...outs.map(e => +e.amount || 0));
       const spread = Math.min(46, H * 0.12);
       outs.forEach((e, i) => {
-        const bend = (i - (outs.length - 1) / 2) * spread * 2;
-        const a = [xM + rM + 2, yM], b = [xC - rC - 7, yM];
-        const p = [a, [a[0] + (b[0] - a[0]) * 0.3, yM + bend], [b[0] - (b[0] - a[0]) * 0.3, yM + bend], b];
+        const k = outs.length > 1 ? (i - (outs.length - 1) / 2) / ((outs.length - 1) / 2) : 0; // -1 (top) .. 1 (bottom)
+        const bend = k * spread * 2;
+        // Each transfer meets the cash-out circle at its own point (up to ±34°), aimed at the centre, and stops
+        // 6 px outside the circle, so the arrowheads never stack on each other or sit on top of the circle.
+        const ang = k * 0.6, R = rC + 6;
+        const a = [xM + rM + 2, yM], b = [xC - R * Math.cos(ang), yM + R * Math.sin(ang)];
+        const reach = (b[0] - a[0]) * 0.35;
+        const p = [a, [a[0] + (b[0] - a[0]) * 0.3, yM + bend], [b[0] - Math.cos(ang) * reach, b[1] + Math.sin(ang) * reach], b];
         const m = bez(p, 0.5);
         out.push(`<path class="mt-cash" d="${path(p)}" marker-end="url(#mt-arrow)" style="stroke-width:${(1.5 + 3 * (+e.amount || 0) / maxO).toFixed(1)}px"/>`,
           `<text class="mt-amt" x="${m[0]}" y="${m[1] + (bend > 0 ? f12 + 4 : -7)}" text-anchor="middle">${esc(amtW(e))}</text>`);
@@ -1005,14 +1011,14 @@
             `<text class="mt-name mt-maria" x="${xL - r - 9}" y="${y + f14 * 0.36}" text-anchor="end">Customer</text>`);
         } else {
           out.push(`<circle class="mt-n-victim" cx="${xL}" cy="${y}" r="${r}"/>`,
-            `<text class="mt-name" x="${xL - r - 9}" y="${y + f14 * 0.36}" text-anchor="end">${first(n)}</text>`);
+            `<text class="mt-name" x="${xL - r - 9}" y="${y + nf * 0.36}" text-anchor="end" style="font-size:${nf}px">${first(n)}</text>`);
         }
       });
       // under the mule's own labels, where no line runs
       if (ms.flagged) out.push(`<circle class="mt-flag-ring" cx="${xM}" cy="${yM}" r="${rM + 7}"/>`);
       out.push(`<circle class="mt-n-mule" cx="${xM}" cy="${yM}" r="${rM}"/>`,
         `<text class="mt-name" x="${xM}" y="${yM + rM + f14 + 10}" text-anchor="middle">Mule account</text>`,
-        ms.flagged ? `<text class="mt-name mt-flagged" x="${xM}" y="${yM + rM + f14 * 2 + 14}" text-anchor="middle">⚑ Flagged</text>` : '',
+        ms.flagged ? `<text class="mt-name mt-flagged" x="${xM}" y="${yM + rM + f14 * 2 + 20}" text-anchor="middle">⚑ Flagged</text>` : '',
         `<circle class="mt-n-cash" cx="${xC}" cy="${yM}" r="${rC}"/>`,
         `<text class="mt-name" x="${xC}" y="${yM + rC + f14 + 6}" text-anchor="middle">Cash-out</text>`); // totals live in the tiles above
       svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
@@ -1072,7 +1078,7 @@
       const rows = [
         ['Caller audio only', "The customer's voice is never processed"],
         ['No audio stored', 'Processed in memory; only scammer infrastructure is kept'],
-        local ? ['On-device model', 'Nemotron 3 Nano 4B on the phone; no audio leaves it'] : ['Enclave attested', 'NVIDIA GPU in confidential-computing mode; image hash sha256:9f2c41…e41a matches the published build'],
+        local ? ['Local model', 'Nemotron Nano 4B on a laptop GPU, standing in for the phone'] : ['Cloud model', 'NVIDIA-hosted Nemotron'],
         v === 'clone' ? ['Consented voice', `The customer's clone, consent ${S.voice && S.voice.consent ? S.voice.consent : 'on file'}, deletable`]
           : v === 'synthetic' ? ['Synthetic voice', 'No voice clone kept'] : null,
         ['Synthetic data', 'No real customer data anywhere in this demo'],
@@ -1265,6 +1271,7 @@
     const app = document.querySelector('.app');
     app.dataset.view = VIEW.name;
     app.dataset.chapter = chapter;
+    applyBrand(chapter);
     document.querySelectorAll('.views [data-view]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.view === chapter)));
     const follow = $('follow');
     follow.hidden = !VIEW.pinned;
@@ -1291,6 +1298,16 @@
     if (chapter === 'money') ensureMap();
     grid.classList.remove('enter'); void grid.offsetWidth; grid.classList.add('enter');
     dirty('feed', 'trace', 'hero'); // moved panels lose their scroll position; re-render scrolls them to the newest line
+  }
+  // One brand at a time, never mixed: the Money trail is the Capital One part of the demo, so it switches the whole
+  // screen (lockup, title, navy accent) to Capital One; the live call stays T-Mobile. ?brand=capitalone keeps
+  // Capital One on for the whole run (Nessie judges).
+  const BRAND_URL = /[?&]brand=(capitalone|c1)(&|$)/i.test(location.search);
+  function applyBrand(chapter) {
+    const c1 = BRAND_URL || chapter === 'money';
+    document.documentElement.classList.toggle('brand-c1', c1);
+    $('brand-title').textContent = c1 ? 'Fraud desk' : 'T-Mobile command center';
+    document.title = c1 ? 'Backfire × Capital One' : 'Backfire Command Center';
   }
   // A tab holds that chapter on screen; the live tab (or Esc, or "back to live") follows the call again.
   function setView(name) {
@@ -1497,7 +1514,6 @@
   }
 
   function boot() {
-    if (document.documentElement.classList.contains('brand-c1')) { $('brand-title').textContent = 'Fraud desk'; document.title = 'Backfire × Capital One'; }
     setView((qs.get('view') || '').toLowerCase());
     renderAll();
     if (CFG.src === 'mock' || CFG.src === 'fixture') { startReplay(); return; }
