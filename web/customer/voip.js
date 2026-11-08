@@ -6,7 +6,7 @@
   "use strict";
   const SDK = "https://cdn.jsdelivr.net/npm/@telnyx/webrtc@2.28.1/lib/bundle.js";
   const qs = new URLSearchParams(location.search);
-  const HUB = BF.hub, dev = qs.get("devtoken");
+  const HUB = BF.hub, dev = ["localhost", "127.0.0.1"].includes(location.hostname) ? qs.get("devtoken") : null;   // a link must not be able to swap in someone else's SIP account
   const status = t => { const s = document.getElementById("src"); if (s) s.dataset.voip = t; console.log("[backfire] voip:", t); BF.voipStatus = t; };
   let client = null, call = null;
   if (!dev && !(HUB && !qs.has("novoip") && location.pathname.startsWith("/app")) && !qs.has("webrtc")) { status("off"); return; }
