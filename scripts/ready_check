@@ -1,0 +1,123 @@
+#!/usr/bin/env python3
+"""One PASS/FAIL readiness summary for the demo laptop. READ-ONLY: GETs + git status + scripts/preflight; makes NO Telnyx API calls, changes nothing.
+Usage: scripts/ready_check [--sim] [--local URL] [--tunnel URL] [--no-tunnel]     (default = live phone demo, i.e. preflight --live)
+Checks: scripts/preflight (all its checks) | decoy /healthz | P2 /healthz (logs/p2_tunnel_url.txt, else P2_STT_URL/P2_BASE) | Telnyx-free config
+(telnyx_ok flag, key NAMES present in .env, never values) | active_calls == 0 | demo reset state (empty protection log, judge number LIVE_GUARD) | git status clean.
+Exit 1 if any FAIL. Stdlib only. Never prints env values."""
+import argparse, json, os, pathlib, subprocess, sys, urllib.error, urllib.request
+from urllib.parse import urlsplit
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+res = []
+
+def rec(ok, name, detail="", warn=False):
+    state = "PASS" if ok else ("WARN" if warn else "FAIL")
+    res.append(state)
+    print(f"{state:4}  {name}" + (f"  ({detail})" if detail else ""))
+    return ok
+
+def get(url, timeout=6):
+    try:
+        with urllib.request.urlopen(url, timeout=timeout) as r:
+            return r.status, r.read()
+    except urllib.error.HTTPError as e:
+        return e.code, b""
+    except Exception as e:
+        return 0, type(e).__name__.encode()
+
+def jget(url):
+    st, b = get(url)
+    try: return st, json.loads(b or b"{}")
+    except ValueError: return st, {}
+
+def env_val(name):
+    """Shell env first, else repo .env (read only; the value is used for host extraction, never printed)."""
+    if os.environ.get(name): return os.environ[name]
+    try:
+        for ln in (ROOT / ".env").read_text().splitlines():
+            k, _, v = ln.partition("=")
+            if k.strip() == name: return v.strip().strip("\"'")
+    except OSError:
+        pass
+    return None
+
+def env_names():
+    try:
+        return {ln.partition("=")[0].strip() for ln in (ROOT / ".env").read_text().splitlines() if "=" in ln and not ln.lstrip().startswith("#") and ln.partition("=")[2].strip()}
+    except OSError:
+        return set()
+
+def origin(u):
+    sp = urlsplit(u)
+    if not sp.hostname or sp.username or sp.password or sp.scheme not in ("http", "https", "ws", "wss"): return None
+    return f"{'https' if sp.scheme in ('https', 'wss') else 'http'}://{sp.netloc}"
+
+def p2_origin():
+    d = pathlib.Path(os.environ.get("LOGDIR") or "logs"); d = d if d.is_absolute() else ROOT / d
+    try:
+        o = origin(((d / "p2_tunnel_url.txt").read_text().strip().splitlines() or [""])[0].strip())
+        if o: return o, "logs/p2_tunnel_url.txt"
+    except OSError:
+        pass
+    for k in ("P2_BASE", "P2_STT_URL"):
+        v = env_val(k)
+        if v and origin(v): return origin(v), k
+    return None, None
+
+def decoy_origin():
+    for k in ("P3_BASE", "P3_VOICE_URL", "P3_DECOY_URL"):
+        v = env_val(k)
+        if v and origin(v): return origin(v), k
+    return "http://127.0.0.1:8300", "default :8300"
+
+def main():
+    ap = argparse.ArgumentParser(); ap.add_argument("--sim", action="store_true"); ap.add_argument("--local"); ap.add_argument("--tunnel"); ap.add_argument("--no-tunnel", action="store_true")
+    a = ap.parse_args()
+    local = (a.local or os.environ.get("HUB_URL") or f"http://127.0.0.1:{os.environ.get('HUB_PORT', '8000')}").rstrip("/")
+    print(f"ready_check  hub={local}  mode={'SIM (phone-free)' if a.sim else 'LIVE (real phone)'}\n")
+
+    print("-- preflight")
+    cmd = [sys.executable, str(ROOT / "scripts" / "preflight"), "--local", local] + ([] if a.sim else ["--live"]) + (["--no-tunnel"] if a.no_tunnel else []) + (["--tunnel", a.tunnel] if a.tunnel else [])
+    p = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+    lines = p.stdout.splitlines()
+    for ln in lines:
+        if ln.startswith("FAIL"): print("   " + ln)
+    npass = sum(1 for l in lines if l.startswith("PASS")); nfail = sum(1 for l in lines if l.startswith("FAIL"))
+    rec(p.returncode == 0 and nfail == 0, "scripts/preflight", f"{npass} PASS, {nfail} FAIL" + ("" if p.returncode == 0 else f", exit {p.returncode}"))
+
+    print("\n-- services")
+    d, dsrc = decoy_origin(); st, _ = get(d + "/healthz")
+    rec(st == 200, "decoy (P3) /healthz", f"host={urlsplit(d).netloc} via {dsrc}, HTTP {st}")
+    o, osrc = p2_origin()
+    if o:
+        st, _ = get(o + "/healthz"); rec(st == 200, "P2 /healthz", f"host={urlsplit(o).netloc} via {osrc}, HTTP {st}")
+    else:
+        rec(False, "P2 /healthz", "no P2 URL: set P2_STT_URL/P2_BASE or logs/p2_tunnel_url.txt")
+
+    print("\n-- hub state (no Telnyx calls)")
+    st, s = jget(local + "/demo/status?format=json"); fl = s.get("flags", {}) if st == 200 else {}
+    rec(st == 200, "hub /demo/status readable", f"HTTP {st}")
+    rec(fl.get("telnyx_ok") is not False, "telnyx_ok is not false (last reported result, no new call)", str(fl.get("telnyx_ok")))
+    names = env_names(); need = ["TELNYX_API_KEY", "TELNYX_PUBLIC_KEY", "TELNYX_CALL_CONTROL_APP_ID", "NVIDIA_API_KEY", "DEVICE_PIN"]
+    miss = [n for n in need if n not in names and not os.environ.get(n)]
+    rec(not miss, "required keys present (names only)", "missing: " + ", ".join(miss) if miss else "all present")
+    rec(fl.get("active_calls") == 0, "active_calls == 0", f"active_calls={fl.get('active_calls')}")
+    rec(fl.get("MARIA_LEG") in ("sip", "listen", "talk"), "MARIA_LEG mode", f"MARIA_LEG={fl.get('MARIA_LEG')}  CUSTOMER_NAME set={bool(fl.get('CUSTOMER_NAME'))}")
+    stl, lk = jget(local + "/routing/lookup?from=%2B12145550199")
+    rec(stl == 200 and lk.get("decision") == "LIVE_GUARD", "demo reset state: judge number routes LIVE_GUARD", f"HTTP {stl}, {lk.get('decision')}")
+    stp, pl = jget(local + "/protection-log")
+    rec(stp == 200 and pl.get("blocked") == [], "demo reset state: protection log empty", f"HTTP {stp}, " + (("0 blocked" if not pl.get("blocked") else f"{len(pl['blocked'])} blocked; run scripts/reset_demo") if stp == 200 else "unreadable (run on the hub machine)"))
+
+    print("\n-- repo")
+    g = subprocess.run(["git", "status", "--porcelain"], cwd=ROOT, capture_output=True, text=True)
+    rows = [l for l in g.stdout.splitlines() if l.strip()]
+    tracked = [l for l in rows if not l.startswith("??")]
+    rec(g.returncode == 0 and not tracked, "git: no uncommitted changes to tracked files", f"{len(tracked)} modified" + ("; " + ", ".join(l[3:] for l in tracked[:4]) if tracked else ""))
+    rec(not [l for l in rows if l.startswith("??")], "git: no untracked files", f"{len(rows) - len(tracked)} untracked", warn=True)
+
+    nf, nw = res.count("FAIL"), res.count("WARN")
+    print(f"\n{'READY' if nf == 0 else 'NOT READY'}: {res.count('PASS')} PASS, {nf} FAIL, {nw} WARN")
+    sys.exit(1 if nf else 0)
+
+if __name__ == "__main__":
+    main()

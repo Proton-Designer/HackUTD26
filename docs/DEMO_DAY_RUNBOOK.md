@@ -12,6 +12,7 @@ Hub = ONE process (hub + voip + relay + intel + `/app` + `/command-center`). Tel
 - [ ] Window 2, P2: `bash detection/scripts/run.sh` (supervised).
 - [ ] Window 3, hub: `scripts/run_hub` (starts cloudflared, exports `PUBLIC_WS`, hub on :8000). Note the **public URL**. Keep this shell open: closing it kills the tunnel.
 - [ ] Lead only: `scripts/point_telnyx` (dry run) then `scripts/point_telnyx --apply` (both URLs must print OK). Needed only when the tunnel URL changed.
+- [ ] `scripts/ready_check` (one summary: preflight + decoy + P2 + active_calls 0 + reset state + git clean; `--sim` for phone-free; exit 0 = READY). Includes `scripts/preflight --live` below.
 - [ ] `scripts/preflight --live` (all PASS, exit 0). `--tunnel URL` if `logs/tunnel_url.txt` is stale.
 - [ ] `<public URL>/demo/status`: voip/intel mounted, P2 + P3 `up`, `SIM_MODE` false, `HUB_TOKEN_set` false, `telnyx_ok` not false, `NVIDIA_API_KEY_set` true, `MARIA_LEG` as intended, `active_calls` 0.
 - [ ] Maria's phone: open `<public URL>/app/`, pair with the PIN (once; pairing survives resets and restarts), Live Guard on, voice enroll or skip, allow sound.

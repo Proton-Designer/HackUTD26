@@ -45,3 +45,27 @@ def test_f9_preflight_checks_p2_tunnel_url_file(tmp_path):
     assert "host=p2-dead.invalid (logs/p2_tunnel_url.txt)" in next(l for l in r.stdout.splitlines() if "P2 reachable" in l)
     (tmp_path / "p2_tunnel_url.txt").unlink()
     assert not any("p2_tunnel_url" in l for l in _run("up", tmp_path).stdout.splitlines())
+
+
+def test_ready_check_summarizes_and_fails_on_live_call_without_leaking_env(tmp_path):
+    body = json.dumps({"flags": {"SIM_MODE": False, "active_calls": 2, "MARIA_LEG": "sip", "telnyx_ok": True}, "pipelines": {}}).encode()
+    class H(http.server.BaseHTTPRequestHandler):
+        def do_GET(s):
+            ok = s.path.startswith("/demo/status")
+            s.send_response(200 if ok else 404); s.send_header("content-type", "application/json"); s.end_headers(); s.wfile.write(body if ok else b"{}")
+        def log_message(*a): pass
+    srv = http.server.HTTPServer(("127.0.0.1", 0), H); threading.Thread(target=srv.serve_forever, daemon=True).start()
+    try:
+        env = dict(os.environ, LOGDIR=str(tmp_path), P2_STT_URL="ws://127.0.0.1:1/stt", P3_BASE="http://127.0.0.1:1", TELNYX_API_KEY="SEKRET-VALUE-123", NVIDIA_API_KEY="NV-SEKRET-456")
+        env.pop("HUB_TOKEN", None); env.pop("P2_BASE", None)
+        r = subprocess.run([sys.executable, str(ROOT / "scripts" / "ready_check"), "--local", f"http://127.0.0.1:{srv.server_port}", "--no-tunnel"],
+                           env=env, capture_output=True, text=True, timeout=120)
+    finally:
+        srv.shutdown()
+    out = r.stdout
+    assert r.returncode == 1 and "NOT READY" in out
+    assert any(l.startswith("FAIL") and "active_calls == 0" in l and "active_calls=2" in l for l in out.splitlines())
+    assert any(l.startswith("FAIL") and "decoy (P3)" in l and "host=127.0.0.1:1" in l for l in out.splitlines())
+    assert any(l.startswith("FAIL") and l.split("  ")[1].startswith("P2 /healthz") for l in out.splitlines())
+    assert any(l.startswith("PASS") and "telnyx_ok" in l for l in out.splitlines())
+    assert "SEKRET" not in out + r.stderr
