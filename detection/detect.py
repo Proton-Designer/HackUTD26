@@ -234,7 +234,113 @@ async def _acquire(engine: str) -> bool:
         await asyncio.sleep(0.05)
 
 
-async def _engine_score(window_text: str, metadata: dict, engine: str) -> dict:
+
+class _Breaker:
+    """Cloud circuit breaker. 3 failures (429/5xx/timeout/transport) within 30 s -> OPEN 60 s (cloud skipped);
+    then HALF_OPEN lets ONE probe through: success closes, failure re-opens with backoff 60->120->240->300. Never raises."""
+    WINDOW_S, THRESHOLD, BASE_S, CAP_S, PROBE_STALE_S = 30.0, 3, 60.0, 300.0, 10.0
+
+    def __init__(self, clock=time.monotonic):
+        self.clock = clock
+        self.reset()
+
+    def reset(self):
+        self.state, self.fails, self.until, self.backoff, self.probe_t = "closed", [], 0.0, self.BASE_S, None
+
+    @staticmethod
+    def enabled() -> bool:
+        return os.environ.get("P2_BREAKER", "1") != "0"
+
+    def _to(self, state: str, why: str):
+        if state != self.state:
+            log.warning("cloud breaker %s -> %s (%s)", self.state, state, why)
+        self.state = state
+
+    def _open(self, why: str):
+        self.until = self.clock() + self.backoff
+        self._to("open", f"{why}; cloud skipped for {self.backoff:.0f}s")
+        self.probe_t = None
+
+    def allow(self) -> bool:
+        """True = a real cloud call may be made now (closed, or the single half-open probe)."""
+        try:
+            if not self.enabled() or self.state == "closed":
+                return True
+            now = self.clock()
+            if self.state == "open":
+                if now < self.until:
+                    return False
+                self._to("half_open", "backoff elapsed, probing")
+                self.probe_t = None
+            if self.probe_t is None or now - self.probe_t > self.PROBE_STALE_S:
+                self.probe_t = now
+                return True
+            return False
+        except Exception:
+            return True
+
+    def success(self):
+        try:
+            if self.state != "closed":
+                self.backoff = self.BASE_S
+                self._to("closed", "probe succeeded")
+            self.fails.clear()
+        except Exception:
+            pass
+
+    def failure(self, why: str):
+        try:
+            if not self.enabled():
+                return
+            now = self.clock()
+            if self.state == "half_open":
+                self.backoff = min(self.CAP_S, self.backoff * 2)
+                self._open(f"probe failed: {why}")
+                return
+            if self.state == "open":
+                return
+            self.fails = [t for t in self.fails if now - t <= self.WINDOW_S] + [now]
+            if len(self.fails) >= self.THRESHOLD:
+                self.fails.clear()
+                self._open(f"{self.THRESHOLD} failures in {self.WINDOW_S:.0f}s, last: {why}")
+        except Exception:
+            pass
+
+    def info(self) -> dict:
+        try:
+            left = max(0.0, self.until - self.clock()) if self.state == "open" else 0.0
+            return {"state": self.state, "enabled": self.enabled(), "retry_in_s": round(left, 1),
+                    "until": round(time.time() + left, 1) if left else None}
+        except Exception:
+            return {"state": "unknown"}
+
+
+BREAKER = _Breaker()
+
+
+def breaker_info() -> dict:
+    return BREAKER.info()
+
+
+def _breaker_why(e: BaseException) -> str | None:
+    """Failure kinds that count toward the breaker; None = not a cloud-health signal (bad JSON, missing creds, 4xx other than 429)."""
+    if isinstance(e, (asyncio.CancelledError, asyncio.TimeoutError)):
+        return "timeout"
+    try:
+        import httpx
+        if isinstance(e, httpx.HTTPStatusError):
+            c = e.response.status_code
+            return str(c) if c == 429 or c >= 500 else None
+        if isinstance(e, httpx.TimeoutException):
+            return "timeout"
+        if isinstance(e, httpx.TransportError):
+            return "transport"
+    except Exception:
+        pass
+    return None
+
+
+async def _engine_score(window_text: str, metadata: dict, engine: str, allow_net: bool = True) -> dict:
     k = _key(engine, window_text)
     if k in _CACHE:
         _CACHE.move_to_end(k)
@@ -248,6 +354,8 @@ async def _engine_score(window_text: str, metadata: dict, engine: str) -> dict:
         if hit is not None:
             return hit
         log.info("demo cache miss: %s", _norm(window_text)[-60:])
+    if not allow_net:
+        raise RuntimeError("cache miss, network not allowed (cloud breaker open)")
     if not await _acquire(engine):
         log.warning("cloud rate budget exhausted: rules-only result")
         raise RuntimeError("rate budget exhausted")
@@ -258,7 +366,16 @@ async def _engine_score(window_text: str, metadata: dict, engine: str) -> dict:
             raise RuntimeError("local engine not available") from e
     else:
         from detection.engines import cloud as local
-    raw = await local.score(window_text, metadata)
+    try:
+        raw = await local.score(window_text, metadata)
+    except BaseException as e:   # incl. CancelledError from the detect() timeout
+        if engine == "cloud":
+            why = _breaker_why(e)
+            if why:
+                BREAKER.failure(why)
+        raise
+    if engine == "cloud" and isinstance(raw, dict):
+        BREAKER.success()
     if isinstance(raw, dict):
         _CACHE[k] = raw
         while len(_CACHE) > CACHE_MAX:
@@ -323,10 +440,27 @@ async def detect(call_id: str, window_text: str, metadata: dict | None, engine: 
         rules = rule_scan(text)
         raw, note = None, None
         t0 = time.monotonic()
-        failover_ok = engine == "cloud" and os.environ.get("P2_FAILOVER", "1") != "0" and await _local_reachable()
+        cloud_skipped = False
+        if engine == "cloud" and BREAKER.state != "closed" and BREAKER.enabled():
+            try:   # cache (LRU / demo) is free even while the breaker is open
+                raw = await asyncio.wait_for(_engine_score(text, metadata, "cloud", allow_net=False), 0.5)
+            except Exception:
+                raw = None
+            if raw is None and not BREAKER.allow():
+                cloud_skipped = True
+        failover_ok = engine == "cloud" and raw is None and os.environ.get("P2_FAILOVER", "1") != "0" and await _local_reachable()
+        if cloud_skipped:   # open breaker: straight to local if reachable, else rules; no cloud wait
+            if failover_ok:
+                try:
+                    raw = await asyncio.wait_for(_engine_score(text, metadata, "local"), OVERALL_TIMEOUT_S - (time.monotonic() - t0))
+                    engine = "local"; FAILOVERS["n"] += 1
+                except Exception as e:
+                    log.warning("detect %s breaker-open local failed: %s", call_id, type(e).__name__)
+            failover_ok = False
         cap = max(0.5, FAILOVER_CLOUD_S - (time.monotonic() - t0)) if failover_ok else OVERALL_TIMEOUT_S  # probe time comes out of the cloud share
         try:
-            raw = await asyncio.wait_for(_engine_score(text, metadata, engine), cap)
+            if raw is None and not cloud_skipped:
+                raw = await asyncio.wait_for(_engine_score(text, metadata, engine), cap)
         except Exception as e:  # fail open to rules only
             note = type(e).__name__
             code = getattr(getattr(e, "response", None), "status_code", None)   # 429 shows up in call_report

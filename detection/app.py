@@ -15,7 +15,7 @@ try:  # eng1's /detect router; guarded so the app runs before it exists
 except Exception as e:
     log.warning("detection.router not available (%s)", type(e).__name__)
 
-from detection.detect import _local_reachable  # one shared cached probe
+from detection.detect import _local_reachable, breaker_info  # one shared cached probe
 
 @app.get("/healthz")
 async def healthz():
@@ -26,5 +26,6 @@ async def healthz():
     return {"ok": True, "engine": os.environ.get("P2_ENGINE", "cloud"),
             "stt": {"backend": backend, "initialized": cur is not None, "whisper_fallback_loaded": bool(getattr(cur, "_fb", None))},
             "engines": {"cloud_key_present": bool(os.environ.get("NVIDIA_API_KEY")), "local_reachable": await _local_reachable()},
+            "cloud_breaker": breaker_info(),
             "hub_subscriber_connected": health.STATE["hub_sub"], "active_stt_sockets": health.STATE["active"],
             "last_error": health.STATE["last_error"]}
