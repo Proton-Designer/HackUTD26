@@ -719,3 +719,79 @@ def test_hang_up_in_sip_mode_still_hangs_up_maria_leg(monkeypatch):
     monkeypatch.setattr(telnyx, "hangup", hang)
     sid = "sess-hangup-sip-12345"; st = _state(sim=False); R.CALLS[sid] = st
     asyncio.run(R._maria_hangup(sid)); assert hung == [st["maria_ccid"]]
+
+
+def _ring_setup(monkeypatch, mode="listen", sim=False):
+    monkeypatch.setenv("MARIA_LEG", mode); monkeypatch.delenv("MARIA_AUTO_ANSWER", raising=False); monkeypatch.setenv("PUBLIC_WS", "wss://x.example")
+    calls = []
+    async def answer(ccid, body=None): calls.append(("answer", ccid, body)); return {"data": {}}
+    async def reject(ccid, cause="CALL_REJECTED"): calls.append(("reject", ccid)); return {"data": {}}
+    async def hangup(ccid): calls.append(("hangup", ccid)); return {"data": {}}
+    monkeypatch.setattr(telnyx, "answer", answer); monkeypatch.setattr(telnyx, "reject", reject); monkeypatch.setattr(telnyx, "hangup", hangup)
+    monkeypatch.setattr(R, "_routing", lambda frm, att: {"decision": "LIVE_GUARD", "reason": ""})
+    monkeypatch.setattr(R, "LIMITER", Limiter(per_caller=99, max_concurrent=99))
+    return calls
+
+def _incoming(sid, ccid="v3:ring1234567890"):
+    return {"call_control_id": ccid, "call_session_id": sid, "from": "+15555550123", "to": "+15555550100", "direction": "incoming"}
+
+def test_listen_mode_rings_until_the_customer_answers(monkeypatch):
+    calls = _ring_setup(monkeypatch); sid = "sess-ring-answer-123"
+    async def go():
+        R.LOOP = asyncio.get_running_loop()
+        await R.on_initiated(_incoming(sid)); assert calls == [] and R.CALLS[sid]["ringing"] is True      # NOT answered: caller keeps ringing
+        assert "call.incoming" in [e["type"] for e in bus.history if e["call_id"] == sid]
+        assert not [e for e in bus.history if e["call_id"] == sid and e["type"] == "call.answered"]
+        await R.on_answered({"call_session_id": sid, "call_control_id": "v3:ring1234567890", "client_state": R._cs(sid=sid, role="caller")})   # stray early webhook is ignored
+        assert not [e for e in bus.history if e["call_id"] == sid and e["type"] == "call.answered"]
+        bus.publish("user.action", sid, {"action": "answer"}); await asyncio.sleep(0.2)                    # the customer taps Answer (bus -> voip)
+        assert [c[0] for c in calls] == ["answer"] and "stream_url" in calls[0][2] and calls[0][2]["stream_bidirectional_target_legs"] == "self"
+        assert R.CALLS[sid]["ringing"] is False
+        ans = [e for e in bus.history if e["call_id"] == sid and e["type"] == "call.answered"]
+        assert len(ans) == 1 and ans[0]["data"] == {"by": "maria", "via": "listen"}                        # emitted immediately on the successful answer
+        await R.on_answered({"call_session_id": sid, "call_control_id": "v3:ring1234567890", "client_state": R._cs(sid=sid, role="caller")})   # Telnyx's own call.answered later
+        assert len([e for e in bus.history if e["call_id"] == sid and e["type"] == "call.answered"]) == 1   # no duplicate
+        assert await R.answer_call(sid) is False                                                           # idempotent
+    asyncio.run(go())
+
+def test_decline_and_hang_up_before_answer_reject_the_call(monkeypatch):
+    for act in ("decline", "hang_up"):
+        calls = _ring_setup(monkeypatch, mode="talk"); sid = f"sess-ring-{act}-1234"
+        async def go():
+            R.LOOP = asyncio.get_running_loop(); await R.on_initiated(_incoming(sid)); calls.clear()
+            bus.publish("user.action", sid, {"action": act}); await asyncio.sleep(0.2)
+        asyncio.run(go())
+        assert [c[0] for c in calls] == ["reject"] and R.CALLS[sid]["ended"] is True
+        end = [e for e in bus.history if e["call_id"] == sid and e["type"] == "call.ended"]
+        assert len(end) == 1 and end[0]["data"]["ended_by"] == "customer_declined"
+
+def test_no_answer_after_timeout_rejects_and_blocks_late_answer(monkeypatch):
+    calls = _ring_setup(monkeypatch); monkeypatch.setattr(R, "RING_TIMEOUT_S", 0.3); sid = "sess-ring-noanswer-12"
+    async def go():
+        R.LOOP = asyncio.get_running_loop(); await R.on_initiated(_incoming(sid)); await asyncio.sleep(0.6)
+        assert await R.answer_call(sid) is False
+    asyncio.run(go())
+    assert [c[0] for c in calls] == ["reject"]
+    end = [e for e in bus.history if e["call_id"] == sid and e["type"] == "call.ended"]
+    assert len(end) == 1 and end[0]["data"]["ended_by"] == "no_answer"
+
+def test_auto_answer_env_and_sip_mode_keep_the_old_behaviour(monkeypatch):
+    calls = _ring_setup(monkeypatch); monkeypatch.setenv("MARIA_AUTO_ANSWER", "1")
+    asyncio.run(R.on_initiated(_incoming("sess-ring-auto-1234567")))
+    assert [c[0] for c in calls] == ["answer"] and not R.CALLS["sess-ring-auto-1234567"].get("ringing")
+    calls = _ring_setup(monkeypatch, mode="sip")
+    asyncio.run(R.on_initiated(_incoming("sess-ring-sip-12345678", "v3:ring2222222222")))
+    assert [c[0] for c in calls] == ["answer"]
+
+def test_sim_ringing_drops_media_until_answered_and_hello_waits(monkeypatch):
+    _ring_setup(monkeypatch); monkeypatch.setattr(R, "_hub_relay", lambda: FakeRelay()); fr = R._hub_relay(); monkeypatch.setattr(R, "direct_local", lambda c: True)
+    sid = "sess-ring-sim-1234567"; st = _state(sim=True); st.update(token="tok", ringing=True); R.CALLS[sid] = st
+    frame = json.dumps({"event": "media", "media": {"track": "inbound", "payload": base64.b64encode(b"\xff" * 160).decode()}})
+    app = FastAPI(); app.include_router(R.router)
+    with TestClient(app).websocket_connect(f"/media/{sid}?t=tok") as ws:
+        ws.send_text(json.dumps({"event": "start"})); ws.send_text(frame); time.sleep(0.2)
+    assert ("frame", "media") not in fr.calls and ("open", sid) in fr.calls     # not relayed while ringing (the WS itself was accepted)
+    st["ringing"] = False
+    with TestClient(app).websocket_connect(f"/media/{sid}?t=tok") as ws:
+        ws.send_text(json.dumps({"event": "start"})); ws.send_text(frame); time.sleep(0.2)
+    assert ("frame", "media") in fr.calls                                        # positive control: relayed once answered

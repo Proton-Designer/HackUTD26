@@ -35,6 +35,12 @@ MAX_STREAM_FRAMES = 50 * 60 * 10  # 10 min of 20 ms frames
 def sim_mode() -> bool: return os.environ.get("SIM_MODE") == "1"
 def _maria_leg() -> str: return os.environ.get("MARIA_LEG", "sip").strip().lower()
 def talk_mode() -> bool: return _maria_leg() == "talk"
+RING_TIMEOUT_S = float(os.environ.get("VOIP_RING_S", "45"))
+def ring_mode() -> bool:
+    """listen/talk mode behaves like a real phone: inbound calls are NOT answered until the customer's page sends user.action 'answer' (caller hears
+    ringing); 'decline' / 'hang_up' before that rejects; RING_TIMEOUT_S without an answer hangs up (no_answer). MARIA_AUTO_ANSWER=1 restores the old
+    auto-answer (scripts/tests). Applies to SIM_MODE calls too."""
+    return listen_mode() and os.environ.get("MARIA_AUTO_ANSWER", "") != "1"
 def listen_mode() -> bool:
     """MARIA_LEG=listen|talk: never dial Maria's SIP leg (no Telnyx dial/conference calls); her page listens (talk: and speaks back via
     WS /talk -> inject_maria). Default 'sip'."""
@@ -137,10 +143,47 @@ async def on_initiated(p, base_ws=None, sim=False):
                     stream_bidirectional_mode="rtp", stream_bidirectional_codec="PCMU",
                     stream_bidirectional_target_legs=os.environ.get("TARGET_LEGS", "self"))
     if sim and "stream_url" in body: out["stream_url"] = body["stream_url"]   # SIM_MODE: hand the tokenized URL to the simulator
+    if ring_mode():   # real phone: leave the call ringing; answer/decline come from the customer's page (user.action)
+        st = CALLS[sid]; st["ringing"] = True; st["answer_body"] = body
+        log.warning("ringing %s: waiting for the customer to answer (%.0f s, MARIA_LEG=%s)", sid[:8], RING_TIMEOUT_S, _maria_leg())
+        asyncio.create_task(_ring_timeout(sid))
+        return out
+    await _answer_now(sid, body, sim)
+    return out
+
+async def _answer_now(sid, body, sim):
+    ccid = CALLS[sid]["caller_ccid"]
     if await _safe(telnyx.answer(ccid, body), "answer(stream)", sim) is None and "stream_url" in body:
         await _safe(telnyx.answer(ccid, {"client_state": body["client_state"]}), "answer(plain)")  # fail open
     asyncio.create_task(_cap(sid))
-    return out
+
+async def answer_call(sid):
+    """user.action 'answer' while ringing: answer the Telnyx call with the caller stream (as the auto-answer did). Real calls get call.answered from
+    Telnyx's webhook; the simulator has none after this point, so emit it here."""
+    st = CALLS.get(sid)
+    if not st or st["ended"] or not st.get("ringing"): return False
+    st["ringing"] = False; st["answered_at"] = time.time(); sim = st.get("sim", False)
+    await _answer_now(sid, st.pop("answer_body", {"client_state": _cs(sid=sid, role="caller")}), sim)
+    # emit call.answered NOW (once): the hub derives "still ringing" from the bus, so a second answer must see it and get 409. Telnyx's own
+    # call.answered webhook (real calls) arrives a moment later and is then a no-op (answer_emitted).
+    st["listen"] = True; st["maria_answered"] = True; st["answer_emitted"] = True
+    emit("call.answered", sid, {"by": "maria", "via": "talk" if talk_mode() else "listen"})
+    log.warning("answered %s on the customer's tap (%.1f s after ringing started)", sid[:8], time.time() - st["t0"])
+    return True
+
+async def _end_unanswered(sid, ended_by):
+    st = CALLS.get(sid)
+    if not st or st["ended"] or not st.get("ringing"): return False
+    st["ended"] = True; st["ringing"] = False; LIMITER.release(sid)
+    await _safe(telnyx.reject(st["caller_ccid"]), f"reject ({ended_by})", st.get("sim", False))   # unanswered inbound call: reject, caller hears busy/decline
+    emit("call.ended", sid, {"ended_by": ended_by, "duration_s": round(time.time() - st["t0"], 1)})
+    return True
+
+async def decline_call(sid): return await _end_unanswered(sid, "customer_declined")
+
+async def _ring_timeout(sid):
+    await asyncio.sleep(RING_TIMEOUT_S)
+    if await _end_unanswered(sid, "no_answer"): log.warning("no answer for %s after %.0f s: call rejected", sid[:8], RING_TIMEOUT_S)
 
 async def _cap(sid):
     await asyncio.sleep(CALL_CAP_S)
@@ -159,6 +202,8 @@ async def on_answered(p):
     sid, st, role = _who(p)
     if not st: return
     sim = st.get("sim", False)
+    if role == "caller" and st.get("ringing"): return   # the simulator sends call.answered on its own timer; a real call is only answered by answer_call()
+    if role == "caller" and st.get("answer_emitted"): return   # already emitted by answer_call()
     if role == "caller" and listen_mode():
         st["listen"] = True; st["maria_answered"] = True   # no conference, no Maria dial: the UI flows as if she answered
         emit("call.answered", sid, {"by": "maria", "via": "talk" if talk_mode() else "listen"})
@@ -296,9 +341,10 @@ async def media(ws: WebSocket, call_id: str, t: str = ""):
             try:   # evidence for LIVE_TEST_PLAN check 3/4: event + track counts, start frame metadata (never payload audio)
                 _f = json.loads(raw); _k = _f.get("event", "?") + ((":" + str(_f.get("media", {}).get("track"))) if _f.get("event") == "media" else "")
                 stats[_k] = stats.get(_k, 0) + 1
-                if ins and _f.get("event") == "media" and _f.get("media", {}).get("track") in (None, "inbound"): ins.add(_f["media"].get("payload", ""), st)
+                if ins and not st.get("ringing") and _f.get("event") == "media" and _f.get("media", {}).get("track") in (None, "inbound"): ins.add(_f["media"].get("payload", ""), st)
                 if _f.get("event") in ("connected", "start") and stats[_k] == 1: log.warning("media %s: %s", _f["event"], json.dumps({"event": _f.get("event"), "media_format": (_f.get("start") or {}).get("media_format"), "tracks": (_f.get("start") or {}).get("tracks")})[:200])
             except Exception: pass
+            if st.get("ringing"): continue   # sim caller streams before the customer answers: nothing is relayed (real Telnyx streams only after answer)
             try:   # caller track only (stream_track=inbound_track); Maria's audio never streamed
                 if hub: await _maybe_await(hub.caller_frame(call_id, json.loads(raw)))
                 elif local: local.feed(raw)
@@ -372,6 +418,9 @@ async def _listen_hello(sid, send):
     Every outcome logs one line (sent / skipped + reason). Fail open: any error = silence."""
     try:
         st = CALLS.get(sid); loop = asyncio.get_running_loop()
+        for _ in range(int(RING_TIMEOUT_S * 5) + 5):   # sim: the stream is up while the call still rings; greet only after the customer answers
+            if not (st and st.get("ringing")): break
+            await asyncio.sleep(0.2)
         f = _persona.cached_hello()
         if f is None:   # nothing cached yet: one blocking attempt (bounded), else silent
             f = await asyncio.wait_for(loop.run_in_executor(None, _persona.generate_hello), 35)
@@ -621,7 +670,9 @@ def _on_bus(ev):
         if (t == "risk.update" and d.get("engine") != "fallback") or (t == "transcript.caller" and not str(d.get("utterance_id", "")).startswith("fb_")):
             CALLS[sid]["p2_seen"] = True   # a real P2 event: the sim fallback detector stops
         if t == "user.action":
-            if d.get("action") == "scammer_get_scammed": asyncio.run_coroutine_threadsafe(handoff(sid), LOOP)
+            if d.get("action") == "answer": asyncio.run_coroutine_threadsafe(answer_call(sid), LOOP)
+            elif d.get("action") == "decline": asyncio.run_coroutine_threadsafe(decline_call(sid), LOOP)
+            elif d.get("action") == "scammer_get_scammed": asyncio.run_coroutine_threadsafe(handoff(sid), LOOP)
             elif d.get("action") == "hang_up": asyncio.run_coroutine_threadsafe(_maria_hangup(sid), LOOP)
         elif t == "risk.update" and isinstance(d.get("s"), (int, float)) and d.get("engine") != "fallback":   # fallback scores never drive restore/legit
             LOOP.call_soon_threadsafe(_note_risk, sid, float(d["s"]))
@@ -633,6 +684,7 @@ async def _maria_hangup(sid):
     has NO Maria leg, so hang up the CALLER leg instead (bug seen on call 0afc3446: tap at +6.6 s, caller stayed connected 100 s)."""
     st = CALLS.get(sid)
     if not st or st["ended"] or st.get("handed_off"): return
+    if st.get("ringing"): await decline_call(sid); return   # hang_up before answering = decline
     sim = st.get("sim", False)
     if (st.get("listen") or listen_mode()) and not st.get("maria_ccid"):
         if st.get("caller_ccid"):
