@@ -3,3 +3,4 @@
 - eng1: cloud primary = nemotron-3.5-lightning-30b-a3b with enable_thinking=false + json_object, because thinking-on leaves empty content and costs ~300 ms more (contracts/models.md).
 - eng1: no Super verifier in the live path, because no tested Super is servable (3-super 404) and the 2.5 s budget is tight; rules + one model is simpler.
 - eng1: rule backstop only raises (floor 0.82 hard ask, 0.9 gift_card/otp, 0.95 2+ asks or ask+secrecy, 0.85 injection), negation guard ("never ask for a code"), because caller text is untrusted.
+- eng2: first alert = s>=ALERT_S(0.80) OR a hard ask with s>=0.60 (HARD_ASK_S), because gift-card/OTP asks are rarely innocent and ≤2 s latency matters; realert only on a NEW transition into critical or a NEW hard ask after Continue, re-armed when s<0.80; after handoff.restored the first-alert state resets; quiet switch-off (180 s of s<0.40) only when no alert fired on the call.
