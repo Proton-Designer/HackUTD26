@@ -8,6 +8,7 @@ How it works: macOS `say` voices the script card (data/script-cards.md: numbered
 served from a spare local port (default 8799, never the hub's :8000) through a cloudflared quick tunnel; Telnyx dials
 POST /v2/calls {connection_id=TELNYX_CALL_CONTROL_APP_ID, from=to=TELNYX_SCAM_LINE, audio_url, time_limit_secs}. The call goes into the
 scam line, i.e. the hub's webhook, like a judge calling in. Needs outbound termination on the Telnyx account (the trial account blocks it).
+SAFETY: --live refuses unless BACKFIRE_ALLOW_PSTN_OUTBOUND=1 (no Telnyx request is made otherwise).
 Env (from .env: `set -a; . ./.env; set +a`): TELNYX_API_KEY, TELNYX_CALL_CONTROL_APP_ID, TELNYX_SCAM_LINE. Never prints the key."""
 import argparse, json, os, pathlib, re, shutil, subprocess, sys, tempfile, threading, time, urllib.error, urllib.request
 import http.server, functools
@@ -110,6 +111,10 @@ def main():
         subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(mp3), "-ar", "8000", "-ac", "1", "-c:a", "pcm_s16le", a.wav_out], check=True)
         shutil.rmtree(w, ignore_errors=True); print(f"wrote {a.wav_out} ({duration_s(a.wav_out):.0f} s, script={a.script}, synthetic voice)"); return
     live = a.live and not a.dry_run
+    if live and os.environ.get("BACKFIRE_ALLOW_PSTN_OUTBOUND") != "1":
+        sys.exit("REFUSING --live: this places a real outbound call on the Telnyx account (costs money, can trigger fraud review/blocks; "
+                 "the earlier account was blocked after repeated self-calls). Set BACKFIRE_ALLOW_PSTN_OUTBOUND=1 only when the lead has approved it. "
+                 "Use scripts/demo_call (phone-free) instead.")
     work = tempfile.mkdtemp(prefix=f"bf_testcall_{a.script}_")
     mp3 = make_audio(a.script, work); dur = duration_s(mp3); limit = a.time_limit or int(dur) + 15
     line = os.environ.get("TELNYX_SCAM_LINE", "<TELNYX_SCAM_LINE>")
